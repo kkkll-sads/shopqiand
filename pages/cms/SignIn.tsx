@@ -89,8 +89,11 @@ const SignIn: React.FC<SignInProps> = ({ onBack, onNavigate }) => {
                     if (progressRes.code === 0 && progressRes.data) {
                         console.log('进度数据:', progressRes.data);
                         setProgressInfo(progressRes.data);
-                        // Update balance from progress if available (more accurate)
-                        if (progressRes.data.total_money !== undefined) {
+                        // 使用 withdrawable_money 作为当前累计奖励（可提现金额）
+                        if (progressRes.data.withdrawable_money !== undefined) {
+                            setBalance(progressRes.data.withdrawable_money);
+                        } else if (progressRes.data.total_money !== undefined) {
+                            // 如果没有 withdrawable_money，使用 total_money 作为后备
                             setBalance(progressRes.data.total_money);
                         }
                     } else {
@@ -156,7 +159,10 @@ const SignIn: React.FC<SignInProps> = ({ onBack, onNavigate }) => {
                         const progressRes = await fetchSignInProgress(token);
                         if (progressRes.code === 0 && progressRes.data) {
                             setProgressInfo(progressRes.data);
-                            if (progressRes.data.total_money !== undefined) {
+                            // 使用 withdrawable_money 作为当前累计奖励（可提现金额）
+                            if (progressRes.data.withdrawable_money !== undefined) {
+                                setBalance(progressRes.data.withdrawable_money);
+                            } else if (progressRes.data.total_money !== undefined) {
                                 setBalance(progressRes.data.total_money);
                             }
                         }
@@ -260,7 +266,10 @@ const SignIn: React.FC<SignInProps> = ({ onBack, onNavigate }) => {
 
                         if (progressRes.code === 0 && progressRes.data) {
                             setProgressInfo(progressRes.data);
-                            if (progressRes.data.total_money !== undefined) {
+                            // 使用 withdrawable_money 作为当前累计奖励（可提现金额）
+                            if (progressRes.data.withdrawable_money !== undefined) {
+                                setBalance(progressRes.data.withdrawable_money);
+                            } else if (progressRes.data.total_money !== undefined) {
                                 setBalance(progressRes.data.total_money);
                             }
                         }
@@ -449,7 +458,7 @@ const SignIn: React.FC<SignInProps> = ({ onBack, onNavigate }) => {
                         </div>
                         <div className="relative z-10 flex items-baseline">
                             <span className="text-3xl font-bold text-gray-900 mr-1">
-                                {(progressInfo?.total_money ?? balance).toFixed(2)}
+                                {(progressInfo?.withdrawable_money ?? progressInfo?.total_money ?? balance).toFixed(2)}
                             </span>
                             <span className="text-sm font-normal text-gray-500">元</span>
                         </div>
@@ -457,7 +466,7 @@ const SignIn: React.FC<SignInProps> = ({ onBack, onNavigate }) => {
 
                     {/* 提现按钮 - 根据余额动态显示 */}
                     {(() => {
-                        const currentBalance = progressInfo?.total_money ?? balance;
+                        const currentBalance = progressInfo?.withdrawable_money ?? progressInfo?.total_money ?? balance;
                         const minAmount = 10;
                         const canWithdraw = currentBalance >= minAmount;
 

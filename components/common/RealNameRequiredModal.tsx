@@ -15,10 +15,14 @@ import { AlertCircle } from 'lucide-react';
 interface RealNameRequiredModalProps {
     /** 是否显示弹窗 */
     open: boolean;
+    /** 是否已实名认证 */
+    isRealNameVerified?: boolean;
     /** 前往实名认证 */
     onNavigateToAuth: () => void;
     /** 返回首页 */
     onBackToHome: () => void;
+    /** 跳转到个人页面（已实名时使用） */
+    onNavigateToProfile?: () => void;
 }
 
 /**
@@ -26,10 +30,18 @@ interface RealNameRequiredModalProps {
  */
 const RealNameRequiredModal: React.FC<RealNameRequiredModalProps> = ({
     open,
+    isRealNameVerified = false,
     onNavigateToAuth,
     onBackToHome,
+    onNavigateToProfile,
 }) => {
     if (!open) return null;
+
+    // 如果已实名认证，直接跳转到个人页面
+    if (isRealNameVerified && onNavigateToProfile) {
+        onNavigateToProfile();
+        return null;
+    }
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import BottomNav from './components/BottomNav';
 import { Tab, Product, NewsItem, LoginSuccessPayload } from './types';
-import { AUTH_TOKEN_KEY, USER_INFO_KEY, fetchAnnouncements, AnnouncementItem } from './services/api';
+import { AUTH_TOKEN_KEY, USER_INFO_KEY, fetchAnnouncements, AnnouncementItem, fetchProfile, fetchRealNameStatus } from './services/api';
 import useAuth from './hooks/useAuth';
 
 // Auth
@@ -80,7 +80,7 @@ const saveReadNewsIds = (ids: string[]) => {
 
 const App: React.FC = () => {
   // Auth State (using useAuth hook)
-  const { isLoggedIn: isLoggedInFromHook, isRealNameVerified, login: loginFromHook } = useAuth();
+  const { isLoggedIn: isLoggedInFromHook, isRealNameVerified, login: loginFromHook, updateRealNameStatus } = useAuth();
 
   // For backward compatibility, maintain local state
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(() => {
@@ -91,6 +91,7 @@ const App: React.FC = () => {
   const [showRealNameModal, setShowRealNameModal] = useState<boolean>(false);
 
   const [activeTab, setActiveTab] = useState<Tab>('home');
+  const [checkingRealName, setCheckingRealName] = useState(false);
   const [subPage, setSubPage] = useState<string | null>(null);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [productDetailOrigin, setProductDetailOrigin] = useState<'market' | 'artist' | 'trading-zone' | null>(null);
@@ -304,12 +305,17 @@ const App: React.FC = () => {
           <div className="min-h-screen bg-gray-50 flex items-center justify-center">
             <RealNameRequiredModal
               open={true}
+              isRealNameVerified={isRealNameVerified}
               onNavigateToAuth={() => {
                 setActiveTab('home');
                 setSubPage('real-name-auth');
               }}
               onBackToHome={() => {
                 setActiveTab('home');
+                setSubPage(null);
+              }}
+              onNavigateToProfile={() => {
+                setActiveTab('profile');
                 setSubPage(null);
               }}
             />
@@ -593,8 +599,67 @@ const App: React.FC = () => {
       <div className="min-h-screen bg-gray-50 pb-safe">
         {renderContent()}
       </div>
+      {/* 实名认证提示弹窗 */}
+      <RealNameRequiredModal
+        open={showRealNameModal}
+        isRealNameVerified={isRealNameVerified}
+        onNavigateToAuth={() => {
+          setShowRealNameModal(false);
+          setActiveTab('home');
+          setSubPage('real-name-auth');
+        }}
+        onBackToHome={() => {
+          setShowRealNameModal(false);
+          setActiveTab('home');
+          setSubPage(null);
+        }}
+        onNavigateToProfile={() => {
+          setShowRealNameModal(false);
+          setActiveTab('profile');
+          setSubPage(null);
+        }}
+      />
+
       {/* Hide BottomNav when in a sub-page */}
-      {!subPage && <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />}
+      {!subPage && (
+        <BottomNav
+          activeTab={activeTab}
+          onTabChange={async (tab) => {
+            // 如果点击"我的"tab，先检查实名状态
+            if (tab === 'profile') {
+              const token = localStorage.getItem(AUTH_TOKEN_KEY);
+              if (token) {
+                try {
+                  setCheckingRealName(true);
+                  // 调用获取个人中心接口检查实名状态
+                  const profileRes = await fetchProfile(token);
+                  if (profileRes.code === 1 && profileRes.data?.userInfo) {
+                    // 获取实名认证状态
+                    const realNameRes = await fetchRealNameStatus(token);
+                    if (realNameRes.code === 1 && realNameRes.data) {
+                      const realNameStatus = realNameRes.data.real_name_status;
+                      // 更新实名状态 (2=已通过)
+                      updateRealNameStatus(realNameStatus, realNameRes.data.real_name);
+                      
+                      // 如果未实名，显示弹窗
+                      if (realNameStatus !== 2) {
+                        setShowRealNameModal(true);
+                        return; // 不切换tab
+                      }
+                    }
+                  }
+                } catch (error) {
+                  console.error('检查实名状态失败:', error);
+                } finally {
+                  setCheckingRealName(false);
+                }
+              }
+            }
+            // 正常切换tab
+            setActiveTab(tab);
+          }}
+        />
+      )}
     </div>
   );
 };
