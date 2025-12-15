@@ -29,7 +29,7 @@ export default defineConfig(({ mode }) => {
 
   return {
     server: {
-      port: 3000,
+      port: 5656,
       host: '0.0.0.0',
       // 配置代理解决 CORS 问题
       proxy: {
@@ -41,6 +41,10 @@ export default defineConfig(({ mode }) => {
           secure: false,
         },
       },
+    },
+    preview: {
+      port: 5656,
+      host: '0.0.0.0',
     },
     plugins: [react()],
     define: {

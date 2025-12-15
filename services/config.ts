@@ -11,8 +11,8 @@ const rawEnv = (import.meta as any).env ?? {};
 const resolveApiBaseUrl = () => {
     const envBase = rawEnv?.VITE_API_BASE_URL;
     if (envBase) return envBase;
-    if (rawEnv?.DEV) return API_PREFIX;
-    return `${DEFAULT_API_ORIGIN}/api`;
+    // 开发和生产环境都使用相对路径，通过 Nginx 代理解决跨域
+    return API_PREFIX;
 };
 
 const resolveApiOrigin = () => {
