@@ -26,6 +26,7 @@ interface TradingSession {
     image: string;
     startTime: string; // HH:mm
     endTime: string;   // HH:mm
+    isActive?: boolean; // 接口返回的 is_active，用于优先判定状态
 }
 
 type TradingDisplayItem = CollectionItem & {
@@ -35,8 +36,8 @@ type TradingDisplayItem = CollectionItem & {
     hasStockInfo?: boolean;
 };
 
-// 极简 + 高级感配置
-const POOL_CONFIGS: Record<string, any> = {
+// 视觉主题预设（结合 /api/collectionSession/index 返回的专场标题与时间）
+const POOL_THEME_PRESETS: Record<string, any> = {
     morning: {
         code: 'Pool-A',
         name: '数字鲁商资产池',
@@ -47,7 +48,7 @@ const POOL_CONFIGS: Record<string, any> = {
         themeColor: 'text-blue-600',
         gradient: 'from-blue-600 to-cyan-500',
         softBg: 'bg-blue-50',
-        dataBg: 'bg-[#F0F7FF]', // 专属数据底色
+        dataBg: 'bg-[#F0F7FF]',
         buttonClass: 'bg-gradient-to-r from-blue-600 to-cyan-600 shadow-blue-200',
     },
     afternoon: {
@@ -99,7 +100,22 @@ const getPoolType = (startTime: string) => {
     return 'default';
 };
 
+<<<<<<< HEAD
 const TradingZone: React.FC<TradingZoneProps> = ({ onBack, onProductSelect, onNavigate }) => {
+=======
+// 将接口数据（title、时间段）与视觉预设融合
+const buildPoolConfig = (session?: TradingSession | null) => {
+    const poolType = session ? getPoolType(session.startTime) : 'default';
+    const preset = POOL_THEME_PRESETS[poolType] || POOL_THEME_PRESETS.default;
+    return {
+        ...preset,
+        name: session?.title || preset.name,
+        subName: session ? `${session.startTime} - ${session.endTime}` : preset.subName,
+    };
+};
+
+const TradingZone: React.FC<TradingZoneProps> = ({ onBack, onProductSelect }) => {
+>>>>>>> 931393f (Enhance ProductDetail and TradingZone components: Updated ProductDetail to display collection details, including title, price, and session information. Improved TradingZone by integrating visual presets with trading session data and added isActive status handling for sessions.)
     const [now, setNow] = useState(new Date());
     const [selectedSession, setSelectedSession] = useState<TradingSession | null>(null);
     const [sessions, setSessions] = useState<TradingSession[]>([]);
@@ -124,6 +140,7 @@ const TradingZone: React.FC<TradingZoneProps> = ({ onBack, onProductSelect, onNa
                         image: item.image,
                         startTime: item.start_time,
                         endTime: item.end_time,
+                        isActive: !!(item as any)?.is_active,
                     }));
                     setSessions(sessionList);
                 } else {
@@ -189,6 +206,11 @@ const TradingZone: React.FC<TradingZoneProps> = ({ onBack, onProductSelect, onNa
         const startDate = new Date(now); startDate.setHours(startH, startM, 0, 0);
         const endDate = new Date(now); endDate.setHours(endH, endM, 0, 0);
 
+        // 后端 is_active 优先
+        if (session.isActive) {
+            return { status: 'active' as const, target: endDate };
+        }
+
         if (now < startDate) return { status: 'waiting', target: startDate };
         else if (now >= startDate && now < endDate) return { status: 'active', target: endDate };
         else return { status: 'ended', target: null };
@@ -205,8 +227,7 @@ const TradingZone: React.FC<TradingZoneProps> = ({ onBack, onProductSelect, onNa
 
     // 1. 详情页渲染
     if (selectedSession) {
-        const poolType = getPoolType(selectedSession.startTime);
-        const config = POOL_CONFIGS[poolType];
+        const config = buildPoolConfig(selectedSession);
         const { status, target } = getSessionStatus(selectedSession);
 
         return (
@@ -393,8 +414,7 @@ const TradingZone: React.FC<TradingZoneProps> = ({ onBack, onProductSelect, onNa
                 ) : error ? (
                     <div className="mt-20 text-center text-red-500 text-sm">{error}</div>
                 ) : sessions.map(session => {
-                    const poolType = getPoolType(session.startTime);
-                    const config = POOL_CONFIGS[poolType];
+                    const config = buildPoolConfig(session);
                     const { status, target } = getSessionStatus(session);
 
                     return (

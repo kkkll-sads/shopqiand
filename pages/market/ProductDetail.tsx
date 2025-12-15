@@ -62,6 +62,16 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, onNaviga
   if (loading) return <div className="min-h-screen flex items-center justify-center bg-[#FDFBF7]"><LoadingSpinner /></div>;
   if (error) return <div className="min-h-screen flex items-center justify-center bg-[#FDFBF7] text-gray-500">{error}</div>;
 
+  const collectionDetail = !isShopProduct ? (detailData as CollectionItemDetailData) : null;
+  const mainImage = collectionDetail?.images?.[0] || collectionDetail?.image || product.image;
+  const displayTitle = collectionDetail?.title || product.title;
+  const displayPrice = Number(collectionDetail?.price ?? product.price);
+  const fingerprint = collectionDetail?.fingerprint;
+  const priceZone = collectionDetail?.price_zone;
+  const sessionName = collectionDetail?.session_name;
+  const sessionTime = collectionDetail ? `${collectionDetail.session_start_time || '--:--'} - ${collectionDetail.session_end_time || '--:--'}` : '';
+  const isTrading = collectionDetail?.is_trading_time ?? true;
+
   return (
     <div className="min-h-screen bg-[#FDFBF7] text-gray-900 font-serif pb-24 relative overflow-hidden">
       {/* Background Texture */}
@@ -96,6 +106,7 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, onNaviga
             <div className="text-[10px] text-gray-400 uppercase tracking-[0.2em]">Digital Property Rights Certificate</div>
           </div>
 
+<<<<<<< HEAD
           {/* Asset Image Removed as requested */}
 
           {/* Certificate Fields */}
@@ -109,12 +120,36 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, onNaviga
                   backgroundSize: '20px 20px',
                   backgroundPosition: '0 0, 10px 10px'
                 }}>
+=======
+          {/* Asset Image (Stamp Style) */}
+          <div className="relative w-full aspect-[16/9] bg-gray-50 mb-8 border border-gray-100 p-2 shadow-inner">
+            <div className="w-full h-full relative overflow-hidden grayscale-[20%] hover:grayscale-0 transition-all duration-500">
+              <LazyImage src={mainImage} className="w-full h-full object-cover" />
+              {/* Official Stamp */}
+              <div className="absolute -right-4 -bottom-4 w-24 h-24 border-[3px] border-red-800 rounded-full flex items-center justify-center opacity-80 -rotate-12 mix-blend-multiply z-10 pointer-events-none">
+                <div className="w-[90%] h-[90%] border border-red-800 rounded-full flex items-center justify-center text-center">
+                  <span className="text-[10px] font-bold text-red-800 transform scale-75 leading-tight">
+                    数权中心<br />已确权<br />VERIFIED
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Certificate Fields */}
+          <div className="space-y-6 relative z-10 font-sans">
+            <div>
+              <label className="block text-xs font-bold text-gray-400 uppercase mb-1 tracking-wider">Asset Name / 资产名称</label>
+              <div className="text-lg font-bold text-gray-900 font-serif leading-tight">
+                {displayTitle}
+>>>>>>> 931393f (Enhance ProductDetail and TradingZone components: Updated ProductDetail to display collection details, including title, price, and session information. Improved TradingZone by integrating visual presets with trading session data and added isActive status handling for sessions.)
               </div>
 
               {/* Line 1: Certificate Number */}
               <div className="text-xs text-gray-500 font-[DINAlternate-Bold,Roboto,sans-serif] tracking-widest mb-3 relative z-10">
                 确权编号：37-DATA-2025-{product.id.toString().padStart(4, '0')}
               </div>
+<<<<<<< HEAD
 
               {/* Line 2: Product Name */}
               <h3 className={`${product.title.length > 12 ? 'text-lg' : product.title.length > 8 ? 'text-xl' : product.title.length > 5 ? 'text-2xl' : 'text-3xl'} font-extrabold text-gray-900 mb-3 font-serif tracking-tight leading-tight relative z-10 drop-shadow-sm whitespace-nowrap overflow-hidden text-ellipsis px-2`}>
@@ -164,8 +199,37 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, onNaviga
                     </text>
                   </g>
                 </svg>
+=======
+              <div>
+                <label className="block text-xs font-bold text-gray-400 uppercase mb-1 tracking-wider">Asset Type / 类型</label>
+                <div className="text-sm font-bold text-gray-800">
+                  {priceZone || '产业数据资产包'}
+                </div>
+>>>>>>> 931393f (Enhance ProductDetail and TradingZone components: Updated ProductDetail to display collection details, including title, price, and session information. Improved TradingZone by integrating visual presets with trading session data and added isActive status handling for sessions.)
               </div>
             </div>
+
+            {collectionDetail?.description && (
+              <div className="bg-amber-50/60 p-4 rounded-lg border border-amber-100">
+                <div className="text-xs font-bold text-amber-700 uppercase mb-1 tracking-wider">Description / 藏品描述</div>
+                <div className="text-sm text-amber-900 leading-relaxed">
+                  {collectionDetail.description}
+                </div>
+              </div>
+            )}
+
+            {(sessionName || sessionTime.trim()) && (
+              <div className="grid grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-xs font-bold text-gray-400 uppercase mb-1 tracking-wider">Session / 专场</label>
+                  <div className="text-sm font-bold text-gray-800">{sessionName || '—'}</div>
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-400 uppercase mb-1 tracking-wider">Trading Window / 场次时间</label>
+                  <div className="text-sm font-bold text-gray-800">{sessionTime || '—'}</div>
+                </div>
+              </div>
+            )}
 
             <div className="bg-gray-50 p-4 rounded-lg border border-gray-100">
               <div className="flex items-start gap-3 mb-3">
@@ -185,14 +249,26 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, onNaviga
 
             <div>
               <label className="block text-xs font-bold text-gray-400 uppercase mb-2 tracking-wider">Blockchain Fingerprint / 存证指纹</label>
+<<<<<<< HEAD
               <div className="bg-gray-900 text-green-500 font-mono text-[10px] p-3 rounded break-all leading-relaxed relative group cursor-pointer hover:bg-gray-800 transition-colors">
                 <Copy size={12} className="absolute right-2 top-2 text-gray-500 group-hover:text-green-400" />
                 <div className="flex items-center gap-2 mb-1 text-gray-500 font-sans font-bold">
                   <Fingerprint size={12} />
                   <span className="uppercase">TREE-CHAIN CONSORTIUM</span>
+=======
+              {fingerprint ? (
+                <div className="bg-gray-900 text-green-500 font-mono text-[10px] p-3 rounded break-all leading-relaxed relative group cursor-pointer hover:bg-gray-800 transition-colors">
+                  <Copy size={12} className="absolute right-2 top-2 text-gray-500 group-hover:text-green-400" />
+                  <div className="flex items-center gap-2 mb-1 text-gray-500 font-sans font-bold">
+                    <Fingerprint size={12} />
+                    <span className="uppercase">On-chain Proof</span>
+                  </div>
+                  {fingerprint}
+>>>>>>> 931393f (Enhance ProductDetail and TradingZone components: Updated ProductDetail to display collection details, including title, price, and session information. Improved TradingZone by integrating visual presets with trading session data and added isActive status handling for sessions.)
                 </div>
-                0x7d9a8b1c4e2f3a6b9c8d7e6f5a4b3c2d1e0f9a8b7c6d5e4f3a2b1c0d9e8f7a6
-              </div>
+              ) : (
+                <div className="text-xs text-gray-400">暂无上链指纹信息</div>
+              )}
             </div>
 
           </div>
@@ -200,6 +276,7 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, onNaviga
       </div>
 
       {/* Bottom Action */}
+<<<<<<< HEAD
       <div className="fixed bottom-0 left-0 right-0 p-4 bg-white/90 backdrop-blur-md border-t border-gray-100 z-50">
         {/* Market Heat Indicator */}
         <div className="flex items-center justify-between bg-red-50 rounded-full px-3 py-1.5 mb-3 border border-red-100">
@@ -209,6 +286,14 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, onNaviga
               <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
             </span>
             <span className="text-[10px] font-bold text-red-600">当前热度：极高 | 剩余额度：28%</span>
+=======
+      <div className="fixed bottom-0 left-0 right-0 p-4 bg-white/90 backdrop-blur-md border-t border-gray-100 z-50 flex items-center justify-between gap-4">
+        <div className="text-left">
+          <div className="text-xs text-gray-400 uppercase font-bold">Starting Bid / 起拍价</div>
+          <div className="text-xl font-bold text-gray-900 font-mono flex items-baseline">
+            <span className="text-sm">¥</span>
+            {displayPrice.toLocaleString()}
+>>>>>>> 931393f (Enhance ProductDetail and TradingZone components: Updated ProductDetail to display collection details, including title, price, and session information. Improved TradingZone by integrating visual presets with trading session data and added isActive status handling for sessions.)
           </div>
           <div className="text-[10px] font-mono text-red-500 font-bold">00:14:23</div>
         </div>
@@ -237,6 +322,16 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, onNaviga
             申请确权
           </button>
         </div>
+<<<<<<< HEAD
+=======
+        <button
+          disabled={!isTrading}
+          className={`flex-1 ${isTrading ? 'bg-[#8B0000] text-amber-100 hover:bg-[#A00000] shadow-lg shadow-red-900/20' : 'bg-gray-200 text-gray-400 shadow-none cursor-not-allowed'} transition-colors py-3.5 rounded-lg font-bold flex items-center justify-center gap-2 active:scale-[0.98]`}
+        >
+          <Gavel size={18} />
+          {isTrading ? '参与竞价摘牌' : '非交易时段'}
+        </button>
+>>>>>>> 931393f (Enhance ProductDetail and TradingZone components: Updated ProductDetail to display collection details, including title, price, and session information. Improved TradingZone by integrating visual presets with trading session data and added isActive status handling for sessions.)
       </div>
 
     </div>
