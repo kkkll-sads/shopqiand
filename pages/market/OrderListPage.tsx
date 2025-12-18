@@ -84,7 +84,9 @@ const OrderListPage: React.FC<OrderListPageProps> = ({ category, initialTab, onB
 
   // Navigate to Detail Page instead of Modal
   const handleViewDetail = (id: number) => {
-    onNavigate(`order-detail:${id}`);
+    // Pass source category and tab info for proper back navigation
+    // Format: order-detail:category:tab:orderId
+    onNavigate(`order-detail:${category}:${activeTab}:${id}`);
   };
 
   // ... (other handlers)
@@ -675,7 +677,7 @@ const OrderListPage: React.FC<OrderListPageProps> = ({ category, initialTab, onB
   return (
     <SubPageLayout title={config.title} onBack={onBack}>
       {/* Tabs */}
-      <div className="bg-white border-b border-gray-100 sticky top-12 z-20">
+      <div className="bg-white border-b border-gray-100 sticky top-0 z-20">
         <div className="flex overflow-x-auto no-scrollbar">
           {config.tabs.map((tab, index) => (
             <button

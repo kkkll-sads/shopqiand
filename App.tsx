@@ -635,7 +635,15 @@ const AppContent: React.FC = () => {
     if (subPage?.startsWith('asset:balance-recharge')) {
       const isFromProfile = subPage.includes(':profile');
       const isFromReservation = subPage.includes(':reservation');
-      return <BalanceRecharge onBack={() => setSubPage(isFromReservation ? 'reservation' : isFromProfile ? null : 'asset-view')} />;
+
+      // Extract amount if present (format: asset:balance-recharge:source:amount)
+      const parts = subPage.split(':');
+      const initialAmount = parts.length > 3 ? parts[parts.length - 1] : undefined;
+
+      return <BalanceRecharge
+        onBack={() => setSubPage(isFromReservation ? 'reservation' : isFromProfile ? null : 'asset-view')}
+        initialAmount={initialAmount}
+      />;
     }
 
     if (subPage?.startsWith('asset:balance-withdraw')) {
@@ -715,13 +723,39 @@ const AppContent: React.FC = () => {
     // Handle Order Detail Page: "order-detail:ORDER_ID"
     if (subPage?.startsWith('order-detail:')) {
       const orderId = subPage.split(':')[1];
-      return (
-        <OrderDetail
-          orderId={orderId}
-          onBack={() => setSubPage(null)} // Or setSubPage('orders')? Null is safer for history stack nature
-          onNavigate={(page) => setSubPage(page)}
-        />
-      );
+      // Extract the source page from the order-detail string if it exists
+      // Format: "order-detail:sourceCategory:sourceTab:orderId"
+      const parts = subPage.split(':');
+      let backPage = null;
+
+      if (parts.length >= 4) {
+        // Has source info: order-detail:points:0:123
+        const sourceCategory = parts[1];
+        const sourceTab = parts[2];
+        const actualOrderId = parts[3];
+        backPage = `order-list:${sourceCategory}:${sourceTab}`;
+
+        return (
+          <OrderDetail
+            orderId={actualOrderId}
+            onBack={() => setSubPage(backPage)}
+            onNavigate={(page) => setSubPage(page)}
+          />
+        );
+      } else {
+        // No source info, try to go back to a reasonable default
+        return (
+          <OrderDetail
+            orderId={orderId}
+            onBack={() => {
+              // Try to determine which order list to return to based on URL history
+              // Default to points order list if unknown
+              setSubPage('order-list:points:0');
+            }}
+            onNavigate={(page) => setSubPage(page)}
+          />
+        );
+      }
     }
 
     // Tab Routing

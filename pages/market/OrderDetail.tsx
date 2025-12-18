@@ -13,7 +13,7 @@ interface OrderDetailProps {
 }
 
 const OrderDetail: React.FC<OrderDetailProps> = ({ orderId, onBack, onNavigate }) => {
-    const { showTost, showDialog } = useNotification();
+    const { showToast, showDialog } = useNotification();
     const [order, setOrder] = useState<ShopOrderItemDetail | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -56,13 +56,13 @@ const OrderDetail: React.FC<OrderDetailProps> = ({ orderId, onBack, onNavigate }
                     const token = localStorage.getItem('cat_auth_token') || '';
                     const response = await confirmOrder({ id, token });
                     if (response.code === 1) {
-                        showTost('success', '收货成功');
+                        showToast('success', '收货成功');
                         loadOrder(); // Reload to update status
                     } else {
-                        showTost('error', response.msg || '操作失败');
+                        showToast('error', response.msg || '操作失败');
                     }
                 } catch (error) {
-                    showTost('error', '网络请求失败');
+                    showToast('error', '网络请求失败');
                 }
             }
         });
@@ -71,9 +71,9 @@ const OrderDetail: React.FC<OrderDetailProps> = ({ orderId, onBack, onNavigate }
     // Copy to clipboard helper
     const copyToClipboard = (text: string) => {
         navigator.clipboard.writeText(text).then(() => {
-            showTost('success', '复制成功');
+            showToast('success', '复制成功');
         }).catch(() => {
-            showTost('error', '复制失败');
+            showToast('error', '复制失败');
         });
     };
 
@@ -270,32 +270,71 @@ const OrderDetail: React.FC<OrderDetailProps> = ({ orderId, onBack, onNavigate }
             </div>
 
             {/* Footer Actions */}
-            <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-gray-100 z-50 flex items-center justify-end gap-3 safe-area-bottom shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
-                {/* Pending Pay */}
-                {String(order.status) === '0' && (
-                    <button
-                        onClick={() => handlePayOrder(order.id)}
-                        className={`px-6 py-2.5 rounded-full text-white font-bold shadow-lg active:scale-95 transition-transform ${isScoreOrder ? 'bg-gradient-to-r from-orange-500 to-red-500 shadow-orange-200' : 'bg-blue-600 shadow-blue-200'}`}
-                    >
-                        立即付款
-                    </button>
+            <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-gray-100 z-50 safe-area-bottom shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+                {/* Debug: Log order status */}
+                {console.log('Order status:', order.status, 'Type:', typeof order.status, 'String:', String(order.status))}
+
+                {/* Pending Pay - status: 0 or 'pending' */}
+                {(order.status === 0 || order.status === 'pending' || String(order.status) === '0') && (
+                    <div className="flex items-center justify-between">
+                        <div className="text-sm text-gray-600">
+                            <div className="font-medium text-gray-800">待支付</div>
+                            <div className="text-xs mt-0.5">请尽快完成支付</div>
+                        </div>
+                        <button
+                            onClick={() => handlePayOrder(order.id)}
+                            className={`px-6 py-2.5 rounded-full text-white font-bold shadow-lg active:scale-95 transition-transform ${isScoreOrder ? 'bg-gradient-to-r from-orange-500 to-red-500 shadow-orange-200' : 'bg-blue-600 shadow-blue-200'}`}
+                        >
+                            立即付款
+                        </button>
+                    </div>
                 )}
 
-                {/* Shipped -> Pending Receipt */}
-                {String(order.status) === '2' && (
-                    <button
-                        onClick={() => handleConfirmReceipt(order.id)}
-                        className="px-6 py-2.5 bg-blue-600 text-white font-bold rounded-full shadow-lg shadow-blue-200 active:scale-95 transition-transform"
-                    >
-                        确认收货
-                    </button>
+                {/* Paid - Pending Ship - status: 1 or 'paid' */}
+                {(order.status === 1 || order.status === 'paid' || String(order.status) === '1') && (
+                    <div className="text-center">
+                        <div className="font-medium text-gray-800 mb-1">等待商家发货</div>
+                        <div className="text-xs text-gray-500">商家正在备货中，请耐心等待</div>
+                    </div>
                 )}
 
-                {/* Completed/Closed/Canceled */}
-                {['3', '4', '-1'].includes(String(order.status)) && (
-                    <button className="px-6 py-2.5 bg-gray-100 text-gray-400 font-bold rounded-full cursor-not-allowed">
-                        {String(order.status) === '3' ? '已完成' : '已关闭'}
-                    </button>
+                {/* Shipped -> Pending Receipt - status: 2 or 'shipped' */}
+                {(order.status === 2 || order.status === 'shipped' || String(order.status) === '2') && (
+                    <div className="flex items-center justify-between">
+                        <div className="text-sm text-gray-600">
+                            <div className="font-medium text-gray-800">待收货</div>
+                            <div className="text-xs mt-0.5">商品运输中，请留意查收</div>
+                        </div>
+                        <button
+                            onClick={() => handleConfirmReceipt(order.id)}
+                            className="px-6 py-2.5 bg-blue-600 text-white font-bold rounded-full shadow-lg shadow-blue-200 active:scale-95 transition-transform"
+                        >
+                            确认收货
+                        </button>
+                    </div>
+                )}
+
+                {/* Completed - status: 3 or 'completed' */}
+                {(order.status === 3 || order.status === 'completed' || String(order.status) === '3') && (
+                    <div className="text-center">
+                        <div className="font-medium text-gray-800 mb-1">订单已完成</div>
+                        <div className="text-xs text-gray-500">感谢您的购买</div>
+                    </div>
+                )}
+
+                {/* Closed/Canceled - status: 4, -1, 'closed', 'cancelled' */}
+                {(order.status === 4 || order.status === -1 || order.status === 'closed' || order.status === 'cancelled' || ['4', '-1'].includes(String(order.status))) && (
+                    <div className="text-center">
+                        <div className="font-medium text-gray-600 mb-1">订单已关闭</div>
+                        <div className="text-xs text-gray-400">该订单已取消或关闭</div>
+                    </div>
+                )}
+
+                {/* Fallback - always show something if no condition matched */}
+                {!([0, 1, 2, 3, 4, -1, '0', '1', '2', '3', '4', '-1', 'pending', 'paid', 'shipped', 'completed', 'closed', 'cancelled'].includes(order.status as any)) && (
+                    <div className="text-center text-gray-500 text-sm">
+                        状态未知: {order.status} ({order.status_text || '无状态文本'})
+                    </div>
                 )}
             </div>
         </div>

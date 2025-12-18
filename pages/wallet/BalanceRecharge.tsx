@@ -1,15 +1,15 @@
 
 import React, { useEffect, useState } from 'react';
-import { ChevronLeft, Zap, Radar, CheckCircle, Shield, AlertTriangle, X, Wallet, CreditCard, Banknote } from 'lucide-react';
+import { ChevronLeft, Zap, Radar, CheckCircle, Shield, AlertTriangle, X, Wallet, CreditCard, Banknote, Upload, Image as ImageIcon } from 'lucide-react';
 
-import { PageContainer, LoadingSpinner } from '../../components/common'; // Assuming common exports
+import { LoadingSpinner } from '../../components/common';
 import { fetchCompanyAccountList, CompanyAccountItem, submitRechargeOrder } from '../../services/api';
-import { toast } from 'react-hot-toast'; // Assuming toast usage or replace with alert
 import { useNotification } from '../../context/NotificationContext';
 
 interface BalanceRechargeProps {
   onBack: () => void;
-  onNavigate: (page: string) => void;
+  onNavigate?: (page: string) => void;
+  initialAmount?: string;
 }
 
 // Payment Methods Configuration
@@ -20,10 +20,10 @@ const PAYMENT_METHODS = [
   { id: 'cloud_flash', name: '云闪付', icon: 'http://oss.spyggw.cc/unnamed.png', color: 'bg-red-50 text-red-600', border: 'border-red-100' },
 ];
 
-const BalanceRecharge: React.FC<BalanceRechargeProps> = ({ onBack, onNavigate }) => {
+const BalanceRecharge: React.FC<BalanceRechargeProps> = ({ onBack, onNavigate, initialAmount }) => {
 
   // Common State
-  const [amount, setAmount] = useState<string>('');
+  const [amount, setAmount] = useState<string>(initialAmount || '');
   const [selectedMethod, setSelectedMethod] = useState<string | null>(null);
 
   const { showToast } = useNotification();
@@ -54,6 +54,11 @@ const BalanceRecharge: React.FC<BalanceRechargeProps> = ({ onBack, onNavigate })
       setLoading(false);
     }
   };
+
+  // Image Upload State
+  const [uploadedImage, setUploadedImage] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
 
   const startMatching = () => {
     if (!amount || Number(amount) <= 0) {
@@ -90,10 +95,78 @@ const BalanceRecharge: React.FC<BalanceRechargeProps> = ({ onBack, onNavigate })
     }, 2500); // 2.5s scan time
   };
 
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!['image/jpeg', 'image/png', 'image/gif'].includes(file.type)) {
+      showToast('error', '格式错误', '只支持 JPG、PNG、GIF 格式');
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      showToast('error', '文件过大', '图片大小不能超过 5MB');
+      return;
+    }
+
+    setUploadedImage(file);
+
+    // Create preview URL
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setImagePreview(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleSubmitOrder = async () => {
+    if (!uploadedImage) {
+      showToast('warning', '请上传截图', '请先上传付款截图');
+      return;
+    }
+
+    if (!matchedAccount) {
+      showToast('error', '系统错误', '未找到匹配账户');
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const response = await submitRechargeOrder({
+        company_account_id: matchedAccount.id,
+        amount: Number(amount),
+        payment_screenshot: uploadedImage,
+        payment_type: selectedMethod || undefined,
+      });
+
+      if (response.code === 1) {
+        showToast('success', '提交成功', `订单号: ${response.data?.order_no || response.data?.order_id || '已生成'}`);
+
+        // Reset form
+        setAmount('');
+        setSelectedMethod(null);
+        setUploadedImage(null);
+        setImagePreview(null);
+        handleClose();
+      } else {
+        showToast('error', '提交失败', response.msg || '请重试');
+      }
+    } catch (error: any) {
+      console.error('Submit recharge order error:', error);
+      showToast('error', '提交失败', error.message || '网络错误，请重试');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const handleClose = () => {
     setIsMatching(false);
     setMatchStep(0);
     setMatchedAccount(null);
+    setUploadedImage(null);
+    setImagePreview(null);
   };
 
   return (
@@ -252,18 +325,82 @@ const BalanceRecharge: React.FC<BalanceRechargeProps> = ({ onBack, onNavigate })
                 </div>
 
                 {/* Warning */}
-                <div className="bg-red-50 p-3 rounded-xl flex items-start gap-2 mb-6">
+                <div className="bg-red-50 p-3 rounded-xl flex items-start gap-2 mb-4">
                   <AlertTriangle size={16} className="text-red-500 shrink-0 mt-0.5" />
                   <p className="text-xs text-red-600 leading-tight">
                     您正在委托授权服务商办理专项金划拨业务，请务必使用本人账户转账，<span className="font-bold underline">备注您的UID</span>，否则将无法自动到账。
                   </p>
                 </div>
 
+                {/* Image Upload Section */}
+                <div className="mb-4">
+                  <label className="block text-sm font-bold text-gray-700 mb-2">
+                    上传付款截图
+                  </label>
+
+                  {/* Hidden file input */}
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/png,image/gif"
+                    onChange={handleImageSelect}
+                    className="hidden"
+                    id="payment-screenshot"
+                  />
+
+                  {/* Upload button or preview */}
+                  {!imagePreview ? (
+                    <label
+                      htmlFor="payment-screenshot"
+                      className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 rounded-xl cursor-pointer hover:border-orange-500 hover:bg-orange-50/50 transition-colors"
+                    >
+                      <Upload size={32} className="text-gray-400 mb-2" />
+                      <span className="text-sm text-gray-500">点击上传付款截图</span>
+                      <span className="text-xs text-gray-400 mt-1">支持 JPG/PNG/GIF，最大5MB</span>
+                    </label>
+                  ) : (
+                    <div className="relative">
+                      <img
+                        src={imagePreview}
+                        alt="付款截图"
+                        className="w-full h-64 object-contain bg-gray-900 rounded-xl"
+                      />
+                      <button
+                        onClick={() => {
+                          setUploadedImage(null);
+                          setImagePreview(null);
+                        }}
+                        className="absolute top-2 right-2 w-8 h-8 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors"
+                      >
+                        <X size={16} />
+                      </button>
+                      <label
+                        htmlFor="payment-screenshot"
+                        className="absolute bottom-2 right-2 px-3 py-1 bg-white/90 backdrop-blur text-xs font-medium text-gray-700 rounded-full cursor-pointer hover:bg-white transition-colors border border-gray-200"
+                      >
+                        重新上传
+                      </label>
+                    </div>
+                  )}
+                </div>
+
+                {/* Submit Button */}
+                <button
+                  onClick={handleSubmitOrder}
+                  disabled={!uploadedImage || submitting}
+                  className={`w-full py-3 rounded-xl font-bold text-sm transition-all ${uploadedImage && !submitting
+                    ? 'bg-orange-600 text-white hover:bg-orange-700 active:scale-[0.98]'
+                    : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                    }`}
+                >
+                  {submitting ? '提交中...' : '提交充值订单'}
+                </button>
+
+                {/* Close Button */}
                 <button
                   onClick={handleClose}
-                  className="w-full py-3 rounded-xl bg-gray-900 text-white font-bold text-sm"
+                  className="w-full py-3 rounded-xl bg-gray-100 text-gray-600 font-bold text-sm mt-2 hover:bg-gray-200 transition-colors"
                 >
-                  我已完成转账 (关闭)
+                  稍后处理
                 </button>
               </div>
             </div>
