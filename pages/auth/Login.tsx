@@ -8,12 +8,17 @@
  */
 
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Eye, EyeOff, User, Lock, Check } from 'lucide-react';
 import { login as loginApi, LoginParams } from '../../services/api';
 import { LoginSuccessPayload } from '../../types';
 import { isValidPhone } from '../../utils/validation';
 import { useNotification } from '../../context/NotificationContext';
+
+// localStorage 存储键名
+const STORAGE_KEY_PHONE = 'login_remembered_phone';
+const STORAGE_KEY_PASSWORD = 'login_remembered_password';
+const STORAGE_KEY_REMEMBER = 'login_remember_me';
 
 /**
  * Login 组件属性接口
@@ -45,6 +50,51 @@ const Login: React.FC<LoginProps> = ({
   const [verifyCode, setVerifyCode] = useState('');
   const [loginType, setLoginType] = useState<'password' | 'code'>('password');
   const [countdown, setCountdown] = useState(0);
+  const [rememberMe, setRememberMe] = useState(false);
+
+  /**
+   * 组件加载时，从 localStorage 读取已保存的账号密码
+   */
+  useEffect(() => {
+    try {
+      const savedRemember = localStorage.getItem(STORAGE_KEY_REMEMBER);
+      if (savedRemember === 'true') {
+        const savedPhone = localStorage.getItem(STORAGE_KEY_PHONE) || '';
+        const savedPassword = localStorage.getItem(STORAGE_KEY_PASSWORD) || '';
+        setPhone(savedPhone);
+        setPassword(savedPassword);
+        setRememberMe(true);
+      }
+    } catch (error) {
+      console.error('读取记住密码信息失败:', error);
+    }
+  }, []);
+
+  /**
+   * 保存账号密码到 localStorage
+   */
+  const saveCredentials = () => {
+    try {
+      localStorage.setItem(STORAGE_KEY_PHONE, phone);
+      localStorage.setItem(STORAGE_KEY_PASSWORD, password);
+      localStorage.setItem(STORAGE_KEY_REMEMBER, 'true');
+    } catch (error) {
+      console.error('保存记住密码信息失败:', error);
+    }
+  };
+
+  /**
+   * 清除 localStorage 中的账号密码
+   */
+  const clearCredentials = () => {
+    try {
+      localStorage.removeItem(STORAGE_KEY_PHONE);
+      localStorage.removeItem(STORAGE_KEY_PASSWORD);
+      localStorage.removeItem(STORAGE_KEY_REMEMBER);
+    } catch (error) {
+      console.error('清除记住密码信息失败:', error);
+    }
+  };
 
   /**
    * 发送验证码
@@ -130,6 +180,14 @@ const Login: React.FC<LoginProps> = ({
           showToast('error', '登录异常', '登录成功，但未获取到 token，无法继续');
           return;
         }
+
+        // 根据"记住密码"选项处理凭证存储
+        if (rememberMe) {
+          saveCredentials();
+        } else {
+          clearCredentials();
+        }
+
         showToast('success', '登录成功', response.msg);
         onLogin({
           token,
@@ -248,12 +306,16 @@ const Login: React.FC<LoginProps> = ({
       {/* 选项 */}
       <div className="flex justify-between items-center mb-10 text-sm">
         <label className="flex items-center text-gray-700 gap-2 cursor-pointer select-none">
-          <div className="relative">
-            <input type="checkbox" className="peer sr-only" />
-            <div className="w-4 h-4 border border-orange-400 rounded bg-transparent peer-checked:bg-orange-400 peer-checked:border-orange-400 transition-colors"></div>
-            <Check size={12} className="absolute top-0.5 left-0.5 text-white opacity-0 peer-checked:opacity-100" />
+          <div
+            className={`w-4 h-4 border rounded flex items-center justify-center transition-colors cursor-pointer ${rememberMe
+                ? 'bg-orange-400 border-orange-400'
+                : 'border-orange-400 bg-transparent'
+              }`}
+            onClick={() => setRememberMe(!rememberMe)}
+          >
+            {rememberMe && <Check size={12} className="text-white" />}
           </div>
-          <span>记住密码</span>
+          <span onClick={() => setRememberMe(!rememberMe)}>记住密码</span>
         </label>
         <button type="button" className="text-gray-600" onClick={onNavigateForgotPassword}>
           忘记密码

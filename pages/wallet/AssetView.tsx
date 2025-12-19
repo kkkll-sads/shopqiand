@@ -955,7 +955,7 @@ const AssetView: React.FC<AssetViewProps> = ({ onBack, onNavigate, onProductSele
                   绿色算力 <ArrowRight size={10} className="opacity-70" />
                 </div>
                 <div className="text-lg font-bold font-[DINAlternate-Bold,Roboto,sans-serif] text-[#E0F2F1] drop-shadow-[0_0_8px_rgba(0,255,0,0.3)]">
-                  {userInfo?.carbon_quota || 0} <span className="text-xs font-normal opacity-70">GHs</span>
+                  {userInfo?.green_power || 0} <span className="text-xs font-normal opacity-70">GHs</span>
                 </div>
               </div>
 

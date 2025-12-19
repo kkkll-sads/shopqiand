@@ -77,20 +77,24 @@ export interface UserInfo {
   static_income: string;
   dynamic_income: string;
   score: number;
+  /** 绿色算力 */
+  green_power: string | number;
   last_login_time: number;
   last_login_ip: string;
   join_time: number;
   motto: string;
-  draw_count: number;
+  draw_count?: number;
   user_type: number;
   token: string;
   refresh_token: string;
+  invite_code: string;
   /** 代理商审核状态(-1=未申请,0=待审核,1=已通过,2=已拒绝) */
-  agent_review_status?: number;
-  /** 绿色算力 */
-  carbon_quota?: number | string;
-  /** 待激活确权金 */
+  agent_review_status: number;
+
+  /** 待激活确权金 (Legacy?) */
   pending_service_fee?: number | string;
+  /** 旧资产冻结余额 (对应 PHP legacy_frozen) */
+  legacy_frozen?: number | string;
 }
 
 export interface ProfileResponse {

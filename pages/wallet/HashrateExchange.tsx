@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ChevronLeft, Zap, Server, Shield, Leaf, Activity } from 'lucide-react';
 import { LoadingSpinner } from '../../components/common';
 
-import { fetchProfile, USER_INFO_KEY, AUTH_TOKEN_KEY } from '../../services/api';
+import { fetchProfile, exchangeScoreToGreenPower, USER_INFO_KEY, AUTH_TOKEN_KEY } from '../../services/api';
 import { UserInfo } from '../../types';
 import { useNotification } from '../../context/NotificationContext';
 
@@ -48,7 +48,7 @@ const HashrateExchange: React.FC<HashrateExchangeProps> = ({ onBack, onNavigate 
     };
 
 
-    const handleExchange = () => {
+    const handleExchange = async () => {
         if (!amount || Number(amount) <= 0) {
             showToast('warning', '输入有误', '请输入兑换数量');
             return;
@@ -59,21 +59,30 @@ const HashrateExchange: React.FC<HashrateExchangeProps> = ({ onBack, onNavigate 
             return;
         }
 
-        setConfirming(true);
-        // Mock API Call
-        setTimeout(() => {
-            showToast('success', '兑换成功', '绿色算力已到账');
-            // Update local state mock
-            if (userInfo) {
-                setUserInfo({
-                    ...userInfo,
-                    score: userInfo.score - cost,
-                    carbon_quota: (Number(userInfo.carbon_quota || 0) + Number(amount)).toFixed(2)
-                });
+        try {
+            setConfirming(true);
+            const res = await exchangeScoreToGreenPower({ score: cost });
+
+            if (res.code === 1 && res.data) {
+                showToast('success', '兑换成功', `消耗 ${res.data.score_consumed} 消费金，获得 ${res.data.green_power_gained} 绿色算力`);
+
+                // Update local state with latest data from API
+                if (userInfo) {
+                    setUserInfo({
+                        ...userInfo,
+                        score: res.data.after_score,
+                        green_power: res.data.after_green_power // Assuming green_power maps to green_power
+                    });
+                }
+                setAmount('');
+            } else {
+                showToast('error', '兑换失败', res.msg || '未知错误');
             }
+        } catch (error: any) {
+            showToast('error', '兑换异常', error.message || '网络请求失败');
+        } finally {
             setConfirming(false);
-            setAmount('');
-        }, 1500);
+        }
     };
 
     return (
@@ -102,7 +111,7 @@ const HashrateExchange: React.FC<HashrateExchangeProps> = ({ onBack, onNavigate 
                                 补充额度 (GH/s)
                             </div>
                             <div className="text-xs text-gray-400">
-                                当前持有: <span className="text-green-600 font-bold">{userInfo?.carbon_quota || 0}</span> GHs
+                                当前持有: <span className="text-green-600 font-bold">{userInfo?.green_power || 0}</span> GHs
                             </div>
                         </div>
 

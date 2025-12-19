@@ -230,7 +230,7 @@ const Profile: React.FC<ProfileProps> = ({ onNavigate }) => {
                 onClick={() => onNavigate('wallet:hashrate_exchange:profile')}
               >
                 <div className="text-[10px] text-gray-400 mb-1 font-medium scale-90 origin-center whitespace-nowrap flex items-center justify-center gap-0.5">绿色算力 <Leaf size={9} className="text-green-500" /></div>
-                <div className="text-sm font-bold text-gray-800 font-[DINAlternate-Bold] whitespace-nowrap leading-none">{userInfo?.carbon_quota || 0}</div>
+                <div className="text-sm font-bold text-gray-800 font-[DINAlternate-Bold] whitespace-nowrap leading-none">{userInfo?.green_power || 0}</div>
                 <div className="absolute right-0 top-1 bottom-1 w-[0.5px] bg-gray-100"></div>
               </div>
 

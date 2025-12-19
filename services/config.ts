@@ -87,6 +87,8 @@ export const API_ENDPOINTS = {
         allLog: '/Account/allLog',
         /** 消费金日志 */
         integral: '/Account/integral',
+        /** 消费金兑换绿色算力 */
+        exchangeScoreToGreenPower: '/Account/exchangeScoreToGreenPower',
     },
     address: {
         /** 收货地址列表 */

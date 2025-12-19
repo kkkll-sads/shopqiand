@@ -65,6 +65,8 @@ import CumulativeRights from './pages/wallet/CumulativeRights';
 import MyCollection from './pages/wallet/MyCollection';
 import MyCollectionDetail from './pages/wallet/MyCollectionDetail';
 import ClaimStation from './pages/wallet/ClaimStation';
+import ClaimHistory from './pages/wallet/ClaimHistory';
+import ClaimDetail from './pages/wallet/ClaimDetail';
 import HashrateExchange from './pages/wallet/HashrateExchange';
 import { RealNameRequiredModal } from './components/common';
 import { NotificationProvider } from './context/NotificationContext';
@@ -661,6 +663,11 @@ const AppContent: React.FC = () => {
       return <ServiceRecharge onBack={() => setSubPage(isFromProfile ? null : 'asset-view')} />;
     }
 
+    if (subPage?.startsWith('claim-detail:')) {
+      const id = subPage.split(':')[1];
+      return <ClaimDetail id={id} onBack={() => setSubPage('claim-history')} />;
+    }
+
     switch (subPage) {
       case 'asset:extension-withdraw':
         return <ExtensionWithdraw onBack={() => setSubPage('asset-view')} />;
@@ -672,6 +679,14 @@ const AppContent: React.FC = () => {
             onBack={() => setSubPage('asset-view')}
           />
         );
+      case 'claim-history':
+        return (
+          <ClaimHistory
+            onBack={() => setSubPage(null)}
+            onNavigate={(page) => setSubPage(page)}
+          />
+        );
+
       case 'cumulative-rights':
         return <CumulativeRights onBack={() => setSubPage(null)} />;
       case 'consignment-voucher':
@@ -771,7 +786,7 @@ const AppContent: React.FC = () => {
       case 'market':
         return <Market onProductSelect={(product) => handleProductSelect(product, 'market')} />;
       case 'rights':
-        return <ClaimStation />;
+        return <ClaimStation onNavigate={(page) => setSubPage(page)} />;
       case 'orders':
         return <Orders onNavigate={(page) => setSubPage(page)} />;
       case 'profile':

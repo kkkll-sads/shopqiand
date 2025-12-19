@@ -32,9 +32,9 @@ const ReservationPage: React.FC<ReservationPageProps> = ({ product, onBack, onNa
     }, []);
 
     const baseHashrate = 5.0;
-    
+
     // Calculate values from real data or fallbacks
-    // Use carbon_quota for hashrate/points
+    // Use green_power for hashrate/points
     // TODO: Revert to real data when backend is ready
     const availableHashrate = 15.5; // Mock data as requested by user
     const specialFund = userInfo ? parseFloat(userInfo.money || '0') : 0;
@@ -43,7 +43,7 @@ const ReservationPage: React.FC<ReservationPageProps> = ({ product, onBack, onNa
     const totalRequiredHashrate = baseHashrate + extraHashrate;
     const isHashrateSufficient = availableHashrate >= totalRequiredHashrate;
     const isFundSufficient = specialFund >= frozenAmount;
-    
+
     // Check if can increase hashrate further
     const canIncreaseHashrate = availableHashrate >= (baseHashrate + extraHashrate + 0.5);
 
@@ -180,8 +180,8 @@ const ReservationPage: React.FC<ReservationPageProps> = ({ product, onBack, onNa
                 <button
                     onClick={(!isHashrateSufficient || !isFundSufficient) ? handleRecharge : handleReservation}
                     className={`w-full py-3.5 rounded-xl font-bold text-lg flex items-center justify-center gap-2 shadow-lg transition-all active:scale-[0.98] ${isHashrateSufficient && isFundSufficient
-                            ? 'bg-[#8B0000] text-amber-50 shadow-red-900/20 hover:bg-[#A00000]'
-                            : 'bg-[#8B0000] text-white opacity-90'
+                        ? 'bg-[#8B0000] text-amber-50 shadow-red-900/20 hover:bg-[#A00000]'
+                        : 'bg-[#8B0000] text-white opacity-90'
                         }`}
                 >
                     {!isHashrateSufficient ? '前往获取算力' : !isFundSufficient ? '前往充值专项金' : '确认预约'}

@@ -789,3 +789,35 @@ export async function fetchSignInProgress(
         throw error;
     }
 }
+
+export interface ExchangeScoreToGreenPowerParams {
+    score: number | string;
+    token?: string;
+}
+
+export interface ExchangeScoreToGreenPowerResult {
+    score_consumed: number;
+    green_power_gained: number;
+    before_score: number;
+    after_score: number;
+    before_green_power: number;
+    after_green_power: number;
+    exchange_rate: number;
+}
+
+export async function exchangeScoreToGreenPower(params: ExchangeScoreToGreenPowerParams): Promise<ApiResponse<ExchangeScoreToGreenPowerResult>> {
+    const token = params.token || localStorage.getItem(AUTH_TOKEN_KEY) || '';
+    if (!params.score || Number(params.score) <= 0) {
+        throw new Error('请输入有效的消费金数量');
+    }
+
+    const search = new URLSearchParams();
+    search.set('score', String(params.score));
+
+    const path = `${API_ENDPOINTS.account.exchangeScoreToGreenPower}?${search.toString()}`;
+
+    return apiFetch<ExchangeScoreToGreenPowerResult>(path, {
+        method: 'POST',
+        token,
+    });
+}
