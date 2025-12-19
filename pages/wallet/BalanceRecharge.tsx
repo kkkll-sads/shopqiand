@@ -172,7 +172,7 @@ const BalanceRecharge: React.FC<BalanceRechargeProps> = ({ onBack, onNavigate, i
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col font-sans text-gray-900 pb-safe">
       {/* 1. Header */}
-      <div className="bg-gradient-to-b from-orange-100 to-gray-50 p-5 pt-4">
+      <div className="bg-gradient-to-b from-orange-100 to-gray-50 px-4 py-5 pt-4">
         <div className="flex items-center gap-3 mb-6">
           <button onClick={onBack} className="w-8 h-8 flex items-center justify-center bg-white rounded-full shadow-sm text-gray-700">
             <ChevronLeft size={20} />
@@ -208,7 +208,7 @@ const BalanceRecharge: React.FC<BalanceRechargeProps> = ({ onBack, onNavigate, i
       </div>
 
       {/* 2. Payment Method Selection */}
-      <div className="px-5 flex-1">
+      <div className="px-4 flex-1">
         <h2 className="text-sm font-bold text-gray-900 mb-4 flex items-center gap-2">
           <span className="w-1 h-4 bg-orange-500 rounded-full"></span>
           选择支付通道
@@ -242,7 +242,7 @@ const BalanceRecharge: React.FC<BalanceRechargeProps> = ({ onBack, onNavigate, i
       </div>
 
       {/* 3. Bottom Action */}
-      <div className="p-5 safe-area-bottom bg-white/80 backdrop-blur border-t border-gray-100">
+      <div className="px-4 py-5 safe-area-bottom bg-white/80 backdrop-blur border-t border-gray-100">
         <button
           onClick={startMatching}
           className="w-full py-4 rounded-xl bg-gradient-to-r from-[#FF6B35] to-[#FF9F2E] text-white font-bold text-lg shadow-lg shadow-orange-200 active:scale-[0.98] transition-transform flex items-center justify-center gap-2"
@@ -257,7 +257,7 @@ const BalanceRecharge: React.FC<BalanceRechargeProps> = ({ onBack, onNavigate, i
 
       {/* 4. Radar Scanning Modal */}
       {isMatching && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/80 backdrop-blur-md animate-in fade-in">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md animate-in fade-in overflow-y-auto p-4">
           {matchStep === 1 && (
             <div className="text-center flex flex-col items-center">
               {/* Radar Animation */}
@@ -291,7 +291,7 @@ const BalanceRecharge: React.FC<BalanceRechargeProps> = ({ onBack, onNavigate, i
               </div>
 
               {/* Account Details */}
-              <div className="p-6">
+              <div className="p-6 max-h-[70vh] overflow-y-auto">
                 <div className="flex items-center justify-between mb-4">
                   <span className="text-xs font-bold text-gray-400 uppercase">Service Specialist</span>
                   <span className="px-2 py-0.5 bg-orange-50 text-orange-600 text-[10px] font-bold rounded">已缴保证金</span>

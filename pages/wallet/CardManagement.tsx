@@ -290,14 +290,14 @@ const CardManagement: React.FC<CardManagementProps> = ({ onBack }) => {
   };
 
   const renderForm = () => (
-    <form className="bg-white rounded-xl p-4 shadow-sm mb-4 space-y-3" onSubmit={handleSubmit}>
-      <div className="flex items-center justify-between mb-1">
-        <h2 className="text-sm font-bold text-gray-800">
+    <form className="bg-white rounded-2xl p-6 shadow-xl shadow-orange-100/50 mb-6 space-y-4 border border-orange-50" onSubmit={handleSubmit}>
+      <div className="flex items-center justify-between mb-2">
+        <h2 className="text-base font-bold text-gray-900">
           {mode === 'edit' ? '编辑账户' : '新增账户'}
         </h2>
         <button
           type="button"
-          className="text-xs text-gray-500 active:opacity-70"
+          className="text-sm text-gray-500 hover:text-gray-700 active:opacity-70 transition-colors px-3 py-1 rounded-lg hover:bg-gray-100"
           onClick={() => {
             resetForm();
             setMode('list');
@@ -306,9 +306,9 @@ const CardManagement: React.FC<CardManagementProps> = ({ onBack }) => {
           取消
         </button>
       </div>
-      <div className="text-xs text-gray-600 flex flex-col gap-2">
-        <span>账户类型</span>
-        <div className="grid grid-cols-4 gap-2">
+      <div className="text-sm text-gray-700 flex flex-col gap-2">
+        <span className="font-medium">账户类型</span>
+        <div className="grid grid-cols-2 gap-3">
           {[
             { value: 'bank_card', label: '银行卡' },
             { value: 'alipay', label: '支付宝' },
@@ -320,10 +320,10 @@ const CardManagement: React.FC<CardManagementProps> = ({ onBack }) => {
               <button
                 key={opt.value}
                 type="button"
-                className={`py-1.5 rounded-md text-xs border ${active
-                  ? 'bg-orange-50 text-orange-600 border-orange-300'
-                  : 'bg-white text-gray-600 border-gray-200'
-                  } active:opacity-80`}
+                className={`py-3 px-4 rounded-xl text-sm font-medium border-2 transition-all ${active
+                    ? 'bg-gradient-to-r from-orange-50 to-orange-100/50 text-orange-600 border-orange-300 shadow-sm shadow-orange-100'
+                    : 'bg-white text-gray-600 border-gray-200 hover:border-orange-200'
+                  } active:scale-[0.98]`}
                 onClick={() => handleFormInputChange('type', opt.value)}
               >
                 {opt.label}
@@ -334,26 +334,26 @@ const CardManagement: React.FC<CardManagementProps> = ({ onBack }) => {
       </div>
 
       {formValues.type === 'bank_card' && (
-        <label className="text-xs text-gray-600 flex flex-col gap-1">
-          <span>银行名称（必填）</span>
+        <label className="text-sm text-gray-700 flex flex-col gap-2">
+          <span className="font-medium">银行名称 <span className="text-red-500">*</span></span>
           <div
-            className="border border-gray-200 rounded-md px-3 py-2.5 text-sm text-gray-800 flex items-center justify-between active:bg-gray-50 transition-colors cursor-pointer bg-gray-50/50"
+            className="border-2 border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-800 flex items-center justify-between hover:border-orange-300 active:bg-orange-50/30 transition-all cursor-pointer bg-gray-50/50 focus-within:ring-2 focus-within:ring-orange-500/20 focus-within:border-orange-500"
             onClick={() => setShowBankPicker(true)}
           >
-            <span className={formValues.bank_name ? 'text-gray-900' : 'text-gray-400'}>
-              {formValues.bank_name || '请选择银行'}
+            <span className={formValues.bank_name ? 'text-gray-900 font-medium' : 'text-gray-400'}>
+              {formValues.bank_name || '点击选择银行'}
             </span>
             <div className="text-orange-500">
-              <Edit2 size={14} className="opacity-60" />
+              <Edit2 size={16} />
             </div>
           </div>
         </label>
       )}
 
-      <label className="text-xs text-gray-600 flex flex-col gap-1">
-        <span>账户名称 / 持卡人</span>
+      <label className="text-sm text-gray-700 flex flex-col gap-2">
+        <span className="font-medium">账户名称 / 持卡人 <span className="text-red-500">*</span></span>
         <input
-          className="border border-gray-200 rounded-md px-3 py-2 text-sm text-gray-800"
+          className="border-2 border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-800 focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 focus:outline-none transition-all placeholder:text-gray-400"
           type="text"
           placeholder="请输入账户名或持卡人姓名"
           value={formValues.account_name}
@@ -361,10 +361,10 @@ const CardManagement: React.FC<CardManagementProps> = ({ onBack }) => {
         />
       </label>
 
-      <label className="text-xs text-gray-600 flex flex-col gap-1">
-        <span>账号 / 卡号 / 收款账号</span>
+      <label className="text-sm text-gray-700 flex flex-col gap-2">
+        <span className="font-medium">账号 / 卡号 / 收款账号 <span className="text-red-500">*</span></span>
         <input
-          className="border border-gray-200 rounded-md px-3 py-2 text-sm text-gray-800"
+          className="border-2 border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-800 focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 focus:outline-none transition-all placeholder:text-gray-400"
           type="text"
           placeholder="请输入账号/卡号"
           value={formValues.account_number}
@@ -373,10 +373,10 @@ const CardManagement: React.FC<CardManagementProps> = ({ onBack }) => {
       </label>
 
       {(formValues.type === 'bank_card' || formValues.type === 'usdt') && (
-        <label className="text-xs text-gray-600 flex flex-col gap-1">
-          <span>{renderRequirements()}</span>
+        <label className="text-sm text-gray-700 flex flex-col gap-2">
+          <span className="font-medium">{renderRequirements()}</span>
           <input
-            className="border border-gray-200 rounded-md px-3 py-2 text-sm text-gray-800"
+            className="border-2 border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-800 focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 focus:outline-none transition-all placeholder:text-gray-400"
             type="text"
             placeholder={formValues.type === 'usdt' ? 'TRC20 / ERC20 等' : '如：招商银行上海徐家汇支行'}
             value={formValues.bank_branch}
@@ -421,9 +421,9 @@ const CardManagement: React.FC<CardManagementProps> = ({ onBack }) => {
       <button
         type="submit"
         disabled={formLoading}
-        className="w-full bg-orange-500 text-white text-sm font-semibold py-2.5 rounded-md active:opacity-80 disabled:opacity-60"
+        className="w-full bg-gradient-to-r from-[#FF6B35] to-[#FF9F2E] text-white text-base font-bold py-3.5 rounded-xl shadow-lg shadow-orange-200 active:scale-[0.98] transition-transform disabled:opacity-60 disabled:cursor-not-allowed mt-2"
       >
-        {formLoading ? '提交中...' : '提交'}
+        {formLoading ? '提交中...' : '提交保存'}
       </button>
     </form>
   );
