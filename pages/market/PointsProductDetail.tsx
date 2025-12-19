@@ -1,10 +1,10 @@
-
 import React from 'react';
 import { useState, useEffect } from 'react';
 import { LoadingSpinner, LazyImage } from '../../components/common';
 import { Product } from '../../types';
 import { fetchShopProductDetail, ShopProductDetailData, createOrder, fetchAddressList, AddressItem } from '../../services/api';
 import { useNotification } from '../../context/NotificationContext';
+import { AUTH_TOKEN_KEY } from '../../constants/storageKeys';
 
 interface PointsProductDetailProps {
     product: Product;
@@ -53,7 +53,7 @@ const PointsProductDetail: React.FC<PointsProductDetailProps> = ({ product, onBa
 
     const loadAddresses = async () => {
         try {
-            const token = localStorage.getItem('cat_auth_token') || '';
+            const token = localStorage.getItem(AUTH_TOKEN_KEY) || '';
             if (!token) return;
 
             const response = await fetchAddressList(token);

@@ -14,15 +14,13 @@
 import { useState, useCallback, useEffect } from 'react';
 import { UserInfo, LoginSuccessPayload } from '../types';
 import { fetchRealNameStatus, RealNameStatusData } from '../services/api';
-
-/**
- * 认证相关的 localStorage 键名
- */
-const AUTH_KEY = 'cat_is_logged_in';
-const AUTH_TOKEN_KEY = 'cat_auth_token';
-const USER_INFO_KEY = 'cat_user_info';
-const REAL_NAME_STATUS_KEY = 'cat_real_name_status';
-const REAL_NAME_KEY = 'cat_real_name';
+import {
+    AUTH_KEY,
+    AUTH_TOKEN_KEY,
+    USER_INFO_KEY,
+    REAL_NAME_STATUS_KEY,
+    REAL_NAME_KEY
+} from '../constants/storageKeys';
 
 /**
  * useAuth Hook 返回值接口

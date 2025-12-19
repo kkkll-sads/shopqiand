@@ -4,7 +4,6 @@ import SubPageLayout from '../../components/SubPageLayout';
 import { LoadingSpinner, EmptyState } from '../../components/common';
 import { formatDateShort } from '../../utils/format';
 import {
-  AUTH_TOKEN_KEY,
   fetchAnnouncements,
   AnnouncementItem,
   getMyOrderList,
@@ -16,6 +15,7 @@ import {
   WithdrawOrderItem,
   ShopOrderItem,
 } from '../../services/api';
+import { AUTH_TOKEN_KEY, STORAGE_KEYS } from '../../constants/storageKeys';
 
 interface MessageCenterProps {
   onBack: () => void;
@@ -45,7 +45,7 @@ const MessageCenter: React.FC<MessageCenterProps> = ({ onBack, onNavigate }) => 
   // 从本地存储读取已读消息ID列表
   const getReadMessageIds = (): string[] => {
     try {
-      const stored = localStorage.getItem('cat_read_message_ids');
+      const stored = localStorage.getItem(STORAGE_KEYS.READ_MESSAGE_IDS_KEY);
       return stored ? JSON.parse(stored) : [];
     } catch {
       return [];
@@ -55,7 +55,7 @@ const MessageCenter: React.FC<MessageCenterProps> = ({ onBack, onNavigate }) => 
   // 保存已读消息ID到本地存储
   const saveReadMessageIds = (ids: string[]) => {
     try {
-      localStorage.setItem('cat_read_message_ids', JSON.stringify(ids));
+      localStorage.setItem(STORAGE_KEYS.READ_MESSAGE_IDS_KEY, JSON.stringify(ids));
     } catch {
       // 忽略存储错误
     }

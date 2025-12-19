@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import BottomNav from './components/BottomNav';
 import { Tab, Product, NewsItem, LoginSuccessPayload } from './types';
-import { AUTH_TOKEN_KEY, USER_INFO_KEY, fetchAnnouncements, AnnouncementItem, fetchProfile, fetchRealNameStatus, MyCollectionItem } from './services/api';
+import { fetchAnnouncements, AnnouncementItem, fetchProfile, fetchRealNameStatus, MyCollectionItem } from './services/api';
+import { AUTH_KEY, AUTH_TOKEN_KEY, USER_INFO_KEY, STORAGE_KEYS } from './constants/storageKeys';
 import useAuth from './hooks/useAuth';
 
 // Auth
@@ -73,12 +74,9 @@ import { NotificationProvider } from './context/NotificationContext';
 import { GlobalNotificationSystem } from './components/common/GlobalNotificationSystem';
 import './styles/notifications.css';
 
-const STORAGE_KEY = 'cat_read_news_ids';
-const AUTH_KEY = 'cat_is_logged_in';
-
 const getReadNewsIds = (): string[] => {
   try {
-    const stored = localStorage.getItem(STORAGE_KEY);
+    const stored = localStorage.getItem(STORAGE_KEYS.READ_NEWS_IDS_KEY);
     return stored ? JSON.parse(stored) : [];
   } catch (e) {
     return [];
@@ -86,7 +84,7 @@ const getReadNewsIds = (): string[] => {
 };
 
 const saveReadNewsIds = (ids: string[]) => {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(ids));
+  localStorage.setItem(STORAGE_KEYS.READ_NEWS_IDS_KEY, JSON.stringify(ids));
 };
 
 const AppContent: React.FC = () => {
@@ -109,6 +107,9 @@ const AppContent: React.FC = () => {
   const [subPage, setSubPage] = useState<string | null>(null);
   const [consignmentTicketCount, setConsignmentTicketCount] = useState<number>(0);
   const [newsList, setNewsList] = useState<NewsItem[]>([]);
+
+  // 待导航页面（用于登录/实名后自动跳转）
+  const [pendingPage, setPendingPage] = useState<{ tab?: Tab; subPage?: string } | null>(null);
 
   // 刷新实名认证状态当页面切换时
   useEffect(() => {
@@ -230,9 +231,19 @@ const AppContent: React.FC = () => {
     // Call useAuth login to fetch real-name status
     loginFromHook(payload);
 
-    console.log('[handleLogin] 设置登录状态完成，跳转到首页');
-    setSubPage(null);
-    setActiveTab('home');
+    console.log('[handleLogin] 设置登录状态完成');
+
+    // 如果有待跳转页面，跳转到那里；否则跳转到首页
+    if (pendingPage) {
+      console.log('[handleLogin] 跳转到待处理页面:', pendingPage);
+      if (pendingPage.tab) setActiveTab(pendingPage.tab);
+      if (pendingPage.subPage) setSubPage(pendingPage.subPage);
+      else setSubPage(null);
+      setPendingPage(null);
+    } else {
+      setSubPage(null);
+      setActiveTab('home');
+    }
     setSelectedProduct(null);
   };
 
@@ -832,38 +843,9 @@ const AppContent: React.FC = () => {
       {!subPage && (
         <BottomNav
           activeTab={activeTab}
-          onTabChange={async (tab) => {
-            // 如果点击"我的"tab，先检查实名状态
-            if (tab === 'profile') {
-              const token = localStorage.getItem(AUTH_TOKEN_KEY);
-              if (token) {
-                try {
-                  setCheckingRealName(true);
-                  // 调用获取个人中心接口检查实名状态
-                  const profileRes = await fetchProfile(token);
-                  if (profileRes.code === 1 && profileRes.data?.userInfo) {
-                    // 获取实名认证状态
-                    const realNameRes = await fetchRealNameStatus(token);
-                    if (realNameRes.code === 1 && realNameRes.data) {
-                      const realNameStatus = realNameRes.data.real_name_status;
-                      // 更新实名状态 (2=已通过)
-                      updateRealNameStatus(realNameStatus, realNameRes.data.real_name);
-
-                      // 如果未实名，显示弹窗
-                      if (realNameStatus !== 2) {
-                        setShowRealNameModal(true);
-                        return; // 不切换tab
-                      }
-                    }
-                  }
-                } catch (error) {
-                  console.error('检查实名状态失败:', error);
-                } finally {
-                  setCheckingRealName(false);
-                }
-              }
-            }
-            // 正常切换tab
+          onTabChange={(tab) => {
+            // 不需要额外验证，实名检查已在 renderContent 中统一处理
+            // 直接切换 tab，renderContent 会根据 isRealNameVerified 显示弹窗
             setActiveTab(tab);
           }}
         />

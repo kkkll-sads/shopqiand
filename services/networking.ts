@@ -84,28 +84,12 @@ export async function apiFetch<T = any>(
 
         const data = await parseResponse(response);
 
-        // 处理 code 303：需要登录，自动跳转到登录页面
+        // 处理 code 303：需要登录，抛出 NeedLoginError 让上层统一处理
+        // 不在 networking 层跳页面，避免破坏 SPA 状态
         if (data.code === 303) {
-            console.warn('用户未登录（code 303），准备跳转到登录页面');
-            // 清除本地存储的token和用户信息
-            localStorage.removeItem('cat_auth_token');
-            localStorage.removeItem('cat_user_info');
-
-            // 跳转到登录页面
-            // 使用 setTimeout 避免在某些情况下阻塞当前操作
-            setTimeout(() => {
-                const currentPath = window.location.pathname;
-                // 如果不在登录页，则跳转
-                if (!currentPath.includes('/login') && !currentPath.includes('/auth')) {
-                    window.location.href = '/login';
-                }
-            }, 100);
-
-            // 抛出错误以便调用方也能知道需要登录
-            const error = new Error(data.msg || '请先登录！');
-            (error as any).code = 303;
-            (error as any).needLogin = true;
-            throw error;
+            console.warn('用户未登录（code 303），抛出 NeedLoginError');
+            const { NeedLoginError } = await import('../utils/errors');
+            throw new NeedLoginError(data.msg || '请先登录');
         }
 
         return data;

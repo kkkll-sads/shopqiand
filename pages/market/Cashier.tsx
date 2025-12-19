@@ -4,6 +4,7 @@ import { useNotification } from '../../context/NotificationContext';
 import { payOrder, getOrderDetail, ShopOrderItem, fetchProfile } from '../../services/api'; // Added fetchProfile
 import { LoadingSpinner } from '../../components/common';
 import { Coins, CreditCard, ChevronLeft } from 'lucide-react';
+import { AUTH_TOKEN_KEY } from '../../constants/storageKeys';
 
 interface CashierProps {
     orderId: string;
@@ -26,7 +27,7 @@ const Cashier: React.FC<CashierProps> = ({ orderId, onBack, onNavigate }) => {
     const loadData = async () => {
         try {
             setLoading(true);
-            const token = localStorage.getItem('cat_auth_token') || '';
+            const token = localStorage.getItem(AUTH_TOKEN_KEY) || '';
 
             // Parallel fetch for order and user profile
             const [orderRes, profileRes] = await Promise.all([
@@ -61,7 +62,7 @@ const Cashier: React.FC<CashierProps> = ({ orderId, onBack, onNavigate }) => {
         if (paying) return;
         try {
             setPaying(true);
-            const token = localStorage.getItem('cat_auth_token');
+            const token = localStorage.getItem(AUTH_TOKEN_KEY);
             const res = await payOrder({ id: orderId, token: token || '' });
             if (res.code === 1) {
                 showToast('success', '支付成功', '订单支付成功');

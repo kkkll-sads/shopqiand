@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Trash2, ArrowRight, ChevronLeft } from 'lucide-react';
 import { EmptyState } from '../../components/common';
 import { NewsItem } from '../../types';
+import { STORAGE_KEYS } from '../../constants/storageKeys';
 
 interface NewsProps {
   newsList: NewsItem[];
@@ -10,9 +11,6 @@ interface NewsProps {
   onBack?: () => void;
 }
 
-/** 本地存储键名 */
-const NEWS_TAB_STORAGE_KEY = 'cat_news_active_tab';
-
 /**
  * News 资讯页面组件
  */
@@ -20,7 +18,7 @@ const News: React.FC<NewsProps> = ({ newsList, onNavigate, onMarkAllRead, onBack
   // 从 localStorage 恢复标签页状态
   const [activeTab, setActiveTab] = useState<'announcement' | 'dynamics'>(() => {
     try {
-      const saved = localStorage.getItem(NEWS_TAB_STORAGE_KEY);
+      const saved = localStorage.getItem(STORAGE_KEYS.NEWS_ACTIVE_TAB_KEY);
       return (saved === 'dynamics' || saved === 'announcement') ? saved : 'announcement';
     } catch {
       return 'announcement';
@@ -30,7 +28,7 @@ const News: React.FC<NewsProps> = ({ newsList, onNavigate, onMarkAllRead, onBack
   // 保存标签页状态到 localStorage
   useEffect(() => {
     try {
-      localStorage.setItem(NEWS_TAB_STORAGE_KEY, activeTab);
+      localStorage.setItem(STORAGE_KEYS.NEWS_ACTIVE_TAB_KEY, activeTab);
     } catch {
       // 忽略存储错误
     }

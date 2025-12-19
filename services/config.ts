@@ -257,6 +257,5 @@ export const API_ENDPOINTS = {
     },
 } as const;
 
-// 本地存储 key
-export const AUTH_TOKEN_KEY = 'cat_auth_token';
-export const USER_INFO_KEY = 'cat_user_info';
+// 本地存储 key - 从统一位置导入并重新导出
+export { AUTH_TOKEN_KEY, USER_INFO_KEY } from '../constants/storageKeys';

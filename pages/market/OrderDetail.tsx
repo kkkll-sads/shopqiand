@@ -1,10 +1,10 @@
-
 import React, { useState, useEffect } from 'react';
 import { Package, X, MapPin, Phone, User, FileText, Calendar, CreditCard, Copy } from 'lucide-react';
 import { LoadingSpinner, LazyImage } from '../../components/common';
 import { formatTime, formatAmount } from '../../utils/format';
 import { getOrderDetail, ShopOrderItemDetail, confirmOrder, normalizeAssetUrl } from '../../services/api';
 import { useNotification } from '../../context/NotificationContext';
+import { AUTH_TOKEN_KEY } from '../../constants/storageKeys';
 
 interface OrderDetailProps {
     orderId: string;
@@ -25,7 +25,7 @@ const OrderDetail: React.FC<OrderDetailProps> = ({ orderId, onBack, onNavigate }
     const loadOrder = async () => {
         try {
             setLoading(true);
-            const token = localStorage.getItem('cat_auth_token');
+            const token = localStorage.getItem(AUTH_TOKEN_KEY);
             if (!token) return;
 
             const response = await getOrderDetail({ id: orderId, token });
@@ -42,7 +42,7 @@ const OrderDetail: React.FC<OrderDetailProps> = ({ orderId, onBack, onNavigate }
     };
 
     const handlePayOrder = (id: number) => {
-        onNavigate(`cashier:${id}`);
+        onNavigate(`cashier:${id} `);
     };
 
     const handleConfirmReceipt = async (id: number) => {
@@ -53,7 +53,7 @@ const OrderDetail: React.FC<OrderDetailProps> = ({ orderId, onBack, onNavigate }
             cancelText: '取消',
             onConfirm: async () => {
                 try {
-                    const token = localStorage.getItem('cat_auth_token') || '';
+                    const token = localStorage.getItem(AUTH_TOKEN_KEY) || '';
                     const response = await confirmOrder({ id, token });
                     if (response.code === 1) {
                         showToast('success', '收货成功');
@@ -137,7 +137,7 @@ const OrderDetail: React.FC<OrderDetailProps> = ({ orderId, onBack, onNavigate }
                 </div>
 
                 {/* Status Banner (Optional visuals based on status) */}
-                <div className={`rounded-xl p-6 text-white shadow-lg ${isScoreOrder ? 'bg-gradient-to-r from-orange-400 to-red-500' : 'bg-gradient-to-r from-blue-500 to-blue-600'}`}>
+                <div className={`rounded - xl p - 6 text - white shadow - lg ${isScoreOrder ? 'bg-gradient-to-r from-orange-400 to-red-500' : 'bg-gradient-to-r from-blue-500 to-blue-600'} `}>
                     <div className="text-xl font-bold mb-1">{getOrderStatus(order)}</div>
                     <div className="text-white/80 text-sm">
                         {order.status === 0 ? '请尽快完成支付' :
@@ -202,7 +202,7 @@ const OrderDetail: React.FC<OrderDetailProps> = ({ orderId, onBack, onNavigate }
                         <div className="flex justify-between text-sm">
                             <span className="text-gray-600">商品总额</span>
                             <span className="font-medium">
-                                {isScoreOrder ? `${order.total_score || 0} 消费金` : `¥${formatAmount(order.total_amount)}`}
+                                {isScoreOrder ? `${order.total_score || 0} 消费金` : `¥${formatAmount(order.total_amount)} `}
                             </span>
                         </div>
                         <div className="flex justify-between text-sm">
@@ -212,7 +212,7 @@ const OrderDetail: React.FC<OrderDetailProps> = ({ orderId, onBack, onNavigate }
                         <div className="flex justify-between items-center pt-2 mt-2 border-t border-gray-50">
                             <span className="font-bold text-gray-800">实付款</span>
                             <span className="text-xl font-bold font-mono text-orange-600">
-                                {isScoreOrder ? `${order.total_score || 0} 消费金` : `¥${formatAmount(order.total_amount)}`}
+                                {isScoreOrder ? `${order.total_score || 0} 消费金` : `¥${formatAmount(order.total_amount)} `}
                             </span>
                         </div>
                     </div>
@@ -283,7 +283,7 @@ const OrderDetail: React.FC<OrderDetailProps> = ({ orderId, onBack, onNavigate }
                         </div>
                         <button
                             onClick={() => handlePayOrder(order.id)}
-                            className={`px-6 py-2.5 rounded-full text-white font-bold shadow-lg active:scale-95 transition-transform ${isScoreOrder ? 'bg-gradient-to-r from-orange-500 to-red-500 shadow-orange-200' : 'bg-blue-600 shadow-blue-200'}`}
+                            className={`px - 6 py - 2.5 rounded - full text - white font - bold shadow - lg active: scale - 95 transition - transform ${isScoreOrder ? 'bg-gradient-to-r from-orange-500 to-red-500 shadow-orange-200' : 'bg-blue-600 shadow-blue-200'} `}
                         >
                             立即付款
                         </button>
