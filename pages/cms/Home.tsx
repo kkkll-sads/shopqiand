@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Building2, Newspaper, Palette, Trophy, ChevronRight, UserCheck, TreeDeciduous, Search, Wallet, Vault, Zap, FileBadge, ClipboardList, Clock, CheckCircle2 } from 'lucide-react';
+import { Building2, Newspaper, Palette, Trophy, ChevronRight, UserCheck, TreeDeciduous, Search, Wallet, Vault, Zap, FileBadge, ClipboardList, Clock, CheckCircle2, AlertCircle } from 'lucide-react';
 import { Banner, Artist, NewsItem } from '../../types';
-import { fetchBanners, fetchArtists, normalizeAssetUrl, ArtistApiItem } from '../../services/api';
+import { fetchBanners, fetchArtists, normalizeAssetUrl, ArtistApiItem, fetchMatchingPool, MatchingPoolItem, MatchingPoolStatus } from '../../services/api';
 
 interface HomeProps {
   onNavigate: (page: string) => void;
@@ -14,6 +14,8 @@ const Home: React.FC<HomeProps> = ({ onNavigate, onSwitchTab, announcements = []
   const [noticeIndex, setNoticeIndex] = useState(0);
   const [banners, setBanners] = useState<Banner[]>([]);
   const [artists, setArtists] = useState<Artist[]>([]);
+  const [reservationRecords, setReservationRecords] = useState<MatchingPoolItem[]>([]);
+  const [loadingRecords, setLoadingRecords] = useState(true);
   const touchStartRef = useRef(0);
   const touchEndRef = useRef(0);
   const bannerTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -107,6 +109,33 @@ const Home: React.FC<HomeProps> = ({ onNavigate, onSwitchTab, announcements = []
     };
 
     load();
+  }, []);
+
+  // 加载申购记录
+  useEffect(() => {
+    const loadReservationRecords = async () => {
+      try {
+        setLoadingRecords(true);
+        const response = await fetchMatchingPool({
+          page: 1,
+          limit: 3, // 首页只显示最新3条
+        });
+
+        if (response.code === 1 && response.data?.list) {
+          setReservationRecords(response.data.list);
+        } else {
+          setReservationRecords([]);
+        }
+      } catch (error) {
+        console.error('加载申购记录失败:', error);
+        // 如果未登录，静默失败
+        setReservationRecords([]);
+      } finally {
+        setLoadingRecords(false);
+      }
+    };
+
+    loadReservationRecords();
   }, []);
 
   const handleTouchStart = (e: React.TouchEvent) => {
@@ -314,57 +343,72 @@ const Home: React.FC<HomeProps> = ({ onNavigate, onSwitchTab, announcements = []
         </div>
 
         <div className="space-y-3">
-          {/* Mock Record 1 */}
-          <div
-            className="bg-gray-50 rounded-xl p-3 flex gap-3 active:scale-[0.99] transition-transform"
-            onClick={() => onNavigate('reservation-record')}
-          >
-            <div className="w-16 h-16 bg-gray-200 rounded-lg overflow-hidden shrink-0">
-              <img src="https://images.unsplash.com/photo-1549281899-f75600a24107?auto=format&fit=crop&q=80&w=200" className="w-full h-full object-cover" alt="" />
+          {loadingRecords ? (
+            <div className="text-center py-8 text-gray-400">
+              <Clock size={24} className="mx-auto mb-2 animate-pulse" />
+              <p className="text-sm">加载中...</p>
             </div>
-            <div className="flex-1 min-w-0 flex flex-col justify-between">
-              <div className="flex justify-between items-start">
-                <h3 className="font-bold text-gray-900 text-sm truncate pr-2">山河锦绣 · 主题典藏</h3>
-                <span className="text-[10px] font-bold text-orange-500 bg-orange-100 px-1.5 py-0.5 rounded border border-orange-200 flex items-center gap-1 whitespace-nowrap">
-                  <Clock size={10} /> 待匹配
-                </span>
-              </div>
-              <div className="flex justify-between items-end">
-                <div className="text-xs text-gray-500">
-                  消耗算力 <span className="text-gray-900 font-bold">7.5</span>
-                </div>
-                <div className="text-sm font-mono font-bold text-gray-900">
-                  ¥1,000.00
-                </div>
-              </div>
+          ) : reservationRecords.length === 0 ? (
+            <div className="text-center py-8 text-gray-400">
+              <ClipboardList size={24} className="mx-auto mb-2" />
+              <p className="text-sm">暂无申购记录</p>
             </div>
-          </div>
+          ) : (
+            reservationRecords.map((record) => {
+              const getStatusBadge = (status: MatchingPoolStatus) => {
+                switch (status) {
+                  case 'pending':
+                    return (
+                      <span className="text-[10px] font-bold text-orange-500 bg-orange-100 px-1.5 py-0.5 rounded border border-orange-200 flex items-center gap-1 whitespace-nowrap">
+                        <Clock size={10} /> 待匹配
+                      </span>
+                    );
+                  case 'matched':
+                    return (
+                      <span className="text-[10px] font-bold text-green-500 bg-green-100 px-1.5 py-0.5 rounded border border-green-200 flex items-center gap-1 whitespace-nowrap">
+                        <CheckCircle2 size={10} /> 中签
+                      </span>
+                    );
+                  case 'cancelled':
+                    return (
+                      <span className="text-[10px] font-bold text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded border border-gray-200 flex items-center gap-1 whitespace-nowrap">
+                        <AlertCircle size={10} /> 已取消
+                      </span>
+                    );
+                }
+              };
 
-          {/* Mock Record 2 */}
-          <div
-            className="bg-gray-50 rounded-xl p-3 flex gap-3 active:scale-[0.99] transition-transform"
-            onClick={() => onNavigate('reservation-record')}
-          >
-            <div className="w-16 h-16 bg-gray-200 rounded-lg overflow-hidden shrink-0">
-              <img src="https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&q=80&w=200" className="w-full h-full object-cover" alt="" />
-            </div>
-            <div className="flex-1 min-w-0 flex flex-col justify-between">
-              <div className="flex justify-between items-start">
-                <h3 className="font-bold text-gray-900 text-sm truncate pr-2">江南水乡 · 限量款</h3>
-                <span className="text-[10px] font-bold text-green-500 bg-green-100 px-1.5 py-0.5 rounded border border-green-200 flex items-center gap-1 whitespace-nowrap">
-                  <CheckCircle2 size={10} /> 中签
-                </span>
-              </div>
-              <div className="flex justify-between items-end">
-                <div className="text-xs text-gray-500">
-                  消耗算力 <span className="text-gray-900 font-bold">10.0</span>
+              return (
+                <div
+                  key={record.id}
+                  className="bg-gray-50 rounded-xl p-3 flex gap-3 active:scale-[0.99] transition-transform cursor-pointer"
+                  onClick={() => onNavigate('reservation-record')}
+                >
+                  {record.item_image && (
+                    <div className="w-16 h-16 bg-gray-200 rounded-lg overflow-hidden shrink-0">
+                      <img src={record.item_image} className="w-full h-full object-cover" alt={record.item_title || ''} />
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-0 flex flex-col justify-between">
+                    <div className="flex justify-between items-start">
+                      <h3 className="font-bold text-gray-900 text-sm truncate pr-2">{record.item_title || '藏品'}</h3>
+                      {getStatusBadge(record.status)}
+                    </div>
+                    <div className="flex justify-between items-end">
+                      <div className="text-xs text-gray-500">
+                        消耗算力 <span className="text-gray-900 font-bold">{record.power || 0}</span>
+                      </div>
+                      {record.price && (
+                        <div className="text-sm font-mono font-bold text-gray-900">
+                          ¥{Number(record.price).toLocaleString()}
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
-                <div className="text-sm font-mono font-bold text-gray-900">
-                  ¥544.98
-                </div>
-              </div>
-            </div>
-          </div>
+              );
+            })
+          )}
         </div>
       </div>
     </div>

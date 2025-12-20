@@ -210,10 +210,18 @@ export const API_ENDPOINTS = {
         originalDetail: '/collectionItem/originalDetail',
         /** 购买藏品 */
         buy: '/collectionItem/buy',
+        /** 查询撮合池列表 */
+        matchingPool: '/collectionItem/matchingPool',
+        /** 取消竞价（从撮合池移除） */
+        cancelBid: '/collectionItem/cancelBid',
+        /** 竞价购买藏品（进入撮合池） */
+        bidBuy: '/collectionItem/bidBuy',
         /** 获取购买记录列表 */
         purchaseRecords: '/collectionItem/purchaseRecords',
         /** 获取寄售商品列表 */
         consignmentList: '/collectionItem/consignmentList',
+        /** 获取寄售交易区列表 */
+        tradeList: '/collectionItem/tradeList',
         /** 获取我的寄售列表 */
         myConsignmentList: '/collectionItem/myConsignmentList',
         /** 获取寄售详情 */

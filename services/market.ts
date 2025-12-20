@@ -65,6 +65,18 @@ export {
     buyCollectionItem,
     getMyCollection,
     fetchMyCollectionList,
+    fetchMatchingPool,
+    cancelBid,
+    bidBuy,
+    // 撮合池类型
+    type MatchingPoolStatus,
+    type MatchingPoolItem,
+    type FetchMatchingPoolParams,
+    type MatchingPoolListData,
+    type CancelBidParams,
+    type CancelBidResult,
+    type BidBuyParams,
+    type BidBuyResult,
     // 艺术家类型
     type ArtistItem,
     type ArtistWorkItem,
@@ -84,14 +96,26 @@ export {
 export {
     // 寄售类型
     type ConsignmentItem,
+    type ConsignmentListData,
+    type TradeListItem,
+    type TradeListData,
+    type FetchTradeListParams,
     type MyConsignmentItem,
+    type FetchMyConsignmentListParams,
+    type MyConsignmentListData,
+    type CancelConsignmentParams,
     type ConsignmentDetailData,
     type DeliverParams,
     type PurchaseRecordItem,
+    // 提货类型
+    type DeliveryStatus,
+    type FetchDeliveryListParams,
+    type DeliveryListData,
     // 寄售接口
     consignCollectionItem,
     cancelConsignment,
     getConsignmentList,
+    getTradeList,
     getMyConsignmentList,
     getConsignmentDetail,
     // 提货接口

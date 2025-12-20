@@ -4,7 +4,6 @@ import SubPageLayout from '../../components/SubPageLayout';
 import { LoadingSpinner, EmptyState, LazyImage } from '../../components/common';
 import { formatTime, formatAmount } from '../../utils/format';
 import { Order } from '../../types';
-import { MOCK_ORDERS } from '../../constants';
 import {
   fetchPendingPayOrders,
   fetchPendingShipOrders,
@@ -667,12 +666,8 @@ const OrderListPage: React.FC<OrderListPageProps> = ({ category, initialTab, onB
     });
   };
 
-  // For non-points, non-delivery, non-transaction, and non-product categories, use mock data
-  const filteredOrders = category !== 'points' && category !== 'delivery' && category !== 'transaction' && category !== 'product'
-    ? MOCK_ORDERS.filter(
-      order => order.type === category && order.subStatusIndex === activeTab
-    )
-    : [];
+  // All categories now use real API data
+  // No more mock data needed
 
   return (
     <SubPageLayout title={config.title} onBack={onBack}>
@@ -986,47 +981,13 @@ const OrderListPage: React.FC<OrderListPageProps> = ({ category, initialTab, onB
                 </div>
               )
             )}
-            {loading && (
-              <div className="flex justify-center py-8">
-                <p className="text-xs text-gray-400">加载中...</p>
-              </div>
-            )}
           </>
         ) : (
-          // Mock orders for other categories
-          <>
-            {filteredOrders.length > 0 ? (
-              filteredOrders.map((order) => (
-                <div key={order.id} className="bg-white rounded-xl p-4 shadow-sm border border-gray-50">
-                  <div className="flex justify-between items-center mb-3 pb-3 border-b border-gray-50">
-                    <span className="text-xs text-gray-500">{order.date}</span>
-                    <span className="text-xs font-medium text-blue-600">{order.status}</span>
-                  </div>
-
-                  <div className="flex gap-3">
-                    <div className="w-16 h-16 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
-                      <img src={order.productImage} alt={order.productName} className="w-full h-full object-cover" />
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="text-sm font-medium text-gray-800 mb-1">{order.productName}</h3>
-                      <div className="text-xs text-gray-400 mb-2">数量: {order.quantity}</div>
-                      <div className="flex justify-between items-end">
-                        <div className="text-sm font-bold text-gray-900">¥ {order.total.toFixed(2)}</div>
-                        <button className="px-3 py-1 rounded-full border border-gray-200 text-xs text-gray-600 active:bg-gray-50">
-                          查看详情
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))
-            ) : (
-              <div className="flex flex-col items-center justify-center py-20 text-gray-400">
-                <Package size={48} className="mb-2 opacity-20" />
-                <p className="text-xs">暂无订单数据</p>
-              </div>
-            )}
-          </>
+          // Other categories - should not reach here as all categories now use real API
+          <div className="flex flex-col items-center justify-center py-20 text-gray-400">
+            <Package size={48} className="mb-2 opacity-20" />
+            <p className="text-xs">暂无数据</p>
+          </div>
         )}
       </div>
 

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ChevronLeft, Shield, Zap, Wallet, AlertCircle, Info, CheckCircle2 } from 'lucide-react';
 import { Product, UserInfo } from '../../types';
-import { fetchProfile, AUTH_TOKEN_KEY } from '../../services/api';
+import { fetchProfile, bidBuy, AUTH_TOKEN_KEY } from '../../services/api';
 
 interface ReservationPageProps {
     product: Product;
@@ -33,10 +33,9 @@ const ReservationPage: React.FC<ReservationPageProps> = ({ product, onBack, onNa
 
     const baseHashrate = 5.0;
 
-    // Calculate values from real data or fallbacks
-    // Use green_power for hashrate/points
-    // TODO: Revert to real data when backend is ready
-    const availableHashrate = 15.5; // Mock data as requested by user
+    // Calculate values from real data
+    // Use green_power for hashrate
+    const availableHashrate = userInfo ? parseFloat(String(userInfo.green_power || '0')) : 0;
     const specialFund = userInfo ? parseFloat(userInfo.money || '0') : 0;
     const frozenAmount = product.price;
 
@@ -60,15 +59,33 @@ const ReservationPage: React.FC<ReservationPageProps> = ({ product, onBack, onNa
         }
     };
 
-    const confirmSubmit = () => {
-        setLoading(true);
-        // Simulate API call
-        setTimeout(() => {
+    const confirmSubmit = async () => {
+        try {
+            setLoading(true);
+
+            // 使用 bidBuy API 提交竞价预约（进入撮合池）
+            const response = await bidBuy({
+                item_id: Number(product.id),
+                power_used: totalRequiredHashrate, // 使用总算力（基础+额外）
+            });
+
+            if (response.code === 1) {
+                // 竞价成功，进入撮合池
+                setShowConfirmModal(false);
+                // 显示成功消息
+                alert(`预约成功！\n消耗算力：${response.data?.power_used}\n获得权重：${response.data?.weight}\n${response.data?.message || ''}`);
+                // 导航到申购记录页面
+                onNavigate('reservation-record');
+            } else {
+                // API 返回错误
+                alert(response.msg || '预约失败，请重试');
+            }
+        } catch (error: any) {
+            console.error('预约提交失败:', error);
+            alert(error?.msg || '网络错误，请稍后重试');
+        } finally {
             setLoading(false);
-            setShowConfirmModal(false);
-            // Navigate to record page (assuming we'll implement this route)
-            onNavigate('reservation-record');
-        }, 1500);
+        }
     };
 
     return (
