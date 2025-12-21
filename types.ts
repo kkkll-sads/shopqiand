@@ -11,6 +11,10 @@ export interface Product {
   productType?: 'shop' | 'collection';
   /** 寄售商品对应的 consignment_id，用于购买接口 */
   consignmentId?: number | string;
+  /** 申购记录对应的 matching_pool_id，用于取消确权 */
+  reservationId?: number | string;
+  /** 申购记录状态 */
+  reservationStatus?: string;
 }
 
 export interface Artist {

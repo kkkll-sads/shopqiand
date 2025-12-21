@@ -101,7 +101,7 @@ const AppContent: React.FC = () => {
 
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [selectedCollectionItem, setSelectedCollectionItem] = useState<MyCollectionItem | null>(null);
-  const [productDetailOrigin, setProductDetailOrigin] = useState<'market' | 'artist' | 'trading-zone'>('market');
+  const [productDetailOrigin, setProductDetailOrigin] = useState<'market' | 'artist' | 'trading-zone' | 'reservation-record'>('market');
   const [activeTab, setActiveTab] = useState<Tab>('home');
   const [checkingRealName, setCheckingRealName] = useState(false);
   const [subPage, setSubPage] = useState<string | null>(null);
@@ -258,7 +258,7 @@ const AppContent: React.FC = () => {
   };
 
   // Helper to navigate to product detail
-  const handleProductSelect = (product: Product, origin: 'market' | 'artist' | 'trading-zone' = 'market') => {
+  const handleProductSelect = (product: Product, origin: 'market' | 'artist' | 'trading-zone' | 'reservation-record' = 'market') => {
     setSelectedProduct(product);
     setProductDetailOrigin(origin);
 
@@ -435,11 +435,13 @@ const AppContent: React.FC = () => {
           onBack={() => {
             if (productDetailOrigin === 'trading-zone') {
               setSubPage('trading-zone');
+            } else if (productDetailOrigin === 'reservation-record') {
+              setSubPage('reservation-record');
             } else {
               setSubPage(null);
             }
             setSelectedProduct(null);
-            setProductDetailOrigin(null);
+            setProductDetailOrigin('market'); // Reset to default
           }}
           onNavigate={(page) => setSubPage(page)}
         />
@@ -461,6 +463,7 @@ const AppContent: React.FC = () => {
         <ReservationRecordPage
           onBack={() => setSubPage(null)} // Or back to wherever appropriate
           onNavigate={(page) => setSubPage(page)}
+          onProductSelect={(product) => handleProductSelect(product, 'reservation-record')}
         />
       );
     }

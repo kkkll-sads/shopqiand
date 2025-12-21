@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ChevronLeft, Shield, Zap, Wallet, AlertCircle, Info, CheckCircle2 } from 'lucide-react';
 import { Product, UserInfo } from '../../types';
 import { fetchProfile, bidBuy, AUTH_TOKEN_KEY } from '../../services/api';
+import { useNotification } from '../../context/NotificationContext';
 
 interface ReservationPageProps {
     product: Product;
@@ -10,6 +11,7 @@ interface ReservationPageProps {
 }
 
 const ReservationPage: React.FC<ReservationPageProps> = ({ product, onBack, onNavigate }) => {
+    const { showToast } = useNotification();
     const [extraHashrate, setExtraHashrate] = useState(0);
     const [showConfirmModal, setShowConfirmModal] = useState(false);
     const [loading, setLoading] = useState(false);
@@ -69,20 +71,20 @@ const ReservationPage: React.FC<ReservationPageProps> = ({ product, onBack, onNa
                 power_used: totalRequiredHashrate, // 使用总算力（基础+额外）
             });
 
-            if (response.code === 1) {
+            if (response.code === 0) {
                 // 竞价成功，进入撮合池
                 setShowConfirmModal(false);
                 // 显示成功消息
-                alert(`预约成功！\n消耗算力：${response.data?.power_used}\n获得权重：${response.data?.weight}\n${response.data?.message || ''}`);
+                showToast('success', '预约成功', '您的预约已提交到撮合池');
                 // 导航到申购记录页面
                 onNavigate('reservation-record');
             } else {
                 // API 返回错误
-                alert(response.msg || '预约失败，请重试');
+                showToast('error', '预约失败', response.msg || '请重试');
             }
         } catch (error: any) {
             console.error('预约提交失败:', error);
-            alert(error?.msg || '网络错误，请稍后重试');
+            showToast('error', '预约提交失败', error?.msg || '网络错误，请稍后重试');
         } finally {
             setLoading(false);
         }

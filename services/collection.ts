@@ -283,6 +283,27 @@ export interface MatchingPoolItem {
     item_id: number;         // 藏品ID
     session_id?: number;     // 时段ID
     status: MatchingPoolStatus; // 状态：pending-待撮合，matched-已撮合，cancelled-已取消
+
+    // New fields from API
+    item_title?: string;
+    item_image?: string;
+    item_price?: number;     // 价格
+
+    power_used?: number;     // 消耗算力
+    weight?: number;         // 权重
+
+    session_title?: string;
+    session_start_time?: string;
+    session_end_time?: string;
+
+    create_time?: number;    // 创建时间戳
+    match_time?: number;     // 撮合时间戳
+    status_text?: string;    // 状态文本
+
+    user_id?: number;
+    user_nickname?: string;
+    user_avatar?: string;
+
     [key: string]: any;      // 其他额外字段
 }
 

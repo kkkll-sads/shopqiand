@@ -1,18 +1,20 @@
 import React, { useState, useEffect } from 'react';
-import { ChevronLeft, CheckCircle2, Clock, Wallet, Zap, AlertCircle, ArrowRight } from 'lucide-react';
+import { ChevronLeft, CheckCircle2, Clock, Wallet, Zap, AlertCircle, ArrowRight, Calendar } from 'lucide-react';
 import {
     fetchMatchingPool,
     MatchingPoolItem,
     MatchingPoolStatus,
     AUTH_TOKEN_KEY
 } from '../../services/api';
+import { Product } from '../../types';
 
 interface ReservationRecordPageProps {
     onBack: () => void;
     onNavigate: (page: string) => void;
+    onProductSelect?: (product: Product) => void;
 }
 
-const ReservationRecordPage: React.FC<ReservationRecordPageProps> = ({ onBack, onNavigate }) => {
+const ReservationRecordPage: React.FC<ReservationRecordPageProps> = ({ onBack, onNavigate, onProductSelect }) => {
     const [statusFilter, setStatusFilter] = useState<'all' | MatchingPoolStatus>('all');
     const [records, setRecords] = useState<MatchingPoolItem[]>([]);
     const [loading, setLoading] = useState(true);
@@ -45,7 +47,9 @@ const ReservationRecordPage: React.FC<ReservationRecordPageProps> = ({ onBack, o
                 limit: 100,
             });
 
-            if (response.code === 1 && response.data) {
+            if (response.code === 0 && response.data) { // API success coe is 0
+                setRecords(response.data.list || []);
+            } else if (response.code === 1 && response.data) { // Handle potential legacy code 1
                 setRecords(response.data.list || []);
             } else {
                 setError(response.msg || '加载失败');
@@ -73,9 +77,19 @@ const ReservationRecordPage: React.FC<ReservationRecordPageProps> = ({ onBack, o
     };
 
     // Format timestamp to date string
-    const formatTime = (timestamp: number | string) => {
+    const formatTime = (timestamp: number | string | undefined) => {
         if (!timestamp) return '';
-        const date = new Date(typeof timestamp === 'string' ? parseInt(timestamp) * 1000 : timestamp * 1000);
+        // If string and looks like seconds (10 digits), multiply by 1000
+        // If number and small (seconds), multiply by 1000
+        let timeMs = 0;
+        if (typeof timestamp === 'string') {
+            const parsed = parseInt(timestamp);
+            timeMs = parsed < 10000000000 ? parsed * 1000 : parsed;
+        } else {
+            timeMs = timestamp < 10000000000 ? timestamp * 1000 : timestamp;
+        }
+
+        const date = new Date(timeMs);
         return date.toLocaleString('zh-CN', {
             year: 'numeric',
             month: '2-digit',
@@ -94,6 +108,25 @@ const ReservationRecordPage: React.FC<ReservationRecordPageProps> = ({ onBack, o
         return '4k';
     };
 
+    const handleProductClick = (record: MatchingPoolItem) => {
+        if (!onProductSelect) return;
+
+        // Construct a partial Product object for navigation
+        const product: Product = {
+            id: String(record.item_id),
+            title: record.item_title || '商品详情',
+            image: record.item_image || '',
+            price: record.item_price || 0,
+            productType: 'collection',
+            reservationId: record.id,
+            reservationStatus: record.status,
+            artist: '',
+            category: '',
+        };
+
+        onProductSelect(product);
+    };
+
     return (
         <div className="min-h-screen bg-gray-50 pb-20">
             <header className="bg-white px-4 py-3 flex items-center justify-between sticky top-0 z-10 shadow-sm border-b border-gray-100">
@@ -106,7 +139,6 @@ const ReservationRecordPage: React.FC<ReservationRecordPageProps> = ({ onBack, o
 
             {/* Filters */}
             <div className="sticky top-[53px] z-10 bg-white border-b border-gray-100 shadow-sm">
-                {/* Status Tabs */}
                 <div className="flex px-4">
                     {[
                         { key: 'all', label: '全部' },
@@ -169,78 +201,92 @@ const ReservationRecordPage: React.FC<ReservationRecordPageProps> = ({ onBack, o
                 ) : (
                     records.map(record => (
                         <div key={record.id} className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-                            {/* Header: ID + Status */}
-                            <div className="flex justify-between items-center mb-3 pb-3 border-b border-gray-50">
-                                <span className="text-xs text-gray-400 font-mono">ID: {record.id}</span>
+                            {/* Header: Status & Session info */}
+                            <div className="flex justify-between items-start mb-3 pb-3 border-b border-gray-50">
+                                <div>
+                                    <div className="flex items-center gap-2 mb-1">
+                                        <span className="text-xs text-gray-400 font-mono">ID: {record.id}</span>
+                                        {renderSessionInfo(record)}
+                                    </div>
+                                    <div className="text-[10px] text-gray-400">
+                                        创建: {formatTime(record.create_time || record.created_at)}
+                                    </div>
+                                </div>
                                 {getStatusBadge(record.status)}
                             </div>
 
-                            {/* Product Info */}
-                            <div className="flex gap-3 mb-4">
-                                {record.item_image && (
-                                    <div className="w-16 h-16 bg-gray-100 rounded-lg overflow-hidden shrink-0">
-                                        <img src={record.item_image} alt={record.item_title || '藏品'} className="w-full h-full object-cover" />
+                            {/* Product Info - Clickable */}
+                            <div
+                                className="flex gap-3 mb-4 cursor-pointer hover:opacity-80 transition-opacity"
+                                onClick={() => handleProductClick(record)}
+                            >
+                                <div className="w-16 h-16 bg-gray-100 rounded-lg overflow-hidden shrink-0">
+                                    <img
+                                        src={record.item_image || record.image || ''}
+                                        alt={record.item_title || '藏品'}
+                                        className="w-full h-full object-cover"
+                                    />
+                                </div>
+                                <div className="flex-1 min-w-0 flex flex-col justify-center">
+                                    <h3 className="text-gray-900 font-bold truncate text-sm mb-1">{record.item_title || record.title || '藏品详情'}</h3>
+
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-2">
+                                            {record.item_price && (
+                                                <>
+                                                    <span className="text-sm font-bold text-red-600 font-mono">¥{record.item_price}</span>
+                                                    <span className="text-[10px] bg-orange-50 text-orange-600 px-1.5 py-0.5 rounded border border-orange-100 font-bold">
+                                                        {getPriceZone(Number(record.item_price))}区
+                                                    </span>
+                                                </>
+                                            )}
+                                        </div>
+                                        <ArrowRight size={14} className="text-gray-300" />
                                     </div>
-                                )}
-                                <div className="flex-1 min-w-0">
-                                    <h3 className="text-gray-900 font-bold truncate text-sm mb-1">{record.item_title || '藏品'}</h3>
-                                    {record.price && (
-                                        <div className="flex items-center gap-2 mb-1">
-                                            <span className="text-[10px] bg-orange-50 text-orange-600 px-1.5 py-0.5 rounded border border-orange-100 font-bold">
-                                                {getPriceZone(Number(record.price))}区
-                                            </span>
-                                        </div>
-                                    )}
-                                    {record.created_at && (
-                                        <div className="text-xs text-gray-400 flex items-center gap-1">
-                                            <Clock size={10} />
-                                            <span>提交: {formatTime(record.created_at)}</span>
-                                        </div>
-                                    )}
                                 </div>
                             </div>
 
                             {/* Stats Grid */}
                             <div className="bg-gray-50 rounded-lg p-3 grid grid-cols-2 gap-y-2 gap-x-4 mb-4">
-                                {record.power && (
+                                {(record.power_used || record.power) && (
                                     <div className="flex justify-between items-center">
                                         <span className="text-[10px] text-gray-500 flex items-center gap-1"><Zap size={10} /> 消耗算力</span>
-                                        <span className="text-xs font-bold text-gray-900 font-mono">{record.power}</span>
+                                        <span className="text-xs font-bold text-gray-900 font-mono">{record.power_used || record.power}</span>
                                     </div>
                                 )}
-                                {record.price && (
-                                    <div className="flex justify-between items-center">
+                                {record.weight && (
+                                    <div className="flex justify-between items-center hidden">
+                                        <span className="text-[10px] text-gray-500 flex items-center gap-1">权重值</span>
+                                        <span className="text-xs font-bold text-gray-900 font-mono">{record.weight}</span>
+                                    </div>
+                                )}
+                                {(record.item_price || record.price) && (
+                                    <div className="col-span-2 flex justify-between items-center pt-1 mt-1 border-t border-gray-200/50">
                                         <span className="text-[10px] text-gray-500 flex items-center gap-1">
                                             <Wallet size={10} /> {record.status === 'cancelled' ? '解冻金额' : '冻结金额'}
                                         </span>
-                                        <span className="text-xs font-bold text-gray-900 font-mono">¥{Number(record.price).toLocaleString()}</span>
-                                    </div>
-                                )}
-                                {record.updated_at && (
-                                    <div className="col-span-2 text-[10px] text-gray-400 border-t border-gray-200/50 pt-2 mt-1">
-                                        {record.status === 'pending' && `预计撮合时间：${formatTime(record.updated_at)}`}
-                                        {record.status === 'matched' && `撮合成功时间：${formatTime(record.updated_at)}`}
-                                        {record.status === 'cancelled' && `取消时间：${formatTime(record.updated_at)}`}
+                                        <span className="text-xs font-bold text-gray-900 font-mono">¥{Number(record.item_price || record.price).toLocaleString()}</span>
                                     </div>
                                 )}
                             </div>
 
-                            {/* Action Button */}
-                            <div className="flex justify-end">
-                                {record.status === 'pending' && (
-                                    <button className="text-sm font-bold text-orange-500 bg-orange-50 px-4 py-2 rounded-lg w-full">等待撮合...</button>
-                                )}
+                            {/* Footer Status/Action */}
+                            <div className="flex justify-between items-center text-xs">
+                                <div className="text-gray-400">
+                                    {record.status === 'pending' && record.session_end_time && `预计 ${record.session_end_time} 结束`}
+                                    {record.status === 'matched' && record.match_time && `撮合时间: ${formatTime(record.match_time)}`}
+                                    {record.status === 'cancelled' && record.status_text && `${record.status_text}`}
+                                </div>
+
                                 {record.status === 'matched' && (
                                     <button
-                                        onClick={() => onNavigate('my-collection')}
-                                        className="text-sm font-bold text-white bg-[#8B0000] px-4 py-2 rounded-lg w-full flex items-center justify-center gap-1 shadow-md shadow-red-900/10"
+                                        onClick={(e) => {
+                                            e.stopPropagation(); // Prevent product click
+                                            onNavigate('my-collection');
+                                        }}
+                                        className="text-xs font-bold text-[#8B0000] flex items-center gap-1 bg-red-50 pl-3 pr-2 py-1.5 rounded-full"
                                     >
-                                        去持仓查看 <ArrowRight size={14} />
-                                    </button>
-                                )}
-                                {record.status === 'cancelled' && (
-                                    <button className="text-sm font-bold text-gray-500 bg-gray-100 px-4 py-2 rounded-lg w-full">
-                                        查看详情 (算力已消耗)
+                                        去持仓查看 <ArrowRight size={12} />
                                     </button>
                                 )}
                             </div>
@@ -251,5 +297,15 @@ const ReservationRecordPage: React.FC<ReservationRecordPageProps> = ({ onBack, o
         </div>
     );
 };
+
+// Helper for session info rendering
+const renderSessionInfo = (record: MatchingPoolItem) => {
+    if (!record.session_title) return null;
+    return (
+        <span className="text-[10px] bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded border border-blue-100 font-bold truncate max-w-[120px]">
+            {record.session_title}
+        </span>
+    );
+}
 
 export default ReservationRecordPage;

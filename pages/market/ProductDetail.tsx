@@ -10,6 +10,7 @@ import {
   CollectionItemDetailData,
   ShopProductDetailData,
   buyShopOrder,
+  cancelBid,
 } from '../../services/api';
 import { useNotification } from '../../context/NotificationContext';
 
@@ -24,7 +25,9 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, onNaviga
   const [detailData, setDetailData] = useState<CollectionItemDetailData | ShopProductDetailData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
   const [buying, setBuying] = useState(false);
+  const [isCancelled, setIsCancelled] = useState(product.reservationStatus === 'cancelled');
 
   const isShopProduct = product.productType === 'shop';
 
@@ -90,6 +93,40 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, onNaviga
         } catch (err: any) {
           console.error('Purchase failed', err);
           showToast('error', '购买失败', err.message || '系统错误');
+        } finally {
+          setBuying(false);
+        }
+      }
+    });
+  };
+
+  const handleCancelBid = async () => {
+    if (buying || !product.reservationId) return;
+
+    showDialog({
+      title: '取消确权',
+      description: '确定要取消本次确权申请吗？',
+      confirmText: '确定取消',
+      cancelText: '暂不取消',
+      onConfirm: async () => {
+        try {
+          setBuying(true); // Reuse buying state for loading
+          const response = await cancelBid({
+            matching_pool_id: Number(product.reservationId)
+          });
+
+          // Handle cases where code might be a string "1" or "0"
+          const code = Number(response.code);
+          if (code === 1 || code === 0) {
+            showToast('success', '取消成功', '取消成功');
+            setIsCancelled(true);
+            // onBack(); // Stay on page to show status change as requested
+          } else {
+            showToast('error', '取消失败', response.msg || '取消失败');
+          }
+        } catch (err: any) {
+          console.error('Cancel bid failed', err);
+          showToast('error', '取消失败', err?.msg || '操作失败');
         } finally {
           setBuying(false);
         }
@@ -360,6 +397,23 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, onNaviga
               {buying ? <LoadingSpinner size={18} color="white" /> : <CreditCard size={18} />}
               {buying ? '处理中...' : '立即购买'}
             </button>
+          ) : product.reservationId ? (
+            isCancelled ? (
+              <button
+                disabled
+                className="flex-1 bg-gray-100 text-gray-400 border border-gray-200 cursor-not-allowed py-3.5 rounded-lg font-bold flex items-center justify-center gap-2">
+                <Gavel size={18} />
+                已取消
+              </button>
+            ) : (
+              <button
+                onClick={handleCancelBid}
+                disabled={buying}
+                className="flex-1 bg-white text-red-600 border border-red-200 hover:bg-red-50 transition-colors py-3.5 rounded-lg font-bold flex items-center justify-center gap-2 shadow-lg shadow-red-900/5 active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed">
+                {buying ? <LoadingSpinner size={18} color="#DC2626" /> : <Gavel size={18} />}
+                {buying ? '处理中...' : '取消确权'}
+              </button>
+            )
           ) : (
             <button
               onClick={() => onNavigate('reservation')}
