@@ -52,6 +52,12 @@ export default defineConfig(({ mode }) => {
           changeOrigin: true,
           secure: false,
         },
+        // 存储资源代理（用户头像等）
+        '/storage': {
+          target: API_TARGET.replace(/\/index\.php$/, ''),
+          changeOrigin: true,
+          secure: false,
+        },
       },
     },
     preview: {
