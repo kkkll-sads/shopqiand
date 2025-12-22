@@ -40,6 +40,18 @@ export default defineConfig(({ mode }) => {
           rewrite: (p) => p.replace(new RegExp(`^${API_PREFIX}`), API_PREFIX),
           secure: false,
         },
+        // 图片资源代理，解决跨域问题
+        '/uploads': {
+          target: API_TARGET.replace(/\/index\.php$/, ''),
+          changeOrigin: true,
+          secure: false,
+        },
+        // 静态资源代理
+        '/static': {
+          target: API_TARGET.replace(/\/index\.php$/, ''),
+          changeOrigin: true,
+          secure: false,
+        },
       },
     },
     preview: {

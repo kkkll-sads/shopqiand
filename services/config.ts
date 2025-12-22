@@ -46,7 +46,22 @@ export const API_ASSET_ORIGIN = resolveApiOrigin();
 
 export const normalizeAssetUrl = (raw?: string) => {
     if (!raw) return '';
-    if (raw.startsWith('http')) return raw;
+
+    // 如果是完整URL，且指向后端服务器，转换为相对路径以使用代理
+    if (raw.startsWith('http')) {
+        try {
+            const url = new URL(raw);
+            // 检查是否指向后端服务器
+            const apiOrigin = new URL(API_ASSET_ORIGIN);
+            if (url.host === apiOrigin.host) {
+                // 转换为相对路径，通过本地代理访问
+                return url.pathname + url.search;
+            }
+        } catch {
+            // URL解析失败，返回原始值
+        }
+        return raw;
+    }
 
     if (raw.startsWith('//')) {
         try {
@@ -59,8 +74,9 @@ export const normalizeAssetUrl = (raw?: string) => {
         }
     }
 
+    // 相对路径，直接返回（会通过代理访问）
     if (raw.startsWith('/')) {
-        return `${API_ASSET_ORIGIN.replace(/\/$/, '')}${raw}`;
+        return raw;
     }
 
     return raw;
