@@ -95,8 +95,8 @@ export interface UserInfo {
   /** 代理商审核状态(-1=未申请,0=待审核,1=已通过,2=已拒绝) */
   agent_review_status: number;
 
-  /** 待激活确权金 (Legacy?) */
-  pending_service_fee?: number | string;
+  /** 待激活确权金 */
+  confirm_rights_gold?: number | string;
   /** 旧资产冻结余额 (对应 PHP legacy_frozen) */
   legacy_frozen?: number | string;
 }

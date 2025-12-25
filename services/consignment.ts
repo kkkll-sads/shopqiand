@@ -260,6 +260,30 @@ export async function getConsignmentDetail(params: {
     const path = `${API_ENDPOINTS.collectionItem.consignmentDetail}?id=${params.consignment_id}`;
     return apiFetch<ConsignmentDetailData>(path, { method: 'GET', token });
 }
+/**
+ * 寄售解锁状态检查接口返回数据
+ */
+export interface ConsignmentCheckData {
+    unlocked?: boolean;
+    remaining_seconds?: number;
+    remaining_text?: string;
+    [key: string]: any;
+}
+
+/**
+ * 检查寄售解锁状态
+ * API: GET /api/collectionItem/consignmentCheck
+ *
+ * @param params.user_collection_id - 用户藏品记录ID（必填）
+ * @param params.token - 用户登录Token（可选，会自动从localStorage获取）
+ */
+export async function getConsignmentCheck(params: { user_collection_id: number | string; token?: string }): Promise<ApiResponse<ConsignmentCheckData>> {
+    const token = params.token || localStorage.getItem(AUTH_TOKEN_KEY) || '';
+    const search = new URLSearchParams();
+    search.set('user_collection_id', String(params.user_collection_id));
+    const path = `${API_ENDPOINTS.collectionItem.consignmentCheck}?${search.toString()}`;
+    return apiFetch<ConsignmentCheckData>(path, { method: 'GET', token });
+}
 
 // ============================================================================
 // 提货相关
@@ -397,4 +421,46 @@ export async function getPurchaseRecords(params: {
 
     const path = `${API_ENDPOINTS.collectionItem.purchaseRecords}?${search.toString()}`;
     return apiFetch<{ list: PurchaseRecordItem[], has_more?: boolean }>(path, { method: 'GET', token });
+}
+
+/**
+ * 权益分割的参数接口
+ * API: POST /api/collectionItem/rightsDeliver
+ */
+export interface RightsDeliverParams {
+    user_collection_id: number | string; // 用户藏品记录ID
+    token?: string;                    // 用户登录Token（可选，会自动从localStorage获取）
+}
+
+/**
+ * 权益分割的返回结果接口
+ */
+export interface RightsDeliverResult {
+    code: number;    // 业务代码
+    message: string; // 业务信息
+    data: object;    // 业务数据
+}
+
+/**
+ * 权益分割
+ * API: POST /api/collectionItem/rightsDeliver
+ *
+ * @param params - 权益分割参数
+ * @param params.user_collection_id - 用户藏品记录ID
+ * @param params.token - 用户登录Token（可选，会自动从localStorage获取）
+ *
+ * @returns 返回权益分割结果
+ */
+export async function rightsDeliver(params: RightsDeliverParams): Promise<ApiResponse<RightsDeliverResult>> {
+    const token = params.token || localStorage.getItem(AUTH_TOKEN_KEY) || '';
+
+    const payload: Record<string, any> = {
+        user_collection_id: Number(params.user_collection_id),
+    };
+
+    return apiFetch<RightsDeliverResult>(API_ENDPOINTS.collectionItem.rightsDeliver, {
+        method: 'POST',
+        body: JSON.stringify(payload),
+        token,
+    });
 }

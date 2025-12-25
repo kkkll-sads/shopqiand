@@ -821,3 +821,88 @@ export async function exchangeScoreToGreenPower(params: ExchangeScoreToGreenPowe
         token,
     });
 }
+
+/**
+ * 检查旧资产解锁状态接口返回数据
+ */
+export interface CheckOldAssetsUnlockStatusResult {
+    unlock_status: number; // 0=未解锁,1=已解锁
+    unlock_conditions: {
+        has_transaction: boolean; // 是否完成过交易
+        transaction_count: number; // 交易次数
+        direct_referrals_count: number; // 直推用户总数
+        qualified_referrals: number; // 有交易记录的直推用户数
+        is_qualified: boolean; // 是否满足解锁条件
+        messages: string[]; // 状态说明信息
+    };
+    required_gold: number; // 需要的待激活金
+    current_gold: number; // 当前待激活金余额
+    can_unlock: boolean; // 是否可以解锁
+}
+
+/**
+ * 解锁旧资产接口返回数据
+ */
+export interface UnlockOldAssetsResult {
+    unlock_status: number; // 0=条件未满足,1=成功
+    consumed_gold?: number; // 消耗的待激活金(成功时返回)
+    reward_equity_package?: number; // 获得的权益资产包价值(成功时返回)
+    reward_consignment_coupon?: number; // 获得的寄售券数量(成功时返回)
+    unlock_conditions: {
+        has_transaction: boolean; // 是否完成过交易
+        transaction_count: number; // 交易次数
+        direct_referrals_count: number; // 直推用户总数
+        qualified_referrals: number; // 有交易记录的直推用户数
+        is_qualified: boolean; // 是否满足解锁条件
+        messages: string[]; // 状态说明信息
+    };
+    required_gold: number; // 需要的待激活金
+    current_gold: number; // 当前待激活金余额
+}
+
+/**
+ * 检查旧资产解锁状态
+ */
+export async function checkOldAssetsUnlockStatus(token?: string): Promise<ApiResponse<CheckOldAssetsUnlockStatusResult>> {
+    const authToken = token || localStorage.getItem(AUTH_TOKEN_KEY) || '';
+
+    if (!authToken) {
+        throw new Error('未找到用户登录信息，请先登录后再检查解锁状态');
+    }
+
+    try {
+        const data = await apiFetch<CheckOldAssetsUnlockStatusResult>(API_ENDPOINTS.account.checkOldAssetsUnlockStatus, {
+            method: 'GET',
+            token: authToken,
+        });
+        console.log('检查旧资产解锁状态接口原始响应:', data);
+        return data;
+    } catch (error: any) {
+        console.error('检查旧资产解锁状态失败:', error);
+        throw error;
+    }
+}
+
+/**
+ * 解锁旧资产
+ */
+export async function unlockOldAssets(token?: string): Promise<ApiResponse<UnlockOldAssetsResult>> {
+    const authToken = token || localStorage.getItem(AUTH_TOKEN_KEY) || '';
+
+    if (!authToken) {
+        throw new Error('未找到用户登录信息，请先登录后再尝试解锁旧资产');
+    }
+
+    try {
+        const data = await apiFetch<UnlockOldAssetsResult>(API_ENDPOINTS.account.unlockOldAssets, {
+            method: 'POST',
+            body: JSON.stringify({}),
+            token: authToken,
+        });
+        console.log('解锁旧资产接口原始响应:', data);
+        return data;
+    } catch (error: any) {
+        console.error('解锁旧资产失败:', error);
+        throw error;
+    }
+}

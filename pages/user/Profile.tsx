@@ -248,7 +248,7 @@ const Profile: React.FC<ProfileProps> = ({ onNavigate }) => {
                 onClick={() => onNavigate('asset-view:2')}
               >
                 <div className="text-[10px] text-gray-400 mb-1 font-medium scale-90 origin-center whitespace-nowrap">确权金</div>
-                <div className="text-sm font-bold text-gray-800 font-[DINAlternate-Bold] whitespace-nowrap leading-none">¥ {formatAmount(userInfo?.service_fee_balance)}</div>
+                <div className="text-sm font-bold text-gray-800 font-[DINAlternate-Bold] whitespace-nowrap leading-none">¥ {formatAmount(userInfo?.confirm_rights_gold)}</div>
               </div>
             </div>
           </div>

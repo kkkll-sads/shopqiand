@@ -105,6 +105,10 @@ export const API_ENDPOINTS = {
         integral: '/Account/integral',
         /** 消费金兑换绿色算力 */
         exchangeScoreToGreenPower: '/Account/exchangeScoreToGreenPower',
+        /** 检查旧资产解锁状态 */
+        checkOldAssetsUnlockStatus: '/Account/checkOldAssetsUnlockStatus',
+        /** 解锁旧资产 */
+        unlockOldAssets: '/Account/unlockOldAssets',
     },
     address: {
         /** 收货地址列表 */
@@ -248,8 +252,12 @@ export const API_ENDPOINTS = {
         deliver: '/collectionItem/deliver',
         /** 申请寄售 */
         consign: '/collectionItem/consign',
+        /** 检查寄售解锁状态 */
+        consignmentCheck: '/collectionItem/consignmentCheck',
         /** 提货订单列表 */
         deliveryList: '/collectionItem/deliveryList',
+        /** 权益分割 */
+        rightsDeliver: '/collectionItem/rightsDeliver',
     },
     artist: {
         /** 艺术家列表 */

@@ -1,51 +1,63 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ChevronLeft, Search, Clock, CheckCircle2, AlertCircle, FileText } from 'lucide-react';
+import { getRightsDeclarationList, RightsDeclarationRecord } from '../../services/rightsDeclaration';
+import { AUTH_TOKEN_KEY } from '../../constants/storageKeys';
+import { useNotification } from '../../context/NotificationContext';
 
 interface ClaimHistoryProps {
     onBack: () => void;
     onNavigate: (page: string) => void;
 }
 
-interface ClaimRecord {
-    id: string;
-    type: string;
-    amount: number;
-    status: 'audit' | 'success' | 'rejected';
-    time: string;
-    reason?: string;
-}
-
 const ClaimHistory: React.FC<ClaimHistoryProps> = ({ onBack, onNavigate }) => {
-    // Mock Data
-    const [history] = useState<ClaimRecord[]>([
-        { id: '1', type: 'balance', amount: 5000.00, status: 'audit', time: '2023-10-27 10:00' },
-        { id: '2', type: 'transfer', amount: 948.00, status: 'success', time: '2023-10-26 14:30' },
-        { id: '3', type: 'other', amount: 3000.00, status: 'rejected', time: '2023-10-25 09:15', reason: '凭证模糊不清，无法识别' },
-        { id: '4', type: 'balance', amount: 12000.00, status: 'success', time: '2023-10-20 11:20' },
-        { id: '5', type: 'transfer', amount: 500.00, status: 'success', time: '2023-10-18 16:45' },
-        { id: '6', type: 'balance', amount: 2000.00, status: 'rejected', time: '2023-10-15 09:30', reason: '账号信息不匹配' },
-    ]);
+    const { showToast } = useNotification();
+    const [history, setHistory] = useState<RightsDeclarationRecord[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        loadHistory();
+    }, []);
+
+    const loadHistory = async () => {
+        setLoading(true);
+        try {
+            const token = localStorage.getItem(AUTH_TOKEN_KEY);
+            if (!token) {
+                showToast('error', '登录过期', '请重新登录');
+                return;
+            }
+
+            const response = await getRightsDeclarationList({}, token);
+            if (response.code === 1 && response.data) {
+                setHistory(response.data.list);
+            } else {
+                showToast('error', '加载失败', response.msg || '获取历史记录失败');
+            }
+        } catch (error: any) {
+            console.error('加载历史记录失败:', error);
+            showToast('error', '加载失败', '网络错误，请重试');
+        } finally {
+            setLoading(false);
+        }
+    };
 
     const getStatusBadge = (status: string) => {
         switch (status) {
-            case 'audit':
-                return <span className="text-xs font-bold px-2 py-0.5 rounded bg-orange-50 text-orange-500 border border-orange-100 flex items-center gap-1"><Clock size={12} /> AI审计中</span>;
-            case 'success':
+            case 'pending':
+                return <span className="text-xs font-bold px-2 py-0.5 rounded bg-orange-50 text-orange-500 border border-orange-100 flex items-center gap-1"><Clock size={12} /> 待审核</span>;
+            case 'approved':
                 return <span className="text-xs font-bold px-2 py-0.5 rounded bg-green-50 text-green-500 border border-green-100 flex items-center gap-1"><CheckCircle2 size={12} /> 确权成功</span>;
             case 'rejected':
                 return <span className="text-xs font-bold px-2 py-0.5 rounded bg-red-50 text-red-500 border border-red-100 flex items-center gap-1"><AlertCircle size={12} /> 审核失败</span>;
+            case 'cancelled':
+                return <span className="text-xs font-bold px-2 py-0.5 rounded bg-gray-50 text-gray-500 border border-gray-100 flex items-center gap-1"><AlertCircle size={12} /> 已撤销</span>;
             default:
                 return null;
         }
     };
 
-    const getTypeLabel = (type: string) => {
-        switch (type) {
-            case 'balance': return '余额截图';
-            case 'transfer': return '转账记录';
-            case 'other': return '其他凭证';
-            default: return '未知类型';
-        }
+    const getTypeLabel = (record: RightsDeclarationRecord) => {
+        return record.voucher_type_text || '未知类型';
     };
 
     return (
@@ -64,7 +76,12 @@ const ClaimHistory: React.FC<ClaimHistoryProps> = ({ onBack, onNavigate }) => {
 
             {/* List */}
             <div className="p-4 space-y-3">
-                {history.length > 0 ? (
+                {loading ? (
+                    <div className="flex flex-col items-center justify-center py-20 text-gray-400">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-300 mb-4"></div>
+                        <p className="text-sm">加载中...</p>
+                    </div>
+                ) : history.length > 0 ? (
                     history.map((record) => (
                         <div
                             key={record.id}
@@ -77,7 +94,7 @@ const ClaimHistory: React.FC<ClaimHistoryProps> = ({ onBack, onNavigate }) => {
                                     <div className="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center text-gray-400">
                                         <FileText size={16} />
                                     </div>
-                                    <span className="font-bold text-gray-900 text-sm">{getTypeLabel(record.type)}</span>
+                                    <span className="font-bold text-gray-900 text-sm">{getTypeLabel(record)}</span>
                                 </div>
                                 {getStatusBadge(record.status)}
                             </div>
@@ -87,18 +104,18 @@ const ClaimHistory: React.FC<ClaimHistoryProps> = ({ onBack, onNavigate }) => {
                                 <div className="space-y-1">
                                     <div className="text-xs text-gray-400 flex items-center gap-1">
                                         <Clock size={12} />
-                                        <span>{record.time}</span>
+                                        <span>{record.create_time_text}</span>
                                     </div>
-                                    {record.reason && (
+                                    {record.review_remark && record.status === 'rejected' && (
                                         <div className="text-xs text-red-500 bg-red-50 px-2 py-1 rounded inline-block">
-                                            驳回原因: {record.reason}
+                                            驳回原因: {record.review_remark}
                                         </div>
                                     )}
                                 </div>
                                 <div className="text-right">
                                     <div className="text-xs text-gray-400 mb-0.5">确权金额</div>
                                     <span className="font-mono font-bold text-gray-900 text-lg">
-                                        ¥{record.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                        ¥{Number(record.amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                     </span>
                                 </div>
                             </div>

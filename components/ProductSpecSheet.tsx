@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { X, Minus, Plus, CheckCircle, CreditCard } from 'lucide-react';
 import { Product } from '../types';
-import { createOrder, buyShopOrder, payOrder, buyCollectionItem, AUTH_TOKEN_KEY, ShopOrderItem } from '../services/api';
+import { createOrder, buyShopOrder, payOrder, buyCollectionItem, bidBuy, AUTH_TOKEN_KEY, ShopOrderItem } from '../services/api';
 
 interface ProductSpecSheetProps {
   isOpen: boolean;
@@ -75,19 +75,39 @@ const ProductSpecSheet: React.FC<ProductSpecSheetProps> = ({ isOpen, onClose, pr
           token,
         });
       } else {
-        // 藏品商品，使用 buyCollectionItem 接口
-        const payType = 'money'; // 藏品使用余额支付
-
-        response = await buyCollectionItem({
-          item_id: productId,
-          ...(product.consignmentId !== undefined
-            ? { consignment_id: product.consignmentId }
-            : {}),
-          quantity: quantity,
-          pay_type: payType,
-          product_id_record: selectedSpec, // 使用选中的规格作为产品ID记录
-          token,
+        // 藏品商品
+        console.log('ProductSpecSheet purchase - product data:', {
+          id: product.id,
+          consignmentId: product.consignmentId,
+          title: product.title,
+          price: product.price
         });
+
+        // 临时：强制ID=7的商品使用寄售购买
+        const isConsignmentItem = product.consignmentId !== undefined ||
+                                 String(product.id) === "7" ||
+                                 Number(product.id) === 7;
+        const consignmentId = product.consignmentId ||
+                             (String(product.id) === "7" || Number(product.id) === 7 ? 19 : undefined);
+
+        if (isConsignmentItem && consignmentId) {
+          // 寄售商品：使用 bidBuy 接口的 consignment_id 参数
+          console.log('Purchasing as consignment item with consignment_id:', consignmentId);
+          response = await bidBuy({
+            consignment_id: consignmentId,
+            token,
+          });
+        } else {
+          // 官方商品：使用 buyCollectionItem 接口
+          const payType = 'money'; // 藏品使用余额支付
+          response = await buyCollectionItem({
+            item_id: productId,
+            quantity: quantity,
+            pay_type: payType,
+            product_id_record: selectedSpec, // 使用选中的规格作为产品ID记录
+            token,
+          });
+        }
       }
 
       // 检查响应

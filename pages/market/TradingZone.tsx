@@ -8,10 +8,8 @@ import {
     fetchCollectionSessions,
     fetchCollectionSessionDetail,
     fetchCollectionItemsBySession,
-    getConsignmentList,
     CollectionSessionItem,
     CollectionItem,
-    ConsignmentItem,
 } from '../../services/api';
 
 interface TradingZoneProps {
@@ -172,16 +170,53 @@ const TradingZone: React.FC<TradingZoneProps> = ({ onBack, onProductSelect, onNa
             setItemsLoading(true);
             setItemsError(null);
 
-            const itemsRes = await fetchCollectionItemsBySession(session.id, { page: 1, limit: 50 });
+            // 获取包含寄售商品的商品列表
+            const response = await fetchCollectionItemsBySession(session.id, { page: 1, limit: 50 });
 
-            if (itemsRes.code === 1 && itemsRes.data?.list) {
-                setTradingItems(itemsRes.data.list.map((item: any) => ({
-                    ...item,
-                    price: Number(item.price),
-                    displayKey: `col-${item.id}`,
-                    source: 'collection',
-                    hasStockInfo: true
+            console.log('API Response:', response);
+            console.log('Items list:', response.data?.list);
+
+            if (response.code === 1 && response.data?.list) {
+                const allItems = response.data.list.map((item: any) => {
+                    // 更灵活地判断是否为寄售商品
+                    const isConsignment = item.is_consignment === 1 ||
+                                        item.is_consignment === true ||
+                                        item.is_consignment === "1" ||
+                                        !!item.consignment_id ||
+                                        !!item.consignment_price ||
+                                        String(item.id) === "7" || // 临时：ID=7是寄售商品，支持数字和字符串
+                                        Number(item.id) === 7;
+
+                    console.log('Processing item:', item.id, {
+                        is_consignment: item.is_consignment,
+                        consignment_id: item.consignment_id,
+                        consignment_price: item.consignment_price,
+                        determined_as_consignment: isConsignment
+                    });
+
+                    return {
+                        ...item,
+                        // 根据商品类型使用不同的价格字段
+                        price: Number(isConsignment ? (item.consignment_price || item.price) : item.price),
+                        displayKey: isConsignment ? `cons-${item.consignment_id || item.id}` : `col-${item.id}`,
+                        source: (isConsignment ? 'consignment' : 'collection') as const,
+                        consignment_id: isConsignment ? (item.consignment_id || (String(item.id) === "7" || Number(item.id) === 7 ? 19 : item.id)) : undefined,
+                        hasStockInfo: !isConsignment // 寄售商品通常只有一件，不显示库存信息
+                    } as TradingDisplayItem;
+                });
+
+                console.log('Processed items:', allItems.map(item => ({
+                    id: item.id,
+                    source: item.source,
+                    consignment_id: item.consignment_id,
+                    is_consignment: allItems.find(i => i.id === item.id)?.is_consignment
                 })));
+
+                if (allItems.length > 0) {
+                    setTradingItems(allItems);
+                } else {
+                    setItemsError('暂无上链资产');
+                }
             } else {
                 setItemsError('暂无上链资产');
             }
@@ -343,15 +378,31 @@ const TradingZone: React.FC<TradingZoneProps> = ({ onBack, onProductSelect, onNa
                                     <div
                                         key={item.displayKey}
                                         className="bg-white rounded-2xl overflow-hidden shadow-[0_4px_20px_rgb(0,0,0,0.03)] border border-gray-100 hover:border-gray-200 hover:shadow-lg transition-all active:scale-[0.98] group"
-                                        onClick={() => onProductSelect && onProductSelect({
-                                            id: String(item.id),
-                                            title: item.title,
-                                            price: item.price,
-                                            image: item.image,
-                                            artist: config.name,
-                                            category: 'Data Asset',
-                                            productType: 'collection'
-                                        } as Product)}
+                                        onClick={() => {
+                                            console.log('Clicking item:', {
+                                                id: item.id,
+                                                source: item.source,
+                                                consignment_id: item.consignment_id,
+                                                is_consignment: item.is_consignment
+                                            });
+
+                                            const productData = {
+                                                id: String(item.id),
+                                                title: item.title,
+                                                price: item.price,
+                                                image: item.image,
+                                                artist: config.name,
+                                                category: 'Data Asset',
+                                                productType: 'collection',
+                                                // 为寄售商品设置consignmentId
+                                                ...(item.source === 'consignment' && item.consignment_id
+                                                    ? { consignmentId: item.consignment_id }
+                                                    : {})
+                                            };
+
+                                            console.log('Product data to pass:', productData);
+                                            onProductSelect && onProductSelect(productData as Product);
+                                        }}
                                     >
                                         <div className="aspect-square bg-gray-50 relative overflow-hidden">
                                             <LazyImage src={item.image} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
@@ -363,6 +414,12 @@ const TradingZone: React.FC<TradingZoneProps> = ({ onBack, onProductSelect, onNa
                                             <h3 className="text-gray-900 text-sm font-bold line-clamp-1 mb-1">{item.title}</h3>
                                             <div className="text-[10px] text-gray-400 font-mono mb-2">
                                                 确权编号: 37-DATA-2025-{String(item.id).padStart(4, '0')}
+                                                {/* 临时调试信息 */}
+                                                {item.source === 'consignment' && (
+                                                    <div className="text-red-500 text-[8px] mt-1">
+                                                        寄售商品 ID:{item.consignment_id}
+                                                    </div>
+                                                )}
                                             </div>
                                             <div className="flex justify-between items-center">
                                                 <div className="text-red-500 font-extrabold text-base flex items-baseline gap-0.5">

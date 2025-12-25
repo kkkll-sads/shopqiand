@@ -355,27 +355,73 @@ const Home: React.FC<HomeProps> = ({ onNavigate, onSwitchTab, announcements = []
             </div>
           ) : (
             reservationRecords.map((record) => {
-              const getStatusBadge = (status: MatchingPoolStatus) => {
-                switch (status) {
-                  case 'pending':
-                    return (
-                      <span className="text-[10px] font-bold text-orange-500 bg-orange-100 px-1.5 py-0.5 rounded border border-orange-200 flex items-center gap-1 whitespace-nowrap">
-                        <Clock size={10} /> 待匹配
-                      </span>
-                    );
-                  case 'matched':
-                    return (
-                      <span className="text-[10px] font-bold text-green-500 bg-green-100 px-1.5 py-0.5 rounded border border-green-200 flex items-center gap-1 whitespace-nowrap">
-                        <CheckCircle2 size={10} /> 中签
-                      </span>
-                    );
-                  case 'cancelled':
-                    return (
-                      <span className="text-[10px] font-bold text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded border border-gray-200 flex items-center gap-1 whitespace-nowrap">
-                        <AlertCircle size={10} /> 已取消
-                      </span>
-                    );
-                }
+              const getStatusBadge = (item: any) => {
+                // 优先使用 status_text 字段，如果没有则使用 status 字段
+                const displayText = item.status_text || (() => {
+                  switch (item.status) {
+                    case 'pending': return '待匹配';
+                    case 'matched': return '中签';
+                    case 'cancelled': return '已取消';
+                    default: return item.status;
+                  }
+                })();
+
+                // 根据状态设置不同的样式
+                const getStatusStyle = (status: string, displayText: string) => {
+                  // 如果有 status_text，使用特殊的样式
+                  if (item.status_text) {
+                    // 根据 status_text 的内容设置样式
+                    if (displayText.includes('寄售') || displayText.includes('出售')) {
+                      return 'text-blue-600 bg-blue-100 border-blue-200';
+                    } else if (displayText.includes('确权') || displayText.includes('成功')) {
+                      return 'text-green-600 bg-green-100 border-green-200';
+                    } else if (displayText.includes('失败') || displayText.includes('取消')) {
+                      return 'text-red-600 bg-red-100 border-red-200';
+                    }
+                  }
+
+                  // 默认根据 status 设置样式
+                  switch (status) {
+                    case 'pending':
+                      return 'text-orange-600 bg-orange-100 border-orange-200';
+                    case 'matched':
+                      return 'text-green-600 bg-green-100 border-green-200';
+                    case 'cancelled':
+                      return 'text-gray-400 bg-gray-100 border-gray-200';
+                    default:
+                      return 'text-gray-400 bg-gray-100 border-gray-200';
+                  }
+                };
+
+                const styleClass = getStatusStyle(item.status, displayText);
+
+                // 根据状态选择图标
+                const getStatusIcon = (status: string, displayText: string) => {
+                  if (item.status_text) {
+                    if (displayText.includes('寄售') || displayText.includes('出售')) {
+                      return <Clock size={10} />;
+                    } else if (displayText.includes('确权') || displayText.includes('成功')) {
+                      return <CheckCircle2 size={10} />;
+                    }
+                  }
+
+                  switch (status) {
+                    case 'pending':
+                      return <Clock size={10} />;
+                    case 'matched':
+                      return <CheckCircle2 size={10} />;
+                    case 'cancelled':
+                      return <AlertCircle size={10} />;
+                    default:
+                      return <Clock size={10} />;
+                  }
+                };
+
+                return (
+                  <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border flex items-center gap-1 whitespace-nowrap ${styleClass}`}>
+                    {getStatusIcon(item.status, displayText)} {displayText}
+                  </span>
+                );
               };
 
               return (
@@ -392,7 +438,7 @@ const Home: React.FC<HomeProps> = ({ onNavigate, onSwitchTab, announcements = []
                   <div className="flex-1 min-w-0 flex flex-col justify-between">
                     <div className="flex justify-between items-start">
                       <h3 className="font-bold text-gray-900 text-sm truncate pr-2">{record.item_title || '藏品'}</h3>
-                      {getStatusBadge(record.status)}
+                      {getStatusBadge(record)}
                     </div>
                     <div className="flex justify-between items-end">
                       <div className="text-xs text-gray-500">

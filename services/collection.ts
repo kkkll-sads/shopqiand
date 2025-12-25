@@ -405,9 +405,11 @@ export async function cancelBid(params: CancelBidParams): Promise<ApiResponse<Ca
  * 竞价购买藏品的参数接口
  */
 export interface BidBuyParams {
-    item_id: number;       // 藏品ID（必填）
-    power_used?: number;   // 使用的算力，默认5
-    token?: string;        // 用户登录Token
+    item_id?: number;         // 藏品ID（竞价购买官方商品时必填）
+    consignment_id?: number;  // 寄售记录ID（购买寄售商品时必填）
+    power_used?: number;      // 使用的算力（竞价购买时使用，默认5）
+    extra_hashrate?: number;  // 额外算力（预约购买时使用）
+    token?: string;           // 用户登录Token
 }
 
 /**
@@ -422,15 +424,37 @@ export interface BidBuyResult {
 
 /**
  * 竞价购买藏品（进入撮合池）
+ * 支持三种购买模式：
+ * 1. 寄售购买：consignment_id - 直接购买已寄售商品
+ * 2. 竞价购买：item_id + power_used - 对官方商品竞价（需要商品status=1）
+ * 3. 预约购买：item_id + extra_hashrate - 预约场次
  * API: POST /api/collectionItem/bidBuy
  */
 export async function bidBuy(params: BidBuyParams): Promise<ApiResponse<BidBuyResult>> {
     const token = params.token || localStorage.getItem(AUTH_TOKEN_KEY) || '';
-    const search = new URLSearchParams();
-    search.set('item_id', String(params.item_id));
-    if (params.power_used !== undefined) {
-        search.set('power_used', String(params.power_used));
+
+    // 参数校验：必须提供 item_id 或 consignment_id 中的一个
+    if (!params.item_id && !params.consignment_id) {
+        throw new Error('必须提供 item_id（竞价购买）或 consignment_id（寄售购买）中的一个');
     }
+
+    const search = new URLSearchParams();
+
+    // 根据购买模式设置参数
+    if (params.consignment_id) {
+        // 寄售购买模式：只使用 consignment_id
+        search.set('consignment_id', String(params.consignment_id));
+    } else if (params.item_id) {
+        // 竞价购买或预约购买模式
+        search.set('item_id', String(params.item_id));
+        if (params.power_used !== undefined) {
+            search.set('power_used', String(params.power_used));
+        }
+        if (params.extra_hashrate !== undefined) {
+            search.set('extra_hashrate', String(params.extra_hashrate));
+        }
+    }
+
     const path = `${API_ENDPOINTS.collectionItem.bidBuy}?${search.toString()}`;
     return apiFetch<BidBuyResult>(path, {
         method: 'POST',

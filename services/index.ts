@@ -6,5 +6,7 @@ export * from './wallet';
 export * from './market';
 export * from './cms';
 export * from './common';
+export * from './consignment';
+export * from './rightsDeclaration';
 
 // Re-export all services

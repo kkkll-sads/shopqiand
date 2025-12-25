@@ -10,7 +10,7 @@ import {
   CollectionItemDetailData,
   ShopProductDetailData,
   buyShopOrder,
-  cancelBid,
+  bidBuy,
 } from '../../services/api';
 import { useNotification } from '../../context/NotificationContext';
 
@@ -27,7 +27,7 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, onNaviga
   const [error, setError] = useState<string | null>(null);
 
   const [buying, setBuying] = useState(false);
-  const [isCancelled, setIsCancelled] = useState(product.reservationStatus === 'cancelled');
+  const [collectionBuying, setCollectionBuying] = useState(false);
 
   const isShopProduct = product.productType === 'shop';
 
@@ -67,6 +67,15 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, onNaviga
   }, [product.id, isShopProduct]);
 
   const handleBuy = async () => {
+    console.log('ProductDetail handleBuy called for product:', product);
+    console.log('Product data:', {
+      id: product.id,
+      title: product.title,
+      productType: product.productType,
+      consignmentId: product.consignmentId,
+      reservationId: product.reservationId
+    });
+
     if (buying) return;
 
     showDialog({
@@ -75,13 +84,16 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, onNaviga
       confirmText: '立即支付',
       cancelText: '取消',
       onConfirm: async () => {
+        console.log('User confirmed purchase in ProductDetail');
         try {
           setBuying(true);
+          console.log('Calling buyShopOrder with product_id:', Number(product.id));
           const response = await buyShopOrder({
             items: [{ product_id: Number(product.id), quantity: 1 }],
             pay_type: 'money',
             // address_id will be handled by service (using default if not provided)
           });
+          console.log('buyShopOrder response:', response);
 
           if (response.code === 1) {
             showToast('success', '购买成功', '订单已创建并支付成功');
@@ -100,35 +112,50 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, onNaviga
     });
   };
 
-  const handleCancelBid = async () => {
-    if (buying || !product.reservationId) return;
+  const handleCollectionBuy = async () => {
+    if (collectionBuying) return;
+
+    console.log('ProductDetail handleCollectionBuy called for product:', product);
 
     showDialog({
-      title: '取消确权',
-      description: '确定要取消本次确权申请吗？',
-      confirmText: '确定取消',
-      cancelText: '暂不取消',
+      title: '确认购买',
+      description: `确定要购买 ${product.title} 吗？`,
+      confirmText: '立即支付',
+      cancelText: '取消',
       onConfirm: async () => {
+        console.log('User confirmed collection purchase in ProductDetail');
         try {
-          setBuying(true); // Reuse buying state for loading
-          const response = await cancelBid({
-            matching_pool_id: Number(product.reservationId)
-          });
+          setCollectionBuying(true);
 
-          // Handle cases where code might be a string "1" or "0"
-          const code = Number(response.code);
-          if (code === 1 || code === 0) {
-            showToast('success', '取消成功', '取消成功');
-            setIsCancelled(true);
-            // onBack(); // Stay on page to show status change as requested
+          // 对于寄售商品，使用 bidBuy 接口
+          // 去除强制ID=7的商品使用寄售购买
+          const consignmentId = product.consignmentId ||
+                                undefined;
+
+          if (consignmentId) {
+            console.log('Purchasing consignment item with consignment_id:', consignmentId);
+            console.log('Original product.consignmentId:', product.consignmentId);
+
+            const response = await bidBuy({
+              consignment_id: consignmentId,
+              token: localStorage.getItem(AUTH_TOKEN_KEY) || '',
+            });
+            console.log('bidBuy response:', response);
+
+            if (response.code === 0 || response.code === 1) {
+              showToast('success', '购买成功', response.msg || '商品购买成功');
+              onNavigate('collection');
+            } else {
+              showToast('error', '购买失败', response.msg || '购买失败');
+            }
           } else {
-            showToast('error', '取消失败', response.msg || '取消失败');
+            showToast('error', '购买失败', '商品信息不完整');
           }
         } catch (err: any) {
-          console.error('Cancel bid failed', err);
-          showToast('error', '取消失败', err?.msg || '操作失败');
+          console.error('Collection purchase failed:', err);
+          showToast('error', '购买失败', err?.msg || err.message || '系统错误');
         } finally {
-          setBuying(false);
+          setCollectionBuying(false);
         }
       }
     });
@@ -148,6 +175,11 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, onNaviga
   const fingerprint = collectionDetail?.fingerprint;
   const sessionName = collectionDetail?.session_name;
   const sessionTime = collectionDetail ? `${collectionDetail.session_start_time || '--:--'} - ${collectionDetail.session_end_time || '--:--'}` : '';
+
+  // 调试信息
+  console.log('ProductDetail rendering with product:', product);
+  console.log('ProductDetail isShopProduct:', isShopProduct);
+  console.log('ProductDetail collectionDetail:', collectionDetail);
 
   return (
     <div className="min-h-screen bg-[#FDFBF7] text-gray-900 font-serif pb-24 relative overflow-hidden">
@@ -389,39 +421,48 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, onNaviga
             </div>
           </div>
 
-          {isShopProduct ? (
-            <button
-              onClick={handleBuy}
-              disabled={buying}
-              className="flex-1 bg-[#EE4D2D] text-white hover:bg-[#D73211] transition-colors py-3.5 rounded-lg font-bold flex items-center justify-center gap-2 shadow-lg shadow-orange-900/20 active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed">
-              {buying ? <LoadingSpinner size={18} color="white" /> : <CreditCard size={18} />}
-              {buying ? '处理中...' : '立即购买'}
-            </button>
-          ) : product.reservationId ? (
-            isCancelled ? (
-              <button
-                disabled
-                className="flex-1 bg-gray-100 text-gray-400 border border-gray-200 cursor-not-allowed py-3.5 rounded-lg font-bold flex items-center justify-center gap-2">
-                <Gavel size={18} />
-                已取消
-              </button>
-            ) : (
-              <button
-                onClick={handleCancelBid}
-                disabled={buying}
-                className="flex-1 bg-white text-red-600 border border-red-200 hover:bg-red-50 transition-colors py-3.5 rounded-lg font-bold flex items-center justify-center gap-2 shadow-lg shadow-red-900/5 active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed">
-                {buying ? <LoadingSpinner size={18} color="#DC2626" /> : <Gavel size={18} />}
-                {buying ? '处理中...' : '取消确权'}
-              </button>
-            )
-          ) : (
-            <button
-              onClick={() => onNavigate('reservation')}
-              className="flex-1 bg-[#8B0000] text-amber-100 hover:bg-[#A00000] transition-colors py-3.5 rounded-lg font-bold flex items-center justify-center gap-2 shadow-lg shadow-red-900/20 active:scale-[0.98]">
-              <Gavel size={18} />
-              申请确权
-            </button>
-          )}
+          {(() => {
+            console.log('Rendering buttons - isShopProduct:', isShopProduct, 'consignmentId:', product.consignmentId, 'reservationId:', product.reservationId, 'productId:', product.id);
+
+            if (isShopProduct) {
+              return (
+                <button
+                  onClick={handleBuy}
+                  disabled={buying}
+                  className="flex-1 bg-[#EE4D2D] text-white hover:bg-[#D73211] transition-colors py-3.5 rounded-lg font-bold flex items-center justify-center gap-2 shadow-lg shadow-orange-900/20 active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed">
+                  {buying ? <LoadingSpinner size={18} color="white" /> : <CreditCard size={18} />}
+                  {buying ? '处理中...' : '立即购买'}
+                </button>
+              );
+            } else if (product.reservationId) {
+              return (
+                <button
+                  disabled
+                  className="flex-1 bg-gray-100 text-gray-400 border border-gray-200 cursor-not-allowed py-3.5 rounded-lg font-bold flex items-center justify-center gap-2">
+                  <Gavel size={18} />
+                  确权中
+                </button>
+              );
+            } else {
+              return (
+                <button
+                  onClick={() => {
+                    console.log('ProductDetail: Clicking 申请确权 for product:', product);
+                    console.log('Navigating to reservation with product data:', {
+                      id: product.id,
+                      title: product.title,
+                      consignmentId: product.consignmentId,
+                      reservationId: product.reservationId
+                    });
+                    onNavigate('reservation');
+                  }}
+                  className="flex-1 bg-[#8B0000] text-amber-100 hover:bg-[#A00000] transition-colors py-3.5 rounded-lg font-bold flex items-center justify-center gap-2 shadow-lg shadow-red-900/20 active:scale-[0.98]">
+                  <Gavel size={18} />
+                  申请确权
+                </button>
+              );
+            }
+          })()}
         </div>
       </div>
 

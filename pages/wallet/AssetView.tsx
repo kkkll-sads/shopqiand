@@ -3,14 +3,16 @@ import React, { useState, useEffect } from 'react';
 import { Wallet, Receipt, CreditCard, FileText, ShoppingBag, Package, ArrowRight, X, AlertCircle, CheckCircle, Leaf } from 'lucide-react';
 import PageContainer from '../../components/layout/PageContainer';
 import { LoadingSpinner, EmptyState, LazyImage } from '../../components/common';
-import { formatTime, formatAmount } from '../../utils/format';
+import { formatAmount } from '../../utils/format';
 import {
   getBalanceLog,
   getMyOrderList,
   getMyWithdrawList,
   getMyCollection,
   deliverCollectionItem,
+  rightsDeliver,
   consignCollectionItem,
+  getConsignmentCheck,
   fetchProfile,
   getServiceFeeLog,
   BalanceLogItem,
@@ -174,6 +176,92 @@ const AssetView: React.FC<AssetViewProps> = ({ onBack, onNavigate, onProductSele
     return () => clearInterval(interval);
   }, [showActionModal, selectedItem, actionTab]);
 
+  // 寄售解锁检查数据
+  const [consignmentCheckData, setConsignmentCheckData] = useState<any>(null);
+
+  // 实时倒计时（秒）
+  const [consignmentRemaining, setConsignmentRemaining] = useState<number | null>(null);
+
+  const formatSeconds = (secs: number) => {
+    const hours = Math.floor(secs / 3600);
+    const minutes = Math.floor((secs % 3600) / 60);
+    const seconds = secs % 60;
+    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+  };
+
+  useEffect(() => {
+    // Always fetch consignment check when modal opens for a selected item
+    if (!showActionModal || !selectedItem) {
+      setConsignmentCheckData(null);
+      return;
+    }
+
+    const collectionId = resolveCollectionId(selectedItem);
+    if (collectionId === undefined || collectionId === null) {
+      setConsignmentCheckData(null);
+      return;
+    }
+
+    let mounted = true;
+    const token = localStorage.getItem(AUTH_TOKEN_KEY) || undefined;
+    getConsignmentCheck({ user_collection_id: collectionId, token })
+      .then((res: any) => {
+        if (!mounted) return;
+        setConsignmentCheckData(res?.data ?? null);
+      })
+      .catch(() => {
+        if (!mounted) return;
+        setConsignmentCheckData(null);
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, [showActionModal, selectedItem]);
+
+  // 当接口返回 remaining_seconds 时启用实时倒计时
+  useEffect(() => {
+    if (!consignmentCheckData) {
+      setConsignmentRemaining(null);
+      return;
+    }
+
+    // 优先使用 numeric remaining_seconds；若不存在但 remaining_text 是 HH:MM:SS，则解析
+    let secs: number = 0;
+    if (typeof consignmentCheckData.remaining_seconds !== 'undefined' && consignmentCheckData.remaining_seconds !== null) {
+      secs = Number(consignmentCheckData.remaining_seconds) || 0;
+    } else if (typeof consignmentCheckData.remaining_text === 'string') {
+      // 尝试从类似 "99:05:35" 的文本中解析秒数
+      const match = consignmentCheckData.remaining_text.match(/(\d{1,}):(\d{2}):(\d{2})/);
+      if (match) {
+        const h = Number(match[1]) || 0;
+        const m = Number(match[2]) || 0;
+        const s = Number(match[3]) || 0;
+        secs = h * 3600 + m * 60 + s;
+      } else {
+        secs = 0;
+      }
+    } else {
+      setConsignmentRemaining(null);
+      return;
+    }
+    setConsignmentRemaining(secs > 0 ? secs : 0);
+    let mounted = true;
+    const id = setInterval(() => {
+      if (!mounted) return;
+      secs = Math.max(0, secs - 1);
+      setConsignmentRemaining(secs);
+      if (secs <= 0) {
+        clearInterval(id);
+      }
+    }, 1000);
+
+    return () => {
+      mounted = false;
+      clearInterval(id);
+    };
+  }, [consignmentCheckData]);
+
   // 如果曾经寄售过，强制切换到提货标签
   useEffect(() => {
     if (showActionModal && selectedItem) {
@@ -229,11 +317,47 @@ const AssetView: React.FC<AssetViewProps> = ({ onBack, onNavigate, onProductSele
       if (isDelivered(selectedItem)) {
         return false;
       }
-      const timeCheck = check48Hours(selectedItem.pay_time || selectedItem.buy_time || 0);
-      return timeCheck.passed;
+      // Use backend consignmentCheck / remaining_seconds / can_consign to determine unlock.
+      if (consignmentCheckData) {
+        if (typeof consignmentCheckData.can_consign === 'boolean') {
+          return !!consignmentCheckData.can_consign;
+        }
+        if (typeof consignmentCheckData.unlocked === 'boolean') {
+          return !!consignmentCheckData.unlocked;
+        }
+        if (typeof consignmentCheckData.remaining_seconds === 'number') {
+          return Number(consignmentCheckData.remaining_seconds) <= 0;
+        }
+        if (typeof consignmentRemaining === 'number') {
+          return consignmentRemaining <= 0;
+        }
+      }
+
+      // Fallback: allow and let backend enforce if no check data available
+      return true;
     } else {
       const timeCheck = check48Hours(selectedItem.pay_time || selectedItem.buy_time || 0);
       const hasTicket = checkConsignmentTicket();
+
+      // If we have consignmentCheckData from backend, prefer it for unlock status.
+      if (consignmentCheckData) {
+        let unlocked = false;
+        // Prefer explicit backend flag
+        if (typeof consignmentCheckData.can_consign === 'boolean') {
+          unlocked = consignmentCheckData.can_consign;
+        } else if (typeof consignmentCheckData.unlocked === 'boolean') {
+          unlocked = consignmentCheckData.unlocked;
+        } else if (typeof consignmentCheckData.remaining_seconds === 'number') {
+          unlocked = Number(consignmentCheckData.remaining_seconds) <= 0;
+        } else if (typeof consignmentRemaining === 'number') {
+          unlocked = consignmentRemaining <= 0;
+        } else {
+          unlocked = timeCheck.passed;
+        }
+        return unlocked && hasTicket;
+      }
+
+      // Fallback to local 48-hour check
       return timeCheck.passed && hasTicket;
     }
   };
@@ -241,7 +365,7 @@ const AssetView: React.FC<AssetViewProps> = ({ onBack, onNavigate, onProductSele
 
   const { showToast, showDialog } = useNotification();
 
-  const handleConfirmAction = () => {
+  const handleConfirmAction = async () => {
     if (!selectedItem || actionLoading) return;
 
     const token = localStorage.getItem(AUTH_TOKEN_KEY);
@@ -277,6 +401,7 @@ const AssetView: React.FC<AssetViewProps> = ({ onBack, onNavigate, onProductSele
         return;
       }
 
+      // 保持本地 48 小时规则为主（提货）
       const timeCheck = check48Hours(selectedItem.pay_time || selectedItem.buy_time || 0);
       if (!timeCheck.passed) {
         showToast('warning', '时间未到', `提货需要满足购买后48小时，还需等待 ${timeCheck.hoursLeft} 小时`);
@@ -284,35 +409,38 @@ const AssetView: React.FC<AssetViewProps> = ({ onBack, onNavigate, onProductSele
       }
 
       const hasConsigned = hasConsignedBefore(selectedItem);
-      const doDelivery = () => {
+      const doRightsDeliver = () => {
         setActionLoading(true);
-        deliverCollectionItem({
+        rightsDeliver({
           user_collection_id: collectionId,
-          address_id: null,
           token,
         })
           .then((res) => {
-            showToast('success', '提交成功', res.msg || '提货申请已提交');
-            setShowActionModal(false);
-            setSelectedItem(null);
-            runLoad();
+            if (res.code === 0 || res.code === 1 || res.data?.code === 0 || res.data?.code === 1) {
+              showToast('success', '操作成功', res.msg || res.data?.message || res.message || '权益分割已提交');
+              setShowActionModal(false);
+              setSelectedItem(null);
+              runLoad();
+            } else {
+              showToast('error', '操作失败', res.msg || res.data?.message || res.message || '权益分割失败');
+            }
           })
           .catch((err: any) => {
-            showToast('error', '提交失败', err?.msg || err?.message || '提货申请失败');
+            showToast('error', '提交失败', err?.msg || err?.message || '权益分割失败');
           })
           .finally(() => setActionLoading(false));
       };
 
       if (hasConsigned) {
         showDialog({
-          title: '强制提货确认',
-          description: '该藏品曾经寄售过，确定要强制提货吗？',
-          confirmText: '确定提货',
+          title: '强制权益分割确认',
+          description: '该藏品曾经寄售过，确定要强制执行权益分割吗？',
+          confirmText: '确定分割',
           cancelText: '取消',
-          onConfirm: doDelivery
+          onConfirm: doRightsDeliver
         });
       } else {
-        doDelivery();
+        doRightsDeliver();
       }
     } else {
       if (isConsigning(selectedItem)) {
@@ -325,10 +453,29 @@ const AssetView: React.FC<AssetViewProps> = ({ onBack, onNavigate, onProductSele
         return;
       }
 
-      const timeCheck = check48Hours(selectedItem.pay_time || selectedItem.buy_time || 0);
-      if (!timeCheck.passed) {
-        showToast('warning', '时间未到', `寄售需要满足购买后48小时，还需等待 ${timeCheck.hoursLeft} 小时`);
-        return;
+      // 对寄售前的解锁检查，优先使用后端 consignmentCheck 接口
+      try {
+        const checkRes: any = await getConsignmentCheck({ user_collection_id: collectionId, token });
+        const cdata = checkRes?.data;
+        if (cdata) {
+          // 如果后端明确返回 unlocked 字段，则以其为准
+          if (typeof cdata.unlocked === 'boolean') {
+            if (!cdata.unlocked) {
+              const hrsLeft = cdata.remaining_seconds ? Math.ceil(Number(cdata.remaining_seconds) / 3600) : 0;
+              showToast('warning', '时间未到', `寄售需要满足购买后48小时，还需等待 ${hrsLeft} 小时`);
+              return;
+            }
+          } else if (typeof cdata.remaining_seconds === 'number') {
+            // 后端只返回剩余秒数
+            if (Number(cdata.remaining_seconds) > 0) {
+              const hrsLeft = Math.ceil(Number(cdata.remaining_seconds) / 3600);
+              showToast('warning', '时间未到', `寄售需要满足购买后48小时，还需等待 ${hrsLeft} 小时`);
+              return;
+            }
+          }
+        }
+      } catch (err) {
+        // 后端会最终校验寄售时间，前端不再使用本地 48 小时回退逻辑
       }
 
       const hasTicket = checkConsignmentTicket();
@@ -689,43 +836,60 @@ const AssetView: React.FC<AssetViewProps> = ({ onBack, onNavigate, onProductSele
             <div className="text-sm font-bold text-gray-900 mb-2">¥ {item.price}</div>
 
             <div className="flex gap-2 flex-wrap">
-              {/* 如果已售出，只显示"已售出"标签 */}
-              {item.consignment_status === 4 ? (
-                <div className="text-xs px-2 py-1 rounded-full bg-green-50 text-green-600 border border-green-200">
-                  已售出
-                </div>
-              ) : item.consignment_status === 2 ? (
-                /* 如果正在寄售中，只显示"寄售中"标签 */
-                <div className="text-xs px-2 py-1 rounded-full bg-orange-50 text-orange-600 border border-orange-200">
-                  寄售中
-                </div>
-              ) : item.delivery_status === 1 ? (
-                /* 如果已提货且未寄售，只显示"已提货"标签 */
-                <div className="text-xs px-2 py-1 rounded-full bg-green-50 text-green-600 border border-green-200">
-                  ✓ 已提货
-                </div>
-              ) : hasConsignedBefore(item) ? (
-                /* 如果曾经寄售过（需要强制提货），只显示"待提货"标签 */
-                <div className="text-xs px-2 py-1 rounded-full bg-orange-50 text-orange-600 border border-orange-200">
-                  待提货
+              {/* 优先使用 status_text 字段显示状态 */}
+              {item.status_text ? (
+                <div className={`text-xs px-2 py-1 rounded-full border ${
+                  item.status_text.includes('寄售') || item.status_text.includes('出售')
+                    ? 'bg-blue-50 text-blue-600 border-blue-200'
+                    : item.status_text.includes('确权') || item.status_text.includes('成功') || item.status_text.includes('已售出')
+                      ? 'bg-green-50 text-green-600 border-green-200'
+                      : item.status_text.includes('失败') || item.status_text.includes('取消')
+                        ? 'bg-red-50 text-red-600 border-red-200'
+                        : item.status_text.includes('提货') || item.status_text.includes('待')
+                          ? 'bg-orange-50 text-orange-600 border-orange-200'
+                          : 'bg-gray-50 text-gray-600 border-gray-200'
+                }`}>
+                  {item.status_text}
                 </div>
               ) : (
-                /* 未提货且未寄售过，显示提货状态和寄售状态 */
-                <>
+                /* 回退到原有的逻辑（如果没有 status_text 字段） */
+                item.consignment_status === 4 ? (
+                  <div className="text-xs px-2 py-1 rounded-full bg-green-50 text-green-600 border border-green-200">
+                    已售出
+                  </div>
+                ) : item.consignment_status === 2 ? (
+                  /* 如果正在寄售中，只显示"寄售中"标签 */
                   <div className="text-xs px-2 py-1 rounded-full bg-orange-50 text-orange-600 border border-orange-200">
-                    ○ 未提货
+                    寄售中
                   </div>
-                  <div className={`text-xs px-2 py-1 rounded-full ${item.consignment_status === 0
-                    ? 'bg-gray-50 text-gray-600 border border-gray-200'
-                    : item.consignment_status === 1
-                      ? 'bg-yellow-50 text-yellow-600 border border-yellow-200'
-                      : item.consignment_status === 3
-                        ? 'bg-red-50 text-red-600 border border-red-200'
-                        : 'bg-green-50 text-green-600 border border-green-200'
-                    }`}>
-                    {item.consignment_status_text || '未寄售'}
+                ) : item.delivery_status === 1 ? (
+                  /* 如果已提货且未寄售，只显示"已提货"标签 */
+                  <div className="text-xs px-2 py-1 rounded-full bg-green-50 text-green-600 border border-green-200">
+                    ✓ 已提货
                   </div>
-                </>
+                ) : hasConsignedBefore(item) ? (
+                  /* 如果曾经寄售过（需要强制提货），只显示"待提货"标签 */
+                  <div className="text-xs px-2 py-1 rounded-full bg-orange-50 text-orange-600 border border-orange-200">
+                    待提货
+                  </div>
+                ) : (
+                  /* 未提货且未寄售过，显示提货状态和寄售状态 */
+                  <>
+                    <div className="text-xs px-2 py-1 rounded-full bg-orange-50 text-orange-600 border border-orange-200">
+                      ○ 未提货
+                    </div>
+                    <div className={`text-xs px-2 py-1 rounded-full ${item.consignment_status === 0
+                      ? 'bg-gray-50 text-gray-600 border border-gray-200'
+                      : item.consignment_status === 1
+                        ? 'bg-yellow-50 text-yellow-600 border border-yellow-200'
+                        : item.consignment_status === 3
+                          ? 'bg-red-50 text-red-600 border border-red-200'
+                          : 'bg-green-50 text-green-600 border border-green-200'
+                      }`}>
+                      {item.consignment_status_text || '未寄售'}
+                    </div>
+                  </>
+                )
               )}
             </div>
           </div>
@@ -1084,7 +1248,7 @@ const AssetView: React.FC<AssetViewProps> = ({ onBack, onNavigate, onProductSele
                       : 'text-gray-600'
                       }`}
                   >
-                    提货
+                    权益分割
                   </button>
                   <button
                     onClick={() => setActionTab('consignment')}
@@ -1186,9 +1350,30 @@ const AssetView: React.FC<AssetViewProps> = ({ onBack, onNavigate, onProductSele
                             <AlertCircle size={16} />
                             <span>距离可寄售时间还有：</span>
                           </div>
-                          {countdown ? (
+                          {consignmentCheckData ? (
+                            consignmentCheckData.remaining_text ? (
+                              <div className="text-sm font-bold text-orange-700 text-center">
+                                {consignmentCheckData.remaining_text}
+                              </div>
+                            ) : typeof consignmentRemaining === 'number' && consignmentRemaining >= 0 ? (
+                              <div className="text-sm font-bold text-orange-700 text-center">
+                                {actionTab === 'delivery' ? '距离权益分割时间还有：' : '距离可寄售时间还有：'}
+                                {formatSeconds(consignmentRemaining)}
+                              </div>
+                            ) : consignmentCheckData.remaining_seconds ? (
+                              <div className="text-sm font-bold text-orange-700 text-center">
+                                {actionTab === 'delivery' ? '距离权益分割时间还有：' : '距离可寄售时间还有：'}
+                                {formatSeconds(Number(consignmentCheckData.remaining_seconds))}
+                              </div>
+                            ) : (
+                              // fallback: show raw message or JSON
+                              <div className="text-sm font-bold text-orange-700 text-center">
+                                {consignmentCheckData.message || JSON.stringify(consignmentCheckData)}
+                              </div>
+                            )
+                          ) : countdown ? (
                             <div className="text-sm font-bold text-orange-700 text-center">
-                              {String(countdown.hours).padStart(2, '0')}:
+                              距离权益分割时间还有：{String(countdown.hours).padStart(2, '0')}:
                               {String(countdown.minutes).padStart(2, '0')}:
                               {String(countdown.seconds).padStart(2, '0')}
                             </div>
@@ -1241,10 +1426,10 @@ const AssetView: React.FC<AssetViewProps> = ({ onBack, onNavigate, onProductSele
                 : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                 }`}
             >
-              {actionLoading
+            {actionLoading
                 ? '提交中...'
                 : actionTab === 'delivery'
-                  ? '确认提货'
+                  ? '权益分割'
                   : '确认寄售'}
             </button>
           </div>

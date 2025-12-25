@@ -65,15 +65,73 @@ const ReservationRecordPage: React.FC<ReservationRecordPageProps> = ({ onBack, o
         }
     };
 
-    const getStatusBadge = (status: MatchingPoolStatus) => {
-        switch (status) {
-            case 'pending':
-                return <span className="text-xs font-bold px-2 py-0.5 rounded bg-orange-50 text-orange-500 border border-orange-100 flex items-center gap-1"><Clock size={10} /> 待匹配</span>;
-            case 'matched':
-                return <span className="text-xs font-bold px-2 py-0.5 rounded bg-green-50 text-green-500 border border-green-100 flex items-center gap-1"><CheckCircle2 size={10} /> 中签</span>;
-            case 'cancelled':
-                return <span className="text-xs font-bold px-2 py-0.5 rounded bg-gray-50 text-gray-400 border border-gray-100 flex items-center gap-1"><AlertCircle size={10} /> 已取消</span>;
-        }
+    const getStatusBadge = (item: any) => {
+        // 优先使用 status_text 字段，如果没有则使用 status 字段
+        const displayText = item.status_text || (() => {
+            switch (item.status) {
+                case 'pending': return '待匹配';
+                case 'matched': return '中签';
+                case 'cancelled': return '已取消';
+                default: return item.status;
+            }
+        })();
+
+        // 根据状态设置不同的样式
+        const getStatusStyle = (status: string, displayText: string) => {
+            // 如果有 status_text，使用特殊的样式
+            if (item.status_text) {
+                // 根据 status_text 的内容设置样式
+                if (displayText.includes('寄售') || displayText.includes('出售')) {
+                    return 'bg-blue-50 text-blue-600 border-blue-200';
+                } else if (displayText.includes('确权') || displayText.includes('成功')) {
+                    return 'bg-green-50 text-green-600 border-green-200';
+                } else if (displayText.includes('失败') || displayText.includes('取消')) {
+                    return 'bg-red-50 text-red-600 border-red-200';
+                }
+            }
+
+            // 默认根据 status 设置样式
+            switch (status) {
+                case 'pending':
+                    return 'bg-orange-50 text-orange-600 border-orange-200';
+                case 'matched':
+                    return 'bg-green-50 text-green-600 border-green-200';
+                case 'cancelled':
+                    return 'bg-gray-50 text-gray-500 border-gray-200';
+                default:
+                    return 'bg-gray-50 text-gray-500 border-gray-200';
+            }
+        };
+
+        const styleClass = getStatusStyle(item.status, displayText);
+
+        // 根据状态选择图标
+        const getStatusIcon = (status: string, displayText: string) => {
+            if (item.status_text) {
+                if (displayText.includes('寄售') || displayText.includes('出售')) {
+                    return <Clock size={10} />;
+                } else if (displayText.includes('确权') || displayText.includes('成功')) {
+                    return <CheckCircle2 size={10} />;
+                }
+            }
+
+            switch (status) {
+                case 'pending':
+                    return <Clock size={10} />;
+                case 'matched':
+                    return <CheckCircle2 size={10} />;
+                case 'cancelled':
+                    return <AlertCircle size={10} />;
+                default:
+                    return <Clock size={10} />;
+            }
+        };
+
+        return (
+            <span className={`text-xs font-bold px-2 py-0.5 rounded border flex items-center gap-1 ${styleClass}`}>
+                {getStatusIcon(item.status, displayText)} {displayText}
+            </span>
+        );
     };
 
     // Format timestamp to date string
@@ -212,7 +270,7 @@ const ReservationRecordPage: React.FC<ReservationRecordPageProps> = ({ onBack, o
                                         创建: {formatTime(record.create_time || record.created_at)}
                                     </div>
                                 </div>
-                                {getStatusBadge(record.status)}
+                                {getStatusBadge(record)}
                             </div>
 
                             {/* Product Info - Clickable */}
@@ -221,11 +279,15 @@ const ReservationRecordPage: React.FC<ReservationRecordPageProps> = ({ onBack, o
                                 onClick={() => handleProductClick(record)}
                             >
                                 <div className="w-16 h-16 bg-gray-100 rounded-lg overflow-hidden shrink-0">
-                                    <img
-                                        src={record.item_image || record.image || ''}
-                                        alt={record.item_title || '藏品'}
-                                        className="w-full h-full object-cover"
-                                    />
+                                    {(record.item_image || record.image) ? (
+                                        <img
+                                            src={record.item_image || record.image}
+                                            alt={record.item_title || '藏品'}
+                                            className="w-full h-full object-cover"
+                                        />
+                                    ) : (
+                                        <div className="w-full h-full bg-gray-100" />
+                                    )}
                                 </div>
                                 <div className="flex-1 min-w-0 flex flex-col justify-center">
                                     <h3 className="text-gray-900 font-bold truncate text-sm mb-1">{record.item_title || record.title || '藏品详情'}</h3>

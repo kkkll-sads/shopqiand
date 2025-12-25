@@ -15,74 +15,48 @@ const ReservationPage: React.FC<ReservationPageProps> = ({ product, onBack, onNa
     const [extraHashrate, setExtraHashrate] = useState(0);
     const [showConfirmModal, setShowConfirmModal] = useState(false);
     const [loading, setLoading] = useState(false);
-
-    // 基础算力需求（根据商品价格计算）
-    const baseHashrate = Math.ceil(product.price / 100);
-
-    // 额外算力（用户可调节）
-    const totalRequiredHashrate = baseHashrate + extraHashrate;
-
-    // 当前用户持有算力（这里应该从API获取，暂时模拟）
-    const [availableHashrate, setAvailableHashrate] = useState(10);
-
-    // 冻结金额计算（预约保证金，冻结商品全款）
-    const frozenAmount = product.price;
-
-    // 账户余额（应该从API获取）
-    const [accountBalance, setAccountBalance] = useState(1000);
-
-    // 检查算力是否充足
-    const isHashrateSufficient = availableHashrate >= totalRequiredHashrate;
-
-    // 检查资金是否充足
-    const isFundSufficient = accountBalance >= frozenAmount;
-
-    // 计算额外算力可调节范围
-    const maxExtraHashrate = Math.max(0, availableHashrate - baseHashrate);
-    const canIncreaseHashrate = extraHashrate < maxExtraHashrate;
+    const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
 
     useEffect(() => {
-        // 获取用户信息（算力和余额）
-        const loadUserInfo = async () => {
-            const token = localStorage.getItem(AUTH_TOKEN_KEY) || '';
-            if (!token) {
-                // 用户未登录，使用默认值
-                console.log('用户未登录，使用默认算力和余额');
-                return;
-            }
-
+        const loadUserData = async () => {
+            const token = localStorage.getItem(AUTH_TOKEN_KEY);
+            if (!token) return;
             try {
-                const response = await fetchProfile(token);
-                if (response.code === 1) {
-                    // 设置真实的算力和余额
-                    setAvailableHashrate(Number(response.data.userInfo.green_power) || 0);
-                    setAccountBalance(Number(response.data.userInfo.money) || 0);
+                const res = await fetchProfile(token);
+                if (res.code === 1 && res.data) {
+                    setUserInfo(res.data.userInfo);
                 }
-            } catch (error: any) {
-                console.error('获取用户信息失败:', error);
-                // 如果是登录问题，不显示错误
-                if (error?.name !== 'NeedLoginError') {
-                    // 可以在这里设置错误状态或显示提示
-                }
+            } catch (error) {
+                console.error('Failed to load user info:', error);
             }
         };
-
-        loadUserInfo();
+        loadUserData();
     }, []);
 
+    const baseHashrate = 5.0;
+
+    // Calculate values from real data
+    // Use green_power for hashrate
+    const availableHashrate = userInfo ? parseFloat(String(userInfo.green_power || '0')) : 0;
+    const specialFund = userInfo ? parseFloat(userInfo.money || '0') : 0;
+    const frozenAmount = product.price;
+
+    const totalRequiredHashrate = baseHashrate + extraHashrate;
+    const isHashrateSufficient = availableHashrate >= totalRequiredHashrate;
+    const isFundSufficient = specialFund >= frozenAmount;
+
+    // Check if can increase hashrate further
+    const canIncreaseHashrate = availableHashrate >= (baseHashrate + extraHashrate + 0.5);
+
     const handleReservation = () => {
-        if (!isHashrateSufficient || !isFundSufficient) {
-            return;
-        }
+        if (!isHashrateSufficient || !isFundSufficient) return;
         setShowConfirmModal(true);
     };
 
     const handleRecharge = () => {
         if (!isHashrateSufficient) {
-            // 跳转到算力充值页面，指定来源为reservation
             onNavigate('wallet:hashrate_exchange:reservation');
         } else if (!isFundSufficient) {
-            // 跳转到资金充值页面，指定来源为reservation
             onNavigate('asset:balance-recharge:reservation');
         }
     };
@@ -100,6 +74,7 @@ const ReservationPage: React.FC<ReservationPageProps> = ({ product, onBack, onNa
                 // 寄售商品：直接购买
                 const consignmentId = product.consignmentId ||
                                     (String(product.id) === "7" || Number(product.id) === 7 ? 19 : undefined);
+                alert(`寄售商品购买: consignment_id=${consignmentId}`); // 临时调试
 
                 const response = await bidBuy({
                     consignment_id: consignmentId,
@@ -114,30 +89,25 @@ const ReservationPage: React.FC<ReservationPageProps> = ({ product, onBack, onNa
                     showToast('error', '购买失败', response.msg || '请重试');
                 }
             } else {
-                // 普通商品：预约购买（进入撮合池）
+                // 普通商品：预约购买
+              
 
                 const response = await bidBuy({
                     item_id: Number(product.id),
                     power_used: totalRequiredHashrate,
                 });
 
-                if (response.code === 0) {
+                if (response.code === 0 || response.code === 1) {
                     setShowConfirmModal(false);
-                    showToast('success', '预约成功', '您的预约已提交到撮合池');
+                    showToast('success', '预约成功', response.msg || '预约成功');
                     onNavigate('reservation-record');
                 } else {
                     showToast('error', '预约失败', response.msg || '请重试');
                 }
             }
         } catch (error: any) {
-            console.error('操作失败:', error);
-            if (error?.name === 'NeedLoginError') {
-                showToast('error', '请先登录', '预约购买需要先登录账户');
-                // 可以在这里添加跳转到登录页面的逻辑
-                // onNavigate('login');
-            } else {
-                showToast('error', '操作失败', error?.msg || '网络错误，请稍后重试');
-            }
+            console.error('预约提交失败:', error);
+            showToast('error', '预约提交失败', error?.msg || '网络错误，请稍后重试');
         } finally {
             setLoading(false);
         }
@@ -150,7 +120,14 @@ const ReservationPage: React.FC<ReservationPageProps> = ({ product, onBack, onNa
                 <button onClick={onBack} className="p-1 hover:bg-gray-100 rounded-full">
                     <ChevronLeft size={24} className="text-gray-700" />
                 </button>
-                <h1 className="text-lg font-bold text-gray-900">预约确权</h1>
+                <h1 className="text-lg font-bold text-gray-900">
+                    {(() => {
+                        const isConsignment = product.consignmentId ||
+                                            String(product.id) === "7" ||
+                                            Number(product.id) === 7;
+                        return isConsignment ? '商品购买' : '预约确权';
+                    })()}
+                </h1>
                 <div className="w-8"></div>
             </header>
 
@@ -160,34 +137,36 @@ const ReservationPage: React.FC<ReservationPageProps> = ({ product, onBack, onNa
                     <div className="w-20 h-20 bg-gray-100 rounded-lg overflow-hidden shrink-0">
                         <img src={product.image} alt={product.title} className="w-full h-full object-cover" />
                     </div>
-                    <div className="flex-1">
-                        <h2 className="text-lg font-bold text-gray-900 line-clamp-2">{product.title}</h2>
-                        <div className="text-xs text-gray-500 mt-1">艺术家: {product.artist}</div>
-                        <div className="text-xs text-gray-400 font-mono mt-2">
-                            确权编号: 37-DATA-2025-{String(product.id).padStart(4, '0')}
-                        </div>
-                        <div className="flex items-baseline gap-1 mt-2">
+                    <div className="flex-1 min-w-0">
+                        <h3 className="text-gray-900 font-bold truncate mb-1">{product.title}</h3>
+                        <div className="text-xs text-gray-500 mb-2 font-mono">37-DATA-2025-{String(product.id).padStart(4, '0')}</div>
+                        <div className="flex items-baseline gap-1">
                             <span className="text-xs text-gray-400">起购价</span>
-                            <span className="text-xl font-bold text-red-600 font-mono">¥{product.price.toLocaleString()}</span>
+                            <span className="text-lg font-bold text-red-600 font-mono">¥{product.price.toLocaleString()}</span>
                         </div>
                     </div>
                 </div>
 
-                {/* Configuration */}
-                <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-100">
-                    <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
-                        <Zap size={18} className="text-orange-500 fill-orange-500" />
-                        算力配置
-                    </h3>
+                {/* Configuration - Only show for regular items, not consignment items */}
+                {(() => {
+                    const isConsignment = product.consignmentId ||
+                                        String(product.id) === "7" ||
+                                        Number(product.id) === 7;
+                    return !isConsignment ? (
+                        <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-100">
+                            <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
+                                <Zap size={18} className="text-orange-500 fill-orange-500" />
+                                算力配置
+                            </h3>
 
                     <div className="mb-6">
                         <div className="flex justify-between text-sm text-gray-600 mb-2">
                             <span>基础算力需求</span>
-                            <span className="font-mono font-bold">{baseHashrate}</span>
+                            <span className="font-mono font-bold">{baseHashrate.toFixed(1)}</span>
                         </div>
                         <div className="flex justify-between text-sm text-gray-600 mb-4">
                             <span>额外加注算力 (提升中签率)</span>
-                            <span className="font-mono font-bold text-orange-600">+{extraHashrate}</span>
+                            <span className="font-mono font-bold text-orange-600">+{extraHashrate.toFixed(1)}</span>
                         </div>
 
                         {/* Stepper/Slider for extra hashrate */}
@@ -195,7 +174,7 @@ const ReservationPage: React.FC<ReservationPageProps> = ({ product, onBack, onNa
                             <button
                                 onClick={() => setExtraHashrate(Math.max(0, extraHashrate - 0.5))}
                                 disabled={extraHashrate <= 0}
-                                className={`w-8 h-8 flex items-center justify-center bg-white rounded-full shadow font-bold transition-all ${extraHashrate <= 0 ? 'text-gray-300 cursor-not-allowed' : 'text-gray-600 active:scale-95'}`}
+                                className={`w-8 h-8 flex items-center justify-center bg-white rounded-full shadow font-bold transition-all ${extraHashrate <= 0 ? 'text-gray-300' : 'text-gray-600 active:scale-95'}`}
                             >-</button>
                             <div className="flex-1 text-center font-mono font-bold text-lg text-gray-900">
                                 {extraHashrate.toFixed(1)}
@@ -223,8 +202,15 @@ const ReservationPage: React.FC<ReservationPageProps> = ({ product, onBack, onNa
                         )}
                     </div>
                 </div>
+                    ) : null;
+                })()}
 
-                {/* Fund Check */}
+                {/* Fund Check - Only show for regular items, not consignment items */}
+                {(() => {
+                    const isConsignment = product.consignmentId ||
+                                        String(product.id) === "7" ||
+                                        Number(product.id) === 7;
+                    return !isConsignment ? (
                 <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-100">
                     <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
                         <Wallet size={18} className="text-blue-500 fill-blue-500" />
@@ -238,29 +224,51 @@ const ReservationPage: React.FC<ReservationPageProps> = ({ product, onBack, onNa
                     <div className="flex justify-between items-center mb-2">
                         <span className="text-sm text-gray-500">当前专项金余额</span>
                         <span className={`font-mono font-bold ${isFundSufficient ? 'text-gray-900' : 'text-red-500'}`}>
-                            ¥{accountBalance.toLocaleString()}
+                            ¥{specialFund.toLocaleString()}
                         </span>
                     </div>
                     {!isFundSufficient && (
-                        <div className="text-xs text-red-500 flex items-center gap-1">
+                        <div className="text-xs text-red-500 flex items-center justify-end gap-1">
                             <AlertCircle size={12} />
                             余额不足，请充值
                         </div>
                     )}
                 </div>
-            </div>
+            ) : null;
+            })()}
 
             {/* Footer Action */}
             <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-gray-100 pb-safe">
-                <button
-                    onClick={(!isHashrateSufficient || !isFundSufficient) ? handleRecharge : handleReservation}
-                    className={`w-full py-3.5 rounded-xl font-bold text-lg flex items-center justify-center gap-2 shadow-lg transition-all active:scale-[0.98] ${isHashrateSufficient && isFundSufficient
-                        ? 'bg-[#8B0000] text-amber-50 shadow-red-900/20 hover:bg-[#A00000]'
-                        : 'bg-[#8B0000] text-white opacity-90'
-                        }`}
-                >
-                    {!isHashrateSufficient ? '前往获取算力' : !isFundSufficient ? '前往充值专项金' : '确认预约'}
-                </button>
+                {(() => {
+                    const isConsignment = product.consignmentId ||
+                                        String(product.id) === "7" ||
+                                        Number(product.id) === 7;
+
+                    if (isConsignment) {
+                        // 寄售商品：直接购买
+                        return (
+                            <button
+                                onClick={handleReservation}
+                                className="w-full py-3.5 rounded-xl font-bold text-lg flex items-center justify-center gap-2 shadow-lg bg-[#EE4D2D] text-white shadow-orange-900/20 hover:bg-[#D73211] transition-all active:scale-[0.98]"
+                            >
+                                确认购买
+                            </button>
+                        );
+                    } else {
+                        // 普通商品：预约购买
+                        return (
+                            <button
+                                onClick={(!isHashrateSufficient || !isFundSufficient) ? handleRecharge : handleReservation}
+                                className={`w-full py-3.5 rounded-xl font-bold text-lg flex items-center justify-center gap-2 shadow-lg transition-all active:scale-[0.98] ${isHashrateSufficient && isFundSufficient
+                                    ? 'bg-[#8B0000] text-amber-50 shadow-red-900/20 hover:bg-[#A00000]'
+                                    : 'bg-[#8B0000] text-white opacity-90'
+                                    }`}
+                            >
+                                {!isHashrateSufficient ? '前往获取算力' : !isFundSufficient ? '前往充值专项金' : '确认预约'}
+                            </button>
+                        );
+                    }
+                })()}
             </div>
 
             {/* Confirmation Modal */}
@@ -268,20 +276,48 @@ const ReservationPage: React.FC<ReservationPageProps> = ({ product, onBack, onNa
                 <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
                     <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowConfirmModal(false)}></div>
                     <div className="bg-white w-full max-w-sm rounded-2xl p-6 relative z-10 animate-in fade-in zoom-in-95 duration-200">
-                        <h3 className="text-xl font-bold text-center mb-6">确认提交预约</h3>
+                        <h3 className="text-xl font-bold text-center mb-6">
+                            {(() => {
+                                const isConsignment = product.consignmentId ||
+                                                    String(product.id) === "7" ||
+                                                    Number(product.id) === 7;
+                                return isConsignment ? '确认购买商品' : '确认提交预约';
+                            })()}
+                        </h3>
 
                         <div className="space-y-4 mb-8">
-                            <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                                <span className="text-gray-500 text-sm">消耗算力</span>
-                                <div className="text-right">
-                                    <div className="font-bold text-gray-900 font-mono">{totalRequiredHashrate.toFixed(1)}</div>
-                                    <div className="text-[10px] text-gray-400">基础 {baseHashrate} + 加注 {extraHashrate}</div>
-                                </div>
-                            </div>
-                            <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                                <span className="text-gray-500 text-sm">冻结金额</span>
-                                <div className="font-bold text-gray-900 font-mono">¥{frozenAmount.toLocaleString()}</div>
-                            </div>
+                            {(() => {
+                                const isConsignment = product.consignmentId ||
+                                                    String(product.id) === "7" ||
+                                                    Number(product.id) === 7;
+
+                                if (isConsignment) {
+                                    // 寄售商品：显示购买金额
+                                    return (
+                                        <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                                            <span className="text-gray-500 text-sm">购买金额</span>
+                                            <div className="font-bold text-gray-900 font-mono">¥{product.price.toLocaleString()}</div>
+                                        </div>
+                                    );
+                                } else {
+                                    // 普通商品：显示算力和冻结金额
+                                    return (
+                                        <>
+                                            <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                                                <span className="text-gray-500 text-sm">消耗算力</span>
+                                                <div className="text-right">
+                                                    <div className="font-bold text-gray-900 font-mono">{totalRequiredHashrate.toFixed(1)}</div>
+                                                    <div className="text-[10px] text-gray-400">基础 {baseHashrate} + 加注 {extraHashrate}</div>
+                                                </div>
+                                            </div>
+                                            <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                                                <span className="text-gray-500 text-sm">冻结金额</span>
+                                                <div className="font-bold text-gray-900 font-mono">¥{frozenAmount.toLocaleString()}</div>
+                                            </div>
+                                        </>
+                                    );
+                                }
+                            })()}
                         </div>
 
                         <div className="flex gap-3">

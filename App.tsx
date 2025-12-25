@@ -636,6 +636,21 @@ const AppContent: React.FC = () => {
         return <OnlineService onBack={() => setSubPage(null)} />;
     }
 
+    if (subPage?.startsWith('my-collection-action:consignment:')) {
+      const parts = subPage.split(':');
+      const targetId = parts[2];
+      return (
+        <MyCollection
+          onBack={() => setSubPage(null)}
+          onItemSelect={(item) => {
+            setSelectedCollectionItem(item);
+            setSubPage(`my-collection-detail:${item.id}`);
+          }}
+          initialConsignItemId={targetId}
+        />
+      );
+    }
+
     if (subPage?.startsWith('wallet:hashrate_exchange')) {
       // Check for return path: wallet:hashrate_exchange:fromPath
       const isFromProfile = subPage.includes(':profile');
