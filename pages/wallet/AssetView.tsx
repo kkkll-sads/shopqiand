@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Wallet, Receipt, CreditCard, FileText, ShoppingBag, Package, ArrowRight, X, AlertCircle, CheckCircle, Leaf } from 'lucide-react';
+import { FileText, ShoppingBag, X, AlertCircle, CheckCircle } from 'lucide-react';
 import PageContainer from '../../components/layout/PageContainer';
 import { LoadingSpinner, EmptyState, LazyImage } from '../../components/common';
 import { formatAmount } from '../../utils/format';
@@ -27,10 +27,14 @@ import {
 import { getIntegralLog, IntegralLogItem } from '../../services/integral';
 import { Product, UserInfo } from '../../types';
 import { useNotification } from '../../context/NotificationContext';
+import { Route } from '../../router/routes';
+import AssetHeaderCard from './components/asset/AssetHeaderCard';
+import AssetActionsGrid from './components/asset/AssetActionsGrid';
+import AssetTabSwitcher from './components/asset/AssetTabSwitcher';
 
 interface AssetViewProps {
   onBack: () => void;
-  onNavigate: (page: string) => void;
+  onNavigate: (route: Route) => void;
   onProductSelect?: (product: Product) => void;
   initialTab?: number; // 初始标签页索引
 }
@@ -1069,7 +1073,7 @@ const AssetView: React.FC<AssetViewProps> = ({ onBack, onNavigate, onProductSele
       onBack={onBack}
       rightAction={
         <button
-          onClick={() => onNavigate('asset-history')}
+          onClick={() => onNavigate({ name: 'asset-history', type: 'all', back: { name: 'asset-view' } })}
           className="text-sm text-orange-600"
         >
           历史记录
@@ -1077,114 +1081,9 @@ const AssetView: React.FC<AssetViewProps> = ({ onBack, onNavigate, onProductSele
       }
     >
       <div className="p-2">
-        {/* Asset Card - New 1+N Layout */}
-        <div className="relative rounded-3xl shadow-xl mb-3 overflow-hidden text-white font-sans">
-          {/* Background Gradient */}
-          <div className="absolute inset-0 bg-gradient-to-br from-[#FF884D] to-[#FF5500] z-0">
-            <div className="absolute top-0 right-0 w-40 h-40 bg-white opacity-10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
-            <div className="absolute bottom-0 left-0 w-32 h-32 bg-orange-300 opacity-20 rounded-full blur-2xl translate-y-1/2 -translate-x-1/4"></div>
-          </div>
-
-          <div className="relative z-10 p-4">
-            {/* Part 1: Core Asset (Supply Chain Special Fund) */}
-            <div className="mb-6 text-center">
-              <div className="flex items-center justify-center gap-1 opacity-90 text-sm font-medium mb-1">
-                供应链专项金 (元)
-              </div>
-              <div className="text-4xl font-[DINAlternate-Bold,Roboto,sans-serif] font-bold tracking-tight drop-shadow-sm">
-                {formatAmount(userInfo?.money)}
-              </div>
-            </div>
-
-            {/* Divider */}
-            <div className="w-full h-px bg-white/20 mb-5"></div>
-
-            {/* Part 2: Liquidity Assets (Grid) */}
-            <div className="grid grid-cols-3 gap-4 items-start relative">
-              {/* Grid Divider Lines - Vertical */}
-              <div className="absolute left-1/3 top-2 bottom-2 w-px bg-white/10"></div>
-              <div className="absolute right-1/3 top-2 bottom-2 w-px bg-white/10"></div>
-
-              {/* Dispatchable Income */}
-              <div className="text-center">
-                <div className="text-xs text-white/80 mb-1">可调度收益</div>
-                <div className="text-lg font-bold font-[DINAlternate-Bold,Roboto,sans-serif]">
-                  {formatAmount(userInfo?.withdrawable_money)}
-                </div>
-              </div>
-
-              {/* Green Hashrate */}
-              <div className="text-center" onClick={() => onNavigate('wallet:hashrate_exchange')}>
-                <div className="text-xs text-white/80 mb-1 flex items-center justify-center gap-1">
-                  绿色算力 <ArrowRight size={10} className="opacity-70" />
-                </div>
-                <div className="text-lg font-bold font-[DINAlternate-Bold,Roboto,sans-serif] text-[#E0F2F1] drop-shadow-[0_0_8px_rgba(0,255,0,0.3)]">
-                  {userInfo?.green_power || 0} <span className="text-xs font-normal opacity-70">GHs</span>
-                </div>
-              </div>
-
-              {/* Consumption Fund */}
-              <div className="text-center">
-                <div className="text-xs text-white/80 mb-1">消费金</div>
-                <div className="text-lg font-bold font-[DINAlternate-Bold,Roboto,sans-serif]">
-                  {userInfo?.score ?? 0}
-                </div>
-              </div>
-            </div>
-
-            {/* Footer: Minimized Service Fee */}
-            <div className="mt-3 pt-2 flex justify-between text-xs text-white/95 border-t border-white/20 px-1 font-medium tracking-wide">
-              <span>确权金: ¥{formatAmount(userInfo?.service_fee_balance)}</span>
-              <span>待激活: ¥{formatAmount(userInfo?.pending_service_fee || 0)}</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Actions - Capsule Design */}
-        <div className="grid grid-cols-4 gap-3 mb-6">
-          {[
-            { label: '申购专项金', icon: Wallet, page: 'asset:balance-recharge', color: 'text-orange-600' },
-            { label: '收益提现', icon: Receipt, page: 'asset:balance-withdraw', color: 'text-orange-600' },
-            { label: '算力补充', icon: Leaf, page: 'wallet:hashrate_exchange', color: 'text-green-600' },
-            { label: '确权金划转', icon: CreditCard, page: 'asset:service-recharge', color: 'text-purple-600' }
-          ].map((item, idx) => (
-            <button
-              key={idx}
-              type="button"
-              onClick={() => onNavigate(item.page)}
-              className="flex flex-col items-center group active:scale-95 transition-transform"
-            >
-              <div className="w-full aspect-[4/3] bg-white rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center justify-center mb-1.5 relative overflow-hidden group-hover:shadow-md transition-shadow">
-                <div className={`mb-1 ${item.color}`}>
-                  <item.icon size={22} />
-                </div>
-              </div>
-              <span className="text-[11px] font-medium text-gray-600 leading-tight text-center">{item.label}</span>
-            </button>
-          ))}
-        </div>
-
-        {/* Tabs - 可左右滑动 */}
-        <div className="overflow-x-auto scrollbar-hide mb-4">
-          <div className="flex gap-2 p-1 bg-gray-50 rounded-xl inline-flex min-w-full">
-            {tabs.map((tab, idx) => (
-              <button
-                key={idx}
-                onClick={() => handleTabChange(idx)}
-                className={`
-                  flex-shrink-0 px-4 py-2.5 text-xs font-medium rounded-lg 
-                  transition-all duration-300 whitespace-nowrap
-                  ${idx === activeTab
-                    ? 'bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-md shadow-orange-200 scale-105 border border-orange-400'
-                    : 'bg-white text-gray-600 hover:text-orange-500 hover:bg-orange-50 border border-transparent'
-                  }
-                `}
-              >
-                {tab}
-              </button>
-            ))}
-          </div>
-        </div>
+        <AssetHeaderCard userInfo={userInfo} onNavigate={onNavigate} />
+        <AssetActionsGrid onNavigate={onNavigate} />
+        <AssetTabSwitcher tabs={tabs} activeTab={activeTab} onChange={handleTabChange} />
 
         {/* Content */}
         {renderContent()}

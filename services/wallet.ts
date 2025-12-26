@@ -1,5 +1,7 @@
-import { apiFetch, ApiResponse } from './networking';
-import { API_ENDPOINTS, AUTH_TOKEN_KEY } from './config';
+import { ApiResponse } from './networking';
+import { API_ENDPOINTS } from './config';
+// 统一的带 token 请求封装，减少重复从 localStorage 取值
+import { authedFetch } from './client';
 
 // 支付账户相关 (银行卡/支付宝/微信/USDT)
 export interface PaymentAccountItem {
@@ -22,7 +24,8 @@ export interface PaymentAccountListData {
 }
 
 export async function fetchPaymentAccountList(token: string): Promise<ApiResponse<PaymentAccountListData>> {
-    return apiFetch<PaymentAccountListData>(API_ENDPOINTS.user.paymentAccountList, {
+    // 使用 authedFetch，允许调用方传入 token 覆盖默认存储值
+    return authedFetch<PaymentAccountListData>(API_ENDPOINTS.user.paymentAccountList, {
         method: 'GET',
         token,
     });
@@ -40,7 +43,6 @@ export interface AddPaymentAccountParams {
 }
 
 export async function addPaymentAccount(params: AddPaymentAccountParams): Promise<ApiResponse> {
-    const token = params.token || localStorage.getItem(AUTH_TOKEN_KEY) || '';
     const payload = new FormData();
     payload.append('type', params.type);
     payload.append('account_type', params.account_type);
@@ -50,10 +52,10 @@ export async function addPaymentAccount(params: AddPaymentAccountParams): Promis
     if (params.bank_branch) payload.append('bank_branch', params.bank_branch);
     if (params.screenshot) payload.append('screenshot', params.screenshot);
 
-    return apiFetch(API_ENDPOINTS.user.addPaymentAccount, {
+    return authedFetch(API_ENDPOINTS.user.addPaymentAccount, {
         method: 'POST',
         body: payload,
-        token,
+        token: params.token,
     });
 }
 
@@ -68,7 +70,6 @@ export interface EditPaymentAccountParams {
 }
 
 export async function editPaymentAccount(params: EditPaymentAccountParams): Promise<ApiResponse> {
-    const token = params.token || localStorage.getItem(AUTH_TOKEN_KEY) || '';
     const payload = new FormData();
     payload.append('id', params.id);
     payload.append('bank_name', params.bank_name);
@@ -77,34 +78,32 @@ export async function editPaymentAccount(params: EditPaymentAccountParams): Prom
     if (params.bank_branch) payload.append('bank_branch', params.bank_branch);
     if (params.screenshot) payload.append('screenshot', params.screenshot);
 
-    return apiFetch(API_ENDPOINTS.user.editPaymentAccount, {
+    return authedFetch(API_ENDPOINTS.user.editPaymentAccount, {
         method: 'POST',
         body: payload,
-        token,
+        token: params.token,
     });
 }
 
 export async function deletePaymentAccount(params: { id: string; token?: string }): Promise<ApiResponse> {
-    const token = params.token || localStorage.getItem(AUTH_TOKEN_KEY) || '';
     const payload = new FormData();
     payload.append('id', params.id);
 
-    return apiFetch(API_ENDPOINTS.user.deletePaymentAccount, {
+    return authedFetch(API_ENDPOINTS.user.deletePaymentAccount, {
         method: 'POST',
         body: payload,
-        token,
+        token: params.token,
     });
 }
 
 export async function setDefaultPaymentAccount(params: { id: string; token?: string }): Promise<ApiResponse> {
-    const token = params.token || localStorage.getItem(AUTH_TOKEN_KEY) || '';
     const payload = new FormData();
     payload.append('id', params.id);
 
-    return apiFetch(API_ENDPOINTS.user.setDefaultPaymentAccount, {
+    return authedFetch(API_ENDPOINTS.user.setDefaultPaymentAccount, {
         method: 'POST',
         body: payload,
-        token,
+        token: params.token,
     });
 }
 
@@ -141,15 +140,14 @@ export interface GetBalanceLogParams {
 }
 
 export async function getBalanceLog(params: GetBalanceLogParams = {}): Promise<ApiResponse<BalanceLogListData>> {
-    const token = params.token || localStorage.getItem(AUTH_TOKEN_KEY) || '';
     const search = new URLSearchParams();
     if (params.page) search.set('page', String(params.page));
     if (params.limit) search.set('limit', String(params.limit));
 
     const path = `${API_ENDPOINTS.account.balance}?${search.toString()}`;
-    return apiFetch<BalanceLogListData>(path, {
+    return authedFetch<BalanceLogListData>(path, {
         method: 'GET',
-        token,
+        token: params.token,
     });
 }
 
@@ -177,16 +175,15 @@ export interface GetAllLogParams extends GetBalanceLogParams {
 }
 
 export async function getAllLog(params: GetAllLogParams = {}): Promise<ApiResponse<AllLogListData>> {
-    const token = params.token || localStorage.getItem(AUTH_TOKEN_KEY) || '';
     const search = new URLSearchParams();
     if (params.page) search.set('page', String(params.page));
     if (params.limit) search.set('limit', String(params.limit));
     if (params.type) search.set('type', params.type);
 
     const path = `${API_ENDPOINTS.account.allLog}?${search.toString()}`;
-    return apiFetch<AllLogListData>(path, {
+    return authedFetch<AllLogListData>(path, {
         method: 'GET',
-        token,
+        token: params.token,
     });
 }
 
@@ -214,15 +211,14 @@ export interface GetServiceFeeLogParams {
 }
 
 export async function getServiceFeeLog(params: GetServiceFeeLogParams = {}): Promise<ApiResponse<ServiceFeeLogListData>> {
-    const token = params.token || localStorage.getItem(AUTH_TOKEN_KEY) || '';
     const search = new URLSearchParams();
     if (params.page) search.set('page', String(params.page));
     if (params.limit) search.set('limit', String(params.limit));
 
     const path = `${API_ENDPOINTS.account.serviceFeeLog}?${search.toString()}`;
-    return apiFetch<ServiceFeeLogListData>(path, {
+    return authedFetch<ServiceFeeLogListData>(path, {
         method: 'GET',
-        token,
+        token: params.token,
     });
 }
 
@@ -240,15 +236,14 @@ export interface TransferBalanceToServiceFeeResponse {
 export async function transferBalanceToServiceFee(
     params: TransferBalanceToServiceFeeParams,
 ): Promise<ApiResponse<TransferBalanceToServiceFeeResponse>> {
-    const token = params.token || localStorage.getItem(AUTH_TOKEN_KEY) || '';
     if (!params.amount || Number(params.amount) <= 0) {
         throw new Error('请输入有效的划转金额');
     }
 
     const url = `${API_ENDPOINTS.account.transferBalanceToServiceFee}?amount=${params.amount}${params.pay_type ? `&pay_type=${params.pay_type}` : ''}`;
-    return apiFetch<TransferBalanceToServiceFeeResponse>(url, {
+    return authedFetch<TransferBalanceToServiceFeeResponse>(url, {
         method: 'POST',
-        token,
+        token: params.token,
     });
 }
 
@@ -260,7 +255,6 @@ export interface RechargeServiceFeeParams {
 }
 
 export async function rechargeServiceFee(params: RechargeServiceFeeParams): Promise<ApiResponse> {
-    const token = params.token || localStorage.getItem(AUTH_TOKEN_KEY) || '';
     if (!params.amount || Number(params.amount) <= 0) {
         throw new Error('请输入有效的充值金额');
     }
@@ -276,10 +270,10 @@ export async function rechargeServiceFee(params: RechargeServiceFeeParams): Prom
     };
     if (params.source) payload.source = params.source;
 
-    return apiFetch(url, {
+    return authedFetch(url, {
         method: 'POST',
         body: JSON.stringify(payload),
-        token,
+        token: params.token,
     });
 }
 
@@ -296,14 +290,13 @@ export interface CompanyAccountItem {
 }
 
 export async function fetchCompanyAccountList(params: { usage?: string; token?: string } = {}): Promise<ApiResponse<{ list: CompanyAccountItem[] }>> {
-    const token = params.token || localStorage.getItem(AUTH_TOKEN_KEY) || '';
     const search = new URLSearchParams();
     if (params.usage) search.set('usage', params.usage);
 
     const path = `${API_ENDPOINTS.recharge.companyAccountList}?${search.toString()}`;
-    return apiFetch<{ list: CompanyAccountItem[] }>(path, {
+    return authedFetch<{ list: CompanyAccountItem[] }>(path, {
         method: 'GET',
-        token,
+        token: params.token,
     });
 }
 
@@ -320,7 +313,6 @@ export interface SubmitRechargeOrderParams {
 }
 
 export async function submitRechargeOrder(params: SubmitRechargeOrderParams): Promise<ApiResponse> {
-    const token = params.token || localStorage.getItem(AUTH_TOKEN_KEY) || '';
     const payload = new FormData();
     payload.append('company_account_id', String(params.company_account_id));
     payload.append('amount', String(params.amount));
@@ -332,10 +324,10 @@ export async function submitRechargeOrder(params: SubmitRechargeOrderParams): Pr
     if (params.remark) payload.append('remark', params.remark);
     if (params.payment_type) payload.append('payment_type', params.payment_type);
 
-    return apiFetch(API_ENDPOINTS.recharge.submitOrder, {
+    return authedFetch(API_ENDPOINTS.recharge.submitOrder, {
         method: 'POST',
         body: payload,
-        token,
+        token: params.token,
     });
 }
 
@@ -349,7 +341,6 @@ export interface SubmitWithdrawParams {
 }
 
 export async function submitWithdraw(params: SubmitWithdrawParams): Promise<ApiResponse> {
-    const token = params.token || localStorage.getItem(AUTH_TOKEN_KEY) || '';
     const payload = new FormData();
     // New API: payment_account_id, amount
     payload.append('payment_account_id', String(params.payment_account_id || params.payment_id));
@@ -358,24 +349,23 @@ export async function submitWithdraw(params: SubmitWithdrawParams): Promise<ApiR
     if (params.pay_password) payload.append('pay_password', params.pay_password);
     if (params.remark) payload.append('remark', params.remark);
 
-    return apiFetch(API_ENDPOINTS.recharge.submitWithdraw, {
+    return authedFetch(API_ENDPOINTS.recharge.submitWithdraw, {
         method: 'POST',
         body: payload,
-        token,
+        token: params.token,
     });
 }
 
 export async function submitStaticIncomeWithdraw(params: SubmitWithdrawParams): Promise<ApiResponse> {
-    const token = params.token || localStorage.getItem(AUTH_TOKEN_KEY) || '';
     const payload = new FormData();
     payload.append('user_account_id', String(params.payment_id || params.payment_account_id));
     payload.append('money', String(params.amount));
     if (params.pay_password) payload.append('pay_password', params.pay_password);
 
-    return apiFetch(API_ENDPOINTS.recharge.submitStaticIncomeWithdraw, {
+    return authedFetch(API_ENDPOINTS.recharge.submitStaticIncomeWithdraw, {
         method: 'POST',
         body: payload,
-        token,
+        token: params.token,
     });
 }
 
@@ -395,15 +385,14 @@ export interface RechargeOrderItem {
 }
 
 export async function getMyRechargeOrders(params: { page?: number; limit?: number; token?: string } = {}): Promise<ApiResponse<{ list: RechargeOrderItem[], has_more?: boolean }>> {
-    const token = params.token || localStorage.getItem(AUTH_TOKEN_KEY) || '';
     const search = new URLSearchParams();
     if (params.page) search.set('page', String(params.page));
     if (params.limit) search.set('limit', String(params.limit));
 
     const path = `${API_ENDPOINTS.recharge.getMyOrderList}?${search.toString()}`;
-    return apiFetch<{ list: RechargeOrderItem[], has_more?: boolean }>(path, {
+    return authedFetch<{ list: RechargeOrderItem[], has_more?: boolean }>(path, {
         method: 'GET',
-        token,
+        token: params.token,
     });
 }
 
@@ -429,14 +418,13 @@ export interface WithdrawRecordItem {
 export type WithdrawOrderItem = WithdrawRecordItem;
 
 export async function getMyWithdrawList(params: { page?: number; limit?: number; token?: string } = {}): Promise<ApiResponse<{ list: WithdrawRecordItem[], has_more?: boolean }>> {
-    const token = params.token || localStorage.getItem(AUTH_TOKEN_KEY) || '';
     const search = new URLSearchParams();
     if (params.page) search.set('page', String(params.page));
     if (params.limit) search.set('limit', String(params.limit));
 
     const path = `${API_ENDPOINTS.recharge.getMyWithdrawList}?${search.toString()}`;
-    return apiFetch<{ list: WithdrawRecordItem[], has_more?: boolean }>(path, {
+    return authedFetch<{ list: WithdrawRecordItem[], has_more?: boolean }>(path, {
         method: 'GET',
-        token,
+        token: params.token,
     });
 }

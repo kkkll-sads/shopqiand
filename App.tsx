@@ -1,9 +1,19 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import BottomNav from './components/BottomNav';
 import { Tab, Product, NewsItem, LoginSuccessPayload } from './types';
 import { fetchAnnouncements, AnnouncementItem, fetchProfile, fetchRealNameStatus, MyCollectionItem } from './services/api';
-import { AUTH_KEY, AUTH_TOKEN_KEY, USER_INFO_KEY, STORAGE_KEYS } from './constants/storageKeys';
+import { STORAGE_KEYS } from './constants/storageKeys';
 import useAuth from './hooks/useAuth';
+// 路由统一编码/解码工具，逐步替换散落的字符串 subPage
+import { encodeRoute, decodeRoute, type Route } from './router/routes';
+import { useNavigationStack } from './router/navigation';
+import { resolveRouteComponent } from './router/routesConfig';
+import { clearNeedLoginHandler, setNeedLoginHandler } from './services/needLoginHandler';
+import { readJSON, readStorage, writeJSON, writeStorage } from './utils/storageAccess';
+import { bizLog, debugLog, warnLog, errorLog } from './utils/logger';
+import useNewsReadState from './hooks/useNewsReadState';
+import usePendingNavigation from './hooks/usePendingNavigation';
+import useRealNameGuard from './hooks/useRealNameGuard';
 
 // Auth
 import Login from './pages/auth/Login';
@@ -26,7 +36,6 @@ import UserSurvey from './pages/user/UserSurvey';
 import NotificationSettings from './pages/user/NotificationSettings';
 
 // CMS / Static pages
-import Home from './pages/cms/Home';
 import SignIn from './pages/cms/SignIn';
 import News from './pages/cms/News';
 import MessageCenter from './pages/cms/MessageCenter';
@@ -38,10 +47,8 @@ import PrivacyPolicy from './pages/cms/PrivacyPolicy';
 import UserAgreement from './pages/cms/UserAgreement';
 
 // Market pages
-import Market from './pages/market/Market';
 import ProductDetail from './pages/market/ProductDetail';
 import OrderListPage from './pages/market/OrderListPage';
-import Orders from './pages/market/Orders';
 import TradingZone from './pages/market/TradingZone';
 import ArtistShowcase from './pages/market/ArtistShowcase';
 import ArtistDetail from './pages/market/ArtistDetail';
@@ -65,7 +72,6 @@ import ConsignmentVoucher from './pages/wallet/ConsignmentVoucher';
 import CumulativeRights from './pages/wallet/CumulativeRights';
 import MyCollection from './pages/wallet/MyCollection';
 import MyCollectionDetail from './pages/wallet/MyCollectionDetail';
-import ClaimStation from './pages/wallet/ClaimStation';
 import ClaimHistory from './pages/wallet/ClaimHistory';
 import ClaimDetail from './pages/wallet/ClaimDetail';
 import HashrateExchange from './pages/wallet/HashrateExchange';
@@ -74,27 +80,20 @@ import { NotificationProvider } from './context/NotificationContext';
 import { GlobalNotificationSystem } from './components/common/GlobalNotificationSystem';
 import './styles/notifications.css';
 
-const getReadNewsIds = (): string[] => {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEYS.READ_NEWS_IDS_KEY);
-    return stored ? JSON.parse(stored) : [];
-  } catch (e) {
-    return [];
-  }
-};
+// Entry containers
+import HomeEntry from './pages/entries/HomeEntry';
+import MarketEntry from './pages/entries/MarketEntry';
+import OrdersEntry from './pages/entries/OrdersEntry';
+import ProfileEntry from './pages/entries/ProfileEntry';
+import RightsEntry from './pages/entries/RightsEntry';
 
-const saveReadNewsIds = (ids: string[]) => {
-  localStorage.setItem(STORAGE_KEYS.READ_NEWS_IDS_KEY, JSON.stringify(ids));
-};
+const getReadNewsIds = (): string[] => readJSON<string[]>(STORAGE_KEYS.READ_NEWS_IDS_KEY, []) || [];
+
+const saveReadNewsIds = (ids: string[]) => writeJSON(STORAGE_KEYS.READ_NEWS_IDS_KEY, ids);
 
 const AppContent: React.FC = () => {
   // Auth State (using useAuth hook)
-  const { isLoggedIn: isLoggedInFromHook, isRealNameVerified, login: loginFromHook, updateRealNameStatus, refreshRealNameStatus } = useAuth();
-
-  // For backward compatibility, maintain local state
-  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(() => {
-    return localStorage.getItem(AUTH_KEY) === 'true';
-  });
+  const { isLoggedIn, isRealNameVerified, login: loginFromHook, logout: logoutFromHook, updateRealNameStatus, refreshRealNameStatus } = useAuth();
 
   // Modal state for real-name verification prompt
   const [showRealNameModal, setShowRealNameModal] = useState<boolean>(false);
@@ -104,12 +103,42 @@ const AppContent: React.FC = () => {
   const [productDetailOrigin, setProductDetailOrigin] = useState<'market' | 'artist' | 'trading-zone' | 'reservation-record'>('market');
   const [activeTab, setActiveTab] = useState<Tab>('home');
   const [checkingRealName, setCheckingRealName] = useState(false);
-  const [subPage, setSubPage] = useState<string | null>(null);
+  const { current: currentRoute, navigate, reset } = useNavigationStack(null);
+  const subPage = useMemo(() => (currentRoute ? encodeRoute(currentRoute) : null), [currentRoute]);
   const [consignmentTicketCount, setConsignmentTicketCount] = useState<number>(0);
-  const [newsList, setNewsList] = useState<NewsItem[]>([]);
-
+  // 新闻已读状态统一通过 hook 管理
+  const { newsList, initWith: initNews, markAllRead: markAllNewsRead, markReadById } = useNewsReadState([]);
   // 待导航页面（用于登录/实名后自动跳转）
-  const [pendingPage, setPendingPage] = useState<{ tab?: Tab; subPage?: string } | null>(null);
+  const { pending, setPendingNav, consumePending } = usePendingNavigation();
+
+  const navigateRoute = useCallback(
+    (route: Route | string | null, options?: { replace?: boolean; back?: Route | null; clearHistory?: boolean }) => {
+      navigate(route, { replace: options?.replace, back: options?.back, clearHistory: options?.clearHistory });
+    },
+    [navigate],
+  );
+
+  // 兼容旧的 setSubPage 用法（字符串路由），统一转为 Route 导航
+  const setSubPage = React.useCallback(
+    (next: string | null) => {
+      const route = next ? decodeRoute(next) : null;
+      navigateRoute(route);
+    },
+    [navigateRoute],
+  );
+
+  // 全局处理 NeedLoginError：退出登录并回到登录入口
+  useEffect(() => {
+    const handleNeedLogin = () => {
+      logoutFromHook();
+      reset();
+      navigateRoute(null, { clearHistory: true });
+      setActiveTab('home');
+    };
+
+    setNeedLoginHandler(handleNeedLogin);
+    return () => clearNeedLoginHandler();
+  }, [logoutFromHook, navigateRoute, reset]);
 
   // 刷新实名认证状态当页面切换时
   useEffect(() => {
@@ -117,7 +146,7 @@ const AppContent: React.FC = () => {
     if (isLoggedIn) {
       refreshRealNameStatus();
     }
-  }, [activeTab, subPage, isLoggedIn, refreshRealNameStatus]);
+  }, [activeTab, currentRoute, isLoggedIn, refreshRealNameStatus]);
 
   // 将公告接口返回的数据转换为前端使用的 NewsItem 结构
   const mapAnnouncementToNewsItem = (item: AnnouncementItem, readIds: string[], newsType: 'announcement' | 'dynamic'): NewsItem => {
@@ -148,39 +177,42 @@ const AppContent: React.FC = () => {
   // 应用启动时验证登录状态
   useEffect(() => {
     const verifyLoginStatus = async () => {
-      const token = localStorage.getItem(AUTH_TOKEN_KEY);
-      const authFlag = localStorage.getItem(AUTH_KEY);
+      const token = readStorage(STORAGE_KEYS.AUTH_TOKEN_KEY);
+      const authFlag = readStorage(STORAGE_KEYS.AUTH_KEY);
 
-      // 如果本地存储显示已登录，验证token是否有效
-      if (authFlag === 'true' && token) {
-        try {
-          // 尝试获取用户信息来验证token是否有效
-          const response = await fetchProfile(token);
-          if (response.code === 1 && response.data?.userInfo) {
-            // Token有效，更新用户信息
-            localStorage.setItem(USER_INFO_KEY, JSON.stringify(response.data.userInfo));
-            setIsLoggedIn(true);
-            loginFromHook({ token, userInfo: response.data.userInfo });
-            console.log('登录状态验证成功');
-          } else {
-            // Token无效，清除登录状态
-            console.warn('Token无效，清除登录状态');
+          // 如果本地存储显示已登录，验证token是否有效
+          if (authFlag === 'true' && token) {
+            try {
+              // 尝试获取用户信息来验证token是否有效
+              const response = await fetchProfile(token);
+              if (response.code === 1 && response.data?.userInfo) {
+                // Token有效，更新用户信息
+                writeJSON(STORAGE_KEYS.USER_INFO_KEY, response.data.userInfo);
+                loginFromHook({ token, userInfo: response.data.userInfo });
+                debugLog('auth.verify', '登录状态验证成功');
+              } else {
+                // Token无效，清除登录状态
+                warnLog('auth.verify', 'Token无效，清除登录状态');
+                handleLogout();
+              }
+            } catch (error: any) {
+              errorLog('auth.verify', '验证登录状态失败', error);
+              // NeedLoginError (303) 表示token无效，需要重新登录
+              // 其他错误也应该清除登录状态以保证安全
+              if (error.name === 'NeedLoginError' || error.code === 303) {
+                warnLog('auth.verify', 'Token已失效（303错误），清除登录状态并跳转到登录页');
+                handleLogout();
+              } else {
+                // 其他错误（如网络错误）也清除状态
+                handleLogout();
+              }
+            }
+          } else if (authFlag === 'true' && !token) {
+            // 有登录标记但没有token，清除状态
+            warnLog('auth.verify', '登录标记存在但缺少token，清除登录状态');
             handleLogout();
           }
-        } catch (error: any) {
-          // 如果是need login错误（code 303），已经在networking.ts中处理了跳转
-          console.error('验证登录状态失败:', error);
-          // 只有在非303错误时才清除登录状态
-          if (error.code !== 303 && !error.needLogin) {
-            handleLogout();
-          }
-        }
-      } else if (authFlag === 'true' && !token) {
-        // 有登录标记但没有token，清除状态
-        console.warn('登录标记存在但缺少token，清除登录状态');
-        handleLogout();
-      }
-    };
+        };
 
     verifyLoginStatus();
   }, []); // 只在组件挂载时执行一次
@@ -206,7 +238,7 @@ const AppContent: React.FC = () => {
           ...dynamicList.map((item) => mapAnnouncementToNewsItem(item, readIds, 'dynamic')),
         ];
 
-        setNewsList(allMapped);
+        initNews(allMapped);
       } catch (error) {
         console.error('加载资讯失败:', error);
       }
@@ -216,43 +248,32 @@ const AppContent: React.FC = () => {
   }, []);
 
   const handleLogin = (payload?: LoginSuccessPayload) => {
-    console.log('[handleLogin] 开始执行登录，payload:', payload);
-    setIsLoggedIn(true);
-    localStorage.setItem(AUTH_KEY, 'true');
-    if (payload?.token) {
-      console.log('[handleLogin] 保存token:', payload.token);
-      localStorage.setItem(AUTH_TOKEN_KEY, payload.token);
-    }
-    if (payload?.userInfo) {
-      console.log('[handleLogin] 保存用户信息:', payload.userInfo);
-      localStorage.setItem(USER_INFO_KEY, JSON.stringify(payload.userInfo));
-    }
+    debugLog('auth.login', '开始执行登录', payload);
 
-    // Call useAuth login to fetch real-name status
+    // 统一使用 useAuth 管理登录态
     loginFromHook(payload);
 
-    console.log('[handleLogin] 设置登录状态完成');
+    bizLog('auth.login.success', { hasPayload: Boolean(payload), pendingRedirect: Boolean(pending) });
 
     // 如果有待跳转页面，跳转到那里；否则跳转到首页
-    if (pendingPage) {
-      console.log('[handleLogin] 跳转到待处理页面:', pendingPage);
-      if (pendingPage.tab) setActiveTab(pendingPage.tab);
-      if (pendingPage.subPage) setSubPage(pendingPage.subPage);
-      else setSubPage(null);
-      setPendingPage(null);
+    const target = consumePending();
+    if (target) {
+      debugLog('auth.login', '跳转到待处理页面', target);
+      if (target.tab) setActiveTab(target.tab);
+      if (target.route) navigateRoute(target.route);
+      else navigateRoute(null, { clearHistory: true });
     } else {
-      setSubPage(null);
+      navigateRoute(null, { clearHistory: true });
       setActiveTab('home');
     }
     setSelectedProduct(null);
   };
 
   const handleLogout = () => {
-    setIsLoggedIn(false);
-    localStorage.removeItem(AUTH_KEY);
-    localStorage.removeItem(AUTH_TOKEN_KEY);
-    localStorage.removeItem(USER_INFO_KEY);
-    setSubPage(null);
+    // 统一使用 useAuth 管理登录态
+    logoutFromHook();
+    reset();
+    navigateRoute(null, { clearHistory: true });
     setActiveTab('home');
     setSelectedProduct(null);
   };
@@ -263,54 +284,31 @@ const AppContent: React.FC = () => {
     setProductDetailOrigin(origin);
 
     if (product.productType === 'shop') {
-      setSubPage('points-product-detail');
+      navigateRoute('points-product-detail');
     } else {
-      setSubPage('product-detail');
+      navigateRoute('product-detail');
     }
   };
 
   // Helper to mark all news as read
   const handleMarkAllRead = () => {
-    const allIds = newsList.map(n => n.id);
-    // Merge with existing read IDs in storage to preserve history if news list changes
-    const currentReadIds = getReadNewsIds();
-    const newReadIds = Array.from(new Set([...currentReadIds, ...allIds]));
-
-    saveReadNewsIds(newReadIds);
-    setNewsList(prev => prev.map(item => ({ ...item, isUnread: false })));
+    markAllNewsRead();
   };
 
   // Effect to mark single item as read when opening detail
   useEffect(() => {
-    if (subPage && subPage.startsWith('news-detail:')) {
-      const id = subPage.split(':')[1];
-
-      setNewsList(prev => {
-        // Check if we need to update state
-        const target = prev.find(p => p.id === id);
-        if (target && target.isUnread) {
-          return prev.map(item =>
-            item.id === id ? { ...item, isUnread: false } : item
-          );
-        }
-        return prev;
-      });
-
-      // Update storage
-      const readIds = getReadNewsIds();
-      if (!readIds.includes(id)) {
-        saveReadNewsIds([...readIds, id]);
-      }
+    if (currentRoute?.name === 'news-detail' && (currentRoute as any).id) {
+      markReadById((currentRoute as any).id);
     }
-  }, [subPage]);
+  }, [currentRoute, markReadById]);
 
   // Handle special navigation: switch to market tab
   useEffect(() => {
-    if (subPage === 'switch-to-market') {
+    if (currentRoute?.name === 'switch-to-market') {
       setActiveTab('market');
-      setSubPage(null);
+      navigateRoute(null, { clearHistory: true });
     }
-  }, [subPage]);
+  }, [currentRoute, navigateRoute]);
 
   // Handle URL-based routing: detect /register path and navigate to register page
   useEffect(() => {
@@ -318,17 +316,17 @@ const AppContent: React.FC = () => {
       const path = window.location.pathname;
       // If URL path is /register, navigate to register page
       if (path === '/register') {
-        setSubPage('register');
+        navigateRoute('register');
       }
     }
   }, []); // Only run once on mount to handle direct URL access
 
   // Authentication Gate
   if (!isLoggedIn) {
-    if (subPage === 'register') {
+    if (currentRoute?.name === 'register') {
       return (
         <Register
-          onBack={() => setSubPage(null)}
+          onBack={() => navigateRoute(null)}
           onRegisterSuccess={(loginPayload) => {
             console.log('[App] 收到注册成功回调，loginPayload:', loginPayload);
             if (loginPayload && loginPayload.token) {
@@ -338,42 +336,42 @@ const AppContent: React.FC = () => {
             } else {
               // 如果没有返回登录信息，只关闭注册页面
               console.warn('[App] 没有收到登录信息，只关闭注册页面');
-              setSubPage(null);
+              navigateRoute(null);
             }
           }}
-          onNavigateUserAgreement={() => setSubPage('user-agreement')}
-          onNavigatePrivacyPolicy={() => setSubPage('privacy-policy')}
+          onNavigateUserAgreement={() => navigateRoute({ name: 'user-agreement' })}
+          onNavigatePrivacyPolicy={() => navigateRoute({ name: 'privacy-policy' })}
         />
       );
     }
-    if (subPage === 'privacy-policy') {
+    if (currentRoute?.name === 'privacy-policy') {
       return (
         <PrivacyPolicy
-          onBack={() => setSubPage(null)}
+          onBack={() => navigateRoute(null)}
         />
       );
     }
-    if (subPage === 'user-agreement') {
+    if (currentRoute?.name === 'user-agreement') {
       return (
         <UserAgreement
-          onBack={() => setSubPage(null)}
+          onBack={() => navigateRoute(null)}
         />
       );
     }
-    if (subPage === 'forgot-password') {
+    if (currentRoute?.name === 'forgot-password') {
       return (
         <ForgotPassword
-          onBack={() => setSubPage(null)}
+          onBack={() => navigateRoute(null)}
         />
       );
     }
     return (
       <Login
         onLogin={handleLogin}
-        onNavigateRegister={() => setSubPage('register')}
-        onNavigateUserAgreement={() => setSubPage('user-agreement')}
-        onNavigatePrivacyPolicy={() => setSubPage('privacy-policy')}
-        onNavigateForgotPassword={() => setSubPage('forgot-password')}
+        onNavigateRegister={() => navigateRoute({ name: 'register' })}
+        onNavigateUserAgreement={() => navigateRoute({ name: 'user-agreement' })}
+        onNavigatePrivacyPolicy={() => navigateRoute({ name: 'privacy-policy' })}
+        onNavigateForgotPassword={() => navigateRoute({ name: 'forgot-password' })}
       />
     );
   }
@@ -381,14 +379,15 @@ const AppContent: React.FC = () => {
   const renderContent = () => {
     // 页面访问控制：未实名用户只能访问首页和实名认证页面
     if (!isRealNameVerified) {
-      // 允许访问的子页面
-      const allowedSubPages = [null, 'real-name-auth'];
+      // 允许未实名访问的子路由（用 Route 名称而非字符串前缀）
+      const allowedRouteNames: Array<Route['name'] | null> = [null, 'real-name-auth'];
 
-      // 检查是否在尝试访问非首页的tab
+      // 检查是否在尝试访问非首页的 tab
       const isNavigatingToRestrictedTab = activeTab !== 'home' && !subPage;
 
-      // 检查是否在尝试访问受限子页面
-      const isNavigatingToRestrictedSubPage = subPage && !allowedSubPages.includes(subPage);
+      // 检查是否在尝试访问受限子路由
+      const isNavigatingToRestrictedSubPage =
+        currentRoute && !allowedRouteNames.includes(currentRoute.name);
 
       if (isNavigatingToRestrictedTab || isNavigatingToRestrictedSubPage) {
         return (
@@ -398,15 +397,15 @@ const AppContent: React.FC = () => {
               isRealNameVerified={isRealNameVerified}
               onNavigateToAuth={() => {
                 setActiveTab('home');
-                setSubPage('real-name-auth');
+                navigateRoute({ name: 'real-name-auth' });
               }}
               onBackToHome={() => {
                 setActiveTab('home');
-                setSubPage(null);
+                navigateRoute(null);
               }}
               onNavigateToProfile={() => {
                 setActiveTab('profile');
-                setSubPage(null);
+                navigateRoute(null);
               }}
             />
           </div>
@@ -414,417 +413,159 @@ const AppContent: React.FC = () => {
       }
     }
 
-    if (subPage === 'points-product-detail' && selectedProduct) {
+    // 商品积分详情页：用 Route 判断，减少字符串误拼
+    if (currentRoute?.name === 'points-product-detail' && selectedProduct) {
       return (
         <PointsProductDetail
           product={selectedProduct}
           onBack={() => {
-            setSubPage(null);
+            navigateRoute(null);
             setSelectedProduct(null);
           }}
-          onNavigate={(page) => setSubPage(page)}
+          onNavigate={(route) => navigateRoute(route)}
         />
       );
     }
 
+    // 优先尝试通过 Route 解析器渲染（参数化路由集中管理），未匹配则走旧分支
+    if (currentRoute) {
+      const resolved = resolveRouteComponent(currentRoute, {
+        newsList,
+        navigateRoute,
+        handleProductSelect,
+        setProductDetailOrigin,
+        productDetailOrigin,
+      handleLogout: handleLogout,
+      selectedCollectionItem,
+      setSelectedCollectionItem,
+        markAllNewsRead,
+      });
+      if (resolved) return resolved;
+    }
+
     // Handle Product Detail Page
-    if (subPage === 'product-detail' && selectedProduct) {
+    if (currentRoute?.name === 'product-detail' && selectedProduct) {
       return (
         <ProductDetail
           product={selectedProduct}
           onBack={() => {
             if (productDetailOrigin === 'trading-zone') {
-              setSubPage('trading-zone');
+              navigateRoute({ name: 'trading-zone' });
             } else if (productDetailOrigin === 'reservation-record') {
-              setSubPage('reservation-record');
+              navigateRoute({ name: 'reservation-record' });
             } else {
-              setSubPage(null);
+              navigateRoute(null);
             }
             setSelectedProduct(null);
             setProductDetailOrigin('market'); // Reset to default
           }}
-          onNavigate={(page) => setSubPage(page)}
+          onNavigate={(route) => navigateRoute(route)} // 兼容旧字符串
         />
       );
     }
 
-    if (subPage === 'reservation' && selectedProduct) {
+    if (currentRoute?.name === 'reservation' && selectedProduct) {
       return (
         <ReservationPage
           product={selectedProduct}
-          onBack={() => setSubPage('product-detail')}
-          onNavigate={(page) => setSubPage(page)}
+          onBack={() => navigateRoute({ name: 'product-detail' })}
+          onNavigate={(route) => navigateRoute(route)} // 兼容旧字符串
         />
       );
     }
 
-    if (subPage === 'reservation-record') {
+    if (currentRoute?.name === 'reservation-record') {
       return (
         <ReservationRecordPage
-          onBack={() => setSubPage(null)} // Or back to wherever appropriate
-          onNavigate={(page) => setSubPage(page)}
+          onBack={() => navigateRoute(null)} // Or back to wherever appropriate
+          onNavigate={(route) => navigateRoute(route)} // 兼容旧字符串
           onProductSelect={(product) => handleProductSelect(product, 'reservation-record')}
         />
       );
     }
 
-    if (subPage?.startsWith('my-collection-detail') && selectedCollectionItem) {
+    if (currentRoute?.name === 'my-collection-detail' && selectedCollectionItem) {
       return (
         <MyCollectionDetail
           item={selectedCollectionItem}
           onBack={() => {
-            setSubPage('my-collection');
+            navigateRoute({ name: 'my-collection' });
             setSelectedCollectionItem(null);
           }}
-          onNavigate={(page) => setSubPage(page)}
+          onNavigate={(route) => navigateRoute(route)} // 兼容旧字符串
         />
       );
     }
 
     // Handle Announcement Detail Page: "news-detail:ID"
-    if (subPage?.startsWith('news-detail:')) {
-      const newsId = subPage.split(':')[1];
+    if (currentRoute?.name === 'news-detail') {
+      const newsId = currentRoute.id;
       const newsItem = newsList.find(item => item.id === newsId);
       if (newsItem) {
+        markReadById(newsId);
         // 根据新闻项类型保存标签页状态，确保返回时显示正确的标签
         const targetTab = newsItem.type === 'announcement' ? 'announcement' : 'dynamics';
         try {
-          localStorage.setItem('cat_news_active_tab', targetTab);
+          writeStorage(STORAGE_KEYS.NEWS_ACTIVE_TAB_KEY, targetTab);
         } catch (e) {
           // 忽略存储错误
         }
-        return <AnnouncementDetail newsItem={newsItem} onBack={() => setSubPage(null)} />;
+        return <AnnouncementDetail newsItem={newsItem} onBack={() => navigateRoute(null)} />;
       }
     }
 
     // Handle Artist Detail Page: "artist-detail:ID"
-    if (subPage?.startsWith('artist-detail:')) {
-      const artistId = subPage.split(':')[1];
-      if (artistId) {
-        return (
-          <ArtistDetail
-            artistId={artistId}
-            onBack={() => setSubPage(null)}
-            onProductSelect={(product) => handleProductSelect(product, 'artist')}
-          />
-        );
-      }
+    if (currentRoute?.name === 'artist-detail' && currentRoute.id) {
+      const artistId = currentRoute.id;
+      return (
+        <ArtistDetail
+          artistId={artistId}
+          onBack={() => navigateRoute(null)}
+          onProductSelect={(product) => handleProductSelect(product, 'artist')}
+        />
+      );
     }
 
     // Handle Order List Page: "order-list:category:tabIndex"
-    if (subPage?.startsWith('order-list:')) {
-      const [_, category, tabIndex] = subPage.split(':');
+    if (currentRoute?.name === 'order-list') {
       return (
         <OrderListPage
-          category={category}
-          initialTab={parseInt(tabIndex, 10)}
-          onBack={() => setSubPage(null)}
-          onNavigate={(page) => setSubPage(page)}
+          category={currentRoute.kind}
+          initialTab={currentRoute.status}
+          onBack={() => navigateRoute(null)}
+          onNavigate={(route) => navigateRoute(route)} // 兼容旧字符串
         />
       );
     }
 
-    // Sub page Routing
-    switch (subPage) {
-      case 'service-center:settings':
-        return (
-          <Settings
-            onBack={() => setSubPage(null)}
-            onLogout={handleLogout}
-            onNavigate={(page) => setSubPage(page)}
-          />
-        );
-      case 'service-center:reset-login-password':
-        return (
-          <ResetLoginPassword
-            onBack={() => setSubPage('service-center:settings')}
-            onNavigateForgotPassword={() => setSubPage('service-center:forgot-password')}
-          />
-        );
-      case 'service-center:reset-pay-password':
-        return (
-          <ResetPayPassword
-            onBack={() => setSubPage('service-center:settings')}
-            onNavigateForgotPassword={() => setSubPage('service-center:forgot-password')}
-          />
-        );
-      case 'service-center:forgot-password':
-        return <ForgotPassword onBack={() => setSubPage('service-center:settings')} />;
-      case 'service-center:notification-settings':
-        return <NotificationSettings onBack={() => setSubPage('service-center:settings')} />;
-      case 'service-center:account-deletion':
-        return <AccountDeletion onBack={() => setSubPage('service-center:settings')} />;
-      case 'service-center:edit-profile':
-        return (
-          <EditProfile
-            onBack={() => setSubPage('service-center:settings')}
-            onLogout={handleLogout}
-          />
-        );
-      case 'card-management':
-        return <CardManagement onBack={() => setSubPage(null)} />;
-      case 'trading-zone':
-        return (
-          <TradingZone
-            onBack={() => setSubPage(null)}
-            onProductSelect={(product) => handleProductSelect(product, 'trading-zone')}
-          />
-        );
-      case 'home:about-us':
-        // 从首页入口进入「中心介绍」，返回时应回到首页
-        return <AboutUs onBack={() => setSubPage(null)} />;
-      case 'about-us':
-        // 从设置页进入「关于我们」，返回时回到设置
-        return <AboutUs onBack={() => setSubPage('service-center:settings')} />;
-      case 'privacy-policy':
-        return (
-          <PrivacyPolicy onBack={() => setSubPage('service-center:settings')} />
-        );
-      case 'artist-showcase':
-        return (
-          <ArtistShowcase
-            onBack={() => setSubPage(null)}
-            onArtistSelect={(id) => setSubPage(`artist-detail:${id}`)}
-          />
-        );
-      case 'masterpiece-showcase':
-        return (
-          <ArtistWorksShowcase
-            onBack={() => setSubPage(null)}
-            onNavigateToArtist={(artistId) => setSubPage(`artist-detail:${artistId}`)}
-          />
-        );
-      case 'asset-view':
-      case 'asset-view:0':
-      case 'asset-view:1':
-      case 'asset-view:2':
-      case 'asset-view:3':
-        const initialTab = subPage?.split(':')[1] ? parseInt(subPage.split(':')[1]) : 0;
-        return (
-          <AssetView
-            initialTab={initialTab}
-            onBack={() => setSubPage(null)}
-            onNavigate={(page) => setSubPage(page)}
-            onProductSelect={(product) => handleProductSelect(product, 'market')}
-          />
-        );
-      case 'my-collection':
-        return (
-          <MyCollection
-            onBack={() => setSubPage(null)}
-            onItemSelect={(item) => {
-              setSelectedCollectionItem(item);
-              setSubPage(`my-collection-detail:${item.id}`);
-            }}
-          />
-        );
-      case 'address-list':
-        return <AddressList onBack={() => setSubPage(null)} />;
-      case 'real-name-auth':
-        return <RealNameAuth onBack={() => setSubPage(null)} />;
-      case 'my-friends':
-        return <MyFriends onBack={() => setSubPage(null)} onNavigate={(page) => setSubPage(page)} />;
-      case 'agent-auth':
-        return <AgentAuth onBack={() => setSubPage(null)} />;
-      case 'help-center':
-        return <HelpCenter onBack={() => setSubPage(null)} />;
-      case 'profile:user-agreement':
-        return <UserAgreement onBack={() => setSubPage(null)} />;
-      case 'user-survey':
-        return <UserSurvey onBack={() => setSubPage(null)} />;
-      case 'online-service':
-        return <OnlineService onBack={() => setSubPage(null)} />;
-    }
+    // 已迁移到 resolveRouteComponent 的旧 subPage 分支已移除
 
-    if (subPage?.startsWith('my-collection-action:consignment:')) {
-      const parts = subPage.split(':');
-      const targetId = parts[2];
-      return (
-        <MyCollection
-          onBack={() => setSubPage(null)}
-          onItemSelect={(item) => {
-            setSelectedCollectionItem(item);
-            setSubPage(`my-collection-detail:${item.id}`);
-          }}
-          initialConsignItemId={targetId}
-        />
-      );
-    }
+    // 其余 legacy subPage 分支已迁移至 resolveRouteComponent
 
-    if (subPage?.startsWith('wallet:hashrate_exchange')) {
-      // Check for return path: wallet:hashrate_exchange:fromPath
-      const isFromProfile = subPage.includes(':profile');
-      const isFromReservation = subPage.includes(':reservation');
-      return (
-        <HashrateExchange
-          onBack={() => setSubPage(isFromReservation ? 'reservation' : isFromProfile ? null : 'asset-view')}
-          onNavigate={(page) => setSubPage(page)}
-        />
-      );
-    }
-
-    if (subPage?.startsWith('asset:balance-recharge')) {
-      const isFromProfile = subPage.includes(':profile');
-      const isFromReservation = subPage.includes(':reservation');
-
-      // Extract amount if present (format: asset:balance-recharge:source:amount)
-      const parts = subPage.split(':');
-      const initialAmount = parts.length > 3 ? parts[parts.length - 1] : undefined;
-
-      return <BalanceRecharge
-        onBack={() => setSubPage(isFromReservation ? 'reservation' : isFromProfile ? null : 'asset-view')}
-        initialAmount={initialAmount}
-      />;
-    }
-
-    if (subPage?.startsWith('asset:balance-withdraw')) {
-      const isFromProfile = subPage.includes(':profile');
-      return (
-        <BalanceWithdraw
-          onBack={() => setSubPage(isFromProfile ? null : 'asset-view')}
-          onNavigate={(page) => setSubPage(page)}
-        />
-      );
-    }
-
-    if (subPage?.startsWith('asset:service-recharge')) {
-      const isFromProfile = subPage.includes(':profile');
-      return <ServiceRecharge onBack={() => setSubPage(isFromProfile ? null : 'asset-view')} />;
-    }
-
-    if (subPage?.startsWith('claim-detail:')) {
-      const id = subPage.split(':')[1];
-      return <ClaimDetail id={id} onBack={() => setSubPage('claim-history')} />;
-    }
-
-    switch (subPage) {
-      case 'asset:extension-withdraw':
-        return <ExtensionWithdraw onBack={() => setSubPage('asset-view')} />;
-      case 'sign-in':
-        return <SignIn onBack={() => setSubPage(null)} onNavigate={(page) => setSubPage(page)} />;
-      case 'asset-history':
-        return (
-          <AssetHistory
-            onBack={() => setSubPage('asset-view')}
-          />
-        );
-      case 'claim-history':
-        return (
-          <ClaimHistory
-            onBack={() => setSubPage(null)}
-            onNavigate={(page) => setSubPage(page)}
-          />
-        );
-
-      case 'cumulative-rights':
-        return <CumulativeRights onBack={() => setSubPage(null)} />;
-      case 'consignment-voucher':
-        return <ConsignmentVoucher onBack={() => setSubPage(null)} />;
-      case 'service-center:message':
-        return <MessageCenter onBack={() => setSubPage(null)} onNavigate={(page) => setSubPage(page)} />;
-      case 'news-center':
-        return (
-          <News
-            newsList={newsList}
-            onNavigate={(id) => {
-              // 根据新闻项类型保存标签页状态，确保返回时显示正确的标签
-              const newsItem = newsList.find(item => item.id === id);
-              if (newsItem) {
-                const targetTab = newsItem.type === 'announcement' ? 'announcement' : 'dynamics';
-                try {
-                  localStorage.setItem('cat_news_active_tab', targetTab);
-                } catch (e) {
-                  // 忽略存储错误
-                }
-              }
-              setSubPage(`news-detail:${id}`);
-            }}
-            onMarkAllRead={handleMarkAllRead}
-            onBack={() => setSubPage(null)}
-          />
-        );
-      case 'invite-friends':
-        return <InviteFriends onBack={() => setSubPage('my-friends')} />;
-    }
-
-    // Handle special navigation: switch to market tab
-    if (subPage === 'switch-to-market') {
-      return null; // Will be handled by useEffect below
-    }
-
-    // Handle Cashier Page: "cashier:ORDER_ID"
-    if (subPage?.startsWith('cashier:')) {
-      const orderId = subPage.split(':')[1];
-      return (
-        <Cashier
-          orderId={orderId}
-          onBack={() => setSubPage(null)}
-          onNavigate={(page) => setSubPage(page)}
-        />
-      );
-    }
-
-    // Handle Order Detail Page: "order-detail:ORDER_ID"
-    if (subPage?.startsWith('order-detail:')) {
-      const orderId = subPage.split(':')[1];
-      // Extract the source page from the order-detail string if it exists
-      // Format: "order-detail:sourceCategory:sourceTab:orderId"
-      const parts = subPage.split(':');
-      let backPage = null;
-
-      if (parts.length >= 4) {
-        // Has source info: order-detail:points:0:123
-        const sourceCategory = parts[1];
-        const sourceTab = parts[2];
-        const actualOrderId = parts[3];
-        backPage = `order-list:${sourceCategory}:${sourceTab}`;
-
-        return (
-          <OrderDetail
-            orderId={actualOrderId}
-            onBack={() => setSubPage(backPage)}
-            onNavigate={(page) => setSubPage(page)}
-          />
-        );
-      } else {
-        // No source info, try to go back to a reasonable default
-        return (
-          <OrderDetail
-            orderId={orderId}
-            onBack={() => {
-              // Try to determine which order list to return to based on URL history
-              // Default to points order list if unknown
-              setSubPage('order-list:points:0');
-            }}
-            onNavigate={(page) => setSubPage(page)}
-          />
-        );
-      }
-    }
-
-    // Tab Routing
+    // Tab Routing 使用 Entry 容器，App 只负责切换
     switch (activeTab) {
       case 'home':
         return (
-          <Home
-            onNavigate={(page) => setSubPage(page)}
+          <HomeEntry
+            onNavigate={(route) => navigateRoute(route)}
             onSwitchTab={(tab) => setActiveTab(tab)}
             announcements={newsList}
           />
         );
       case 'market':
-        return <Market onProductSelect={(product) => handleProductSelect(product, 'market')} />;
+        return <MarketEntry onProductSelect={(product) => handleProductSelect(product, 'market')} />;
       case 'rights':
-        return <ClaimStation onNavigate={(page) => setSubPage(page)} />;
+        return <RightsEntry onNavigate={(route) => navigateRoute(route)} />;
       case 'orders':
-        return <Orders onNavigate={(page) => setSubPage(page)} />;
+        return <OrdersEntry onNavigate={(route) => navigateRoute(route)} />;
       case 'profile':
-        return <Profile onNavigate={(page) => setSubPage(page)} />;
+        return <ProfileEntry onNavigate={(route) => navigateRoute(route)} />;
       default:
         return (
-          <Home
-            onNavigate={(page) => setSubPage(page)}
+          <HomeEntry
+            onNavigate={(route) => navigateRoute(route)}
             onSwitchTab={(tab) => setActiveTab(tab)}
+            announcements={newsList}
           />
         );
     }
@@ -843,17 +584,17 @@ const AppContent: React.FC = () => {
         onNavigateToAuth={() => {
           setShowRealNameModal(false);
           setActiveTab('home');
-          setSubPage('real-name-auth');
+          navigateRoute('real-name-auth');
         }}
         onBackToHome={() => {
           setShowRealNameModal(false);
           setActiveTab('home');
-          setSubPage(null);
+          navigateRoute(null);
         }}
         onNavigateToProfile={() => {
           setShowRealNameModal(false);
           setActiveTab('profile');
-          setSubPage(null);
+          navigateRoute(null);
         }}
       />
 

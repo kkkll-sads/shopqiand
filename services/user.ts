@@ -1,6 +1,9 @@
-import { apiFetch, ApiResponse } from './networking';
-import { API_ENDPOINTS, AUTH_TOKEN_KEY } from './config';
+import { ApiResponse } from './networking';
+import { API_ENDPOINTS } from './config';
+// 统一带 token 的请求封装，减少重复的 localStorage 读取
+import { authedFetch, getStoredToken } from './client';
 import { ProfileResponse, PromotionCardData, TeamMembersListData } from '../types';
+import { debugLog, bizLog, errorLog } from '../utils/logger';
 
 /**
  * 获取个人中心信息
@@ -8,14 +11,14 @@ import { ProfileResponse, PromotionCardData, TeamMembersListData } from '../type
  */
 export async function fetchProfile(token: string): Promise<ApiResponse<ProfileResponse>> {
     try {
-        const data = await apiFetch<ProfileResponse>(API_ENDPOINTS.account.profile, {
+        const data = await authedFetch<ProfileResponse>(API_ENDPOINTS.account.profile, {
             method: 'GET',
             token,
         });
-        console.log('个人中心接口原始响应:', data);
+        debugLog('api.user.profile.raw', data);
         return data;
     } catch (error: any) {
-        console.error('获取个人中心信息失败:', error);
+        errorLog('api.user.profile', '获取个人中心信息失败', error);
         if (error.name === 'TypeError' && error.message === 'Failed to fetch') {
             const corsError = new Error('网络请求失败，可能是跨域问题或服务器不可达。请检查：\n1. API 服务器是否正常运行\n2. 是否配置了 CORS 允许跨域\n3. 网络连接是否正常');
             (corsError as any).isCorsError = true;
@@ -32,7 +35,7 @@ export interface UpdateAvatarParams {
 }
 
 export async function updateAvatar(params: UpdateAvatarParams): Promise<ApiResponse> {
-    const token = params.token || localStorage.getItem(AUTH_TOKEN_KEY) || '';
+    const token = params.token ?? getStoredToken();
 
     if (!token) {
         throw new Error('未找到用户登录信息，请先登录后再尝试修改头像');
@@ -44,15 +47,15 @@ export async function updateAvatar(params: UpdateAvatarParams): Promise<ApiRespo
     };
 
     try {
-        const data = await apiFetch(API_ENDPOINTS.user.updateAvatar, {
+        const data = await authedFetch(API_ENDPOINTS.user.updateAvatar, {
             method: 'POST',
             body: JSON.stringify(payload),
             token,
         });
-        console.log('修改头像接口原始响应:', data);
+        debugLog('api.user.updateAvatar.raw', data);
         return data;
     } catch (error: any) {
-        console.error('修改头像失败:', error);
+        errorLog('api.user.updateAvatar', '修改头像失败', error);
         throw error;
     }
 }
@@ -63,7 +66,7 @@ export interface UpdateNicknameParams {
 }
 
 export async function updateNickname(params: UpdateNicknameParams): Promise<ApiResponse> {
-    const token = params.token || localStorage.getItem(AUTH_TOKEN_KEY) || '';
+    const token = params.token ?? getStoredToken();
 
     if (!token) {
         throw new Error('未找到用户登录信息，请先登录后再尝试修改昵称');
@@ -77,15 +80,15 @@ export async function updateNickname(params: UpdateNicknameParams): Promise<ApiR
     payload.append('nickname', params.nickname.trim());
 
     try {
-        const data = await apiFetch(API_ENDPOINTS.user.updateNickname, {
+        const data = await authedFetch(API_ENDPOINTS.user.updateNickname, {
             method: 'POST',
             body: payload,
             token,
         });
-        console.log('修改昵称接口原始响应:', data);
+        debugLog('api.user.updateNickname.raw', data);
         return data;
     } catch (error: any) {
-        console.error('修改昵称失败:', error);
+        errorLog('api.user.updateNickname', '修改昵称失败', error);
         throw error;
     }
 }
@@ -97,7 +100,7 @@ export interface UpdatePasswordParams {
 }
 
 export async function updatePassword(params: UpdatePasswordParams): Promise<ApiResponse> {
-    const token = params.token || localStorage.getItem(AUTH_TOKEN_KEY) || '';
+    const token = params.token ?? getStoredToken();
 
     if (!token) {
         throw new Error('未找到用户登录信息，请先登录后再尝试修改密码');
@@ -127,15 +130,15 @@ export async function updatePassword(params: UpdatePasswordParams): Promise<ApiR
     payload.append('new_password', newPassword);
 
     try {
-        const data = await apiFetch(API_ENDPOINTS.user.updatePassword, {
+        const data = await authedFetch(API_ENDPOINTS.user.updatePassword, {
             method: 'POST',
             body: payload,
             token,
         });
-        console.log('修改登录密码接口原始响应:', data);
+        debugLog('api.user.updatePassword.raw', data);
         return data;
     } catch (error: any) {
-        console.error('修改登录密码失败:', error);
+        errorLog('api.user.updatePassword', '修改登录密码失败', error);
         throw error;
     }
 }
@@ -146,8 +149,14 @@ export interface UpdatePayPasswordParams {
     token?: string;
 }
 
+export interface ResetPayPasswordBySmsParams {
+    mobile: string;
+    captcha: string;
+    new_pay_password: string;
+}
+
 export async function updatePayPassword(params: UpdatePayPasswordParams): Promise<ApiResponse> {
-    const token = params.token || localStorage.getItem(AUTH_TOKEN_KEY) || '';
+    const token = params.token ?? getStoredToken();
 
     if (!token) {
         throw new Error('未找到用户登录信息，请先登录后再尝试修改支付密码');
@@ -177,15 +186,40 @@ export async function updatePayPassword(params: UpdatePayPasswordParams): Promis
     payload.append('new_pay_password', newPayPassword);
 
     try {
-        const data = await apiFetch(API_ENDPOINTS.user.updatePayPassword, {
+        const data = await authedFetch(API_ENDPOINTS.user.updatePayPassword, {
             method: 'POST',
             body: payload,
             token,
         });
-        console.log('修改支付密码接口原始响应:', data);
+        debugLog('api.user.updatePayPassword.raw', data);
         return data;
     } catch (error: any) {
-        console.error('修改支付密码失败:', error);
+        errorLog('api.user.updatePayPassword', '修改支付密码失败', error);
+        throw error;
+    }
+}
+
+/**
+ * 短信验证码重置支付密码
+ * @param params.mobile 手机号
+ * @param params.captcha 短信验证码
+ * @param params.new_pay_password 新的支付密码（6位数字）
+ */
+export async function resetPayPasswordBySms(params: ResetPayPasswordBySmsParams): Promise<ApiResponse> {
+    const payload = new FormData();
+    payload.append('mobile', params.mobile);
+    payload.append('captcha', params.captcha);
+    payload.append('new_pay_password', params.new_pay_password);
+
+    try {
+        const data = await authedFetch(API_ENDPOINTS.user.resetPayPasswordBySms, {
+            method: 'POST',
+            body: payload,
+        });
+        debugLog('api.user.resetPayPasswordBySms.raw', data);
+        return data;
+    } catch (error: any) {
+        errorLog('api.user.resetPayPasswordBySms', '短信重置支付密码失败', error);
         throw error;
     }
 }
@@ -197,7 +231,7 @@ export interface CancelAccountParams {
 }
 
 export async function cancelAccount(params: CancelAccountParams): Promise<ApiResponse> {
-    const token = params.token || localStorage.getItem(AUTH_TOKEN_KEY) || '';
+    const token = params.token ?? getStoredToken();
 
     if (!token) {
         throw new Error('未找到用户登录信息，请先登录后再尝试注销账户');
@@ -215,15 +249,15 @@ export async function cancelAccount(params: CancelAccountParams): Promise<ApiRes
     payload.append('reason', reason);
 
     try {
-        const data = await apiFetch(API_ENDPOINTS.account.cancelAccount, {
+        const data = await authedFetch(API_ENDPOINTS.account.cancelAccount, {
             method: 'POST',
             body: payload,
             token,
         });
-        console.log('账户注销接口原始响应:', data);
+        debugLog('api.user.cancelAccount.raw', data);
         return data;
     } catch (error: any) {
-        console.error('提交账户注销申请失败:', error);
+        errorLog('api.user.cancelAccount', '提交账户注销申请失败', error);
         throw error;
     }
 }
@@ -243,7 +277,7 @@ export interface RealNameStatusData {
 }
 
 export async function fetchRealNameStatus(token: string): Promise<ApiResponse<RealNameStatusData>> {
-    return apiFetch<RealNameStatusData>(API_ENDPOINTS.user.realNameStatus, {
+    return authedFetch<RealNameStatusData>(API_ENDPOINTS.user.realNameStatus, {
         method: 'GET',
         token,
     });
@@ -259,7 +293,7 @@ export interface SubmitRealNameParams {
 }
 
 export async function submitRealName(params: SubmitRealNameParams): Promise<ApiResponse<{ real_name_status?: number }>> {
-    const token = params.token || localStorage.getItem(AUTH_TOKEN_KEY) || '';
+    const token = params.token ?? getStoredToken();
     const payload = new FormData();
 
     if (params.auth_token) {
@@ -271,7 +305,7 @@ export async function submitRealName(params: SubmitRealNameParams): Promise<ApiR
         if (params.id_card_back) payload.append('id_card_back', params.id_card_back);
     }
 
-    return apiFetch(API_ENDPOINTS.user.submitRealName, {
+    return authedFetch(API_ENDPOINTS.user.submitRealName, {
         method: 'POST',
         body: payload,
         token,
@@ -298,7 +332,7 @@ export interface LivePersonCheckResult {
 }
 
 export async function livePersonCheck(params: LivePersonCheckParams): Promise<ApiResponse<LivePersonCheckResult>> {
-    const token = params.userToken || localStorage.getItem(AUTH_TOKEN_KEY) || '';
+    const token = params.userToken ?? getStoredToken();
     const payload = new URLSearchParams();
     payload.append('name', params.name);
     payload.append('cardNo', params.cardNo);
@@ -314,7 +348,7 @@ export async function livePersonCheck(params: LivePersonCheckParams): Promise<Ap
         payload.append('dataId', params.dataId);
     }
 
-    return apiFetch<LivePersonCheckResult>(API_ENDPOINTS.yidun.livePersonCheck, {
+    return authedFetch<LivePersonCheckResult>(API_ENDPOINTS.yidun.livePersonCheck, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/x-www-form-urlencoded',
@@ -337,13 +371,13 @@ export interface H5AuthTokenResult {
 }
 
 export async function fetchH5AuthToken(params: H5AuthTokenParams): Promise<ApiResponse<H5AuthTokenResult>> {
-    const token = params.token || localStorage.getItem(AUTH_TOKEN_KEY) || '';
+    const token = params.token ?? getStoredToken();
     const payload = new FormData();
     payload.append('real_name', params.real_name);
     payload.append('id_card', params.id_card);
     payload.append('redirect_url', params.redirect_url);
 
-    return apiFetch<H5AuthTokenResult>(API_ENDPOINTS.user.getH5AuthToken, {
+    return authedFetch<H5AuthTokenResult>(API_ENDPOINTS.user.getH5AuthToken, {
         method: 'POST',
         body: payload,
         token,
@@ -375,11 +409,11 @@ export interface H5RecheckResult {
 }
 
 export async function h5Recheck(params: H5RecheckParams): Promise<ApiResponse<H5RecheckResult>> {
-    const token = params.token || localStorage.getItem(AUTH_TOKEN_KEY) || '';
+    const token = params.token ?? getStoredToken();
     const payload = new URLSearchParams();
     payload.append('authToken', params.authToken);
 
-    return apiFetch<H5RecheckResult>(API_ENDPOINTS.yidun.h5Recheck, {
+    return authedFetch<H5RecheckResult>(API_ENDPOINTS.yidun.h5Recheck, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/x-www-form-urlencoded',
@@ -391,7 +425,7 @@ export async function h5Recheck(params: H5RecheckParams): Promise<ApiResponse<H5
 
 // 推广相关
 export async function fetchPromotionCard(token: string): Promise<ApiResponse<PromotionCardData>> {
-    return apiFetch<PromotionCardData>(API_ENDPOINTS.team.promotionCard, {
+    return authedFetch<PromotionCardData>(API_ENDPOINTS.team.promotionCard, {
         method: 'GET',
         token,
     });
@@ -408,7 +442,7 @@ export interface FetchTeamMembersParams {
 export async function fetchTeamMembers(
     params: FetchTeamMembersParams = {},
 ): Promise<ApiResponse<TeamMembersListData>> {
-    const token = params.token || localStorage.getItem(AUTH_TOKEN_KEY) || '';
+    const token = params.token ?? getStoredToken();
     const search = new URLSearchParams();
     if (params.page) search.set('page', String(params.page));
     if (params.page) search.set('page', String(params.page));
@@ -417,7 +451,7 @@ export async function fetchTeamMembers(
     if (params.level) search.set('level', String(params.level));
 
     const path = `${API_ENDPOINTS.team.members}?${search.toString()}`;
-    return apiFetch<TeamMembersListData>(path, {
+    return authedFetch<TeamMembersListData>(path, {
         method: 'GET',
         token,
     });
@@ -441,7 +475,7 @@ export interface AgentReviewStatusData {
 }
 
 export async function fetchAgentReviewStatus(token: string): Promise<ApiResponse<AgentReviewStatusData | null>> {
-    return apiFetch<AgentReviewStatusData | null>(API_ENDPOINTS.user.agentReviewStatus, {
+    return authedFetch<AgentReviewStatusData | null>(API_ENDPOINTS.user.agentReviewStatus, {
         method: 'GET',
         token,
     });
@@ -460,7 +494,7 @@ export interface SubmitAgentReviewParams {
 }
 
 export async function submitAgentReview(params: SubmitAgentReviewParams): Promise<ApiResponse> {
-    const token = params.token || localStorage.getItem(AUTH_TOKEN_KEY) || '';
+    const token = params.token ?? getStoredToken();
     const payload = new FormData();
     if (params.name) payload.append('name', params.name);
     if (params.phone) payload.append('phone', params.phone);
@@ -471,7 +505,7 @@ export async function submitAgentReview(params: SubmitAgentReviewParams): Promis
     if (params.license_image) payload.append('license_image', params.license_image);
     if (params.reason) payload.append('reason', params.reason);
 
-    return apiFetch(API_ENDPOINTS.user.submitAgentReview, {
+    return authedFetch(API_ENDPOINTS.user.submitAgentReview, {
         method: 'POST',
         body: payload,
         token,
@@ -500,7 +534,7 @@ export interface AddressListData {
 }
 
 export async function fetchAddressList(token: string): Promise<ApiResponse<AddressListData>> {
-    return apiFetch<AddressListData>(API_ENDPOINTS.address.list, {
+    return authedFetch<AddressListData>(API_ENDPOINTS.address.list, {
         method: 'GET',
         token,
     });
@@ -519,7 +553,7 @@ export interface SaveAddressParams {
 }
 
 export async function saveAddress(params: SaveAddressParams): Promise<ApiResponse> {
-    const token = params.token || localStorage.getItem(AUTH_TOKEN_KEY) || '';
+    const token = params.token ?? getStoredToken();
     const payload = new FormData();
 
     if (params.id) payload.append('id', String(params.id));
@@ -532,7 +566,7 @@ export async function saveAddress(params: SaveAddressParams): Promise<ApiRespons
     payload.append('is_default', params.is_default ? '1' : '0');
 
     const url = params.id ? API_ENDPOINTS.address.edit : API_ENDPOINTS.address.add;
-    return apiFetch(url, {
+    return authedFetch(url, {
         method: 'POST',
         body: payload,
         token,
@@ -540,11 +574,11 @@ export async function saveAddress(params: SaveAddressParams): Promise<ApiRespons
 }
 
 export async function deleteAddress(params: { id: number | string; token?: string }): Promise<ApiResponse> {
-    const token = params.token || localStorage.getItem(AUTH_TOKEN_KEY) || '';
+    const token = params.token ?? getStoredToken();
     const payload = new FormData();
     payload.append('id', String(params.id));
 
-    return apiFetch(API_ENDPOINTS.address.delete, {
+    return authedFetch(API_ENDPOINTS.address.delete, {
         method: 'POST',
         body: payload,
         token,
@@ -552,7 +586,7 @@ export async function deleteAddress(params: { id: number | string; token?: strin
 }
 
 export async function fetchDefaultAddress(token: string): Promise<ApiResponse<AddressItem>> {
-    return apiFetch<AddressItem>(API_ENDPOINTS.address.getDefault, {
+    return authedFetch<AddressItem>(API_ENDPOINTS.address.getDefault, {
         method: 'GET',
         token,
     });
@@ -709,13 +743,13 @@ export interface SignInRecordsData {
  */
 export async function fetchSignInRules(): Promise<ApiResponse<SignInRulesData>> {
     try {
-        const data = await apiFetch<SignInRulesData>(API_ENDPOINTS.signIn.rules, {
+        const data = await authedFetch<SignInRulesData>(API_ENDPOINTS.signIn.rules, {
             method: 'GET',
         });
-        console.log('获取签到规则接口原始响应:', data);
+        debugLog('api.signIn.rules.raw', data);
         return data;
     } catch (error: any) {
-        console.error('获取签到规则失败:', error);
+        errorLog('api.signIn.rules', '获取签到规则失败', error);
         throw error;
     }
 }
@@ -731,14 +765,14 @@ export async function fetchSignInInfo(
     }
 
     try {
-        const data = await apiFetch<SignInInfoData>(API_ENDPOINTS.signIn.info, {
+        const data = await authedFetch<SignInInfoData>(API_ENDPOINTS.signIn.info, {
             method: 'GET',
             token,
         });
-        console.log('获取签到信息接口原始响应:', data);
+        debugLog('api.signIn.info.raw', data);
         return data;
     } catch (error: any) {
-        console.error('获取签到信息失败:', error);
+        errorLog('api.signIn.info', '获取签到信息失败', error);
         throw error;
     }
 }
@@ -754,15 +788,15 @@ export async function doSignIn(
     }
 
     try {
-        const data = await apiFetch<SignInDoData>(API_ENDPOINTS.signIn.do, {
+        const data = await authedFetch<SignInDoData>(API_ENDPOINTS.signIn.do, {
             method: 'POST',
             body: JSON.stringify({}),
             token,
         });
-        console.log('执行签到接口原始响应:', data);
+        debugLog('api.signIn.do.raw', data);
         return data;
     } catch (error: any) {
-        console.error('执行签到失败:', error);
+        errorLog('api.signIn.do', '执行签到失败', error);
         throw error;
     }
 }
@@ -778,14 +812,14 @@ export async function fetchSignInProgress(
     }
 
     try {
-        const data = await apiFetch<SignInProgressData>(API_ENDPOINTS.signIn.progress, {
+        const data = await authedFetch<SignInProgressData>(API_ENDPOINTS.signIn.progress, {
             method: 'GET',
             token,
         });
-        console.log('获取签到提现进度接口原始响应:', data);
+        debugLog('api.signIn.progress.raw', data);
         return data;
     } catch (error: any) {
-        console.error('获取签到提现进度失败:', error);
+        errorLog('api.signIn.progress', '获取签到提现进度失败', error);
         throw error;
     }
 }
@@ -806,7 +840,7 @@ export interface ExchangeScoreToGreenPowerResult {
 }
 
 export async function exchangeScoreToGreenPower(params: ExchangeScoreToGreenPowerParams): Promise<ApiResponse<ExchangeScoreToGreenPowerResult>> {
-    const token = params.token || localStorage.getItem(AUTH_TOKEN_KEY) || '';
+    const token = params.token ?? getStoredToken();
     if (!params.score || Number(params.score) <= 0) {
         throw new Error('请输入有效的消费金数量');
     }
@@ -816,7 +850,7 @@ export async function exchangeScoreToGreenPower(params: ExchangeScoreToGreenPowe
 
     const path = `${API_ENDPOINTS.account.exchangeScoreToGreenPower}?${search.toString()}`;
 
-    return apiFetch<ExchangeScoreToGreenPowerResult>(path, {
+    return authedFetch<ExchangeScoreToGreenPowerResult>(path, {
         method: 'POST',
         token,
     });
@@ -864,21 +898,22 @@ export interface UnlockOldAssetsResult {
  * 检查旧资产解锁状态
  */
 export async function checkOldAssetsUnlockStatus(token?: string): Promise<ApiResponse<CheckOldAssetsUnlockStatusResult>> {
-    const authToken = token || localStorage.getItem(AUTH_TOKEN_KEY) || '';
+    const authToken = token ?? getStoredToken();
 
     if (!authToken) {
         throw new Error('未找到用户登录信息，请先登录后再检查解锁状态');
     }
 
     try {
-        const data = await apiFetch<CheckOldAssetsUnlockStatusResult>(API_ENDPOINTS.account.checkOldAssetsUnlockStatus, {
+        const data = await authedFetch<CheckOldAssetsUnlockStatusResult>(API_ENDPOINTS.account.checkOldAssetsUnlockStatus, {
             method: 'GET',
             token: authToken,
         });
-        console.log('检查旧资产解锁状态接口原始响应:', data);
+        debugLog('api.assets.unlock.check.raw', data);
+        bizLog('assets.unlock.check', { code: data.code, unlockStatus: data.data?.unlock_status });
         return data;
     } catch (error: any) {
-        console.error('检查旧资产解锁状态失败:', error);
+        errorLog('api.assets.unlock.check', '检查旧资产解锁状态失败', error);
         throw error;
     }
 }
@@ -887,22 +922,23 @@ export async function checkOldAssetsUnlockStatus(token?: string): Promise<ApiRes
  * 解锁旧资产
  */
 export async function unlockOldAssets(token?: string): Promise<ApiResponse<UnlockOldAssetsResult>> {
-    const authToken = token || localStorage.getItem(AUTH_TOKEN_KEY) || '';
+    const authToken = token ?? getStoredToken();
 
     if (!authToken) {
         throw new Error('未找到用户登录信息，请先登录后再尝试解锁旧资产');
     }
 
     try {
-        const data = await apiFetch<UnlockOldAssetsResult>(API_ENDPOINTS.account.unlockOldAssets, {
+        const data = await authedFetch<UnlockOldAssetsResult>(API_ENDPOINTS.account.unlockOldAssets, {
             method: 'POST',
             body: JSON.stringify({}),
             token: authToken,
         });
-        console.log('解锁旧资产接口原始响应:', data);
+        debugLog('api.assets.unlock.execute.raw', data);
+        bizLog('assets.unlock.execute', { code: data.code, unlockStatus: data.data?.unlock_status });
         return data;
     } catch (error: any) {
-        console.error('解锁旧资产失败:', error);
+        errorLog('api.assets.unlock.execute', '解锁旧资产失败', error);
         throw error;
     }
 }

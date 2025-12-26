@@ -7,7 +7,7 @@
  * @version 2.0.0
  */
 
-import React from 'react';
+import React, { useState } from 'react';
 import { PasswordForm } from '../../components/business';
 
 /**
@@ -24,12 +24,22 @@ interface ResetPayPasswordProps {
  * ResetPayPassword 修改支付密码页面组件
  */
 const ResetPayPassword: React.FC<ResetPayPasswordProps> = ({ onBack, onNavigateForgotPassword }) => {
+  const [formType, setFormType] = useState<'reset_pay' | 'reset_pay_sms'>('reset_pay');
+
+  const handleBack = () => {
+    if (formType === 'reset_pay_sms') {
+      setFormType('reset_pay');
+      return;
+    }
+    onBack();
+  };
+
   return (
     <PasswordForm
-      type="reset_pay"
-      title="修改支付密码"
-      onBack={onBack}
-      onNavigateForgotPassword={onNavigateForgotPassword}
+      type={formType}
+      title={formType === 'reset_pay' ? '修改支付密码' : '短信重置支付密码'}
+      onBack={handleBack}
+      onNavigateForgotPassword={() => setFormType('reset_pay_sms')}
     />
   );
 };

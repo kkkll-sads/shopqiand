@@ -15,6 +15,7 @@ import { ListItem } from '../../components/common';
 import { USER_INFO_KEY, normalizeAssetUrl } from '../../services/api';
 import { UserInfo } from '../../types';
 import { formatPhone } from '../../utils/format';
+import { Route } from '../../router/routes';
 
 /**
  * Settings 组件属性接口
@@ -22,7 +23,7 @@ import { formatPhone } from '../../utils/format';
 interface SettingsProps {
   onBack: () => void;
   onLogout: () => void;
-  onNavigate: (page: string) => void;
+  onNavigate: (route: Route) => void;
 }
 
 /**
@@ -72,7 +73,7 @@ const Settings: React.FC<SettingsProps> = ({ onBack, onLogout, onNavigate }) => 
         </div>
         <button
           className="flex items-center text-xs text-gray-500 active:opacity-70"
-          onClick={() => onNavigate('service-center:edit-profile')}
+          onClick={() => onNavigate({ name: 'edit-profile' })}
         >
           编辑
           <ChevronRight size={16} className="ml-0.5" />
@@ -83,19 +84,19 @@ const Settings: React.FC<SettingsProps> = ({ onBack, onLogout, onNavigate }) => 
       <div className="mt-3 bg-white">
         <ListItem
           title="重置登录密码"
-          onClick={() => onNavigate('service-center:reset-login-password')}
+          onClick={() => onNavigate({ name: 'reset-login-password', from: 'settings' })}
         />
         <ListItem
           title="重置支付密码"
-          onClick={() => onNavigate('service-center:reset-pay-password')}
+          onClick={() => onNavigate({ name: 'reset-pay-password', from: 'settings' })}
         />
         <ListItem
           title="新消息通知"
-          onClick={() => onNavigate('service-center:notification-settings')}
+          onClick={() => onNavigate({ name: 'notification-settings' })}
         />
         <ListItem
           title="账户注销"
-          onClick={() => onNavigate('service-center:account-deletion')}
+          onClick={() => onNavigate({ name: 'account-deletion' })}
         />
       </div>
 
@@ -108,11 +109,11 @@ const Settings: React.FC<SettingsProps> = ({ onBack, onLogout, onNavigate }) => 
         />
         <ListItem
           title="隐私政策"
-          onClick={() => onNavigate('privacy-policy')}
+          onClick={() => onNavigate({ name: 'privacy-policy', from: 'settings' })}
         />
         <ListItem
           title="关于我们"
-          onClick={() => onNavigate('about-us')}
+          onClick={() => onNavigate({ name: 'about-us', from: 'settings' })}
         />
       </div>
 

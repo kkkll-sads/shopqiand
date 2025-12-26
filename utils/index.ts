@@ -39,3 +39,14 @@ export {
 
 // 存储工具
 export { storage, sessionStorage } from './storage';
+
+// 日志工具
+export {
+    debugLog,
+    bizLog,
+    warnLog,
+    errorLog,
+    enableDebugLog,
+    disableDebugLog,
+    isDebugLogEnabled,
+} from './logger';

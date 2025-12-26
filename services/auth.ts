@@ -1,5 +1,6 @@
 import { apiFetch, ApiResponse } from './networking';
 import { API_ENDPOINTS } from './config';
+import { bizLog, debugLog, errorLog } from '../utils/logger';
 
 // 注册接口参数类型
 export interface RegisterParams {
@@ -34,10 +35,11 @@ export async function register(params: RegisterParams): Promise<ApiResponse> {
             method: 'POST',
             body: formData,
         });
-        console.log('注册接口原始响应:', data);
+        debugLog('api.auth.register.raw', data);
+        bizLog('auth.register', { code: data.code });
         return data;
     } catch (error: any) {
-        console.error('注册接口调用失败:', error);
+        errorLog('api.auth.register', '注册接口调用失败', error);
 
         // 提供更详细的错误信息
         if (error.name === 'TypeError' && error.message === 'Failed to fetch') {
@@ -66,10 +68,11 @@ export async function login(params: LoginParams): Promise<ApiResponse> {
             method: 'POST',
             body: formData,
         });
-        console.log('登录接口原始响应:', data);
+        debugLog('api.auth.login.raw', data);
+        bizLog('auth.login.request', { code: data.code });
         return data;
     } catch (error: any) {
-        console.error('登录接口调用失败:', error);
+        errorLog('api.auth.login', '登录接口调用失败', error);
         if (error.name === 'TypeError' && error.message === 'Failed to fetch') {
             const corsError = new Error('网络请求失败，可能是跨域问题或服务器不可达。请检查：\n1. API 服务器是否正常运行\n2. 是否配置了 CORS 允许跨域\n3. 网络连接是否正常');
             (corsError as any).isCorsError = true;
@@ -83,9 +86,14 @@ export async function login(params: LoginParams): Promise<ApiResponse> {
  * 找回密码参数接口
  */
 export interface RetrievePasswordParams {
-    mobile: string;
+    /** 账户类型：mobile/email，默认 mobile */
+    type?: 'mobile' | 'email' | string;
+    /** 账户：手机号或邮箱 */
+    account: string;
+    /** 短信/邮箱验证码 */
     captcha: string;
-    newpassword: string;
+    /** 新密码（6-32位，不能包含特殊字符） */
+    password: string;
 }
 
 /**
@@ -94,19 +102,22 @@ export interface RetrievePasswordParams {
  */
 export async function retrievePassword(params: RetrievePasswordParams): Promise<ApiResponse> {
     try {
+        // 兼容后端字段：password 为主，newpassword 为兼容字段
         const formData = new FormData();
-        formData.append('mobile', params.mobile);
+        formData.append('type', params.type || 'mobile');
+        formData.append('account', params.account);
         formData.append('captcha', params.captcha);
-        formData.append('newpassword', params.newpassword);
+        formData.append('password', params.password);
+        formData.append('newpassword', params.password);
 
         const data = await apiFetch(API_ENDPOINTS.account.retrievePassword, {
             method: 'POST',
             body: formData,
         });
-        console.log('找回密码接口原始响应:', data);
+        debugLog('api.auth.retrievePassword.raw', data);
         return data;
     } catch (error: any) {
-        console.error('找回密码失败:', error);
+        errorLog('api.auth.retrievePassword', '找回密码失败', error);
         throw error;
     }
 }

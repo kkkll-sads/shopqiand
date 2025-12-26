@@ -110,7 +110,7 @@ const AgentAuth: React.FC<AgentAuthProps> = ({ onBack }) => {
       setLicenseImagePath(path || fullUrl);
       const previewUrl = normalizeAssetUrl(fullUrl || path);
       setLicensePreview(previewUrl);
-      showToast('success', '上传成功');
+      showToast('success', res?.msg || '上传成功');
     } catch (err: any) {
       console.error('营业执照上传失败:', err);
       const errorMsg = err?.msg || err?.response?.msg || err?.message || '营业执照上传失败，请稍后重试';

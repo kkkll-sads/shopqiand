@@ -173,7 +173,7 @@ const CardManagement: React.FC<CardManagementProps> = ({ onBack }) => {
               try {
                 const res = await deletePaymentAccount({ id });
                 if (res.code === 1) {
-                  setNotice('删除成功');
+                  setNotice(res.msg || '删除成功');
                   await loadAccounts();
                 } else {
                   setNotice(res.msg || '删除失败，请稍后重试');
@@ -265,7 +265,7 @@ const CardManagement: React.FC<CardManagementProps> = ({ onBack }) => {
         });
 
         if (res.code === 1) {
-          setNotice('新增账户成功');
+          setNotice(res.msg || '新增账户成功');
           resetForm();
           setMode('list');
           await loadAccounts();
@@ -321,8 +321,8 @@ const CardManagement: React.FC<CardManagementProps> = ({ onBack }) => {
                 key={opt.value}
                 type="button"
                 className={`py-3 px-4 rounded-xl text-sm font-medium border-2 transition-all ${active
-                    ? 'bg-gradient-to-r from-orange-50 to-orange-100/50 text-orange-600 border-orange-300 shadow-sm shadow-orange-100'
-                    : 'bg-white text-gray-600 border-gray-200 hover:border-orange-200'
+                  ? 'bg-gradient-to-r from-orange-50 to-orange-100/50 text-orange-600 border-orange-300 shadow-sm shadow-orange-100'
+                  : 'bg-white text-gray-600 border-gray-200 hover:border-orange-200'
                   } active:scale-[0.98]`}
                 onClick={() => handleFormInputChange('type', opt.value)}
               >

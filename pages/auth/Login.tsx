@@ -14,6 +14,7 @@ import { login as loginApi, LoginParams } from '../../services/api';
 import { LoginSuccessPayload } from '../../types';
 import { isValidPhone } from '../../utils/validation';
 import { useNotification } from '../../context/NotificationContext';
+import { bizLog, debugLog, errorLog } from '../../utils/logger';
 
 // localStorage 存储键名
 const STORAGE_KEY_PHONE = 'login_remembered_phone';
@@ -171,8 +172,8 @@ const Login: React.FC<LoginProps> = ({
       }
 
       const response = await loginApi(params);
-      console.log('登录接口响应:', response);
-      console.log('响应code类型:', typeof response.code, '值:', response.code);
+      debugLog('auth.login.page', '登录接口响应', response);
+      bizLog('auth.login.page', { code: response.code });
 
       if (response.code === 1) {
         const token = response.data?.userInfo?.token;
@@ -195,11 +196,11 @@ const Login: React.FC<LoginProps> = ({
         });
       } else {
         const errorMsg = response.msg || response.message || '登录失败，请稍后重试';
-        console.log('登录失败，显示错误提示:', errorMsg);
+        debugLog('auth.login.page', '登录失败', errorMsg);
         showToast('error', '登录失败', errorMsg);
       }
     } catch (error: any) {
-      console.error('登录失败:', error);
+      errorLog('auth.login.page', '登录失败', error);
       if (error.isCorsError) {
         showToast('error', '网络错误', error.message);
       } else if (error.message) {

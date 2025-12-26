@@ -22,16 +22,18 @@ import {
     updatePassword,
     updatePayPassword,
     retrievePassword,
-    AUTH_TOKEN_KEY,
-    USER_INFO_KEY,
+    resetPayPasswordBySms,
 } from '../../services/api';
 import { sendSmsCode } from '../../services/common';
 import { useNotification } from '../../context/NotificationContext';
+import { clearAuthStorage } from '../../utils/storageAccess';
+import { readJSON } from '../../utils/storageAccess';
+import { STORAGE_KEYS } from '../../constants/storageKeys';
 
 /**
  * 表单类型枚举
  */
-type FormType = 'reset_login' | 'reset_pay' | 'forgot';
+type FormType = 'reset_login' | 'reset_pay' | 'reset_pay_sms' | 'forgot';
 
 /**
  * PasswordForm 组件属性接口
@@ -43,6 +45,8 @@ interface PasswordFormProps {
     title: string;
     /** 返回回调 */
     onBack: () => void;
+    /** 成功回调 */
+    onSuccess?: () => void;
     /** 跳转找回密码回调 (可选) */
     onNavigateForgotPassword?: () => void;
 }
@@ -54,50 +58,63 @@ const getFormConfig = (type: FormType) => {
     switch (type) {
         case 'reset_login':
             return {
-                oldLabel: '请输入旧密码',
-                oldPlaceholder: '请输入旧密码',
-                newLabel: '请输入新密码',
-                newPlaceholder: '请输入新密码',
-                confirmLabel: '再次输入新密码',
+                oldLabel: '旧登录密码',
+                oldPlaceholder: '请输入当前使用的登录密码',
+                newLabel: '新登录密码',
+                newPlaceholder: '请设置新的登录密码',
+                confirmLabel: '确认新密码',
                 confirmPlaceholder: '请再次输入新密码',
-                submitText: '重置登录密码',
+                submitText: '提交修改',
                 minLength: 6,
                 showPhone: false,
                 showCode: false,
             };
         case 'reset_pay':
             return {
-                oldLabel: '请输入旧支付密码',
-                oldPlaceholder: '请输入旧支付密码',
-                newLabel: '请输入新支付密码',
-                newPlaceholder: '请输入新支付密码',
-                confirmLabel: '再次输入新支付密码',
+                oldLabel: '旧支付密码',
+                oldPlaceholder: '请输入当前支付密码（6位数字）',
+                newLabel: '新支付密码',
+                newPlaceholder: '请设置新支付密码（6位数字）',
+                confirmLabel: '确认新密码',
                 confirmPlaceholder: '请再次输入新支付密码',
                 submitText: '确认修改',
                 minLength: 6,
                 showPhone: false,
                 showCode: false,
             };
+        case 'reset_pay_sms':
+            return {
+                oldLabel: '',
+                oldPlaceholder: '',
+                newLabel: '新支付密码',
+                newPlaceholder: '请设置新支付密码（6位数字）',
+                confirmLabel: '确认新密码',
+                confirmPlaceholder: '请再次输入新支付密码',
+                submitText: '确认重置',
+                minLength: 6,
+                showPhone: true,
+                showCode: true,
+            };
         case 'forgot':
             return {
                 oldLabel: '',
                 oldPlaceholder: '',
-                newLabel: '新密码',
-                newPlaceholder: '请设置新的登录密码，至少 6 位',
+                newLabel: '新登录密码',
+                newPlaceholder: '请设置新的登录密码，6-32 位',
                 confirmLabel: '',
                 confirmPlaceholder: '',
-                submitText: '确认重置',
+                submitText: '重置密码',
                 minLength: 6,
                 showPhone: true,
                 showCode: true,
             };
         default:
             return {
-                oldLabel: '请输入旧密码',
+                oldLabel: '旧密码',
                 oldPlaceholder: '请输入旧密码',
-                newLabel: '请输入新密码',
+                newLabel: '新密码',
                 newPlaceholder: '请输入新密码',
-                confirmLabel: '再次输入新密码',
+                confirmLabel: '确认新密码',
                 confirmPlaceholder: '请再次输入新密码',
                 submitText: '确认',
                 minLength: 6,
@@ -133,14 +150,20 @@ const PasswordForm: React.FC<PasswordFormProps> = ({
     onSuccess,
     onNavigateForgotPassword,
 }) => {
+    const [currentType, setCurrentType] = useState<FormType>(type);
+
     // 获取通知上下文
     const { showToast } = useNotification();
 
     // 获取表单配置
-    const config = getFormConfig(type);
+    const config = getFormConfig(currentType);
+
+    // 读取本地用户手机号（用于重置登录/交易密码时自动填充且不可修改）
+    const storedUserInfo = readJSON<{ mobile?: string }>(STORAGE_KEYS.USER_INFO_KEY, null);
+    const presetAccount = storedUserInfo?.mobile || '';
 
     // 表单状态
-    const [phone, setPhone] = useState('');
+    const [phone, setPhone] = useState(presetAccount);
     const [code, setCode] = useState('');
     const [oldPassword, setOldPassword] = useState('');
     const [newPassword, setNewPassword] = useState('');
@@ -148,6 +171,9 @@ const PasswordForm: React.FC<PasswordFormProps> = ({
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [countdown, setCountdown] = useState(0);
+
+    // 判断账号是否禁用（有预设账号或非找回密码模式时禁用）
+    const isAccountDisabled = loading || !!presetAccount;
 
     /**
      * 发送验证码（找回密码场景）
@@ -162,7 +188,7 @@ const PasswordForm: React.FC<PasswordFormProps> = ({
         try {
             await sendSmsCode({
                 mobile: phone.trim(),
-                event: 'retrieve_password'
+                event: currentType === 'reset_pay_sms' ? 'reset_pay_password' : 'retrieve_password'
             });
             showToast('success', '验证码已发送');
             setCountdown(60);
@@ -192,23 +218,34 @@ const PasswordForm: React.FC<PasswordFormProps> = ({
         const trimmedNewPassword = newPassword.trim();
 
         // 验证找回密码场景
-        if (type === 'forgot') {
-            const trimmedPhone = phone.trim();
+        if (currentType === 'forgot') {
+            const trimmedAccount = phone.trim();
             const trimmedCode = code.trim();
 
-            if (!trimmedPhone || !trimmedCode || !trimmedNewPassword) {
+            if (!trimmedAccount || !trimmedCode || !trimmedNewPassword) {
                 setError('请完整填写手机号、验证码和新密码');
                 return;
             }
 
             const phoneRegex = /^1[3-9]\d{9}$/;
-            if (!phoneRegex.test(trimmedPhone)) {
+            // const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            let accountType: 'mobile' | 'email' = 'mobile';
+
+            if (phoneRegex.test(trimmedAccount)) {
+                accountType = 'mobile';
+            }
+            // else if (emailRegex.test(trimmedAccount)) {
+            //     accountType = 'email';
+            // } 
+            else {
                 setError('请输入正确的手机号');
                 return;
             }
 
-            if (trimmedNewPassword.length < config.minLength) {
-                setError(`新密码长度至少 ${config.minLength} 位`);
+            // 6-32 位，限制特殊字符
+            const passwordRegex = /^[A-Za-z0-9]{6,32}$/;
+            if (!passwordRegex.test(trimmedNewPassword)) {
+                setError('新密码需为6-32位字母或数字，且不含特殊字符');
                 return;
             }
 
@@ -217,9 +254,10 @@ const PasswordForm: React.FC<PasswordFormProps> = ({
 
             try {
                 await retrievePassword({
-                    mobile: trimmedPhone,
+                    type: accountType,
+                    account: trimmedAccount,
                     captcha: trimmedCode,
-                    newpassword: trimmedNewPassword
+                    password: trimmedNewPassword
                 });
                 showToast('success', '重置成功', '请使用新密码重新登录');
                 onSuccess?.();
@@ -238,14 +276,42 @@ const PasswordForm: React.FC<PasswordFormProps> = ({
         const trimmedOldPassword = oldPassword.trim();
         const trimmedConfirm = confirmPassword.trim();
 
-        if (!trimmedOldPassword || !trimmedNewPassword || !trimmedConfirm) {
-            setError('请完整填写所有字段');
-            return;
-        }
+        if (currentType === 'reset_pay') {
+            const sixDigitRegex = /^\d{6}$/;
+            if (!sixDigitRegex.test(trimmedOldPassword) || !sixDigitRegex.test(trimmedNewPassword) || !sixDigitRegex.test(trimmedConfirm)) {
+                setError('支付密码需为6位数字');
+                return;
+            }
+        } else if (currentType === 'reset_pay_sms') {
+            const phoneRegex = /^1[3-9]\d{9}$/;
+            if (!phoneRegex.test(phone.trim())) {
+                setError('请输入正确的手机号');
+                return;
+            }
+            if (!code.trim()) {
+                setError('请输入短信验证码');
+                return;
+            }
+            const sixDigitRegex = /^\d{6}$/;
+            if (!sixDigitRegex.test(trimmedNewPassword) || !sixDigitRegex.test(trimmedConfirm)) {
+                setError('支付密码需为6位数字');
+                return;
+            }
+        } else {
+            if (!trimmedOldPassword || !trimmedNewPassword || !trimmedConfirm) {
+                setError('请完整填写所有字段');
+                return;
+            }
 
-        if (trimmedNewPassword.length < config.minLength) {
-            setError(`新密码长度至少需要 ${config.minLength} 位`);
-            return;
+            if (trimmedNewPassword.length < config.minLength) {
+                setError(`新密码长度至少需要 ${config.minLength} 位`);
+                return;
+            }
+
+            if (trimmedNewPassword !== trimmedConfirm) {
+                setError('两次输入的新密码不一致');
+                return;
+            }
         }
 
         if (trimmedNewPassword !== trimmedConfirm) {
@@ -257,30 +323,61 @@ const PasswordForm: React.FC<PasswordFormProps> = ({
         setLoading(true);
 
         try {
-            if (type === 'reset_login') {
+            if (currentType === 'reset_login') {
                 // 重置登录密码
                 const response = await updatePassword({
                     old_password: trimmedOldPassword,
                     new_password: trimmedNewPassword,
                 });
 
-                // 清理本地登录态，强制重新登录
-                localStorage.removeItem(AUTH_TOKEN_KEY);
-                localStorage.removeItem(USER_INFO_KEY);
+                // 检查返回码：code === 1 才是成功
+                if (response.code === 1) {
+                    // 清理本地登录态，强制重新登录
+                    clearAuthStorage();
 
-                showToast('success', '重置成功', response?.msg || '登录密码重置成功，请使用新密码重新登录');
-                onSuccess?.();
-                onBack();
-            } else if (type === 'reset_pay') {
+                    showToast('success', '重置成功', '登录密码重置成功，请使用新密码重新登录');
+                    onSuccess?.();
+                    onBack();
+                } else {
+                    // code !== 1 表示失败
+                    const errorMsg = response.msg || '修改密码失败';
+                    setError(errorMsg);
+                    showToast('error', '修改失败', errorMsg);
+                }
+            } else if (currentType === 'reset_pay') {
                 // 修改支付密码
                 const response = await updatePayPassword({
                     old_pay_password: trimmedOldPassword,
                     new_pay_password: trimmedNewPassword,
                 });
 
-                showToast('success', '修改成功', response?.msg || '支付密码修改成功');
-                onSuccess?.();
-                onBack();
+                // 检查返回码：code === 1 才是成功
+                if (response.code === 1) {
+                    showToast('success', '修改成功', '支付密码修改成功');
+                    onSuccess?.();
+                    onBack();
+                } else {
+                    // code !== 1 表示失败
+                    const errorMsg = response.msg || '修改支付密码失败';
+                    setError(errorMsg);
+                    showToast('error', '修改失败', errorMsg);
+                }
+            } else if (currentType === 'reset_pay_sms') {
+                const response = await resetPayPasswordBySms({
+                    mobile: phone.trim(),
+                    captcha: code.trim(),
+                    new_pay_password: trimmedNewPassword,
+                });
+
+                if (response.code === 1) {
+                    showToast('success', '重置成功', '支付密码重置成功');
+                    onSuccess?.();
+                    onBack();
+                } else {
+                    const errorMsg = response.msg || '重置支付密码失败';
+                    setError(errorMsg);
+                    showToast('error', '重置失败', errorMsg);
+                }
             }
         } catch (err: any) {
             const message =
@@ -295,86 +392,118 @@ const PasswordForm: React.FC<PasswordFormProps> = ({
     return (
         <div className="min-h-screen bg-gray-50 pb-safe">
             {/* 顶部导航栏 */}
-            <header className="bg-white px-4 py-3 flex items-center justify-between sticky top-0 z-10 shadow-sm">
+            <header className="bg-white px-4 py-3 flex items-center justify-between sticky top-0 z-10 shadow-sm border-b border-gray-100">
                 <div className="relative flex items-center justify-center w-full">
                     <button
-                        className="absolute left-0 p-1 active:opacity-70"
+                        className="absolute left-0 p-2 -ml-2 rounded-full active:bg-gray-100 transition-colors"
                         onClick={onBack}
                         aria-label="返回"
                     >
-                        <ChevronLeft size={22} className="text-gray-800" />
+                        <ChevronLeft size={22} className="text-gray-900" />
                     </button>
-                    <h1 className="text-base font-bold text-gray-900">{title}</h1>
+                    <h1 className="text-lg font-bold text-gray-900">{title}</h1>
 
                     {/* 忘记密码按钮 (仅在重置登录密码或支付密码时显示) */}
-                    {(type === 'reset_login' || type === 'reset_pay') && onNavigateForgotPassword && (
+                    {(currentType === 'reset_login' || currentType === 'reset_pay') && onNavigateForgotPassword && (
                         <button
                             type="button"
-                            className="absolute right-0 text-sm text-orange-500 font-medium active:opacity-70"
-                            onClick={onNavigateForgotPassword}
+                            className="absolute right-0 text-sm text-orange-600 font-semibold active:opacity-70"
+                            onClick={() => {
+                                if (currentType === 'reset_pay') {
+                                    setCurrentType('reset_pay_sms');
+                                    setError('');
+                                    setCode('');
+                                    setPhone('');
+                                    setOldPassword('');
+                                    setNewPassword('');
+                                    setConfirmPassword('');
+                                } else {
+                                    onNavigateForgotPassword();
+                                }
+                            }}
                         >
-                            忘记密码？
+                            {currentType === 'reset_pay' ? '短信重置' : '忘记密码？'}
                         </button>
                     )}
                 </div>
             </header>
 
             {/* 表单内容 */}
-            <main className="px-4 pt-6">
-                <div className="rounded-xl bg-white p-4 shadow-sm">
-                    <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
-                        {/* 手机号输入（找回密码场景） */}
+            <main className="px-4 pt-6 max-w-lg mx-auto">
+                <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+                    {currentType === 'reset_pay' && (
+                        <div className="mb-6 rounded-xl bg-orange-50 border border-orange-100 p-4">
+                            <div className="flex gap-3">
+                                <div className="text-orange-500 mt-0.5">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M12 22C17.5 22 22 17.5 22 12C22 6.5 17.5 2 12 2C6.5 2 2 6.5 2 12C2 17.5 6.5 22 12 22Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                                        <path d="M12 8V13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                                        <path d="M11.9945 16H12.0035" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                    </svg>
+                                </div>
+                                <p className="text-sm text-orange-700 leading-relaxed">
+                                    支持通过短信验证码重置交易密码；若忘记旧支付密码，请点击右上角“短信重置”。
+                                </p>
+                            </div>
+                        </div>
+                    )}
+
+                    <form className="flex flex-col gap-5" onSubmit={handleSubmit}>
+                        {/* 账号输入（找回密码场景：手机号） */}
                         {config.showPhone && (
-                            <label className="text-sm text-gray-800">
-                                <span className="mb-2 block font-medium">手机号</span>
+                            <label className="block">
+                                <span className="mb-2 block text-sm font-semibold text-gray-900">账号（手机号）</span>
                                 <input
                                     type="tel"
-                                    className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-orange-500 focus:outline-none"
+                                    className={`w-full rounded-xl border border-gray-200 px-4 py-3.5 text-base text-gray-900 placeholder:text-gray-400 transition-all duration-200 
+                                      ${isAccountDisabled
+                                            ? 'bg-gray-100 text-gray-500 cursor-not-allowed border-gray-100'
+                                            : 'bg-gray-50/50 focus:border-orange-500 focus:bg-white focus:outline-none focus:ring-4 focus:ring-orange-500/10'
+                                        }`}
                                     placeholder="请输入注册时使用的手机号"
                                     value={phone}
                                     onChange={(e) => setPhone(e.target.value)}
-                                    disabled={loading}
+                                    disabled={isAccountDisabled}
+                                    readOnly={isAccountDisabled}
                                 />
                             </label>
                         )}
 
                         {/* 验证码输入（找回密码场景） */}
                         {config.showCode && (
-                            <div className="flex items-center gap-3">
-                                <div className="flex-1">
-                                    <label className="text-sm text-gray-800">
-                                        <span className="mb-2 block font-medium">验证码</span>
-                                        <input
-                                            type="text"
-                                            className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-orange-500 focus:outline-none"
-                                            placeholder="请输入短信验证码"
-                                            value={code}
-                                            onChange={(e) => setCode(e.target.value)}
-                                            disabled={loading}
-                                        />
-                                    </label>
+                            <div className="block">
+                                <span className="mb-2 block text-sm font-semibold text-gray-900">验证码</span>
+                                <div className="flex items-center gap-3">
+                                    <input
+                                        type="text"
+                                        className="flex-1 rounded-xl border border-gray-200 bg-gray-50/50 px-4 py-3.5 text-base text-gray-900 placeholder:text-gray-400 focus:border-orange-500 focus:bg-white focus:outline-none focus:ring-4 focus:ring-orange-500/10 transition-all duration-200"
+                                        placeholder="请输入短信验证码"
+                                        value={code}
+                                        onChange={(e) => setCode(e.target.value)}
+                                        disabled={loading}
+                                    />
+                                    <button
+                                        type="button"
+                                        className={`rounded-xl px-4 py-3.5 text-sm font-semibold transition-all duration-200 shadow-sm whitespace-nowrap ${countdown > 0
+                                                ? 'bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200'
+                                                : 'bg-orange-50 text-orange-600 hover:bg-orange-100 border border-orange-100 active:scale-95'
+                                            }`}
+                                        onClick={handleSendCode}
+                                        disabled={loading || countdown > 0}
+                                    >
+                                        {countdown > 0 ? `${countdown}s 后重试` : '获取验证码'}
+                                    </button>
                                 </div>
-                                <button
-                                    type="button"
-                                    className={`mt-6 whitespace-nowrap rounded-lg border px-3 py-2 text-xs font-medium ${countdown > 0
-                                        ? 'border-gray-300 text-gray-400 cursor-not-allowed'
-                                        : 'border-orange-500 text-orange-500 active:opacity-80'
-                                        }`}
-                                    onClick={handleSendCode}
-                                    disabled={loading || countdown > 0}
-                                >
-                                    {countdown > 0 ? `${countdown}s 后重试` : '获取验证码'}
-                                </button>
                             </div>
                         )}
 
                         {/* 旧密码输入 */}
                         {config.oldLabel && (
-                            <label className="text-sm text-gray-800">
-                                <span className="mb-2 block font-medium">{config.oldLabel}</span>
+                            <label className="block">
+                                <span className="mb-2 block text-sm font-semibold text-gray-900">{config.oldLabel}</span>
                                 <input
                                     type="password"
-                                    className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-orange-500 focus:outline-none"
+                                    className="w-full rounded-xl border border-gray-200 bg-gray-50/50 px-4 py-3.5 text-base text-gray-900 placeholder:text-gray-400 focus:border-orange-500 focus:bg-white focus:outline-none focus:ring-4 focus:ring-orange-500/10 transition-all duration-200"
                                     placeholder={config.oldPlaceholder}
                                     value={oldPassword}
                                     onChange={(e) => setOldPassword(e.target.value)}
@@ -384,11 +513,11 @@ const PasswordForm: React.FC<PasswordFormProps> = ({
                         )}
 
                         {/* 新密码输入 */}
-                        <label className="text-sm text-gray-800">
-                            <span className="mb-2 block font-medium">{config.newLabel}</span>
+                        <label className="block">
+                            <span className="mb-2 block text-sm font-semibold text-gray-900">{config.newLabel}</span>
                             <input
                                 type="password"
-                                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-orange-500 focus:outline-none"
+                                className="w-full rounded-xl border border-gray-200 bg-gray-50/50 px-4 py-3.5 text-base text-gray-900 placeholder:text-gray-400 focus:border-orange-500 focus:bg-white focus:outline-none focus:ring-4 focus:ring-orange-500/10 transition-all duration-200"
                                 placeholder={config.newPlaceholder}
                                 value={newPassword}
                                 onChange={(e) => setNewPassword(e.target.value)}
@@ -398,11 +527,11 @@ const PasswordForm: React.FC<PasswordFormProps> = ({
 
                         {/* 确认新密码输入 */}
                         {config.confirmLabel && (
-                            <label className="text-sm text-gray-800">
-                                <span className="mb-2 block font-medium">{config.confirmLabel}</span>
+                            <label className="block">
+                                <span className="mb-2 block text-sm font-semibold text-gray-900">{config.confirmLabel}</span>
                                 <input
                                     type="password"
-                                    className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-orange-500 focus:outline-none"
+                                    className="w-full rounded-xl border border-gray-200 bg-gray-50/50 px-4 py-3.5 text-base text-gray-900 placeholder:text-gray-400 focus:border-orange-500 focus:bg-white focus:outline-none focus:ring-4 focus:ring-orange-500/10 transition-all duration-200"
                                     placeholder={config.confirmPlaceholder}
                                     value={confirmPassword}
                                     onChange={(e) => setConfirmPassword(e.target.value)}
@@ -413,18 +542,32 @@ const PasswordForm: React.FC<PasswordFormProps> = ({
 
                         {/* 错误提示 */}
                         {error && (
-                            <p className="text-xs text-red-500" role="alert">
-                                {error}
-                            </p>
+                            <div className="rounded-lg bg-red-50 p-3 flex items-start gap-2 animate-in fade-in slide-in-from-top-1">
+                                <div className="text-red-500 mt-0.5">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                        <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" />
+                                        <path d="M12 8V12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                                        <path d="M12 16H12.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                                    </svg>
+                                </div>
+                                <p className="text-sm text-red-600 font-medium">
+                                    {error}
+                                </p>
+                            </div>
                         )}
 
                         {/* 提交按钮 */}
                         <button
                             type="submit"
-                            className="mt-2 w-full rounded-lg bg-orange-500 py-3 text-sm font-semibold text-white active:opacity-80 disabled:opacity-50"
+                            className="mt-4 w-full rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 py-3.5 text-base font-bold text-white shadow-lg shadow-orange-500/20 active:scale-[0.98] active:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none transition-all duration-200"
                             disabled={loading}
                         >
-                            {loading ? '提交中...' : config.submitText}
+                            {loading ? (
+                                <span className="flex items-center justify-center gap-2">
+                                    <LoadingSpinner size="sm" color="white" />
+                                    <span>处理中...</span>
+                                </span>
+                            ) : config.submitText}
                         </button>
                     </form>
                 </div>

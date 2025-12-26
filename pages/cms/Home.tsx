@@ -2,9 +2,10 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Building2, Newspaper, Palette, Trophy, ChevronRight, UserCheck, TreeDeciduous, Search, Wallet, Vault, Zap, FileBadge, ClipboardList, Clock, CheckCircle2, AlertCircle } from 'lucide-react';
 import { Banner, Artist, NewsItem } from '../../types';
 import { fetchBanners, fetchArtists, normalizeAssetUrl, ArtistApiItem, fetchMatchingPool, MatchingPoolItem, MatchingPoolStatus } from '../../services/api';
+import { Route } from '../../router/routes';
 
 interface HomeProps {
-  onNavigate: (page: string) => void;
+  onNavigate: (route: Route) => void;
   onSwitchTab: (tab: string) => void;
   announcements?: NewsItem[];
 }
@@ -117,11 +118,12 @@ const Home: React.FC<HomeProps> = ({ onNavigate, onSwitchTab, announcements = []
       try {
         setLoadingRecords(true);
         const response = await fetchMatchingPool({
+          // status: -1, // 全部 (Default is all if omitted)
           page: 1,
           limit: 3, // 首页只显示最新3条
         });
 
-        if (response.code === 1 && response.data?.list) {
+        if (Number(response.code) === 1 && response.data?.list) {
           setReservationRecords(response.data.list);
         } else {
           setReservationRecords([]);
@@ -179,28 +181,28 @@ const Home: React.FC<HomeProps> = ({ onNavigate, onSwitchTab, announcements = []
       icon: Wallet,
       color: 'text-orange-500',
       bgColor: 'bg-orange-50',
-      action: () => onNavigate('asset:balance-recharge')
+      action: () => onNavigate({ name: 'balance-recharge', source: 'asset-view' })
     },
     {
       label: '收益提现',
       icon: Vault,
       color: 'text-orange-500',
       bgColor: 'bg-orange-50',
-      action: () => onNavigate('asset:balance-withdraw')
+      action: () => onNavigate({ name: 'balance-withdraw', source: 'asset-view' })
     },
     {
       label: '算力补充',
       icon: Zap,
       color: 'text-orange-500',
       bgColor: 'bg-orange-50',
-      action: () => onNavigate('wallet:hashrate_exchange')
+      action: () => onNavigate({ name: 'hashrate-exchange', source: 'asset-view' })
     },
     {
       label: '确权申报',
       icon: FileBadge,
       color: 'text-orange-500',
       bgColor: 'bg-orange-50',
-      action: () => onNavigate('cumulative-rights')
+      action: () => onNavigate({ name: 'cumulative-rights' })
     },
   ];
 
@@ -213,7 +215,7 @@ const Home: React.FC<HomeProps> = ({ onNavigate, onSwitchTab, announcements = []
       <header className="px-4 py-3 fixed top-0 left-0 right-0 z-20 bg-gradient-to-r from-[#FFD6A5] to-[#FFC3A0] shadow-sm max-w-md mx-auto">
         <div
           className="flex items-center bg-white rounded-full p-1 pl-4 shadow-sm cursor-pointer active:scale-[0.99] transition-transform"
-          onClick={() => onNavigate('asset-trace')}
+          onClick={() => onNavigate({ name: 'asset-trace' })}
         >
           <Search size={16} className="text-gray-400 mr-2 flex-shrink-0" />
           <span className="text-sm text-gray-400 flex-1 truncate">数据资产溯源查询...</span>
@@ -276,7 +278,10 @@ const Home: React.FC<HomeProps> = ({ onNavigate, onSwitchTab, announcements = []
           className={`flex items-center mt-3 text-xs text-gray-600 bg-white/80 backdrop-blur-sm p-2 rounded-lg transition-colors shadow-sm ${announcements.length ? 'cursor-pointer active:bg-white' : 'opacity-60'}`}
           onClick={() => {
             if (announcements.length) {
-              onNavigate(`news-detail:${announcements[noticeIndex]?.id}`);
+              const targetId = announcements[noticeIndex]?.id;
+              if (targetId) {
+                onNavigate({ name: 'news-detail', id: targetId, from: { name: 'news' } });
+              }
             }
           }}
         >
@@ -319,7 +324,7 @@ const Home: React.FC<HomeProps> = ({ onNavigate, onSwitchTab, announcements = []
       <div className="px-4 py-2 mb-2 relative z-0">
         <div
           className="w-full h-24 rounded-xl overflow-hidden relative shadow-md cursor-pointer transform transition active:scale-95 duration-200 group bg-gradient-to-r from-[#FFD6A5] to-[#FFC3A0]"
-          onClick={() => onNavigate('trading-zone')}
+          onClick={() => onNavigate({ name: 'trading-zone' })}
         >
           <div className="absolute inset-0 flex flex-col items-center justify-center">
             <h2 className="text-2xl font-bold text-white tracking-widest drop-shadow-md">交易专区</h2>
@@ -335,7 +340,7 @@ const Home: React.FC<HomeProps> = ({ onNavigate, onSwitchTab, announcements = []
             申购记录
           </h2>
           <button
-            onClick={() => onNavigate('reservation-record')}
+            onClick={() => onNavigate({ name: 'reservation-record' })}
             className="text-gray-400 flex items-center text-xs bg-gray-50 px-2 py-1 rounded-full"
           >
             全部记录 <ChevronRight size={14} />
@@ -355,101 +360,55 @@ const Home: React.FC<HomeProps> = ({ onNavigate, onSwitchTab, announcements = []
             </div>
           ) : (
             reservationRecords.map((record) => {
-              const getStatusBadge = (item: any) => {
-                // 优先使用 status_text 字段，如果没有则使用 status 字段
-                const displayText = item.status_text || (() => {
-                  switch (item.status) {
-                    case 'pending': return '待匹配';
-                    case 'matched': return '中签';
-                    case 'cancelled': return '已取消';
-                    default: return item.status;
-                  }
-                })();
-
-                // 根据状态设置不同的样式
-                const getStatusStyle = (status: string, displayText: string) => {
-                  // 如果有 status_text，使用特殊的样式
-                  if (item.status_text) {
-                    // 根据 status_text 的内容设置样式
-                    if (displayText.includes('寄售') || displayText.includes('出售')) {
-                      return 'text-blue-600 bg-blue-100 border-blue-200';
-                    } else if (displayText.includes('确权') || displayText.includes('成功')) {
-                      return 'text-green-600 bg-green-100 border-green-200';
-                    } else if (displayText.includes('失败') || displayText.includes('取消')) {
-                      return 'text-red-600 bg-red-100 border-red-200';
-                    }
-                  }
-
-                  // 默认根据 status 设置样式
-                  switch (status) {
-                    case 'pending':
-                      return 'text-orange-600 bg-orange-100 border-orange-200';
-                    case 'matched':
-                      return 'text-green-600 bg-green-100 border-green-200';
-                    case 'cancelled':
-                      return 'text-gray-400 bg-gray-100 border-gray-200';
-                    default:
-                      return 'text-gray-400 bg-gray-100 border-gray-200';
-                  }
-                };
-
-                const styleClass = getStatusStyle(item.status, displayText);
-
-                // 根据状态选择图标
-                const getStatusIcon = (status: string, displayText: string) => {
-                  if (item.status_text) {
-                    if (displayText.includes('寄售') || displayText.includes('出售')) {
-                      return <Clock size={10} />;
-                    } else if (displayText.includes('确权') || displayText.includes('成功')) {
-                      return <CheckCircle2 size={10} />;
-                    }
-                  }
-
-                  switch (status) {
-                    case 'pending':
-                      return <Clock size={10} />;
-                    case 'matched':
-                      return <CheckCircle2 size={10} />;
-                    case 'cancelled':
-                      return <AlertCircle size={10} />;
-                    default:
-                      return <Clock size={10} />;
-                  }
-                };
-
-                return (
-                  <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border flex items-center gap-1 whitespace-nowrap ${styleClass}`}>
-                    {getStatusIcon(item.status, displayText)} {displayText}
-                  </span>
-                );
+              const getStatusBadge = (item: MatchingPoolItem) => {
+                switch (item.status) {
+                  case 'pending':
+                    return (
+                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded border flex items-center gap-1 whitespace-nowrap text-orange-600 bg-orange-100 border-orange-200">
+                        <Clock size={10} className="text-orange-500" /> 待撮合
+                      </span>
+                    );
+                  case 'matched':
+                    return (
+                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded border flex items-center gap-1 whitespace-nowrap text-green-600 bg-green-100 border-green-200">
+                        <CheckCircle2 size={10} className="text-green-500" /> 已中签
+                      </span>
+                    );
+                  case 'cancelled':
+                    return (
+                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded border flex items-center gap-1 whitespace-nowrap text-gray-400 bg-gray-100 border-gray-200">
+                        <AlertCircle size={10} className="text-gray-400" /> 未中签
+                      </span>
+                    );
+                  default:
+                    return (
+                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded border flex items-center gap-1 whitespace-nowrap text-gray-400 bg-gray-100 border-gray-200">
+                        <Clock size={10} /> {item.status_text || '未知'}
+                      </span>
+                    );
+                }
               };
 
               return (
                 <div
                   key={record.id}
-                  className="bg-gray-50 rounded-xl p-3 flex gap-3 active:scale-[0.99] transition-transform cursor-pointer"
-                  onClick={() => onNavigate('reservation-record')}
+                  className="bg-gray-50 rounded-xl p-3 flex flex-col gap-2 active:scale-[0.99] transition-transform cursor-pointer"
+                  onClick={() => onNavigate({ name: 'reservation-record' })}
                 >
-                  {record.item_image && (
-                    <div className="w-16 h-16 bg-gray-200 rounded-lg overflow-hidden shrink-0">
-                      <img src={record.item_image} className="w-full h-full object-cover" alt={record.item_title || ''} />
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <h3 className="font-bold text-gray-900 text-sm">{record.status_text || '待撮合'}</h3>
+                      <span className="text-xs text-orange-600 bg-orange-50 px-1.5 py-0.5 rounded border border-orange-100">
+                        {record.session_id ? `场次${record.session_id}` : '盲盒预约'}
+                      </span>
                     </div>
-                  )}
-                  <div className="flex-1 min-w-0 flex flex-col justify-between">
-                    <div className="flex justify-between items-start">
-                      <h3 className="font-bold text-gray-900 text-sm truncate pr-2">{record.item_title || '藏品'}</h3>
-                      {getStatusBadge(record)}
-                    </div>
-                    <div className="flex justify-between items-end">
-                      <div className="text-xs text-gray-500">
-                        消耗算力 <span className="text-gray-900 font-bold">{record.power || 0}</span>
-                      </div>
-                      {record.price && (
-                        <div className="text-sm font-mono font-bold text-gray-900">
-                          ¥{Number(record.price).toLocaleString()}
-                        </div>
-                      )}
-                    </div>
+                    {getStatusBadge(record)}
+                  </div>
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="text-gray-500">
+                      冻结金额 <span className="text-red-600 font-bold">¥{Number(record.freeze_amount || 0).toLocaleString()}</span>
+                    </span>
+                    <span className="text-gray-400">权重: {record.weight || 0}</span>
                   </div>
                 </div>
               );

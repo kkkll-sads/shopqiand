@@ -5,7 +5,7 @@ export const API_PREFIX = '/api';
 // - 开发环境：使用 Vite 代理，走相对路径 /api
 // - 生产环境：优先使用环境变量 VITE_API_BASE_URL，其次降级到写死的线上地址
 
-const DEFAULT_API_ORIGIN = 'https://18.166.211.131';
+const DEFAULT_API_ORIGIN = 'http://47.76.239.170:8080';
 const rawEnv = (import.meta as any).env ?? {};
 
 const resolveApiBaseUrl = () => {
@@ -129,6 +129,7 @@ export const API_ENDPOINTS = {
         updateNickname: '/User/updateNickname',
         updatePassword: '/User/updatePassword',
         updatePayPassword: '/User/updatePayPassword',
+        resetPayPasswordBySms: '/User/resetPayPasswordBySms',
         paymentAccountList: '/User/getPaymentAccountList',
         addPaymentAccount: '/User/addPaymentAccount',
         deletePaymentAccount: '/User/deletePaymentAccount',
@@ -258,6 +259,8 @@ export const API_ENDPOINTS = {
         deliveryList: '/collectionItem/deliveryList',
         /** 权益分割 */
         rightsDeliver: '/collectionItem/rightsDeliver',
+        /** 盲盒预约记录列表 */
+        reservations: '/collectionItem/reservations',
     },
     artist: {
         /** 艺术家列表 */

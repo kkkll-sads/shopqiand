@@ -5,11 +5,12 @@ import { Product } from '../../types';
 import { fetchShopProductDetail, ShopProductDetailData, createOrder, fetchAddressList, AddressItem } from '../../services/api';
 import { useNotification } from '../../context/NotificationContext';
 import { AUTH_TOKEN_KEY } from '../../constants/storageKeys';
+import { Route } from '../../router/routes';
 
 interface PointsProductDetailProps {
     product: Product;
     onBack: () => void;
-    onNavigate: (page: string) => void;
+    onNavigate: (route: Route) => void;
 }
 
 const PointsProductDetail: React.FC<PointsProductDetailProps> = ({ product, onBack, onNavigate }) => {
@@ -93,7 +94,7 @@ const PointsProductDetail: React.FC<PointsProductDetailProps> = ({ product, onBa
                 description: '您还没有设置收货地址，请先添加地址',
                 confirmText: '去添加',
                 cancelText: '取消',
-                onConfirm: () => onNavigate('address-list')
+                    onConfirm: () => onNavigate({ name: 'address-list', back: { name: 'points-product-detail' } })
             });
             return;
         }
@@ -122,10 +123,10 @@ const PointsProductDetail: React.FC<PointsProductDetailProps> = ({ product, onBa
                 setShowConfirmModal(false);
                 const orderId = response.data.order_id || response.data.id;
                 if (orderId) {
-                    onNavigate(`cashier:${orderId}`);
+                    onNavigate({ name: 'cashier', orderId: String(orderId), back: { name: 'points-product-detail' } });
                 } else {
                     showToast('success', '下单成功', '请前往订单列表支付');
-                    onNavigate('order-list:points:0'); // Go to Pending Pay
+                    onNavigate({ name: 'order-list', kind: 'points', status: 0, back: { name: 'points-product-detail' } });
                 }
             } else {
                 showToast('error', '下单失败', response.msg || '操作失败');

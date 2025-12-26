@@ -4,7 +4,7 @@ import react from '@vitejs/plugin-react';
 
 // 统一的后端前缀，前端代码里都以这个作为基础路径
 const API_PREFIX = '/api';
-const DEFAULT_API_TARGET = 'https://18.166.211.131/index.php';
+const DEFAULT_API_TARGET = 'http://47.76.239.170:8080/index.php';
 
 const resolveApiTarget = (raw?: string) => {
   const source = raw?.trim();
@@ -72,6 +72,20 @@ export default defineConfig(({ mode }) => {
     resolve: {
       alias: {
         '@': path.resolve(__dirname, '.'),
+      },
+    },
+    build: {
+      chunkSizeWarningLimit: 800, // 调高警告阈值，结合手动分包
+      rollupOptions: {
+        output: {
+          // 按需拆分常见依赖，避免引用不存在的包导致构建失败
+          manualChunks: (id: string) => {
+            if (id.includes('node_modules')) {
+              if (id.includes('react')) return 'react';
+              if (id.includes('axios')) return 'vendor';
+            }
+          },
+        },
       },
     },
   };

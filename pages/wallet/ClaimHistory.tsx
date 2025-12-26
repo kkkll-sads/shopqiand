@@ -3,10 +3,11 @@ import { ChevronLeft, Search, Clock, CheckCircle2, AlertCircle, FileText } from 
 import { getRightsDeclarationList, RightsDeclarationRecord } from '../../services/rightsDeclaration';
 import { AUTH_TOKEN_KEY } from '../../constants/storageKeys';
 import { useNotification } from '../../context/NotificationContext';
+import { Route } from '../../router/routes';
 
 interface ClaimHistoryProps {
     onBack: () => void;
-    onNavigate: (page: string) => void;
+    onNavigate: (route: Route) => void;
 }
 
 const ClaimHistory: React.FC<ClaimHistoryProps> = ({ onBack, onNavigate }) => {
@@ -85,7 +86,7 @@ const ClaimHistory: React.FC<ClaimHistoryProps> = ({ onBack, onNavigate }) => {
                     history.map((record) => (
                         <div
                             key={record.id}
-                            onClick={() => onNavigate(`claim-detail:${record.id}`)}
+                            onClick={() => onNavigate({ name: 'claim-detail', id: String(record.id), back: { name: 'claim-history' } })}
                             className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 hover:shadow-md transition-shadow cursor-pointer active:scale-[0.99] transition-transform"
                         >
                             {/* Header: ID/Type + Status */}

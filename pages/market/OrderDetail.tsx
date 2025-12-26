@@ -5,11 +5,12 @@ import { formatTime, formatAmount } from '../../utils/format';
 import { getOrderDetail, ShopOrderItemDetail, confirmOrder, normalizeAssetUrl } from '../../services/api';
 import { useNotification } from '../../context/NotificationContext';
 import { AUTH_TOKEN_KEY } from '../../constants/storageKeys';
+import { Route } from '../../router/routes';
 
 interface OrderDetailProps {
     orderId: string;
     onBack: () => void;
-    onNavigate: (page: string) => void;
+    onNavigate: (route: Route) => void;
 }
 
 const OrderDetail: React.FC<OrderDetailProps> = ({ orderId, onBack, onNavigate }) => {
@@ -42,7 +43,8 @@ const OrderDetail: React.FC<OrderDetailProps> = ({ orderId, onBack, onNavigate }
     };
 
     const handlePayOrder = (id: number) => {
-        onNavigate(`cashier:${id} `);
+        const targetId = String(id).trim();
+        onNavigate({ name: 'cashier', orderId: targetId, back: { name: 'order-detail', orderId: targetId } });
     };
 
     const handleConfirmReceipt = async (id: number) => {
@@ -56,7 +58,7 @@ const OrderDetail: React.FC<OrderDetailProps> = ({ orderId, onBack, onNavigate }
                     const token = localStorage.getItem(AUTH_TOKEN_KEY) || '';
                     const response = await confirmOrder({ id, token });
                     if (response.code === 1) {
-                        showToast('success', '收货成功');
+                        showToast('success', response.msg || '收货成功');
                         loadOrder(); // Reload to update status
                     } else {
                         showToast('error', response.msg || '操作失败');

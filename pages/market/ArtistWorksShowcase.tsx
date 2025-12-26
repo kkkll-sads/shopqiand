@@ -58,7 +58,7 @@ const ArtistWorksShowcase: React.FC<ArtistWorksShowcaseProps> = ({
     try {
       setLoading(true);
       setError(null);
-      const res = await fetchArtistAllWorks({ page: targetPage, limit: 50 });
+      const res = await fetchArtistAllWorks({ page: targetPage, limit: 10 });
       const data: ArtistAllWorksListData | undefined = res.data;
       const list: ArtistAllWorkItem[] = data?.list ?? [];
       setTotal(data?.total ?? 0);

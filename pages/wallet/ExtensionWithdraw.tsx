@@ -6,9 +6,9 @@ import {
   fetchPaymentAccountList,
   submitStaticIncomeWithdraw,
   PaymentAccountItem,
-  AUTH_TOKEN_KEY,
-  USER_INFO_KEY,
 } from '../../services/api';
+import { getStoredToken } from '../../services/client';
+import { Route } from '../../router/routes';
 import { UserInfo } from '../../types';
 
 import { formatAmount } from '../../utils/format';
@@ -16,7 +16,7 @@ import { useNotification } from '../../context/NotificationContext';
 
 interface ExtensionWithdrawProps {
   onBack: () => void;
-  onNavigate?: (page: string) => void;
+  onNavigate?: (route: Route) => void;
 }
 
 const ExtensionWithdraw: React.FC<ExtensionWithdrawProps> = ({ onBack, onNavigate }) => {
@@ -49,14 +49,14 @@ const ExtensionWithdraw: React.FC<ExtensionWithdrawProps> = ({ onBack, onNavigat
   // 加载用户信息
   useEffect(() => {
     const loadUserInfo = async () => {
-      const token = localStorage.getItem(AUTH_TOKEN_KEY);
+      const token = getStoredToken();
       if (!token) return;
 
       try {
         const response = await fetchProfile(token);
         if (response.code === 1 && response.data?.userInfo) {
           setUserInfo(response.data.userInfo);
-          localStorage.setItem(USER_INFO_KEY, JSON.stringify(response.data.userInfo));
+          localStorage.setItem('cat_user_info', JSON.stringify(response.data.userInfo));
         }
       } catch (err) {
         console.error('获取用户信息失败:', err);
@@ -69,7 +69,7 @@ const ExtensionWithdraw: React.FC<ExtensionWithdrawProps> = ({ onBack, onNavigat
   // 加载收款账户列表
   useEffect(() => {
     const loadAccounts = async () => {
-      const token = localStorage.getItem(AUTH_TOKEN_KEY);
+      const token = getStoredToken();
       if (!token) return;
 
       setLoadingAccounts(true);

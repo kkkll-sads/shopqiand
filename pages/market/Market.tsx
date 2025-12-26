@@ -1,6 +1,6 @@
 
-import React, { useState, useMemo, useEffect } from 'react';
-import { Search, Filter, LayoutGrid, List } from 'lucide-react';
+import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
+import { Search, Filter, LayoutGrid, List, Loader2 } from 'lucide-react';
 import { LoadingSpinner, EmptyState, LazyImage } from '../../components/common';
 import { Product } from '../../types';
 import {
@@ -16,14 +16,20 @@ interface MarketProps {
   onProductSelect?: (product: Product) => void;
 }
 
+const PAGE_SIZE = 10;
+
 const Market: React.FC<MarketProps> = ({ onProductSelect }) => {
   const [activeFilter, setActiveFilter] = useState('comprehensive');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [categoryList, setCategoryList] = useState<string[]>([]);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   // Categories Configuration（含“全部”+后端分类）
   const categories = useMemo(
@@ -75,49 +81,59 @@ const Market: React.FC<MarketProps> = ({ onProductSelect }) => {
   }, []);
 
   // 根据筛选条件加载商品列表
-  useEffect(() => {
-    let isMounted = true;
-    const load = async () => {
-      try {
+  const loadProducts = useCallback(async (pageNum: number, append: boolean = false) => {
+    try {
+      if (append) {
+        setLoadingMore(true);
+      } else {
         setLoading(true);
-        setError(null);
-
-        // 根据 activeFilter 选择不同的接口
-        let listRes;
-        if (activeFilter === 'sales') {
-          // 销量排序：调用热销接口
-          listRes = await fetchShopProductsBySales({ page: 1, limit: 100 });
-        } else if (activeFilter === 'new') {
-          // 最新排序：调用最新接口
-          listRes = await fetchShopProductsByLatest({ page: 1, limit: 100 });
-        } else {
-          // 综合或价格排序：调用普通列表接口
-          listRes = await fetchShopProducts({ page: 1, limit: 100 });
-        }
-
-        if (isMounted) {
-          const remoteList = listRes.data?.list ?? [];
-          setProducts(remoteList.map(adaptShopProduct));
-        }
-      } catch (e: any) {
-        console.error('加载商品列表失败:', e);
-        if (isMounted) {
-          // 优先使用接口返回的错误消息
-          setError(e?.msg || e?.response?.msg || e?.message || '加载商品失败，请稍后重试');
-        }
-      } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
       }
-    };
+      setError(null);
 
-    load();
+      // 根据 activeFilter 选择不同的接口
+      let listRes;
+      if (activeFilter === 'sales') {
+        listRes = await fetchShopProductsBySales({ page: pageNum, limit: PAGE_SIZE });
+      } else if (activeFilter === 'new') {
+        listRes = await fetchShopProductsByLatest({ page: pageNum, limit: PAGE_SIZE });
+      } else {
+        listRes = await fetchShopProducts({ page: pageNum, limit: PAGE_SIZE });
+      }
 
-    return () => {
-      isMounted = false;
-    };
+      const remoteList = listRes.data?.list ?? [];
+      const total = listRes.data?.total || 0;
+      const newProducts = remoteList.map(adaptShopProduct);
+
+      if (append) {
+        setProducts(prev => [...prev, ...newProducts]);
+      } else {
+        setProducts(newProducts);
+      }
+      setPage(pageNum);
+      setHasMore(pageNum * PAGE_SIZE < total);
+    } catch (e: any) {
+      console.error('加载商品列表失败:', e);
+      setError(e?.msg || e?.response?.msg || e?.message || '加载商品失败，请稍后重试');
+    } finally {
+      setLoading(false);
+      setLoadingMore(false);
+    }
   }, [activeFilter]);
+
+  useEffect(() => {
+    setPage(1);
+    setProducts([]);
+    loadProducts(1, false);
+  }, [activeFilter, loadProducts]);
+
+  // 滚动加载更多
+  const handleScroll = useCallback(() => {
+    if (!containerRef.current || loadingMore || !hasMore) return;
+    const { scrollTop, scrollHeight, clientHeight } = containerRef.current;
+    if (scrollTop + clientHeight >= scrollHeight - 100) {
+      loadProducts(page + 1, true);
+    }
+  }, [loadingMore, hasMore, page, loadProducts]);
 
   // Filtering Logic
   const filteredProducts = useMemo(() => {
@@ -156,7 +172,7 @@ const Market: React.FC<MarketProps> = ({ onProductSelect }) => {
   };
 
   return (
-    <div className="pb-40 min-h-screen bg-gray-50">
+    <div ref={containerRef} onScroll={handleScroll} className="h-[calc(100vh-60px)] overflow-y-auto bg-gray-50">
       {/* Header & Search */}
       <div className="bg-white p-3 sticky top-0 z-20 shadow-sm">
         <div className="flex items-center gap-3 mb-3">
@@ -269,6 +285,21 @@ const Market: React.FC<MarketProps> = ({ onProductSelect }) => {
             title="暂无相关商品"
             description="换个关键词试试吧"
           />
+        )}
+
+        {/* 加载更多指示器 */}
+        {loadingMore && (
+          <div className="py-4 flex items-center justify-center text-gray-400 text-xs">
+            <Loader2 size={16} className="animate-spin mr-2" />
+            加载中...
+          </div>
+        )}
+
+        {/* 没有更多数据 */}
+        {!loading && !hasMore && filteredProducts.length > 0 && (
+          <div className="py-4 text-center text-gray-400 text-xs pb-20">
+            已加载全部
+          </div>
         )}
       </div>
     </div>

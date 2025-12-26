@@ -5,11 +5,12 @@ import { payOrder, getOrderDetail, ShopOrderItem, fetchProfile } from '../../ser
 import { LoadingSpinner } from '../../components/common';
 import { Coins, CreditCard, ChevronLeft } from 'lucide-react';
 import { AUTH_TOKEN_KEY } from '../../constants/storageKeys';
+import { Route } from '../../router/routes';
 
 interface CashierProps {
     orderId: string;
     onBack: () => void;
-    onNavigate: (page: string) => void;
+    onNavigate: (route: Route) => void;
 }
 
 const Cashier: React.FC<CashierProps> = ({ orderId, onBack, onNavigate }) => {
@@ -65,8 +66,13 @@ const Cashier: React.FC<CashierProps> = ({ orderId, onBack, onNavigate }) => {
             const token = localStorage.getItem(AUTH_TOKEN_KEY);
             const res = await payOrder({ id: orderId, token: token || '' });
             if (res.code === 1) {
-                showToast('success', '支付成功', '订单支付成功');
-                onNavigate(`order-list:${payType === 'score' ? 'points' : 'product'}:1`);
+                showToast('success', res.msg || '支付成功');
+                onNavigate({
+                    name: 'order-list',
+                    kind: payType === 'score' ? 'points' : 'product',
+                    status: 1,
+                    back: { name: 'cashier', orderId: String(orderId) },
+                });
             } else {
                 showToast('error', '支付失败', res.msg || '操作失败');
             }

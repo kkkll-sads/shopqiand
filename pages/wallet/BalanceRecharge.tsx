@@ -5,10 +5,11 @@ import { ChevronLeft, Zap, Radar, CheckCircle, Shield, AlertTriangle, X, Wallet,
 import { LoadingSpinner } from '../../components/common';
 import { fetchCompanyAccountList, CompanyAccountItem, submitRechargeOrder } from '../../services/api';
 import { useNotification } from '../../context/NotificationContext';
+import { Route } from '../../router/routes';
 
 interface BalanceRechargeProps {
   onBack: () => void;
-  onNavigate?: (page: string) => void;
+  onNavigate?: (route: Route) => void;
   initialAmount?: string;
 }
 

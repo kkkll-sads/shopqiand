@@ -5,15 +5,15 @@ import {
   PaymentAccountItem,
   submitWithdraw,
   fetchProfile,
-  AUTH_TOKEN_KEY,
-  USER_INFO_KEY,
 } from '../../services/api';
+import { getStoredToken } from '../../services/client';
+import { Route } from '../../router/routes';
 
 import { useNotification } from '../../context/NotificationContext';
 
 interface BalanceWithdrawProps {
   onBack: () => void;
-  onNavigate?: (page: string) => void;
+  onNavigate?: (route: Route) => void;
 }
 
 const BalanceWithdraw: React.FC<BalanceWithdrawProps> = ({ onBack, onNavigate }) => {
@@ -43,7 +43,7 @@ const BalanceWithdraw: React.FC<BalanceWithdrawProps> = ({ onBack, onNavigate })
   }, []);
 
   const loadAccounts = async () => {
-    const token = localStorage.getItem(AUTH_TOKEN_KEY);
+    const token = getStoredToken();
     if (!token) return;
     setLoading(true);
     try {
@@ -61,7 +61,7 @@ const BalanceWithdraw: React.FC<BalanceWithdrawProps> = ({ onBack, onNavigate })
   };
 
   const loadBalance = async () => {
-    const token = localStorage.getItem(AUTH_TOKEN_KEY);
+    const token = getStoredToken();
     if (!token) return;
     setLoadingBalance(true);
     try {

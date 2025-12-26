@@ -62,7 +62,6 @@ export {
     fetchCollectionItemDetail,
     fetchCollectionItemsBySession,
     fetchCollectionItemOriginalDetail,
-    buyCollectionItem,
     getMyCollection,
     fetchMyCollectionList,
     fetchMatchingPool,
@@ -77,6 +76,13 @@ export {
     type CancelBidResult,
     type BidBuyParams,
     type BidBuyResult,
+    // 盲盒预约记录类型
+    type ReservationStatus,
+    type ReservationItem,
+    type FetchReservationsParams,
+    type ReservationsListData,
+    // 盲盒预约记录接口
+    fetchReservations,
     // 艺术家类型
     type ArtistItem,
     type ArtistWorkItem,

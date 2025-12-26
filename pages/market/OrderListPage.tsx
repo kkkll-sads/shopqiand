@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { Package, X, MapPin, Phone, User, FileText, Calendar, CreditCard } from 'lucide-react';
 import SubPageLayout from '../../components/SubPageLayout';
 import { LoadingSpinner, EmptyState, LazyImage } from '../../components/common';
 import { formatTime, formatAmount } from '../../utils/format';
@@ -26,12 +25,18 @@ import {
   normalizeAssetUrl,
 } from '../../services/api';
 import { useNotification } from '../../context/NotificationContext';
+import { Route } from '../../router/routes';
+import OrderTabs from './components/orders/OrderTabs';
+import TransactionOrderList from './components/orders/TransactionOrderList';
+import ProductOrderList from './components/orders/ProductOrderList';
+import PointDeliveryOrderList from './components/orders/PointDeliveryOrderList';
+import ConsignmentDetailModal from './components/orders/ConsignmentDetailModal';
 
 interface OrderListPageProps {
-  category: string; // product, transaction, delivery, points
+  category: 'product' | 'transaction' | 'delivery' | 'points';
   initialTab: number;
   onBack: () => void;
-  onNavigate: (page: string) => void;
+  onNavigate: (route: Route) => void;
 }
 
 const OrderListPage: React.FC<OrderListPageProps> = ({ category, initialTab, onBack, onNavigate }) => {
@@ -83,9 +88,8 @@ const OrderListPage: React.FC<OrderListPageProps> = ({ category, initialTab, onB
 
   // Navigate to Detail Page instead of Modal
   const handleViewDetail = (id: number) => {
-    // Pass source category and tab info for proper back navigation
-    // Format: order-detail:category:tab:orderId
-    onNavigate(`order-detail:${category}:${activeTab}:${id}`);
+    const backRoute: Route = { name: 'order-list', kind: category, status: activeTab };
+    onNavigate({ name: 'order-detail', orderId: String(id), back: backRoute });
   };
 
   // ... (other handlers)
@@ -498,7 +502,7 @@ const OrderListPage: React.FC<OrderListPageProps> = ({ category, initialTab, onB
               if (reloadResponse.code === 1 && reloadResponse.data) {
                 setOrders(reloadResponse.data.list || []);
               }
-              showToast('success', '支付成功', '订单支付成功！');
+              showToast('success', response.msg || '支付成功');
             } catch (error) {
               console.error('重新加载订单失败:', error);
             } finally {
@@ -572,7 +576,7 @@ const OrderListPage: React.FC<OrderListPageProps> = ({ category, initialTab, onB
               if (reloadResponse.code === 1 && reloadResponse.data) {
                 setOrders(reloadResponse.data.list || []);
               }
-              showToast('success', '删除成功', '订单删除成功！');
+              showToast('success', response.msg || '删除成功');
             } catch (error) {
               console.error('重新加载订单失败:', error);
             } finally {
@@ -649,7 +653,7 @@ const OrderListPage: React.FC<OrderListPageProps> = ({ category, initialTab, onB
               if (reloadResponse.code === 1 && reloadResponse.data) {
                 setConsignmentOrders(reloadResponse.data.list || []);
               }
-              showToast('success', '取消成功', '取消寄售成功！');
+              showToast('success', response.msg || '取消成功');
             } catch (error) {
               console.error('重新加载寄售订单失败:', error);
             } finally {
@@ -671,433 +675,60 @@ const OrderListPage: React.FC<OrderListPageProps> = ({ category, initialTab, onB
 
   return (
     <SubPageLayout title={config.title} onBack={onBack}>
-      {/* Tabs */}
-      <div className="bg-white border-b border-gray-100 sticky top-0 z-20">
-        <div className="flex overflow-x-auto no-scrollbar">
-          {config.tabs.map((tab, index) => (
-            <button
-              key={index}
-              onClick={() => setActiveTab(index)}
-              className={`flex-1 min-w-[80px] py-3 text-sm font-medium relative whitespace-nowrap ${activeTab === index ? 'text-orange-600' : 'text-gray-500'
-                }`}
-            >
-              {tab}
-              {activeTab === index && (
-                <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-6 h-0.5 bg-orange-600 rounded-full"></div>
-              )}
-            </button>
-          ))}
-        </div>
-      </div>
+      <OrderTabs tabs={config.tabs} activeTab={activeTab} onChange={setActiveTab} />
 
       {/* Order List */}
       <div className="p-4 space-y-4">
         {category === 'transaction' ? (
-          // Consignment orders from API
-          <>
-            {consignmentOrders.length > 0 ? (
-              consignmentOrders.map((order) => (
-                <div key={order.consignment_id} className="bg-white rounded-xl p-4 shadow-sm border border-gray-50">
-                  <div className="flex justify-between items-center mb-3 pb-3 border-b border-gray-50">
-                    <span className="text-xs text-gray-500">
-                      {order.create_time_text || formatOrderDate(order.create_time)}
-                    </span>
-                    <span className="text-xs font-medium text-orange-600">
-                      {order.consignment_status_text || '未知状态'}
-                    </span>
-                  </div>
-
-                  <div className="flex gap-3">
-                    {order.image && (
-                      <div className="w-16 h-16 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
-                        <img
-                          src={normalizeAssetUrl(order.image)}
-                          alt={order.title}
-                          className="w-full h-full object-cover"
-                          onError={(e) => {
-                            (e.target as HTMLImageElement).style.display = 'none';
-                          }}
-                        />
-                      </div>
-                    )}
-                    <div className="flex-1">
-                      <h3 className="text-sm font-medium text-gray-800 mb-1">
-                        {order.title}
-                      </h3>
-                      <div className="text-xs text-gray-400 mb-2">
-                        原价: ¥{formatOrderPrice(order.original_price)} | 寄售价: ¥{formatOrderPrice(order.consignment_price)}
-                      </div>
-                      <div className="flex justify-between items-end">
-                        <div className="text-sm font-bold text-gray-900">
-                          ¥ {formatOrderPrice(order.consignment_price)}
-                        </div>
-                        <div className="flex gap-2">
-                          {activeTab === 1 && order.consignment_status === 1 && (
-                            <button
-                              onClick={() => handleCancelConsignment(order.consignment_id)}
-                              className="px-3 py-1 rounded-full border border-red-300 text-red-600 text-xs active:bg-red-50"
-                            >
-                              取消寄售
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))
-            ) : (
-              !loading && (
-                <div className="flex flex-col items-center justify-center py-20 text-gray-400">
-                  <Package size={48} className="mb-2 opacity-20" />
-                  <p className="text-xs">暂无寄售订单</p>
-                </div>
-              )
-            )}
-            {loading && (
-              <div className="flex justify-center py-8">
-                <p className="text-xs text-gray-400">加载中...</p>
-              </div>
-            )}
-          </>
+          <TransactionOrderList
+            orders={consignmentOrders}
+            loading={loading}
+            activeTab={activeTab}
+            formatOrderDate={(date) => formatOrderDate(date)}
+            formatOrderPrice={formatOrderPrice}
+            onCancelConsignment={handleCancelConsignment}
+          />
         ) : category === 'product' ? (
-          // Purchase records from API
-          <>
-            {activeTab === 0 ? (
-              // 买入订单
-              <>
-                {purchaseRecords.length > 0 ? (
-                  purchaseRecords.map((record) => (
-                    <div key={record.order_id} className="bg-white rounded-xl p-4 shadow-sm border border-gray-50">
-                      <div className="flex justify-between items-center mb-3 pb-3 border-b border-gray-50">
-                        <span className="text-xs text-gray-500">
-                          {record.pay_time_text || formatOrderDate(record.pay_time)}
-                        </span>
-                        <span className="text-xs font-medium text-blue-600">
-                          {record.status_text || record.order_status_text || '未知状态'}
-                        </span>
-                      </div>
-
-                      <div className="flex gap-3">
-                        {record.item_image && (
-                          <div className="w-16 h-16 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
-                            <img
-                              src={normalizeAssetUrl(record.item_image)}
-                              alt={record.item_title}
-                              className="w-full h-full object-cover"
-                              onError={(e) => {
-                                (e.target as HTMLImageElement).style.display = 'none';
-                              }}
-                            />
-                          </div>
-                        )}
-                        <div className="flex-1">
-                          <h3 className="text-sm font-medium text-gray-800 mb-1">
-                            {record.item_title}
-                          </h3>
-                          <div className="text-xs text-gray-400 mb-2">
-                            数量: {record.quantity} | 单价: ¥{formatOrderPrice(record.price)}
-                          </div>
-                          <div className="flex justify-between items-end">
-                            <div className="text-sm font-bold text-gray-900">
-                              ¥ {formatOrderPrice(record.total_amount)}
-                            </div>
-                            <div className="text-xs text-gray-500">
-                              {record.pay_type_text || '余额支付'}
-                            </div>
-                          </div>
-                          {record.order_no && (
-                            <div className="text-xs text-gray-400 mt-1">
-                              订单号: {record.order_no}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  !loading && (
-                    <div className="flex flex-col items-center justify-center py-20 text-gray-400">
-                      <Package size={48} className="mb-2 opacity-20" />
-                      <p className="text-xs">暂无买入订单</p>
-                    </div>
-                  )
-                )}
-                {loading && (
-                  <div className="flex justify-center py-8">
-                    <p className="text-xs text-gray-400">加载中...</p>
-                  </div>
-                )}
-              </>
-            ) : (
-              // 卖出订单 - 使用我的寄售已售出记录
-              <>
-                {consignmentOrders.length > 0 ? (
-                  consignmentOrders.map((order) => (
-                    <div key={order.consignment_id} className="bg-white rounded-xl p-4 shadow-sm border border-gray-50">
-                      <div className="flex justify-between items-center mb-3 pb-3 border-b border-gray-50">
-                        <span className="text-xs text-gray-500">
-                          {order.update_time_text || order.create_time_text || formatOrderDate(order.update_time || order.create_time)}
-                        </span>
-                        <span className="text-xs font-medium text-blue-600">
-                          {order.consignment_status_text || '已售出'}
-                        </span>
-                      </div>
-
-                      <div className="flex gap-3">
-                        {order.image && (
-                          <div className="w-16 h-16 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
-                            <img
-                              src={normalizeAssetUrl(order.image)}
-                              alt={order.title}
-                              className="w-full h-full object-cover"
-                              onError={(e) => {
-                                (e.target as HTMLImageElement).style.display = 'none';
-                              }}
-                            />
-                          </div>
-                        )}
-                        <div className="flex-1">
-                          <h3 className="text-sm font-medium text-gray-800 mb-1">
-                            {order.title}
-                          </h3>
-                          <div className="text-xs text-gray-400 mb-2">
-                            原价: ¥{formatOrderPrice(order.original_price)} | 寄售价: ¥{formatOrderPrice(order.consignment_price)}
-                          </div>
-                          <div className="flex justify-between items-end">
-                            <div className="text-sm font-bold text-gray-900">
-                              ¥ {formatOrderPrice(order.consignment_price)}
-                            </div>
-                            <div className="flex gap-2">
-                              <button
-                                onClick={() => handleViewConsignmentDetail(order.consignment_id)}
-                                className="px-3 py-1 rounded-full border border-gray-200 text-xs text-gray-600 active:bg-gray-50"
-                              >
-                                查看寄售详情
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  !loading && (
-                    <div className="flex flex-col items-center justify-center py-20 text-gray-400">
-                      <Package size={48} className="mb-2 opacity-20" />
-                      <p className="text-xs">暂无卖出订单</p>
-                    </div>
-                  )
-                )}
-                {loading && (
-                  <div className="flex justify-center py-8">
-                    <p className="text-xs text-gray-400">加载中...</p>
-                  </div>
-                )}
-              </>
-            )}
-          </>
+          <ProductOrderList
+            activeTab={activeTab}
+            purchaseRecords={purchaseRecords}
+            consignmentOrders={consignmentOrders}
+            loading={loading}
+            formatOrderDate={(date) => formatOrderDate(date)}
+            formatOrderPrice={formatOrderPrice}
+            onViewConsignmentDetail={handleViewConsignmentDetail}
+          />
         ) : category === 'points' || category === 'delivery' ? (
-          // Points and delivery orders from API
-          <>
-            {orders.length > 0 ? (
-              orders.map((order) => (
-                <div key={order.id} className="bg-white rounded-xl p-4 shadow-sm border border-gray-50">
-                  <div className="flex justify-between items-center mb-3 pb-3 border-b border-gray-50">
-                    <span className="text-xs text-gray-500">
-                      {formatOrderDate(order.create_time)}
-                    </span>
-                    <span className="text-xs font-medium text-blue-600">
-                      {getOrderStatus(order)}
-                    </span>
-                  </div>
-
-                  <div className="flex gap-3">
-                    {getOrderImage(order) && (
-                      <div className="w-16 h-16 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
-                        <img
-                          src={getOrderImage(order)}
-                          alt={getOrderName(order)}
-                          className="w-full h-full object-cover"
-                          onError={(e) => {
-                            (e.target as HTMLImageElement).style.display = 'none';
-                          }}
-                        />
-                      </div>
-                    )}
-                    <div className="flex-1">
-                      <h3 className="text-sm font-medium text-gray-800 mb-1">
-                        {getOrderName(order)}
-                      </h3>
-                      <div className="text-xs text-gray-400 mb-2">
-                        数量: {getOrderQuantity(order)}
-                      </div>
-                      <div className="flex justify-between items-end">
-                        <div className="text-sm font-bold text-gray-900">
-                          {(() => {
-                            const priceInfo = getOrderPrice(order);
-                            return priceInfo.isScore
-                              ? `${priceInfo.score} 消费金`
-                              : `¥ ${formatOrderPrice(priceInfo.amount)}`;
-                          })()}
-                        </div>
-                        <div className="flex gap-2">
-                          {activeTab === 0 && category === 'points' && (
-                            <>
-
-                              <button
-                                onClick={() => handleDeleteOrder(order.id)}
-                                className="px-3 py-1 rounded-full border border-red-300 text-red-600 text-xs active:bg-red-50"
-                              >
-                                删除订单
-                              </button>
-                            </>
-                          )}
-                          {(activeTab === 2 && category === 'points') || (activeTab === 1 && category === 'delivery') ? (
-                            <button
-                              onClick={() => handleConfirmReceipt(order.id)}
-                              className="px-3 py-1 rounded-full bg-blue-600 text-white text-xs active:bg-blue-700"
-                            >
-                              确认收货
-                            </button>
-                          ) : null}
-                          <button
-                            onClick={() => handleViewDetail(order.id)}
-                            className="px-3 py-1 rounded-full border border-gray-200 text-xs text-gray-600 active:bg-gray-50"
-                          >
-                            查看详情
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))
-            ) : (
-              !loading && (
-                <div className="flex flex-col items-center justify-center py-20 text-gray-400">
-                  <Package size={48} className="mb-2 opacity-20" />
-                  <p className="text-xs">暂无订单数据</p>
-                </div>
-              )
-            )}
-          </>
+          <PointDeliveryOrderList
+            category={category}
+            orders={orders}
+            loading={loading}
+            activeTab={activeTab}
+            formatOrderDate={(date) => formatOrderDate(date)}
+            formatOrderPrice={formatOrderPrice}
+            getOrderStatus={getOrderStatus}
+            getOrderImage={getOrderImage}
+            getOrderName={getOrderName}
+            getOrderQuantity={getOrderQuantity}
+            getOrderPrice={getOrderPrice}
+            onDelete={handleDeleteOrder}
+            onConfirmReceipt={handleConfirmReceipt}
+            onViewDetail={handleViewDetail}
+          />
         ) : (
-          // Other categories - should not reach here as all categories now use real API
           <div className="flex flex-col items-center justify-center py-20 text-gray-400">
-            <Package size={48} className="mb-2 opacity-20" />
             <p className="text-xs">暂无数据</p>
           </div>
         )}
       </div>
 
 
-      {/* Consignment Detail Modal */}
-      {showConsignmentDetailModal && selectedConsignmentDetail && (
-        <div
-          className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4"
-          onClick={() => setShowConsignmentDetailModal(false)}
-        >
-          <div
-            className="bg-white rounded-xl max-w-md w-full max-h-[90vh] overflow-y-auto relative"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Header */}
-            <div className="sticky top-0 bg-white border-b border-gray-100 px-4 py-3 flex items-center justify-between z-10">
-              <h3 className="text-lg font-bold text-gray-900">寄售详情</h3>
-              <button
-                type="button"
-                className="p-1 text-gray-400 hover:text-gray-600 active:bg-gray-100 rounded-full"
-                onClick={() => setShowConsignmentDetailModal(false)}
-              >
-                <X size={20} />
-              </button>
-            </div>
-
-            {/* Content */}
-            <div className="p-4 space-y-4">
-              {/* Basic Info */}
-              <div className="bg-blue-50 rounded-lg p-4 border border-blue-100">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-2">
-                    <FileText size={16} className="text-blue-600" />
-                    <span className="text-xs text-gray-600">藏品名称</span>
-                  </div>
-                  <span className="text-xs font-medium text-gray-800">{selectedConsignmentDetail.title}</span>
-                </div>
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-2">
-                    <Calendar size={16} className="text-blue-600" />
-                    <span className="text-xs text-gray-600">寄售状态</span>
-                  </div>
-                  <span className="text-xs font-medium text-blue-600">
-                    {selectedConsignmentDetail.consignment_status_text || '已售出'}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <CreditCard size={16} className="text-blue-600" />
-                    <span className="text-xs text-gray-600">寄售价</span>
-                  </div>
-                  <span className="text-xs text-gray-800">
-                    ¥ {formatOrderPrice(selectedConsignmentDetail.consignment_price)}
-                  </span>
-                </div>
-              </div>
-
-              {/* Buyer Info */}
-              {(selectedConsignmentDetail.buyer_id ||
-                selectedConsignmentDetail.buyer_username ||
-                selectedConsignmentDetail.buyer_nickname ||
-                selectedConsignmentDetail.buyer_mobile) && (
-                  <div className="bg-gray-50 rounded-lg p-4 border border-gray-100">
-                    <h4 className="text-sm font-semibold text-gray-800 mb-3 flex items-center gap-2">
-                      <User size={16} className="text-blue-600" />
-                      买家信息
-                    </h4>
-                    <div className="space-y-2 text-xs text-gray-700">
-                      {selectedConsignmentDetail.buyer_id && (
-                        <div>买家ID：{selectedConsignmentDetail.buyer_id}</div>
-                      )}
-                      {selectedConsignmentDetail.buyer_username && (
-                        <div>用户名：{selectedConsignmentDetail.buyer_username}</div>
-                      )}
-                      {selectedConsignmentDetail.buyer_nickname && (
-                        <div>昵称：{selectedConsignmentDetail.buyer_nickname}</div>
-                      )}
-                      {selectedConsignmentDetail.buyer_mobile && (
-                        <div className="flex items-center gap-1">
-                          <Phone size={14} className="text-gray-400" />
-                          <span>{selectedConsignmentDetail.buyer_mobile}</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-              {/* Description */}
-              {selectedConsignmentDetail.description && (
-                <div className="bg-gray-50 rounded-lg p-3 border border-gray-100">
-                  <div className="text-xs text-gray-600 mb-1">作品描述</div>
-                  <div className="text-sm text-gray-800 whitespace-pre-line">
-                    {selectedConsignmentDetail.description}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Footer */}
-            <div className="sticky bottom-0 bg-white border-t border-gray-100 px-4 py-3">
-              <button
-                onClick={() => setShowConsignmentDetailModal(false)}
-                className="w-full px-4 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg active:bg-blue-700 transition-colors shadow-sm"
-              >
-                关闭
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConsignmentDetailModal
+        visible={showConsignmentDetailModal}
+        detail={selectedConsignmentDetail}
+        onClose={() => setShowConsignmentDetailModal(false)}
+        formatOrderPrice={formatOrderPrice}
+      />
     </SubPageLayout>
   );
 };

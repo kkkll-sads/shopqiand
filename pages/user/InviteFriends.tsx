@@ -52,7 +52,7 @@ const InviteFriends: React.FC<InviteFriendsProps> = ({ onBack }) => {
                     return;
                 }
                 const response = await fetchPromotionCard(token);
-                if (response.code === 0 && response.data) {
+                if ((response.code === 0 || response.code === 1) && response.data) {
                     setInviteCode(response.data.invite_code);
                 } else {
                     setError(response.msg || '获取推广卡信息失败');

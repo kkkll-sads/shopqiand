@@ -1,5 +1,7 @@
-import { apiFetch, ApiResponse } from './networking';
-import { API_ENDPOINTS, AUTH_TOKEN_KEY } from './config';
+import { ApiResponse } from './networking';
+import { API_ENDPOINTS } from './config';
+// 统一的带 token 请求封装，减少重复从 localStorage 取 token
+import { authedFetch } from './client';
 
 export interface UploadFileData {
     suffix?: string;
@@ -42,14 +44,14 @@ interface RawUploadResponse {
 }
 
 export async function uploadImage(file: File, token?: string): Promise<ApiResponse<UploadResponse>> {
-    const authToken = token || localStorage.getItem(AUTH_TOKEN_KEY) || '';
     const formData = new FormData();
     formData.append('file', file);
 
-    const res = await apiFetch<RawUploadResponse>(API_ENDPOINTS.upload.image, {
+    // 使用 authedFetch 自动注入 token（传入的 token 优先）
+    const res = await authedFetch<RawUploadResponse>(API_ENDPOINTS.upload.image, {
         method: 'POST',
         body: formData,
-        token: authToken,
+        token,
     });
 
     // 后端返回数据可能在 data.file 下，也可能直接在 data 下
@@ -114,8 +116,6 @@ export interface SendSmsParams {
 }
 
 export async function sendSmsCode(params: SendSmsParams, token?: string): Promise<ApiResponse<any>> {
-    const authToken = token || localStorage.getItem(AUTH_TOKEN_KEY) || '';
-
     // Construct body using FormData for compatibility
     const payload = new FormData();
     payload.append('mobile', params.mobile);
@@ -125,9 +125,9 @@ export async function sendSmsCode(params: SendSmsParams, token?: string): Promis
         payload.append('password', params.password);
     }
 
-    return apiFetch(API_ENDPOINTS.sms.send, {
+    return authedFetch(API_ENDPOINTS.sms.send, {
         method: 'POST',
         body: payload,
-        token: authToken,
+        token,
     });
 }

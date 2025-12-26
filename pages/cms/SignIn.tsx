@@ -2,7 +2,6 @@
 import React, { useState, useEffect } from 'react';
 import { ChevronLeft, History, CalendarCheck, Users, Wallet, Info, Gift, X, ChevronLeft as ChevronLeftIcon, ChevronRight as ChevronRightIcon } from 'lucide-react';
 import {
-    AUTH_TOKEN_KEY,
     fetchSignInRules,
     fetchSignInInfo,
     fetchSignInProgress,
@@ -14,11 +13,13 @@ import {
     submitWithdraw,
     PaymentAccountItem
 } from '../../services/api';
+import { getStoredToken } from '../../services/client';
+import { Route } from '../../router/routes';
 import { useNotification } from '../../context/NotificationContext';
 
 interface SignInProps {
     onBack: () => void;
-    onNavigate?: (page: string) => void;
+    onNavigate?: (route: Route) => void;
 }
 
 const SignIn: React.FC<SignInProps> = ({ onBack, onNavigate }) => {
@@ -50,12 +51,12 @@ const SignIn: React.FC<SignInProps> = ({ onBack, onNavigate }) => {
     useEffect(() => {
         const loadData = async () => {
             setLoading(true);
-            const token = localStorage.getItem(AUTH_TOKEN_KEY);
+            const token = getStoredToken();
 
             try {
                 // Load activity rules (no token required)
                 const rulesRes = await fetchSignInRules();
-                if (rulesRes.code === 0 && rulesRes.data) {
+                if ((rulesRes.code === 0 || rulesRes.code === 1) && rulesRes.data) {
                     setActivityInfo(rulesRes.data);
                 }
 
@@ -67,7 +68,7 @@ const SignIn: React.FC<SignInProps> = ({ onBack, onNavigate }) => {
                         fetchPromotionCard(token).catch(() => ({ code: -1, data: null })) // 如果失败不影响其他数据加载
                     ]);
 
-                    if (infoRes.code === 0 && infoRes.data) {
+                    if ((infoRes.code === 0 || infoRes.code === 1) && infoRes.data) {
                         const data = infoRes.data;
                         setBalance(data.total_reward || 0);
                         setHasSignedIn(data.today_signed || false);
@@ -88,7 +89,7 @@ const SignIn: React.FC<SignInProps> = ({ onBack, onNavigate }) => {
                         setSignedInDates(dates);
                     }
 
-                    if (progressRes.code === 0 && progressRes.data) {
+                    if ((progressRes.code === 0 || progressRes.code === 1) && progressRes.data) {
                         console.log('进度数据:', progressRes.data);
                         setProgressInfo(progressRes.data);
                         // 使用 withdrawable_money 作为当前累计奖励（可提现金额）
@@ -103,7 +104,7 @@ const SignIn: React.FC<SignInProps> = ({ onBack, onNavigate }) => {
                     }
 
                     // Load invite count from promotion card
-                    if (promotionRes.code === 0 && promotionRes.data) {
+                    if ((promotionRes.code === 0 || promotionRes.code === 1) && promotionRes.data) {
                         setInviteCount(promotionRes.data.team_count || 0);
                     }
                 }
@@ -132,7 +133,7 @@ const SignIn: React.FC<SignInProps> = ({ onBack, onNavigate }) => {
 
         try {
             const res = await doSignIn(token);
-            if (res.code === 0 && res.data) {
+            if ((res.code === 0 || res.code === 1) && res.data) {
                 const data = res.data;
                 const rewardAmount = data.daily_reward || 0;
 
@@ -160,7 +161,7 @@ const SignIn: React.FC<SignInProps> = ({ onBack, onNavigate }) => {
                 if (token) {
                     try {
                         const progressRes = await fetchSignInProgress(token);
-                        if (progressRes.code === 0 && progressRes.data) {
+                        if ((progressRes.code === 0 || progressRes.code === 1) && progressRes.data) {
                             setProgressInfo(progressRes.data);
                             // 使用 withdrawable_money 作为当前累计奖励（可提现金额）
                             if (progressRes.data.withdrawable_money !== undefined) {
@@ -263,11 +264,11 @@ const SignIn: React.FC<SignInProps> = ({ onBack, onNavigate }) => {
                             fetchSignInProgress(token)
                         ]);
 
-                        if (infoRes.code === 0 && infoRes.data) {
+                        if ((infoRes.code === 0 || infoRes.code === 1) && infoRes.data) {
                             setBalance(infoRes.data.total_reward || 0);
                         }
 
-                        if (progressRes.code === 0 && progressRes.data) {
+                        if ((progressRes.code === 0 || progressRes.code === 1) && progressRes.data) {
                             setProgressInfo(progressRes.data);
                             // 使用 withdrawable_money 作为当前累计奖励（可提现金额）
                             if (progressRes.data.withdrawable_money !== undefined) {

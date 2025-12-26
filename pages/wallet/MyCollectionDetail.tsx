@@ -2,11 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { ChevronLeft, Share2, Copy, Shield, Fingerprint, Award, ExternalLink, ArrowRightLeft, Store } from 'lucide-react';
 import { MyCollectionItem, fetchProfile, fetchRealNameStatus, AUTH_TOKEN_KEY } from '../../services/api';
 import { UserInfo } from '../../types';
+import { Route } from '../../router/routes';
 
 interface MyCollectionDetailProps {
     item: MyCollectionItem;
     onBack: () => void;
-    onNavigate: (page: string) => void;
+    onNavigate: (route: Route) => void;
 }
 
 const MyCollectionDetail: React.FC<MyCollectionDetailProps> = ({ item, onBack, onNavigate }) => {
@@ -207,7 +208,7 @@ const MyCollectionDetail: React.FC<MyCollectionDetailProps> = ({ item, onBack, o
                     </button>
                     <button
                         onClick={() => {
-                            onNavigate(`my-collection-action:consignment:${item.id}`);
+                            onNavigate({ name: 'my-collection-consignment', id: String(item.id) });
                         }}
                         className="flex-1 bg-[#8B0000] text-amber-100 hover:bg-[#A00000] transition-colors py-3.5 rounded-lg font-bold flex items-center justify-center gap-2 shadow-lg shadow-red-900/20 active:scale-[0.98]">
                         <Store size={18} />

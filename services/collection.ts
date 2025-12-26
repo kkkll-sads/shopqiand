@@ -7,8 +7,10 @@
  * @version 1.0.0
  */
 
-import { apiFetch, ApiResponse } from './networking';
+import { ApiResponse } from './networking';
 import { API_ENDPOINTS, AUTH_TOKEN_KEY } from './config';
+import { authedFetch, getStoredToken } from './client';
+import { bizLog, debugLog, errorLog } from '../utils/logger';
 
 // ============================================================================
 // 交易专场
@@ -25,13 +27,13 @@ export interface CollectionSessionItem {
 }
 
 export async function fetchCollectionSessions(): Promise<ApiResponse<{ list: CollectionSessionItem[] }>> {
-    return apiFetch<{ list: CollectionSessionItem[] }>(API_ENDPOINTS.collectionSession.index, {
+    return authedFetch<{ list: CollectionSessionItem[] }>(API_ENDPOINTS.collectionSession.index, {
         method: 'GET',
     });
 }
 
 export async function fetchCollectionSessionDetail(id: number): Promise<ApiResponse<CollectionSessionItem>> {
-    return apiFetch<CollectionSessionItem>(`${API_ENDPOINTS.collectionSession.detail}?id=${id}`, {
+    return authedFetch<CollectionSessionItem>(`${API_ENDPOINTS.collectionSession.detail}?id=${id}`, {
         method: 'GET',
     });
 }
@@ -53,6 +55,7 @@ export interface CollectionItem {
     sales?: number;       // 销量
     artist?: string;      // 艺术家/创作者
     description?: string; // 商品描述
+    price_zone?: string;  // 价格分区 (例如: "500元区", "1000元区")
     [key: string]: any;   // 其他额外字段
 }
 
@@ -70,6 +73,9 @@ export interface CollectionItemDetailData {
     artist: string;       // 艺术家/创作者
     stock: number;        // 库存数量
     sales: number;        // 销量
+    supplier_name?: string; // 供应方名称
+    tx_hash?: string;        // 上链交易哈希
+    asset_code?: string;     // 资产编码
     [key: string]: any;   // 其他额外字段
 }
 
@@ -102,7 +108,7 @@ export async function fetchCollectionItems(params: FetchCollectionItemsParams = 
     if (params.limit) search.set('limit', String(params.limit));
 
     const path = `${API_ENDPOINTS.collectionItem.index}?${search.toString()}`;
-    return apiFetch<CollectionItemListData>(path, {
+    return authedFetch<CollectionItemListData>(path, {
         method: 'GET',
     });
 }
@@ -124,7 +130,7 @@ export async function fetchCollectionItems(params: FetchCollectionItemsParams = 
  *          - sales: 销量
  */
 export async function fetchCollectionItemDetail(id: number): Promise<ApiResponse<CollectionItemDetailData>> {
-    return apiFetch<CollectionItemDetailData>(`${API_ENDPOINTS.collectionItem.detail}?id=${id}`, {
+    return authedFetch<CollectionItemDetailData>(`${API_ENDPOINTS.collectionItem.detail}?id=${id}`, {
         method: 'GET',
     });
 }
@@ -159,7 +165,7 @@ export async function fetchCollectionItemsBySession(
     if (params.limit) search.set('limit', String(params.limit));
 
     const path = `${API_ENDPOINTS.collectionItem.bySession}?${search.toString()}`;
-    return apiFetch<CollectionItemListData>(path, { method: 'GET' });
+    return authedFetch<CollectionItemListData>(path, { method: 'GET' });
 }
 
 /**
@@ -181,90 +187,11 @@ export interface CollectionItemOriginalDetailData extends CollectionItemDetailDa
  */
 export async function fetchCollectionItemOriginalDetail(id: number | string): Promise<ApiResponse<CollectionItemOriginalDetailData>> {
     const path = `${API_ENDPOINTS.collectionItem.originalDetail}?id=${id}`;
-    return apiFetch<CollectionItemOriginalDetailData>(path, { method: 'GET' });
+    return authedFetch<CollectionItemOriginalDetailData>(path, { method: 'GET' });
 }
 
-/**
- * 购买藏品/寄售藏品的参数接口
- * API: POST /api/collectionItem/buy
- */
-export interface BuyCollectionItemParams {
-    item_id?: number | string;        // 藏品ID（购买普通藏品时必填）
-    quantity?: number;                 // 购买数量，默认1
-    pay_type?: 'money' | 'score';     // 支付方式: money=余额, score=积分
-    product_id_record?: string;        // 产品ID记录（如'第一天产品'）
-    consignment_id?: number | string;  // 寄售记录ID（购买寄售藏品时传此参数，优先按寄售购买）
-    token?: string;                    // 用户登录Token（可选，会自动从localStorage获取）
-}
+// buyCollectionItem 接口已移除
 
-/**
- * 购买藏品/寄售藏品的返回结果接口
- */
-export interface BuyCollectionItemResult {
-    order_no: string;          // 订单号
-    order_id: number;          // 订单ID
-    total_amount: number;      // 订单总金额
-    user_type_updated: boolean; // 用户状态是否已更新
-    [key: string]: any;        // 其他额外字段
-}
-
-/**
- * 购买藏品/寄售藏品
- * API: POST /api/collectionItem/buy
- * 
- * 请求头需要包含：
- * - ba-token
- * - ba-user-token  
- * - batoken: 用户登录Token
- * 
- * @param params - 购买参数
- * @param params.item_id - 藏品ID（购买普通藏品时必填）
- * @param params.quantity - 购买数量，默认1
- * @param params.pay_type - 支付方式: money=余额, score=积分
- * @param params.product_id_record - 产品ID记录（如'第一天产品'）
- * @param params.consignment_id - 寄售记录ID（购买寄售藏品时传此参数，优先按寄售购买）
- * @param params.token - 用户登录Token（可选，会自动从localStorage获取）
- * 
- * @returns 返回数据包括：
- *          - order_no: 订单号
- *          - order_id: 订单ID
- *          - total_amount: 订单总金额
- *          - user_type_updated: 用户状态是否已更新
- */
-export async function buyCollectionItem(params: BuyCollectionItemParams): Promise<ApiResponse<BuyCollectionItemResult>> {
-    const token = params.token || localStorage.getItem(AUTH_TOKEN_KEY) || '';
-
-    // 根据 API 文档，使用 JSON 格式传递参数
-    const payload: Record<string, any> = {
-        quantity: params.quantity ?? 1,
-    };
-
-    // 藏品ID（购买普通藏品时必填）
-    if (params.item_id) {
-        payload.item_id = Number(params.item_id);
-    }
-
-    // 支付方式: money=余额, score=积分
-    if (params.pay_type) {
-        payload.pay_type = params.pay_type;
-    }
-
-    // 产品ID记录
-    if (params.product_id_record) {
-        payload.product_id_record = params.product_id_record;
-    }
-
-    // 寄售记录ID（购买寄售藏品时传此参数，优先按寄售购买）
-    if (params.consignment_id) {
-        payload.consignment_id = Number(params.consignment_id);
-    }
-
-    return apiFetch<BuyCollectionItemResult>(API_ENDPOINTS.collectionItem.buy, {
-        method: 'POST',
-        body: JSON.stringify(payload),
-        token,
-    });
-}
 
 // ============================================================================
 // 撮合池
@@ -282,7 +209,7 @@ export interface MatchingPoolItem {
     id: number;              // 撮合池记录ID
     item_id: number;         // 藏品ID
     session_id?: number;     // 时段ID
-    status: MatchingPoolStatus; // 状态：pending-待撮合，matched-已撮合，cancelled-已取消
+    status: MatchingPoolStatus; // 状态：pending-匹配中，matched-已匹配，cancelled-已取消
 
     // New fields from API
     item_title?: string;
@@ -292,7 +219,8 @@ export interface MatchingPoolItem {
     power_used?: number;     // 消耗算力
     weight?: number;         // 权重
 
-    session_title?: string;
+    session_title?: string;   // 场次名称（盲盒模式）
+    zone_name?: string;       // 分区名称（盲盒模式）
     session_start_time?: string;
     session_end_time?: string;
 
@@ -314,10 +242,11 @@ export interface MatchingPoolItem {
 export interface FetchMatchingPoolParams {
     item_id?: number;        // 藏品ID
     session_id?: number;     // 时段ID
-    status?: MatchingPoolStatus; // 状态：pending-待撮合，matched-已撮合，cancelled-已取消
+    status?: MatchingPoolStatus; // 状态：pending-匹配中，matched-已匹配，cancelled-已取消
     page?: number;           // 页码，默认1
     limit?: number;          // 每页数量，默认20
     token?: string;          // 用户登录Token（可选，会自动从localStorage获取）
+    sort_by_weight?: boolean; // 是否按权重排序（后端支持则传true）
 }
 
 /**
@@ -344,7 +273,7 @@ export interface MatchingPoolListData {
  *          - total: 总记录数
  */
 export async function fetchMatchingPool(params: FetchMatchingPoolParams = {}): Promise<ApiResponse<MatchingPoolListData>> {
-    const token = params.token || localStorage.getItem(AUTH_TOKEN_KEY) || '';
+    const token = params.token ?? getStoredToken();
     const search = new URLSearchParams();
 
     if (params.item_id) search.set('item_id', String(params.item_id));
@@ -352,9 +281,10 @@ export async function fetchMatchingPool(params: FetchMatchingPoolParams = {}): P
     if (params.status) search.set('status', params.status);
     if (params.page) search.set('page', String(params.page));
     if (params.limit) search.set('limit', String(params.limit));
+    if (params.sort_by_weight) search.set('sort_by_weight', '1');
 
     const path = `${API_ENDPOINTS.collectionItem.matchingPool}?${search.toString()}`;
-    return apiFetch<MatchingPoolListData>(path, {
+    return authedFetch<MatchingPoolListData>(path, {
         method: 'GET',
         token,
     });
@@ -389,77 +319,180 @@ export interface CancelBidResult {
  *          - power_returned: 返还的算力
  */
 export async function cancelBid(params: CancelBidParams): Promise<ApiResponse<CancelBidResult>> {
-    const token = params.token || localStorage.getItem(AUTH_TOKEN_KEY) || '';
+    const token = params.token ?? getStoredToken();
 
     const search = new URLSearchParams();
     search.set('matching_pool_id', String(params.matching_pool_id));
 
     const path = `${API_ENDPOINTS.collectionItem.cancelBid}?${search.toString()}`;
-    return apiFetch<CancelBidResult>(path, {
+    return authedFetch<CancelBidResult>(path, {
         method: 'POST',
         token,
     });
 }
 
+// ============================================================================
+// 盲盒预约记录
+// ============================================================================
+
 /**
- * 竞价购买藏品的参数接口
+ * 盲盒预约记录状态
+ * -1: 全部, 0: 待撮合, 1: 已中签, 2: 未中签/已退款
+ */
+export type ReservationStatus = -1 | 0 | 1 | 2;
+
+/**
+ * 盲盒预约记录项接口
+ * API: GET /api/collectionItem/reservations
+ */
+export interface ReservationItem {
+    id: number;                   // 预约记录ID
+    session_id: number;           // 场次ID
+    session_title?: string;       // 场次名称
+    session_start_time?: string;  // 场次开始时间
+    session_end_time?: string;    // 场次结束时间
+
+    zone_id: number;              // 价格分区ID
+    zone_name?: string;           // 分区名称
+    zone_min_price?: number;      // 分区最低价
+    zone_max_price?: number;      // 分区最高价
+
+    product_id?: number;          // 商品ID（撮合后才有）
+    item_title?: string;          // 商品标题
+    item_image?: string;          // 商品图片
+    item_price?: number;          // 商品价格
+
+    freeze_amount: number;        // 冻结金额
+    power_used: number;           // 总消耗算力
+    base_hashrate_cost?: number;  // 基础算力消耗
+    extra_hashrate_cost?: number; // 额外算力消耗
+    weight: number;               // 权重
+
+    status: number;               // 状态: 0=待撮合, 1=已撮合/已中签, 2=已退款/未中签
+    status_text: string;          // 状态文本
+
+    match_order_id?: number;      // 匹配订单ID
+    match_time?: number;          // 撮合时间
+    create_time?: number;         // 创建时间戳
+    update_time?: number;         // 更新时间戳
+    create_time_str?: string;     // 创建时间字符串
+    order?: any;                  // 中签后的订单信息
+    [key: string]: any;           // 其他额外字段
+}
+
+/**
+ * 查询盲盒预约记录的参数接口
+ * API: GET /api/collectionItem/reservations
+ */
+export interface FetchReservationsParams {
+    status?: ReservationStatus; // 状态筛选: -1=全部(默认), 0=待撮合, 1=已中签, 2=未中签/已退款
+    page?: number;              // 页码
+    limit?: number;             // 每页数量
+    token?: string;             // 用户登录Token（可选，会自动从localStorage获取）
+}
+
+/**
+ * 盲盒预约记录列表返回数据接口
+ */
+export interface ReservationsListData {
+    list: ReservationItem[];  // 预约记录列表
+    total: number;            // 总记录数
+    page: number;             // 当前页码
+    limit: number;            // 每页数量
+}
+
+/**
+ * 查询盲盒预约记录列表
+ * API: GET /api/collectionItem/reservations
+ * 
+ * @param params - 查询参数
+ * @param params.status - 状态筛选: -1=全部(默认), 0=待撮合, 1=已中签, 2=未中签/已退款
+ * @param params.page - 页码
+ * @param params.limit - 每页数量
+ * 
+ * @returns 返回数据包括：
+ *          - list: 预约记录列表
+ *          - total: 总记录数
+ *          - page: 当前页码
+ *          - limit: 每页数量
+ */
+export async function fetchReservations(params: FetchReservationsParams = {}): Promise<ApiResponse<ReservationsListData>> {
+    const token = params.token ?? getStoredToken();
+    const search = new URLSearchParams();
+
+    if (params.status !== undefined && params.status !== -1) {
+        search.set('status', String(params.status));
+    }
+    if (params.page) search.set('page', String(params.page));
+    if (params.limit) search.set('limit', String(params.limit));
+
+    const path = `${API_ENDPOINTS.collectionItem.reservations}?${search.toString()}`;
+    return authedFetch<ReservationsListData>(path, {
+        method: 'GET',
+        token,
+    });
+}
+
+/**
+ * 盲盒预约参数接口（新模式，仅保留预约）
  */
 export interface BidBuyParams {
-    item_id?: number;         // 藏品ID（竞价购买官方商品时必填）
-    consignment_id?: number;  // 寄售记录ID（购买寄售商品时必填）
-    power_used?: number;      // 使用的算力（竞价购买时使用，默认5）
-    extra_hashrate?: number;  // 额外算力（预约购买时使用）
-    token?: string;           // 用户登录Token
+    session_id?: number | string;  // 场次ID（优先透传后端，不前端拦截）
+    zone_id?: number | string;     // 价格分区ID（透传后端，不前端拦截）
+    extra_hashrate?: number;       // 额外加注算力 (0-50)
+    token?: string;                // 用户登录Token
 }
 
 /**
- * 竞价购买藏品的返回数据接口
+ * 盲盒预约返回数据接口
  */
 export interface BidBuyResult {
-    matching_pool_id: number;  // 撮合池记录ID
-    power_used: number;        // 消耗的算力
-    weight: number;            // 获得的权重
-    message: string;           // 提示信息
+    reservation_id?: number;
+    freeze_amount?: number;
+    power_used?: number;
+    weight?: number;
+    zone_id?: number;
+    zone_name?: string;
+    session_id?: number;
+    message?: string;
+    [key: string]: any;
 }
 
 /**
- * 竞价购买藏品（进入撮合池）
- * 支持三种购买模式：
- * 1. 寄售购买：consignment_id - 直接购买已寄售商品
- * 2. 竞价购买：item_id + power_used - 对官方商品竞价（需要商品status=1）
- * 3. 预约购买：item_id + extra_hashrate - 预约场次
+ * 盲盒预约（唯一模式）
  * API: POST /api/collectionItem/bidBuy
  */
 export async function bidBuy(params: BidBuyParams): Promise<ApiResponse<BidBuyResult>> {
-    const token = params.token || localStorage.getItem(AUTH_TOKEN_KEY) || '';
+    debugLog('collection.bidBuy', '开始调用', params);
+    const token = params.token ?? getStoredToken();
 
-    // 参数校验：必须提供 item_id 或 consignment_id 中的一个
-    if (!params.item_id && !params.consignment_id) {
-        throw new Error('必须提供 item_id（竞价购买）或 consignment_id（寄售购买）中的一个');
+    // 直接透传场次/分区给后端，不做前端拦截
+    const sessionIdNum = params.session_id !== undefined ? Number(params.session_id) : NaN;
+    const zoneIdNum = params.zone_id !== undefined ? Number(params.zone_id) : NaN;
+
+    const extraHashrateRaw = params.extra_hashrate ?? 0;
+    const extraHashrate = Number.isFinite(extraHashrateRaw) ? extraHashrateRaw : 0;
+    if (extraHashrate < 0 || extraHashrate > 50) {
+        throw new Error('额外算力需在 0-50 之间');
     }
 
-    const search = new URLSearchParams();
+    const formData = new FormData();
+    formData.append('session_id', params.session_id !== undefined ? String(params.session_id) : '');
+    formData.append('zone_id', params.zone_id !== undefined ? String(params.zone_id) : '');
+    formData.append('extra_hashrate', String(extraHashrate));
 
-    // 根据购买模式设置参数
-    if (params.consignment_id) {
-        // 寄售购买模式：只使用 consignment_id
-        search.set('consignment_id', String(params.consignment_id));
-    } else if (params.item_id) {
-        // 竞价购买或预约购买模式
-        search.set('item_id', String(params.item_id));
-        if (params.power_used !== undefined) {
-            search.set('power_used', String(params.power_used));
-        }
-        if (params.extra_hashrate !== undefined) {
-            search.set('extra_hashrate', String(params.extra_hashrate));
-        }
-    }
-
-    const path = `${API_ENDPOINTS.collectionItem.bidBuy}?${search.toString()}`;
-    return apiFetch<BidBuyResult>(path, {
+    const response = await authedFetch<BidBuyResult>(API_ENDPOINTS.collectionItem.bidBuy, {
         method: 'POST',
         token,
+        body: formData,
     });
+    bizLog('collection.bidBuy', {
+        sessionId: params.session_id,
+        zoneId: params.zone_id,
+        code: response.code,
+    });
+    debugLog('collection.bidBuy', '响应结果', response);
+    return response;
 }
 
 // ============================================================================
@@ -494,7 +527,7 @@ export async function getMyCollection(params: { page?: number; type?: string; to
     if (params.type) search.set('type', params.type);
 
     const path = `${API_ENDPOINTS.collectionItem.purchaseRecords}?${search.toString()}`;
-    return apiFetch<{ list: MyCollectionItem[], total: number, has_more?: boolean }>(path, {
+    return authedFetch<{ list: MyCollectionItem[], total: number, has_more?: boolean }>(path, {
         method: 'GET',
         token,
     });
@@ -516,7 +549,7 @@ export interface ArtistItem {
 }
 
 export async function fetchArtistList(): Promise<ApiResponse<{ list: ArtistItem[] }>> {
-    return apiFetch<{ list: ArtistItem[] }>(API_ENDPOINTS.artist.index, {
+    return authedFetch<{ list: ArtistItem[] }>(API_ENDPOINTS.artist.index, {
         method: 'GET',
     });
 }
@@ -537,7 +570,7 @@ export interface ArtistDetailData extends ArtistItem {
 
 export async function fetchArtistDetail(id: number | string): Promise<ApiResponse<ArtistDetailData>> {
     const path = `${API_ENDPOINTS.artist.detail}?id=${id}`;
-    return apiFetch<ArtistDetailData>(path, { method: 'GET' });
+    return authedFetch<ArtistDetailData>(path, { method: 'GET' });
 }
 
 export interface ArtistAllWorkItem {
@@ -562,7 +595,7 @@ export async function fetchArtistAllWorks(params: { page?: number; limit?: numbe
     if (params.limit) search.set('limit', String(params.limit));
 
     const path = `${API_ENDPOINTS.artist.allWorks}?${search.toString()}`;
-    return apiFetch<ArtistAllWorksListData>(path, { method: 'GET' });
+    return authedFetch<ArtistAllWorksListData>(path, { method: 'GET' });
 }
 
 // 兼容旧名称

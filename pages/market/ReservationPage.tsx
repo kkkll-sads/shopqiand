@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { ChevronLeft, Shield, Zap, Wallet, AlertCircle, Info, CheckCircle2 } from 'lucide-react';
 import { Product, UserInfo } from '../../types';
-import { fetchProfile, bidBuy, AUTH_TOKEN_KEY } from '../../services/api';
+import { fetchProfile, bidBuy, fetchCollectionItemDetail } from '../../services/api';
 import { useNotification } from '../../context/NotificationContext';
+import { getStoredToken } from '../../services/client';
+import { Route } from '../../router/routes';
 
 interface ReservationPageProps {
     product: Product;
     onBack: () => void;
-    onNavigate: (page: string) => void;
+    onNavigate: (route: Route) => void;
 }
 
 const ReservationPage: React.FC<ReservationPageProps> = ({ product, onBack, onNavigate }) => {
@@ -15,6 +17,9 @@ const ReservationPage: React.FC<ReservationPageProps> = ({ product, onBack, onNa
     const [extraHashrate, setExtraHashrate] = useState(0);
     const [showConfirmModal, setShowConfirmModal] = useState(false);
     const [loading, setLoading] = useState(false);
+    // 新版预约需要后端提供的场次/分区，若入参缺失则尝试自动补全
+    const [sessionId, setSessionId] = useState<number | string | undefined>(product.sessionId);
+    const [zoneId, setZoneId] = useState<number | string | undefined>(product.zoneId);
 
     // 基础算力需求（根据商品价格计算）
     const baseHashrate = Math.ceil(product.price / 100);
@@ -41,10 +46,51 @@ const ReservationPage: React.FC<ReservationPageProps> = ({ product, onBack, onNa
     const maxExtraHashrate = Math.max(0, availableHashrate - baseHashrate);
     const canIncreaseHashrate = extraHashrate < maxExtraHashrate;
 
+    // 标记是否已尝试过详情补全，避免重复请求
+    const [triedFillFromDetail, setTriedFillFromDetail] = useState(false);
+
+    const fillSessionZoneFromDetail = async () => {
+        if (triedFillFromDetail) return { sessionId: sessionId ?? product.sessionId, zoneId: zoneId ?? product.zoneId };
+        setTriedFillFromDetail(true);
+        if (!product?.id) return { sessionId, zoneId };
+        try {
+            const res = await fetchCollectionItemDetail(Number(product.id));
+            if (res.code === 1 && res.data) {
+                const data: any = res.data;
+                const detailSessionId =
+                    data.session_id ??
+                    data.sessionId ??
+                    data.session?.id ??
+                    data.session?.session_id;
+                const detailZoneId =
+                    data.zone_id ??
+                    data.price_zone_id ??
+                    data.zoneId ??
+                    data.priceZoneId ??
+                    data.zone?.id;
+
+                if (detailSessionId) setSessionId(detailSessionId);
+                if (detailZoneId) setZoneId(detailZoneId);
+                return { sessionId: detailSessionId ?? sessionId ?? product.sessionId, zoneId: detailZoneId ?? zoneId ?? product.zoneId };
+            }
+        } catch (error) {
+            console.warn('补全场次/分区失败', error);
+        }
+        return { sessionId: sessionId ?? product.sessionId, zoneId: zoneId ?? product.zoneId };
+    };
+
+    // 如果缺少场次/分区，从详情接口补全
+    useEffect(() => {
+        if (sessionId && zoneId) return;
+        if (!product?.id) return;
+
+        fillSessionZoneFromDetail();
+    }, [product?.id, sessionId, zoneId]);
+
     useEffect(() => {
         // 获取用户信息（算力和余额）
         const loadUserInfo = async () => {
-            const token = localStorage.getItem(AUTH_TOKEN_KEY) || '';
+            const token = getStoredToken();
             if (!token) {
                 // 用户未登录，使用默认值
                 console.log('用户未登录，使用默认算力和余额');
@@ -60,10 +106,8 @@ const ReservationPage: React.FC<ReservationPageProps> = ({ product, onBack, onNa
                 }
             } catch (error: any) {
                 console.error('获取用户信息失败:', error);
-                // 如果是登录问题，不显示错误
-                if (error?.name !== 'NeedLoginError') {
-                    // 可以在这里设置错误状态或显示提示
-                }
+                if (error?.name === 'NeedLoginError') return;
+                // 可以在这里设置错误状态或显示提示
             }
         };
 
@@ -80,10 +124,10 @@ const ReservationPage: React.FC<ReservationPageProps> = ({ product, onBack, onNa
     const handleRecharge = () => {
         if (!isHashrateSufficient) {
             // 跳转到算力充值页面，指定来源为reservation
-            onNavigate('wallet:hashrate_exchange:reservation');
+            onNavigate({ name: 'hashrate-exchange', source: 'reservation', back: { name: 'reservation' } });
         } else if (!isFundSufficient) {
             // 跳转到资金充值页面，指定来源为reservation
-            onNavigate('asset:balance-recharge:reservation');
+            onNavigate({ name: 'balance-recharge', source: 'reservation', back: { name: 'reservation' } });
         }
     };
 
@@ -91,53 +135,38 @@ const ReservationPage: React.FC<ReservationPageProps> = ({ product, onBack, onNa
         try {
             setLoading(true);
 
-            // 检查是否为寄售商品
-            const isConsignment = product.consignmentId ||
-                                String(product.id) === "7" ||
-                                Number(product.id) === 7;
+            // 统一使用 bidBuy 接口 (盲盒预约模式: session_id + zone_id)
+            const finalSessionId = sessionId ?? product.sessionId;
+            const finalZoneId = zoneId ?? product.zoneId;
 
-            if (isConsignment) {
-                // 寄售商品：直接购买
-                const consignmentId = product.consignmentId ||
-                                    (String(product.id) === "7" || Number(product.id) === 7 ? 19 : undefined);
+            // 若初始缺失或为 0，先尝试详情补全一次
+            let ensuredSessionId = finalSessionId;
+            let ensuredZoneId = finalZoneId;
+            if (!ensuredSessionId || Number(ensuredSessionId) <= 0 || !ensuredZoneId || Number(ensuredZoneId) <= 0) {
+                const filled = await fillSessionZoneFromDetail();
+                ensuredSessionId = filled.sessionId;
+                ensuredZoneId = filled.zoneId;
+            }
 
-                const response = await bidBuy({
-                    consignment_id: consignmentId,
-                    token: localStorage.getItem(AUTH_TOKEN_KEY) || '',
-                });
+            const response = await bidBuy({
+                session_id: ensuredSessionId,
+                zone_id: ensuredZoneId,
+                extra_hashrate: extraHashrate,
+            });
 
-                if (response.code === 0 || response.code === 1) {
-                    setShowConfirmModal(false);
-                    showToast('success', '购买成功', response.msg || '商品购买成功');
-                    onNavigate('collection');
-                } else {
-                    showToast('error', '购买失败', response.msg || '请重试');
-                }
+            if (Number(response.code) === 1) {
+                setShowConfirmModal(false);
+                showToast('success', '预约成功', response.msg || '预约成功');
+                onNavigate({ name: 'reservation-record' });
             } else {
-                // 普通商品：预约购买（进入撮合池）
-
-                const response = await bidBuy({
-                    item_id: Number(product.id),
-                    power_used: totalRequiredHashrate,
-                });
-
-                if (response.code === 0) {
-                    setShowConfirmModal(false);
-                    showToast('success', '预约成功', '您的预约已提交到撮合池');
-                    onNavigate('reservation-record');
-                } else {
-                    showToast('error', '预约失败', response.msg || '请重试');
-                }
+                // 失败时完全使用后端返回的 msg
+                showToast('error', '预约失败', response.msg || '预约失败');
             }
         } catch (error: any) {
             console.error('操作失败:', error);
-            if (error?.name === 'NeedLoginError') {
-                showToast('error', '请先登录', '预约购买需要先登录账户');
-                // 可以在这里添加跳转到登录页面的逻辑
-                // onNavigate('login');
-            } else {
-                showToast('error', '操作失败', error?.msg || '网络错误，请稍后重试');
-            }
+            if (error?.name === 'NeedLoginError') return;
+            // 异常时也使用后端/错误对象的 msg
+            showToast('error', '操作失败', error?.msg || error?.message || '网络错误，请稍后重试');
         } finally {
             setLoading(false);
         }

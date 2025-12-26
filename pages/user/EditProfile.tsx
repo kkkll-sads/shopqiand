@@ -62,7 +62,7 @@ const EditProfile: React.FC<EditProfileProps> = ({ onBack, onLogout }) => {
     setSaving(true);
 
     try {
-      await updateNickname({
+      const res = await updateNickname({
         nickname: finalNickname,
         token: userInfo.token || localStorage.getItem(AUTH_TOKEN_KEY) || '',
       });
@@ -74,7 +74,7 @@ const EditProfile: React.FC<EditProfileProps> = ({ onBack, onLogout }) => {
 
       setUserInfo(updated);
       localStorage.setItem(USER_INFO_KEY, JSON.stringify(updated));
-      showToast('success', '保存成功');
+      showToast('success', res?.msg || '保存成功');
       onBack();
     } catch (error: any) {
       console.error('昵称更新失败:', error);
@@ -127,7 +127,7 @@ const EditProfile: React.FC<EditProfileProps> = ({ onBack, onLogout }) => {
 
       const token = userInfo.token || localStorage.getItem(AUTH_TOKEN_KEY) || '';
 
-      await updateAvatar({
+      const avatarRes = await updateAvatar({
         avatar: avatarPath || avatarUrl,
         avatar_url: avatarUrl,
         token,
@@ -141,7 +141,7 @@ const EditProfile: React.FC<EditProfileProps> = ({ onBack, onLogout }) => {
       setUserInfo(updatedUser);
       setAvatarPreview(updatedUser.avatar || '');
       localStorage.setItem(USER_INFO_KEY, JSON.stringify(updatedUser));
-      showToast('success', '头像更新成功');
+      showToast('success', avatarRes?.msg || '头像更新成功');
     } catch (error: any) {
       console.error('修改头像失败:', error);
       showToast('error', '修改失败', error?.message || '头像修改失败，请稍后重试');

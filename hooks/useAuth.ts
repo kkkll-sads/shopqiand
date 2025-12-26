@@ -14,13 +14,17 @@
 import { useState, useCallback, useEffect } from 'react';
 import { UserInfo, LoginSuccessPayload } from '../types';
 import { fetchRealNameStatus, RealNameStatusData } from '../services/api';
-import {
+import { STORAGE_KEYS } from '../constants/storageKeys';
+import { readJSON, readStorage, removeStorage, writeJSON, writeStorage } from '../utils/storageAccess';
+import { debugLog, warnLog, errorLog } from '../utils/logger';
+
+const {
     AUTH_KEY,
     AUTH_TOKEN_KEY,
     USER_INFO_KEY,
     REAL_NAME_STATUS_KEY,
-    REAL_NAME_KEY
-} from '../constants/storageKeys';
+    REAL_NAME_KEY,
+} = STORAGE_KEYS;
 
 /**
  * useAuth Hook 返回值接口
@@ -82,59 +86,30 @@ function useAuth(): UseAuthResult {
     /**
      * 从 localStorage 初始化登录状态
      */
-    const [isLoggedIn, setIsLoggedIn] = useState<boolean>(() => {
-        try {
-            return localStorage.getItem(AUTH_KEY) === 'true';
-        } catch {
-            return false;
-        }
-    });
+    const [isLoggedIn, setIsLoggedIn] = useState<boolean>(() => readStorage(AUTH_KEY) === 'true');
 
     /**
      * 从 localStorage 初始化用户信息
      */
-    const [user, setUser] = useState<UserInfo | null>(() => {
-        try {
-            const stored = localStorage.getItem(USER_INFO_KEY);
-            return stored ? JSON.parse(stored) : null;
-        } catch {
-            return null;
-        }
-    });
+    const [user, setUser] = useState<UserInfo | null>(() => readJSON<UserInfo>(USER_INFO_KEY));
 
     /**
      * 从 localStorage 初始化 Token
      */
-    const [token, setToken] = useState<string | null>(() => {
-        try {
-            return localStorage.getItem(AUTH_TOKEN_KEY);
-        } catch {
-            return null;
-        }
-    });
+    const [token, setToken] = useState<string | null>(() => readStorage(AUTH_TOKEN_KEY));
 
     /**
      * 从 localStorage 初始化实名认证状态
      */
     const [realNameStatus, setRealNameStatus] = useState<number | null>(() => {
-        try {
-            const stored = localStorage.getItem(REAL_NAME_STATUS_KEY);
-            return stored ? parseInt(stored, 10) : null;
-        } catch {
-            return null;
-        }
+        const stored = readStorage(REAL_NAME_STATUS_KEY);
+        return stored ? parseInt(stored, 10) : null;
     });
 
     /**
      * 从 localStorage 初始化真实姓名
      */
-    const [realName, setRealName] = useState<string | null>(() => {
-        try {
-            return localStorage.getItem(REAL_NAME_KEY);
-        } catch {
-            return null;
-        }
-    });
+    const [realName, setRealName] = useState<string | null>(() => readStorage(REAL_NAME_KEY));
 
     /**
      * 计算是否已完成实名认证
@@ -151,12 +126,12 @@ function useAuth(): UseAuthResult {
     const login = useCallback(async (payload?: LoginSuccessPayload) => {
         // 设置登录状态
         setIsLoggedIn(true);
-        localStorage.setItem(AUTH_KEY, 'true');
+        writeStorage(AUTH_KEY, 'true');
 
         // 保存 Token
         if (payload?.token) {
             setToken(payload.token);
-            localStorage.setItem(AUTH_TOKEN_KEY, payload.token);
+            writeStorage(AUTH_TOKEN_KEY, payload.token);
 
             // 获取实名认证状态
             try {
@@ -166,11 +141,11 @@ function useAuth(): UseAuthResult {
                     const name = response.data.real_name;
 
                     setRealNameStatus(status);
-                    localStorage.setItem(REAL_NAME_STATUS_KEY, String(status));
+                    writeStorage(REAL_NAME_STATUS_KEY, String(status));
 
                     if (name) {
                         setRealName(name);
-                        localStorage.setItem(REAL_NAME_KEY, name);
+                        writeStorage(REAL_NAME_KEY, name);
                     }
                 }
             } catch (error) {
@@ -182,7 +157,7 @@ function useAuth(): UseAuthResult {
         // 保存用户信息
         if (payload?.userInfo) {
             setUser(payload.userInfo);
-            localStorage.setItem(USER_INFO_KEY, JSON.stringify(payload.userInfo));
+            writeJSON(USER_INFO_KEY, payload.userInfo);
         }
     }, []);
 
@@ -199,11 +174,11 @@ function useAuth(): UseAuthResult {
         setRealName(null);
 
         // 清除 localStorage
-        localStorage.removeItem(AUTH_KEY);
-        localStorage.removeItem(AUTH_TOKEN_KEY);
-        localStorage.removeItem(USER_INFO_KEY);
-        localStorage.removeItem(REAL_NAME_STATUS_KEY);
-        localStorage.removeItem(REAL_NAME_KEY);
+        removeStorage(AUTH_KEY);
+        removeStorage(AUTH_TOKEN_KEY);
+        removeStorage(USER_INFO_KEY);
+        removeStorage(REAL_NAME_STATUS_KEY);
+        removeStorage(REAL_NAME_KEY);
     }, []);
 
     /**
@@ -214,7 +189,7 @@ function useAuth(): UseAuthResult {
      */
     const updateUser = useCallback((userInfo: UserInfo) => {
         setUser(userInfo);
-        localStorage.setItem(USER_INFO_KEY, JSON.stringify(userInfo));
+        writeJSON(USER_INFO_KEY, userInfo);
     }, []);
 
     /**
@@ -225,7 +200,7 @@ function useAuth(): UseAuthResult {
      */
     const updateToken = useCallback((newToken: string) => {
         setToken(newToken);
-        localStorage.setItem(AUTH_TOKEN_KEY, newToken);
+        writeStorage(AUTH_TOKEN_KEY, newToken);
     }, []);
 
     /**
@@ -237,11 +212,11 @@ function useAuth(): UseAuthResult {
      */
     const updateRealNameStatus = useCallback((status: number, name?: string) => {
         setRealNameStatus(status);
-        localStorage.setItem(REAL_NAME_STATUS_KEY, String(status));
+        writeStorage(REAL_NAME_STATUS_KEY, String(status));
 
         if (name) {
             setRealName(name);
-            localStorage.setItem(REAL_NAME_KEY, name);
+            writeStorage(REAL_NAME_KEY, name);
         }
     }, []);
 
@@ -250,9 +225,9 @@ function useAuth(): UseAuthResult {
      * 从服务器获取最新的实名认证状态
      */
     const refreshRealNameStatus = useCallback(async () => {
-        const currentToken = token || localStorage.getItem(AUTH_TOKEN_KEY);
+        const currentToken = token || readStorage(AUTH_TOKEN_KEY);
         if (!currentToken) {
-            console.warn('无法刷新实名认证状态：未找到token');
+            warnLog('auth.realName.refresh', '无法刷新实名认证状态：未找到token');
             return;
         }
 
@@ -262,18 +237,18 @@ function useAuth(): UseAuthResult {
                 const status = response.data.real_name_status;
                 const name = response.data.real_name;
 
-                console.log('[useAuth] 刷新实名认证状态成功:', { status, name });
+                debugLog('auth.realName.refresh', '刷新实名认证状态成功', { status, name });
 
                 setRealNameStatus(status);
-                localStorage.setItem(REAL_NAME_STATUS_KEY, String(status));
+                writeStorage(REAL_NAME_STATUS_KEY, String(status));
 
                 if (name) {
                     setRealName(name);
-                    localStorage.setItem(REAL_NAME_KEY, name);
+                    writeStorage(REAL_NAME_KEY, name);
                 }
             }
         } catch (error) {
-            console.error('刷新实名认证状态失败:', error);
+            errorLog('auth.realName.refresh', '刷新实名认证状态失败', error);
             // 失败时不清除现有状态，保持当前状态
         }
     }, [token]);

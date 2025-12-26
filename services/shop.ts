@@ -7,9 +7,11 @@
  * @version 1.0.0
  */
 
-import { apiFetch, ApiResponse } from './networking';
-import { API_ENDPOINTS, AUTH_TOKEN_KEY } from './config';
+import { ApiResponse } from './networking';
+import { API_ENDPOINTS } from './config';
+import { authedFetch, getStoredToken } from './client';
 import { fetchDefaultAddress } from './user';
+import { bizLog, debugLog, warnLog, errorLog } from '../utils/logger';
 
 // ============================================================================
 // 商品相关接口
@@ -47,7 +49,7 @@ export async function fetchShopProducts(params: FetchShopProductsParams = {}): P
     if (params.limit !== undefined) search.set('limit', String(params.limit));
 
     const path = `${API_ENDPOINTS.shopProduct.list}?${search.toString()}`;
-    return apiFetch<ShopProductListData>(path, {
+    return authedFetch<ShopProductListData>(path, {
         method: 'GET',
     });
 }
@@ -59,7 +61,7 @@ export interface ShopProductDetailData extends ShopProductItem {
 
 export async function fetchShopProductDetail(id: number | string): Promise<ApiResponse<ShopProductDetailData>> {
     const path = `${API_ENDPOINTS.shopProduct.detail}?id=${id}`;
-    return apiFetch<ShopProductDetailData>(path, {
+    return authedFetch<ShopProductDetailData>(path, {
         method: 'GET',
     });
 }
@@ -69,7 +71,7 @@ export interface ShopProductCategoriesData {
 }
 
 export async function fetchShopProductCategories(): Promise<ApiResponse<ShopProductCategoriesData>> {
-    return apiFetch<ShopProductCategoriesData>(API_ENDPOINTS.shopProduct.categories, {
+    return authedFetch<ShopProductCategoriesData>(API_ENDPOINTS.shopProduct.categories, {
         method: 'GET',
     });
 }
@@ -80,7 +82,7 @@ export async function fetchShopProductsBySales(params: FetchShopProductsParams =
     if (params.limit !== undefined) search.set('limit', String(params.limit));
 
     const path = `${API_ENDPOINTS.shopProduct.sales}?${search.toString()}`;
-    return apiFetch<ShopProductListData>(path, {
+    return authedFetch<ShopProductListData>(path, {
         method: 'GET',
     });
 }
@@ -91,7 +93,7 @@ export async function fetchShopProductsByLatest(params: FetchShopProductsParams 
     if (params.limit !== undefined) search.set('limit', String(params.limit));
 
     const path = `${API_ENDPOINTS.shopProduct.latest}?${search.toString()}`;
-    return apiFetch<ShopProductListData>(path, {
+    return authedFetch<ShopProductListData>(path, {
         method: 'GET',
     });
 }
@@ -139,79 +141,79 @@ export interface FetchShopOrderParams {
 }
 
 export async function fetchPendingPayOrders(params: FetchShopOrderParams = {}): Promise<ApiResponse<{ list: ShopOrderItem[], total: number }>> {
-    const token = params.token || localStorage.getItem(AUTH_TOKEN_KEY) || '';
+    const token = params.token ?? getStoredToken();
     const search = new URLSearchParams();
     if (params.page) search.set('page', String(params.page));
     if (params.limit) search.set('limit', String(params.limit));
 
     const path = `${API_ENDPOINTS.shopOrder.pendingPay}?${search.toString()}`;
-    return apiFetch<{ list: ShopOrderItem[], total: number }>(path, { method: 'GET', token });
+    return authedFetch<{ list: ShopOrderItem[], total: number }>(path, { method: 'GET', token });
 }
 
 export async function fetchPendingShipOrders(params: FetchShopOrderParams = {}): Promise<ApiResponse<{ list: ShopOrderItem[], total: number }>> {
-    const token = params.token || localStorage.getItem(AUTH_TOKEN_KEY) || '';
+    const token = params.token ?? getStoredToken();
     const search = new URLSearchParams();
     if (params.page) search.set('page', String(params.page));
     if (params.limit) search.set('limit', String(params.limit));
 
     const path = `${API_ENDPOINTS.shopOrder.pendingShip}?${search.toString()}`;
-    return apiFetch<{ list: ShopOrderItem[], total: number }>(path, { method: 'GET', token });
+    return authedFetch<{ list: ShopOrderItem[], total: number }>(path, { method: 'GET', token });
 }
 
 export async function fetchPendingConfirmOrders(params: FetchShopOrderParams = {}): Promise<ApiResponse<{ list: ShopOrderItem[], total: number }>> {
-    const token = params.token || localStorage.getItem(AUTH_TOKEN_KEY) || '';
+    const token = params.token ?? getStoredToken();
     const search = new URLSearchParams();
     if (params.page) search.set('page', String(params.page));
     if (params.limit) search.set('limit', String(params.limit));
 
     const path = `${API_ENDPOINTS.shopOrder.pendingConfirm}?${search.toString()}`;
-    return apiFetch<{ list: ShopOrderItem[], total: number }>(path, { method: 'GET', token });
+    return authedFetch<{ list: ShopOrderItem[], total: number }>(path, { method: 'GET', token });
 }
 
 export async function fetchCompletedOrders(params: FetchShopOrderParams = {}): Promise<ApiResponse<{ list: ShopOrderItem[], total: number }>> {
-    const token = params.token || localStorage.getItem(AUTH_TOKEN_KEY) || '';
+    const token = params.token ?? getStoredToken();
     const search = new URLSearchParams();
     if (params.page) search.set('page', String(params.page));
     if (params.limit) search.set('limit', String(params.limit));
 
     const path = `${API_ENDPOINTS.shopOrder.completed}?${search.toString()}`;
-    return apiFetch<{ list: ShopOrderItem[], total: number }>(path, { method: 'GET', token });
+    return authedFetch<{ list: ShopOrderItem[], total: number }>(path, { method: 'GET', token });
 }
 
 export async function confirmOrder(params: { id: number | string; token?: string }): Promise<ApiResponse> {
-    const token = params.token || localStorage.getItem(AUTH_TOKEN_KEY) || '';
+    const token = params.token ?? getStoredToken();
     const payload = new FormData();
     payload.append('id', String(params.id));
 
-    return apiFetch(API_ENDPOINTS.shopOrder.confirm, {
+    return authedFetch(API_ENDPOINTS.shopOrder.confirm, {
         method: 'POST', body: payload, token
     });
 }
 
 export async function payOrder(params: { id: number | string; token?: string }): Promise<ApiResponse> {
-    const token = params.token || localStorage.getItem(AUTH_TOKEN_KEY) || '';
+    const token = params.token ?? getStoredToken();
     const payload = new FormData();
     payload.append('order_id', String(params.id));
 
-    return apiFetch(API_ENDPOINTS.shopOrder.pay, {
+    return authedFetch(API_ENDPOINTS.shopOrder.pay, {
         method: 'POST', body: payload, token
     });
 }
 
 export async function deleteOrder(params: { id: number | string; token?: string }): Promise<ApiResponse> {
-    const token = params.token || localStorage.getItem(AUTH_TOKEN_KEY) || '';
+    const token = params.token ?? getStoredToken();
     const payload = new FormData();
     payload.append('id', String(params.id));
 
-    return apiFetch(API_ENDPOINTS.shopOrder.delete, {
+    return authedFetch(API_ENDPOINTS.shopOrder.delete, {
         method: 'POST', body: payload, token
     });
 }
 
 export async function getOrderDetail(params: { id: number | string; token?: string }): Promise<ApiResponse<ShopOrderItem>> {
-    const token = params.token || localStorage.getItem(AUTH_TOKEN_KEY) || '';
+    const token = params.token ?? getStoredToken();
     const path = `${API_ENDPOINTS.shopOrder.detail}?id=${params.id}`;
-    return apiFetch<ShopOrderItem>(path, { method: 'GET', token });
+    return authedFetch<ShopOrderItem>(path, { method: 'GET', token });
 }
 
 export interface CreateOrderItem {
@@ -228,7 +230,7 @@ export interface CreateOrderParams {
 }
 
 export async function createOrder(params: CreateOrderParams): Promise<ApiResponse> {
-    const token = params.token || localStorage.getItem(AUTH_TOKEN_KEY) || '';
+    const token = params.token ?? getStoredToken();
 
     if (!token) {
         throw new Error('未找到用户登录信息，请先登录后再创建订单');
@@ -242,6 +244,18 @@ export async function createOrder(params: CreateOrderParams): Promise<ApiRespons
         throw new Error('请选择支付方式');
     }
 
+    const normalizedItems = params.items.map((item) => {
+        const productId = Number(item.product_id);
+        const quantity = Number(item.quantity);
+        if (!Number.isFinite(productId) || productId <= 0) {
+            throw new Error('无效的商品ID');
+        }
+        if (!Number.isFinite(quantity) || quantity <= 0) {
+            throw new Error('商品数量必须大于0');
+        }
+        return { product_id: productId, quantity };
+    });
+
     let addressId = params.address_id;
     if (addressId === undefined || addressId === null) {
         try {
@@ -252,31 +266,34 @@ export async function createOrder(params: CreateOrderParams): Promise<ApiRespons
                     : defaultAddressResponse.data.id;
             }
         } catch (error) {
-            console.warn('获取默认收货地址失败，将使用 null:', error);
+            warnLog('order.create', '获取默认收货地址失败，将使用 null', error);
             addressId = null;
         }
     }
 
     const requestBody = {
-        items: params.items.map(item => ({
-            product_id: item.product_id,
-            quantity: item.quantity,
-        })),
+        items: normalizedItems,
         pay_type: params.pay_type,
         address_id: addressId ?? null,
         remark: params.remark || '',
     };
 
     try {
-        const data = await apiFetch(API_ENDPOINTS.shopOrder.create, {
+        const data = await authedFetch(API_ENDPOINTS.shopOrder.create, {
             method: 'POST',
             body: JSON.stringify(requestBody),
             token,
         });
-        console.log('创建订单接口原始响应:', data);
+        debugLog('api.shop.createOrder.raw', data);
+        bizLog('order.create', {
+            code: data.code,
+            addressId: addressId ?? null,
+            payType: params.pay_type,
+            itemCount: normalizedItems.length,
+        });
         return data;
     } catch (error: any) {
-        console.error('创建订单失败:', error);
+        errorLog('api.shop.createOrder', '创建订单失败', error);
         throw error;
     }
 }
@@ -290,7 +307,7 @@ export interface BuyShopOrderParams {
 }
 
 export async function buyShopOrder(params: BuyShopOrderParams): Promise<ApiResponse> {
-    const token = params.token || localStorage.getItem(AUTH_TOKEN_KEY) || '';
+    const token = params.token ?? getStoredToken();
 
     if (!token) {
         throw new Error('未找到用户登录信息，请先登录后再购买商品');
@@ -304,6 +321,18 @@ export async function buyShopOrder(params: BuyShopOrderParams): Promise<ApiRespo
         throw new Error('请选择支付方式');
     }
 
+    const normalizedItems = params.items.map((item) => {
+        const productId = Number(item.product_id);
+        const quantity = Number(item.quantity);
+        if (!Number.isFinite(productId) || productId <= 0) {
+            throw new Error('无效的商品ID');
+        }
+        if (!Number.isFinite(quantity) || quantity <= 0) {
+            throw new Error('商品数量必须大于0');
+        }
+        return { product_id: productId, quantity };
+    });
+
     let isPhysicalProduct = false;
     if (params.items && params.items.length > 0) {
         try {
@@ -313,7 +342,7 @@ export async function buyShopOrder(params: BuyShopOrderParams): Promise<ApiRespo
                 isPhysicalProduct = productDetailResponse.data.is_physical === '1';
             }
         } catch (error) {
-            console.warn('获取商品详情失败，无法判断是否为实物商品:', error);
+            warnLog('order.buy', '获取商品详情失败，无法判断是否为实物商品', error);
             isPhysicalProduct = true;
         }
     }
@@ -331,7 +360,7 @@ export async function buyShopOrder(params: BuyShopOrderParams): Promise<ApiRespo
             if (isPhysicalProduct) {
                 throw new Error('实物商品必须填写收货地址，请先添加收货地址');
             }
-            console.warn('获取默认收货地址失败，将使用 null:', error);
+            warnLog('order.buy', '获取默认收货地址失败，将使用 null', error);
             addressId = null;
         }
     }
@@ -341,25 +370,29 @@ export async function buyShopOrder(params: BuyShopOrderParams): Promise<ApiRespo
     }
 
     const requestBody = {
-        items: params.items.map(item => ({
-            product_id: item.product_id,
-            quantity: item.quantity,
-        })),
+        items: normalizedItems,
         pay_type: params.pay_type,
         address_id: addressId ?? null,
         remark: params.remark || '',
     };
 
     try {
-        const data = await apiFetch(API_ENDPOINTS.shopOrder.buy, {
+        const data = await authedFetch(API_ENDPOINTS.shopOrder.buy, {
             method: 'POST',
             body: JSON.stringify(requestBody),
             token,
         });
-        console.log('购买商品接口原始响应:', data);
+        debugLog('api.shop.buy.raw', data);
+        bizLog('order.buy', {
+            code: data.code,
+            addressId: addressId ?? null,
+            payType: params.pay_type,
+            itemCount: normalizedItems.length,
+            isPhysicalProduct,
+        });
         return data;
     } catch (error: any) {
-        console.error('购买商品失败:', error);
+        errorLog('api.shop.buy', '购买商品失败', error);
         throw error;
     }
 }

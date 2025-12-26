@@ -15,6 +15,10 @@ export interface Product {
   reservationId?: number | string;
   /** 申购记录状态 */
   reservationStatus?: string;
+  /** 场次ID (用于盲盒预约) */
+  sessionId?: number | string;
+  /** 价格分区ID (用于盲盒预约) */
+  zoneId?: number | string;
 }
 
 export interface Artist {

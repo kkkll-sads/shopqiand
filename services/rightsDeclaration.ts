@@ -1,4 +1,5 @@
-import { apiFetch, ApiResponse } from './networking';
+import { ApiResponse } from './networking';
+import { authedFetch, getStoredToken } from './client';
 
 export interface RightsDeclarationSubmitParams {
     voucher_type: 'screenshot' | 'transfer_record' | 'other';
@@ -60,13 +61,28 @@ export interface RightsDeclarationDetail {
 /**
  * 提交确权申报
  */
-export async function submitRightsDeclaration(params: RightsDeclarationSubmitParams, token: string): Promise<ApiResponse<{ declaration_id: number }>> {
-    return apiFetch('/rightsDeclaration/submit', {
+export async function submitRightsDeclaration(params: RightsDeclarationSubmitParams, token?: string): Promise<ApiResponse<{ declaration_id: number }>> {
+    const authToken = token ?? getStoredToken();
+
+    if (!authToken) {
+        throw new Error('未找到用户登录信息，请先登录后再提交确权申报');
+    }
+
+    const amount = Number(params.amount);
+    if (!Number.isFinite(amount) || amount <= 0) {
+        throw new Error('请填写有效的确权金额');
+    }
+
+    if (!params.images || params.images.length === 0) {
+        throw new Error('请至少上传一张凭证图片');
+    }
+
+    return authedFetch('/rightsDeclaration/submit', {
         method: 'POST',
-        token,
+        token: authToken,
         body: JSON.stringify({
             voucher_type: params.voucher_type,
-            amount: params.amount,
+            amount,
             images: params.images, // 图片URL数组
             remark: params.remark || '',
         }),
@@ -76,35 +92,38 @@ export async function submitRightsDeclaration(params: RightsDeclarationSubmitPar
 /**
  * 获取申报记录列表
  */
-export async function getRightsDeclarationList(params: RightsDeclarationListParams = {}, token: string): Promise<ApiResponse<RightsDeclarationListResponse>> {
+export async function getRightsDeclarationList(params: RightsDeclarationListParams = {}, token?: string): Promise<ApiResponse<RightsDeclarationListResponse>> {
+    const authToken = token ?? getStoredToken();
     const queryParams = new URLSearchParams();
     if (params.page) queryParams.append('page', params.page.toString());
     if (params.limit) queryParams.append('limit', params.limit.toString());
     if (params.status) queryParams.append('status', params.status);
 
-    return apiFetch(`/rightsDeclaration/list?${queryParams.toString()}`, {
+    return authedFetch(`/rightsDeclaration/list?${queryParams.toString()}`, {
         method: 'GET',
-        token,
+        token: authToken,
     });
 }
 
 /**
  * 获取申报详情
  */
-export async function getRightsDeclarationDetail(id: number, token: string): Promise<ApiResponse<{ detail: RightsDeclarationDetail }>> {
-    return apiFetch(`/rightsDeclaration/detail?id=${id}`, {
+export async function getRightsDeclarationDetail(id: number, token?: string): Promise<ApiResponse<{ detail: RightsDeclarationDetail }>> {
+    const authToken = token ?? getStoredToken();
+    return authedFetch(`/rightsDeclaration/detail?id=${id}`, {
         method: 'GET',
-        token,
+        token: authToken,
     });
 }
 
 /**
  * 撤销确权申报
  */
-export async function cancelRightsDeclaration(id: number, token: string, reason?: string): Promise<ApiResponse> {
-    return apiFetch('/rightsDeclaration/cancel', {
+export async function cancelRightsDeclaration(id: number, token?: string, reason?: string): Promise<ApiResponse> {
+    const authToken = token ?? getStoredToken();
+    return authedFetch('/rightsDeclaration/cancel', {
         method: 'POST',
-        token,
+        token: authToken,
         body: JSON.stringify({
             id,
             reason: reason || '',
@@ -115,14 +134,15 @@ export async function cancelRightsDeclaration(id: number, token: string, reason?
 /**
  * 获取确权审核状态
  */
-export async function getRightsDeclarationReviewStatus(params: RightsDeclarationListParams = {}, token: string): Promise<ApiResponse<RightsDeclarationReviewStatusResponse>> {
+export async function getRightsDeclarationReviewStatus(params: RightsDeclarationListParams = {}, token?: string): Promise<ApiResponse<RightsDeclarationReviewStatusResponse>> {
+    const authToken = token ?? getStoredToken();
     const queryParams = new URLSearchParams();
     if (params.page) queryParams.append('page', params.page.toString());
     if (params.limit) queryParams.append('limit', params.limit.toString());
     if (params.status) queryParams.append('status', params.status);
 
-    return apiFetch(`/rightsDeclaration/reviewStatus?${queryParams.toString()}`, {
+    return authedFetch(`/rightsDeclaration/reviewStatus?${queryParams.toString()}`, {
         method: 'GET',
-        token,
+        token: authToken,
     });
 }

@@ -16,10 +16,11 @@ import {
   ShopOrderItem,
 } from '../../services/api';
 import { AUTH_TOKEN_KEY, STORAGE_KEYS } from '../../constants/storageKeys';
+import { Route } from '../../router/routes';
 
 interface MessageCenterProps {
   onBack: () => void;
-  onNavigate: (page: string) => void;
+  onNavigate: (route: Route) => void;
 }
 
 interface MessageItem {
@@ -371,18 +372,28 @@ const MessageCenter: React.FC<MessageCenterProps> = ({ onBack, onNavigate }) => 
       case 'notice':
       case 'activity':
         if (message.sourceId) {
-          onNavigate(`news-detail:${message.sourceId}`);
+          onNavigate({
+            name: 'news-detail',
+            id: String(message.sourceId),
+            from: { name: 'message-center' },
+            back: { name: 'message-center' },
+          });
         }
         break;
       case 'recharge':
-        onNavigate('asset:balance-recharge'); // 或者 asset-history
+        onNavigate({ name: 'balance-recharge', source: 'asset-view', back: { name: 'message-center' } });
         break;
       case 'withdraw':
-        onNavigate('asset:balance-withdraw'); // 或者 asset-history
+        onNavigate({ name: 'balance-withdraw', source: 'asset-view', back: { name: 'message-center' } });
         break;
       case 'shop_order':
         // 商城订单，跳转到订单列表（全部）
-        onNavigate('order-list:all:0');
+        onNavigate({
+          name: 'order-list',
+          kind: 'points',
+          status: 0,
+          back: { name: 'message-center' },
+        });
         break;
       default:
         // 默认行为

@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { ChevronLeft, Share2, Copy, Shield, FileText, Lock, Fingerprint, Award, Gavel, TrendingUp, CreditCard } from 'lucide-react';
+import { ChevronLeft, Share2, Copy, Shield, FileText, Lock, Award, Gavel, TrendingUp, CreditCard, BadgeCheck } from 'lucide-react';
 import { LoadingSpinner, LazyImage } from '../../components/common';
 import { Product } from '../../types';
 import {
@@ -11,13 +11,16 @@ import {
   ShopProductDetailData,
   buyShopOrder,
   bidBuy,
+  AUTH_TOKEN_KEY,
 } from '../../services/api';
 import { useNotification } from '../../context/NotificationContext';
+import { Route } from '../../router/routes';
+import { bizLog, debugLog } from '../../utils/logger';
 
 interface ProductDetailProps {
   product: Product;
   onBack: () => void;
-  onNavigate: (page: string) => void;
+  onNavigate: (route: Route) => void;
 }
 
 const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, onNavigate }) => {
@@ -67,13 +70,12 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, onNaviga
   }, [product.id, isShopProduct]);
 
   const handleBuy = async () => {
-    console.log('ProductDetail handleBuy called for product:', product);
-    console.log('Product data:', {
+    debugLog('productDetail.buy', '发起积分商品购买', {
       id: product.id,
       title: product.title,
       productType: product.productType,
       consignmentId: product.consignmentId,
-      reservationId: product.reservationId
+      reservationId: product.reservationId,
     });
 
     if (buying) return;
@@ -84,21 +86,22 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, onNaviga
       confirmText: '立即支付',
       cancelText: '取消',
       onConfirm: async () => {
-        console.log('User confirmed purchase in ProductDetail');
+        debugLog('productDetail.buy', '用户确认购买');
         try {
           setBuying(true);
-          console.log('Calling buyShopOrder with product_id:', Number(product.id));
+          debugLog('productDetail.buy', '调用 buyShopOrder', { productId: Number(product.id) });
           const response = await buyShopOrder({
             items: [{ product_id: Number(product.id), quantity: 1 }],
             pay_type: 'money',
             // address_id will be handled by service (using default if not provided)
           });
-          console.log('buyShopOrder response:', response);
+          debugLog('productDetail.buy', 'buyShopOrder 响应', response);
+          bizLog('order.buy.shop.ui', { code: response.code, productId: product.id });
 
           if (response.code === 1) {
             showToast('success', '购买成功', '订单已创建并支付成功');
             // Navigate to order list or success page
-            onNavigate('orders');
+            onNavigate({ name: 'order-list', kind: isShopProduct ? 'points' : 'product', status: 0, back: { name: 'product-detail' } });
           } else {
             showToast('error', '购买失败', response.msg || '购买失败');
           }
@@ -115,50 +118,11 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, onNaviga
   const handleCollectionBuy = async () => {
     if (collectionBuying) return;
 
-    console.log('ProductDetail handleCollectionBuy called for product:', product);
+    debugLog('productDetail.collectionBuy', '发起藏品购买', product);
 
-    showDialog({
-      title: '确认购买',
-      description: `确定要购买 ${product.title} 吗？`,
-      confirmText: '立即支付',
-      cancelText: '取消',
-      onConfirm: async () => {
-        console.log('User confirmed collection purchase in ProductDetail');
-        try {
-          setCollectionBuying(true);
-
-          // 对于寄售商品，使用 bidBuy 接口
-          // 去除强制ID=7的商品使用寄售购买
-          const consignmentId = product.consignmentId ||
-                                undefined;
-
-          if (consignmentId) {
-            console.log('Purchasing consignment item with consignment_id:', consignmentId);
-            console.log('Original product.consignmentId:', product.consignmentId);
-
-            const response = await bidBuy({
-              consignment_id: consignmentId,
-              token: localStorage.getItem(AUTH_TOKEN_KEY) || '',
-            });
-            console.log('bidBuy response:', response);
-
-            if (response.code === 0 || response.code === 1) {
-              showToast('success', '购买成功', response.msg || '商品购买成功');
-              onNavigate('collection');
-            } else {
-              showToast('error', '购买失败', response.msg || '购买失败');
-            }
-          } else {
-            showToast('error', '购买失败', '商品信息不完整');
-          }
-        } catch (err: any) {
-          console.error('Collection purchase failed:', err);
-          showToast('error', '购买失败', err?.msg || err.message || '系统错误');
-        } finally {
-          setCollectionBuying(false);
-        }
-      }
-    });
+    showToast('info', '仅支持预约', '当前藏品仅支持在交易专区进行盲盒预约，请前往对应专场选择价格分区进行预约。');
+    // 旧的寄售购买模式已下线，如需支持预约，请跳转交易专区
+    // onNavigate({ name: 'trading-zone' });
   };
 
   if (loading) return <div className="min-h-screen flex items-center justify-center bg-[#FDFBF7]"><LoadingSpinner /></div>;
@@ -172,14 +136,77 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, onNaviga
   const displayPrice = isShopProduct ? Number(shopDetail?.price ?? product.price) : Number(collectionDetail?.price ?? product.price);
 
   // Specific fields for Collection
-  const fingerprint = collectionDetail?.fingerprint;
-  const sessionName = collectionDetail?.session_name;
-  const sessionTime = collectionDetail ? `${collectionDetail.session_start_time || '--:--'} - ${collectionDetail.session_end_time || '--:--'}` : '';
+  const txHash = (collectionDetail as CollectionItemDetailData | undefined)?.tx_hash;
+  const assetCode = (collectionDetail as CollectionItemDetailData | undefined)?.asset_code;
+  const supplierName = (collectionDetail as CollectionItemDetailData | undefined)?.supplier_name;
+  // 后端专场信息，尽量使用返回字段，不做前端拼接
+  const sessionName =
+    collectionDetail?.session_name ||
+    collectionDetail?.sessionName ||
+    collectionDetail?.session_title ||
+    collectionDetail?.sessionTitle ||
+    collectionDetail?.session?.name;
+  const sessionStartTime =
+    collectionDetail?.session_start_time ||
+    collectionDetail?.sessionStartTime ||
+    collectionDetail?.session?.start_time;
+  const sessionEndTime =
+    collectionDetail?.session_end_time ||
+    collectionDetail?.sessionEndTime ||
+    collectionDetail?.session?.end_time;
+  const sessionTime =
+    sessionStartTime || sessionEndTime
+      ? `${sessionStartTime || ''}${sessionStartTime && sessionEndTime ? ' - ' : ''}${sessionEndTime || ''}`
+      : '';
+
+  // 资产锚定补充字段（完全依赖后端，不前端拼接）
+  const coreEnterprise =
+    collectionDetail?.core_enterprise ||
+    collectionDetail?.coreEnterprise ||
+    collectionDetail?.core_company ||
+    collectionDetail?.coreCompany ||
+    supplierName;
+  const farmerInfo =
+    collectionDetail?.farmer_info ||
+    collectionDetail?.farmerInfo ||
+    collectionDetail?.farmer_count_text ||
+    collectionDetail?.farmerCountText ||
+    collectionDetail?.farmer_text ||
+    collectionDetail?.farmerText;
+  const assetStatus =
+    collectionDetail?.asset_status ||
+    collectionDetail?.assetStatus ||
+    collectionDetail?.status_text ||
+    collectionDetail?.statusText ||
+    collectionDetail?.status;
+
+  // 预约场次/分区（如果从列表未带上，尝试用详情补全）
+  const detailSessionId =
+    collectionDetail?.session_id ||
+    collectionDetail?.sessionId ||
+    collectionDetail?.session?.id ||
+    collectionDetail?.session?.session_id;
+  const detailZoneId =
+    collectionDetail?.zone_id ||
+    collectionDetail?.price_zone_id ||
+    collectionDetail?.zoneId ||
+    collectionDetail?.priceZoneId ||
+    collectionDetail?.zone?.id;
+
+  // 将补全的场次/分区直接写回当前 product 引用，确保预约页能拿到
+  if (!product.sessionId && detailSessionId) {
+    product.sessionId = detailSessionId as any;
+  }
+  if (!product.zoneId && detailZoneId) {
+    product.zoneId = detailZoneId as any;
+  }
 
   // 调试信息
-  console.log('ProductDetail rendering with product:', product);
-  console.log('ProductDetail isShopProduct:', isShopProduct);
-  console.log('ProductDetail collectionDetail:', collectionDetail);
+  debugLog('productDetail.render', '渲染详情', {
+    product,
+    isShopProduct,
+    collectionDetail,
+  });
 
   return (
     <div className="min-h-screen bg-[#FDFBF7] text-gray-900 font-serif pb-24 relative overflow-hidden">
@@ -249,9 +276,9 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, onNaviga
               )}
 
               {/* Line 1: Certificate Number (Collection only) */}
-              {!isShopProduct && (
+              {!isShopProduct && assetCode && (
                 <div className="text-xs text-gray-500 font-[DINAlternate-Bold,Roboto,sans-serif] tracking-widest mb-3 relative z-10">
-                  确权编号：37-DATA-2025-{product.id.toString().padStart(4, '0')}
+                  确权编号：{assetCode}
                 </div>
               )}
 
@@ -263,7 +290,7 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, onNaviga
               {/* Line 3: Asset Type / Artist (Collection only) */}
               {!isShopProduct && (
                 <div className="text-base font-bold text-[#C5A572] tracking-wide relative z-10">
-                  {product.artist || '产业数据资产包'}
+                  {product.artist || '—'}
                 </div>
               )}
 
@@ -339,38 +366,55 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, onNaviga
 
             {/* Collection Specific: Anchor */}
             {!isShopProduct && (
-              <div className="bg-gray-50 p-4 rounded-lg border border-gray-100">
-                <div className="flex items-start gap-3 mb-3">
+              <div className="bg-gray-50 p-4 rounded-lg border border-gray-100 space-y-2">
+                <div className="flex items-start gap-3">
                   <Shield size={16} className="text-amber-600 shrink-0 mt-0.5" />
-                  <div>
+                  <div className="space-y-1">
                     <label className="block text-xs font-bold text-gray-400 uppercase mb-0.5">Asset Anchor / 资产锚定</label>
-                    <div className="text-sm font-medium text-gray-800">
-                      涉及农户/合作社：238户 (数据已脱敏)
-                      <span className="inline-block ml-1 text-[10px] text-amber-600 border border-amber-200 px-1 rounded bg-white">隐私保护</span>
+                    <div className="space-y-1">
+                      <div className="text-sm font-medium text-gray-800 flex items-start gap-2">
+                        <span className="whitespace-nowrap">核心企业：</span>
+                        <span className="text-gray-900 break-words">{coreEnterprise || '—'}</span>
+                      </div>
+                      <div className="text-sm font-medium text-gray-800 flex items-start gap-2">
+                        <span className="whitespace-nowrap">关联农户：</span>
+                        <span className="text-gray-900 break-words">{farmerInfo || '—'}</span>
+                      </div>
+                      <div className="text-sm font-medium text-gray-800 flex items-start gap-2">
+                        <span className="whitespace-nowrap">资产状态：</span>
+                        <span className="text-gray-900 break-words">{assetStatus || '—'}</span>
+                      </div>
                     </div>
-                    <div className="text-[10px] text-gray-400 mt-1 leading-tight">
-                      * 根据《数据安全法》及商业保密协议，底层隐私信息已做Hash脱敏处理，仅持有人可申请解密查看。
-                    </div>
+                    <div className="text-[10px] text-gray-500">数据已脱敏，持有人可申请解密查看。</div>
                   </div>
                 </div>
               </div>
             )}
 
-            {/* Collection Specific: Fingerprint */}
+            {/* Collection Specific: On-chain Info */}
             {!isShopProduct && (
-              <div>
-                <label className="block text-xs font-bold text-gray-400 uppercase mb-2 tracking-wider">Blockchain Fingerprint / 存证指纹</label>
-                {fingerprint ? (
-                  <div className="bg-gray-900 text-green-500 font-mono text-[10px] p-3 rounded break-all leading-relaxed relative group cursor-pointer hover:bg-gray-800 transition-colors">
-                    <Copy size={12} className="absolute right-2 top-2 text-gray-500 group-hover:text-green-400" />
-                    <div className="flex items-center gap-2 mb-1 text-gray-500 font-sans font-bold">
-                      <Fingerprint size={12} />
-                      <span className="uppercase">On-chain Proof</span>
-                    </div>
-                    {fingerprint}
+              <div className="space-y-2">
+                <label className="block text-xs font-bold text-gray-400 uppercase mb-2 tracking-wider">On-chain Proof / 上链信息</label>
+                <div className="bg-gray-900 text-green-500 font-mono text-[10px] p-3 rounded break-all leading-relaxed relative group hover:bg-gray-800 transition-colors">
+                  <Copy size={12} className="absolute right-2 top-2 text-gray-500 group-hover:text-green-400" />
+                  <div className="flex items-center gap-2 mb-2 text-gray-500 font-sans font-bold">
+                    <BadgeCheck size={12} />
+                    <span className="uppercase">Tx Hash</span>
                   </div>
-                ) : (
-                  <div className="text-xs text-gray-400">暂无上链指纹信息</div>
+                  {txHash ? (
+                    <div className="bg-black/30 p-2 rounded text-green-400 break-all">{txHash}</div>
+                  ) : (
+                    <div className="text-gray-500">暂无上链交易哈希</div>
+                  )}
+                </div>
+                {supplierName && (
+                  <div className="bg-gray-50 border border-gray-100 rounded p-3 text-[12px] text-gray-700 flex items-center gap-2">
+                    <Shield size={14} className="text-amber-600" />
+                    <div>
+                      <div className="text-xs font-bold text-gray-500 uppercase">Supplier</div>
+                      <div className="text-sm font-medium text-gray-800">{supplierName}</div>
+                    </div>
+                  </div>
                 )}
               </div>
             )}
@@ -422,7 +466,12 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, onNaviga
           </div>
 
           {(() => {
-            console.log('Rendering buttons - isShopProduct:', isShopProduct, 'consignmentId:', product.consignmentId, 'reservationId:', product.reservationId, 'productId:', product.id);
+            debugLog('productDetail.render', '渲染按钮区', {
+              isShopProduct,
+              consignmentId: product.consignmentId,
+              reservationId: product.reservationId,
+              productId: product.id,
+            });
 
             if (isShopProduct) {
               return (
@@ -447,14 +496,13 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, onNaviga
               return (
                 <button
                   onClick={() => {
-                    console.log('ProductDetail: Clicking 申请确权 for product:', product);
-                    console.log('Navigating to reservation with product data:', {
+                    debugLog('productDetail.render', '点击申请确权', {
                       id: product.id,
                       title: product.title,
                       consignmentId: product.consignmentId,
-                      reservationId: product.reservationId
+                      reservationId: product.reservationId,
                     });
-                    onNavigate('reservation');
+                    onNavigate({ name: 'reservation', back: { name: 'product-detail' } });
                   }}
                   className="flex-1 bg-[#8B0000] text-amber-100 hover:bg-[#A00000] transition-colors py-3.5 rounded-lg font-bold flex items-center justify-center gap-2 shadow-lg shadow-red-900/20 active:scale-[0.98]">
                   <Gavel size={18} />

@@ -92,8 +92,8 @@ const AddressList: React.FC<AddressListProps> = ({ onBack }) => {
       cancelText: '取消',
       onConfirm: async () => {
         try {
-          await deleteAddress({ id });
-          showToast('success', '删除成功');
+          const res = await deleteAddress({ id });
+          showToast('success', res?.msg || '删除成功');
           // 删除成功后刷新列表
           loadAddresses();
         } catch (e: any) {

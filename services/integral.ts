@@ -1,5 +1,6 @@
-import { apiFetch, ApiResponse } from './networking';
-import { AUTH_TOKEN_KEY, API_ENDPOINTS } from './config';
+import { ApiResponse } from './networking';
+import { API_ENDPOINTS } from './config';
+import { authedFetch, getStoredToken } from './client';
 
 /**
  * 消费金日志项
@@ -37,7 +38,7 @@ export interface GetIntegralLogParams {
 export async function getIntegralLog(
     params: GetIntegralLogParams = {},
 ): Promise<ApiResponse<IntegralLogData>> {
-    const token = params.token || localStorage.getItem(AUTH_TOKEN_KEY) || '';
+    const token = params.token ?? getStoredToken();
     const limit = params.limit || 10;
 
     if (!token) {
@@ -50,7 +51,7 @@ export async function getIntegralLog(
     const path = `${API_ENDPOINTS.account.integral}?${search.toString()}`;
 
     try {
-        const data = await apiFetch<IntegralLogData>(path, {
+        const data = await authedFetch<IntegralLogData>(path, {
             method: 'GET',
             token,
         });

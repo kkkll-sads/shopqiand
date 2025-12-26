@@ -5,10 +5,11 @@ import { LoadingSpinner } from '../../components/common';
 import { fetchProfile, exchangeScoreToGreenPower, USER_INFO_KEY, AUTH_TOKEN_KEY } from '../../services/api';
 import { UserInfo } from '../../types';
 import { useNotification } from '../../context/NotificationContext';
+import { Route } from '../../router/routes';
 
 interface HashrateExchangeProps {
     onBack: () => void;
-    onNavigate: (page: string) => void;
+    onNavigate: (route: Route) => void;
 }
 
 

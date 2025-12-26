@@ -4,6 +4,7 @@ import { Clock, Globe, Database, Zap, Cpu, Activity, Lock, ArrowRight, ArrowLeft
 import PageContainer from '../../components/layout/PageContainer';
 import { LoadingSpinner, LazyImage } from '../../components/common';
 import { Product } from '../../types';
+import { Route } from '../../router/routes';
 import {
     fetchCollectionSessions,
     fetchCollectionSessionDetail,
@@ -15,7 +16,7 @@ import {
 interface TradingZoneProps {
     onBack: () => void;
     onProductSelect?: (product: Product) => void;
-    onNavigate?: (page: string) => void;
+    onNavigate?: (route: Route) => void;
 }
 
 interface TradingSession {
@@ -171,7 +172,7 @@ const TradingZone: React.FC<TradingZoneProps> = ({ onBack, onProductSelect, onNa
             setItemsError(null);
 
             // 获取包含寄售商品的商品列表
-            const response = await fetchCollectionItemsBySession(session.id, { page: 1, limit: 50 });
+            const response = await fetchCollectionItemsBySession(session.id, { page: 1, limit: 10 });
 
             console.log('API Response:', response);
             console.log('Items list:', response.data?.list);
@@ -180,12 +181,12 @@ const TradingZone: React.FC<TradingZoneProps> = ({ onBack, onProductSelect, onNa
                 const allItems = response.data.list.map((item: any) => {
                     // 更灵活地判断是否为寄售商品
                     const isConsignment = item.is_consignment === 1 ||
-                                        item.is_consignment === true ||
-                                        item.is_consignment === "1" ||
-                                        !!item.consignment_id ||
-                                        !!item.consignment_price ||
-                                        String(item.id) === "7" || // 临时：ID=7是寄售商品，支持数字和字符串
-                                        Number(item.id) === 7;
+                        item.is_consignment === true ||
+                        item.is_consignment === "1" ||
+                        !!item.consignment_id ||
+                        !!item.consignment_price ||
+                        String(item.id) === "7" || // 临时：ID=7是寄售商品，支持数字和字符串
+                        Number(item.id) === 7;
 
                     console.log('Processing item:', item.id, {
                         is_consignment: item.is_consignment,
@@ -237,14 +238,22 @@ const TradingZone: React.FC<TradingZoneProps> = ({ onBack, onProductSelect, onNa
         const startDate = new Date(now); startDate.setHours(startH, startM, 0, 0);
         const endDate = new Date(now); endDate.setHours(endH, endM, 0, 0);
 
-        // 后端 is_active 优先
-        if (session.isActive) {
+        // 时间优先：超过结束时间立刻关闭入口
+        if (now >= endDate) {
+            return { status: 'ended' as const, target: null };
+        }
+
+        // 活跃中：后端 isActive 或者在时间窗口内
+        if (session.isActive || (now >= startDate && now < endDate)) {
             return { status: 'active' as const, target: endDate };
         }
 
-        if (now < startDate) return { status: 'waiting', target: startDate };
-        else if (now >= startDate && now < endDate) return { status: 'active', target: endDate };
-        else return { status: 'ended', target: null };
+        // 等待中
+        if (now < startDate) {
+            return { status: 'waiting' as const, target: startDate };
+        }
+
+        return { status: 'ended' as const, target: null };
     };
 
     const formatDuration = (ms: number) => {
@@ -318,7 +327,7 @@ const TradingZone: React.FC<TradingZoneProps> = ({ onBack, onProductSelect, onNa
                         <div className="flex items-center gap-2">
                             {onNavigate && (
                                 <button
-                                    onClick={() => onNavigate('reservation-record')}
+                                    onClick={() => onNavigate({ name: 'reservation-record' })}
                                     className="flex items-center gap-1.5 bg-orange-50 text-orange-600 px-3 py-1.5 rounded-full text-xs font-bold border border-orange-100 active:scale-95 transition-transform"
                                 >
                                     <ClipboardList size={14} />
@@ -336,24 +345,27 @@ const TradingZone: React.FC<TradingZoneProps> = ({ onBack, onProductSelect, onNa
 
                     {/* Price Partition Filters */}
                     <div className="flex gap-2 mb-5 px-2 overflow-x-auto pb-1 scrollbar-none">
-                        {[
-                            { id: 'all', label: '全部' },
-                            { id: '1k', label: '1k区' },
-                            { id: '2k', label: '2k区' },
-                            { id: '3k', label: '3k区' },
-                            { id: '4k', label: '4k区' }
-                        ].map((zone) => (
-                            <button
-                                key={zone.id}
-                                onClick={() => setActivePriceZone(zone.id)}
-                                className={`px-4 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all ${activePriceZone === zone.id
-                                    ? 'bg-orange-500 text-white shadow-md shadow-orange-200'
-                                    : 'bg-white text-gray-500 border border-gray-100 hover:bg-gray-50'
-                                    }`}
-                            >
-                                {zone.label}
-                            </button>
-                        ))}
+                        {(() => {
+                            // Extract unique price zones from items
+                            const priceZones = ['all', ...Array.from(new Set(
+                                tradingItems
+                                    .map(item => item.price_zone)
+                                    .filter(zone => zone) // Filter out undefined/null
+                            ))];
+
+                            return priceZones.map((zone) => (
+                                <button
+                                    key={zone}
+                                    onClick={() => setActivePriceZone(zone)}
+                                    className={`px-4 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all ${activePriceZone === zone
+                                        ? 'bg-orange-500 text-white shadow-md shadow-orange-200'
+                                        : 'bg-white text-gray-500 border border-gray-100 hover:bg-gray-50'
+                                        }`}
+                                >
+                                    {zone === 'all' ? '全部' : zone}
+                                </button>
+                            ));
+                        })()}
                     </div>
 
                     {/* 列表内容 */}
@@ -367,12 +379,9 @@ const TradingZone: React.FC<TradingZoneProps> = ({ onBack, onProductSelect, onNa
                         <div className="grid grid-cols-2 gap-4">
                             {tradingItems
                                 .filter(item => {
+                                    // Filter by price zone using the backend field
                                     if (activePriceZone === 'all') return true;
-                                    if (activePriceZone === '1k') return item.price >= 1000 && item.price < 2000;
-                                    if (activePriceZone === '2k') return item.price >= 2000 && item.price < 3000;
-                                    if (activePriceZone === '3k') return item.price >= 3000 && item.price < 4000;
-                                    if (activePriceZone === '4k') return item.price >= 4000;
-                                    return true;
+                                    return item.price_zone === activePriceZone;
                                 })
                                 .map((item) => (
                                     <div
@@ -394,6 +403,8 @@ const TradingZone: React.FC<TradingZoneProps> = ({ onBack, onProductSelect, onNa
                                                 artist: config.name,
                                                 category: 'Data Asset',
                                                 productType: 'collection',
+                                                sessionId: selectedSession?.id || item.session_id,
+                                                zoneId: item.zone_id || item.price_zone_id,
                                                 // 为寄售商品设置consignmentId
                                                 ...(item.source === 'consignment' && item.consignment_id
                                                     ? { consignmentId: item.consignment_id }
@@ -537,18 +548,16 @@ const TradingZone: React.FC<TradingZoneProps> = ({ onBack, onProductSelect, onNa
                             {/* 3. 底部区域：全宽强按钮 */}
                             <div className="relative z-10">
                                 <button
-                                    onClick={() => status !== 'ended' && handleSessionSelect(session)}
-                                    disabled={status === 'ended'}
+                                    onClick={() => status === 'active' && handleSessionSelect(session)}
+                                    disabled={status !== 'active'}
                                     className={`w-full h-12 rounded-xl text-sm font-bold flex items-center justify-center gap-2 shadow-lg transition-all active:scale-[0.98]
                            ${status === 'active'
                                             ? `${config.buttonClass} text-white`
-                                            : status === 'waiting'
-                                                ? 'bg-white border text-orange-500 border-orange-200 shadow-sm'
-                                                : 'bg-gray-100 text-gray-400 border border-gray-200 shadow-none cursor-not-allowed'
+                                            : 'bg-gray-100 text-gray-400 border border-gray-200 shadow-none cursor-not-allowed'
                                         }`}
                                 >
-                                    {status === 'active' ? '立即抢购 · ACCESS' : status === 'waiting' ? '预约开场 · WAITLIST' : '本场结束 · CLOSED'}
-                                    {status !== 'ended' && <ArrowRight size={16} />}
+                                    {status === 'active' ? '立即抢购 · ACCESS' : status === 'waiting' ? '即将开始 · COMING SOON' : '本场结束 · CLOSED'}
+                                    {status === 'active' && <ArrowRight size={16} />}
                                 </button>
                             </div>
                         </div>

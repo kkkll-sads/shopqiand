@@ -1,4 +1,7 @@
 import { API_BASE_URL } from './config';
+import { NeedLoginError } from '../utils/errors';
+import { clearAuthStorage } from '../utils/storageAccess';
+import { notifyNeedLogin } from './needLoginHandler';
 
 export interface ApiFetchConfig {
     method?: 'GET' | 'POST' | 'PUT' | 'DELETE';
@@ -84,16 +87,22 @@ export async function apiFetch<T = any>(
 
         const data = await parseResponse(response);
 
-        // 处理 code 303：需要登录，抛出 NeedLoginError 让上层统一处理
-        // 不在 networking 层跳页面，避免破坏 SPA 状态
+        // 处理 code 303：需要登录，抛出统一错误由上层决定跳转
         if (data.code === 303) {
-            console.warn('用户未登录（code 303），抛出 NeedLoginError');
-            const { NeedLoginError } = await import('../utils/errors');
+            console.warn('用户登录已失效（code 303），抛出 NeedLoginError 交由上层统一处理');
             throw new NeedLoginError(data.msg || '请先登录');
         }
 
         return data;
     } catch (error: any) {
+        if (error?.name === 'NeedLoginError') {
+            const handled = notifyNeedLogin(error.message);
+            if (!handled) {
+                clearAuthStorage();
+            }
+            throw error;
+        }
+
         console.error(`API 调用失败 [${method}] ${url}:`, error);
 
         if (error.name === 'TypeError' && error.message === 'Failed to fetch') {

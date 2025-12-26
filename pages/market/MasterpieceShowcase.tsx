@@ -34,7 +34,7 @@ const MasterpieceShowcase: React.FC<MasterpieceShowcaseProps> = ({ onBack }) => 
     const load = async () => {
       try {
         setLoading(true);
-        const res = await fetchShopProducts({ page: 1, limit: 20 });
+        const res = await fetchShopProducts({ page: 1, limit: 10 });
         if (!isMounted) return;
 
         const list = res.data?.list ?? [];

@@ -7,8 +7,10 @@
  * @version 1.0.0
  */
 
-import { apiFetch, ApiResponse } from './networking';
-import { API_ENDPOINTS, AUTH_TOKEN_KEY } from './config';
+import { ApiResponse } from './networking';
+import { API_ENDPOINTS } from './config';
+// 统一的带 token 请求封装，避免重复从 localStorage 取值
+import { authedFetch } from './client';
 import type { ShopOrderItem } from './shop';
 
 // ============================================================================
@@ -21,15 +23,14 @@ export async function consignCollectionItem(params: {
     price: number;
     token?: string
 }): Promise<ApiResponse> {
-    const token = params.token || localStorage.getItem(AUTH_TOKEN_KEY) || '';
     const payload = new FormData();
     payload.append('user_collection_id', String(params.user_collection_id || params.id));
     payload.append('price', String(params.price));
 
-    return apiFetch(API_ENDPOINTS.collectionItem.consign, {
+    return authedFetch(API_ENDPOINTS.collectionItem.consign, {
         method: 'POST',
         body: payload,
-        token,
+        token: params.token,
     });
 }
 
@@ -59,17 +60,15 @@ export interface CancelConsignmentParams {
  * @returns 返回取消寄售结果
  */
 export async function cancelConsignment(params: CancelConsignmentParams): Promise<ApiResponse> {
-    const token = params.token || localStorage.getItem(AUTH_TOKEN_KEY) || '';
-
     // 根据 API 文档，使用 JSON 格式传递参数
     const payload = {
         consignment_id: Number(params.consignment_id),
     };
 
-    return apiFetch(API_ENDPOINTS.collectionItem.cancelConsignment, {
+    return authedFetch(API_ENDPOINTS.collectionItem.cancelConsignment, {
         method: 'POST',
         body: JSON.stringify(payload),
-        token,
+        token: params.token,
     });
 }
 
@@ -114,7 +113,7 @@ export async function getConsignmentList(params: { page?: number; limit?: number
     if (params.page) search.set('page', String(params.page));
     if (params.limit) search.set('limit', String(params.limit));
 
-    return apiFetch<ConsignmentListData>(`${API_ENDPOINTS.collectionItem.consignmentList}?${search.toString()}`, { method: 'GET' });
+    return authedFetch<ConsignmentListData>(`${API_ENDPOINTS.collectionItem.consignmentList}?${search.toString()}`, { method: 'GET' });
 }
 
 /**
@@ -148,6 +147,7 @@ export interface FetchTradeListParams {
     page?: number;                // 页码，默认1
     limit?: number;               // 每页数量，默认10，最大50
     session_id?: number;          // 专场ID
+    token?: string;               // 用户登录Token（可选，会自动从localStorage获取）
 }
 
 /**
@@ -169,7 +169,7 @@ export async function getTradeList(params: FetchTradeListParams = {}): Promise<A
     if (params.limit) search.set('limit', String(params.limit));
     if (params.session_id) search.set('session_id', String(params.session_id));
 
-    return apiFetch<TradeListData>(`${API_ENDPOINTS.collectionItem.tradeList}?${search.toString()}`, { method: 'GET' });
+    return authedFetch<TradeListData>(`${API_ENDPOINTS.collectionItem.tradeList}?${search.toString()}`, { method: 'GET', token: params.token });
 }
 
 /**
@@ -229,14 +229,13 @@ export interface MyConsignmentListData {
  *          - has_more: 是否有更多数据
  */
 export async function getMyConsignmentList(params: FetchMyConsignmentListParams = {}): Promise<ApiResponse<MyConsignmentListData>> {
-    const token = params.token || localStorage.getItem(AUTH_TOKEN_KEY) || '';
     const search = new URLSearchParams();
     if (params.page) search.set('page', String(params.page));
     if (params.limit) search.set('limit', String(params.limit));
     if (params.status !== undefined) search.set('status', String(params.status));
 
     const path = `${API_ENDPOINTS.collectionItem.myConsignmentList}?${search.toString()}`;
-    return apiFetch<MyConsignmentListData>(path, { method: 'GET', token });
+    return authedFetch<MyConsignmentListData>(path, { method: 'GET', token: params.token });
 }
 
 export interface ConsignmentDetailData {
@@ -256,9 +255,8 @@ export async function getConsignmentDetail(params: {
     consignment_id: number;
     token?: string
 }): Promise<ApiResponse<ConsignmentDetailData>> {
-    const token = params.token || localStorage.getItem(AUTH_TOKEN_KEY) || '';
     const path = `${API_ENDPOINTS.collectionItem.consignmentDetail}?id=${params.consignment_id}`;
-    return apiFetch<ConsignmentDetailData>(path, { method: 'GET', token });
+    return authedFetch<ConsignmentDetailData>(path, { method: 'GET', token: params.token });
 }
 /**
  * 寄售解锁状态检查接口返回数据
@@ -278,11 +276,10 @@ export interface ConsignmentCheckData {
  * @param params.token - 用户登录Token（可选，会自动从localStorage获取）
  */
 export async function getConsignmentCheck(params: { user_collection_id: number | string; token?: string }): Promise<ApiResponse<ConsignmentCheckData>> {
-    const token = params.token || localStorage.getItem(AUTH_TOKEN_KEY) || '';
     const search = new URLSearchParams();
     search.set('user_collection_id', String(params.user_collection_id));
     const path = `${API_ENDPOINTS.collectionItem.consignmentCheck}?${search.toString()}`;
-    return apiFetch<ConsignmentCheckData>(path, { method: 'GET', token });
+    return authedFetch<ConsignmentCheckData>(path, { method: 'GET', token: params.token });
 }
 
 // ============================================================================
@@ -316,18 +313,16 @@ export interface DeliverParams {
  * @returns 返回提货申请结果
  */
 export async function deliverCollectionItem(params: DeliverParams): Promise<ApiResponse> {
-    const token = params.token || localStorage.getItem(AUTH_TOKEN_KEY) || '';
-
     // 根据 API 文档，使用 JSON 格式传递参数
     const payload = {
         user_collection_id: Number(params.user_collection_id),
         address_id: Number(params.address_id),
     };
 
-    return apiFetch(API_ENDPOINTS.collectionItem.deliver, {
+    return authedFetch(API_ENDPOINTS.collectionItem.deliver, {
         method: 'POST',
         body: JSON.stringify(payload),
-        token,
+        token: params.token,
     });
 }
 
@@ -380,14 +375,13 @@ export interface DeliveryListData {
  *          - has_more: 是否有更多数据
  */
 export async function getDeliveryList(params: FetchDeliveryListParams = {}): Promise<ApiResponse<DeliveryListData>> {
-    const token = params.token || localStorage.getItem(AUTH_TOKEN_KEY) || '';
     const search = new URLSearchParams();
     if (params.page) search.set('page', String(params.page));
     if (params.limit) search.set('limit', String(params.limit));
     if (params.status) search.set('status', params.status);
 
     const path = `${API_ENDPOINTS.collectionItem.deliveryList}?${search.toString()}`;
-    return apiFetch<DeliveryListData>(path, { method: 'GET', token });
+    return authedFetch<DeliveryListData>(path, { method: 'GET', token: params.token });
 }
 
 // ============================================================================
@@ -414,13 +408,12 @@ export async function getPurchaseRecords(params: {
     limit?: number;
     token?: string
 } = {}): Promise<ApiResponse<{ list: PurchaseRecordItem[], has_more?: boolean }>> {
-    const token = params.token || localStorage.getItem(AUTH_TOKEN_KEY) || '';
     const search = new URLSearchParams();
     if (params.page) search.set('page', String(params.page));
     if (params.limit) search.set('limit', String(params.limit));
 
     const path = `${API_ENDPOINTS.collectionItem.purchaseRecords}?${search.toString()}`;
-    return apiFetch<{ list: PurchaseRecordItem[], has_more?: boolean }>(path, { method: 'GET', token });
+    return authedFetch<{ list: PurchaseRecordItem[], has_more?: boolean }>(path, { method: 'GET', token: params.token });
 }
 
 /**
@@ -458,9 +451,9 @@ export async function rightsDeliver(params: RightsDeliverParams): Promise<ApiRes
         user_collection_id: Number(params.user_collection_id),
     };
 
-    return apiFetch<RightsDeliverResult>(API_ENDPOINTS.collectionItem.rightsDeliver, {
+    return authedFetch<RightsDeliverResult>(API_ENDPOINTS.collectionItem.rightsDeliver, {
         method: 'POST',
         body: JSON.stringify(payload),
-        token,
+        token: params.token,
     });
 }
