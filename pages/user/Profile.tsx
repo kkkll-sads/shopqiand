@@ -190,65 +190,61 @@ const Profile: React.FC<ProfileProps> = ({ onNavigate }) => {
         </div>
 
         {/* Digital Rights Card - Smooth Floating Style */}
-        <div className="bg-white rounded-3xl p-6 shadow-[0_8px_30px_rgb(0,0,0,0.08)] relative overflow-hidden">
-
+        <div className="bg-white mx-4 rounded-3xl p-6 shadow-sm relative overflow-hidden mb-4">
           <div className="relative z-10">
-            <div className="flex justify-between items-start mb-2">
+            <div className="flex justify-between items-start mb-4">
               <div className="flex items-center gap-2">
                 <span className="text-sm text-gray-500 font-medium">供应链专项金</span>
-                <span className="bg-[#FFEDD5] text-[#F97316] text-[10px] px-2 py-0.5 rounded-md font-bold">采购本金</span>
+                <span className="bg-orange-50 text-orange-600 text-[10px] px-2 py-0.5 rounded-full font-bold">
+                  采购本金
+                </span>
               </div>
               <button
                 onClick={() => onNavigate('asset:balance-recharge:profile')}
-                className="bg-[#0f172a] text-white px-4 py-1.5 rounded-full text-xs font-medium shadow-md active:scale-95 transition-transform flex items-center gap-1"
+                className="text-orange-600 text-sm font-medium flex items-center gap-1 active:opacity-70"
               >
-                去充值 <ChevronRight size={12} />
+                去充值 <ChevronRight size={14} />
               </button>
             </div>
 
             <div
-              className="text-3xl font-[800] text-gray-900 tracking-tight mb-6 font-sans cursor-pointer active:opacity-70 transition-opacity"
+              className="text-5xl font-[DINAlternate-Bold,Roboto,sans-serif] font-bold text-gray-900 tracking-tight mb-8 cursor-pointer active:opacity-70 transition-opacity"
               onClick={() => onNavigate('asset-view:0')}
             >
-              ¥ {formatAmount(userInfo?.money)}
+              <span className="text-2xl mr-1">¥</span>{formatAmount(userInfo?.money)}
             </div>
 
-            <div className="w-full h-px bg-gray-100 mb-5"></div>
-
-            <div className="flex items-center text-center py-1">
+            <div className="flex items-center justify-between">
               <div
-                className="flex-1 cursor-pointer active:opacity-70 transition-opacity relative flex flex-col items-center justify-center"
+                className="flex flex-col cursor-pointer active:opacity-70 transition-opacity"
                 onClick={() => onNavigate('asset-view:1')}
               >
-                <div className="text-[10px] text-gray-400 mb-1 font-medium scale-90 origin-center whitespace-nowrap">可调度收益</div>
-                <div className="text-sm font-bold text-gray-800 font-[DINAlternate-Bold] whitespace-nowrap leading-none">¥ {formatAmount(userInfo?.withdrawable_money)}</div>
-                <div className="absolute right-0 top-1 bottom-1 w-[0.5px] bg-gray-100"></div>
+                <div className="text-xs text-gray-400 mb-1">可调度收益</div>
+                <div className="text-xl font-bold text-gray-800 font-[DINAlternate-Bold,Roboto,sans-serif]">
+                  {formatAmount(userInfo?.withdrawable_money)}
+                </div>
               </div>
 
               <div
-                className="flex-1 cursor-pointer active:opacity-70 transition-opacity relative flex flex-col items-center justify-center"
+                className="flex flex-col cursor-pointer active:opacity-70 transition-opacity items-center"
                 onClick={() => onNavigate('wallet:hashrate_exchange:profile')}
               >
-                <div className="text-[10px] text-gray-400 mb-1 font-medium scale-90 origin-center whitespace-nowrap flex items-center justify-center gap-0.5">绿色算力 <Leaf size={9} className="text-green-500" /></div>
-                <div className="text-sm font-bold text-gray-800 font-[DINAlternate-Bold] whitespace-nowrap leading-none">{userInfo?.green_power || 0}</div>
-                <div className="absolute right-0 top-1 bottom-1 w-[0.5px] bg-gray-100"></div>
+                <div className="text-xs text-gray-400 mb-1 flex items-center gap-1">
+                  绿色算力 <Leaf size={10} className="text-green-500" />
+                </div>
+                <div className="text-xl font-bold text-gray-800 font-[DINAlternate-Bold,Roboto,sans-serif]">
+                  {userInfo?.green_power || 0}
+                </div>
               </div>
 
               <div
-                className="flex-1 cursor-pointer active:opacity-70 transition-opacity relative flex flex-col items-center justify-center"
+                className="flex flex-col cursor-pointer active:opacity-70 transition-opacity items-end"
                 onClick={() => onNavigate('switch-to-market')}
               >
-                <div className="text-[10px] text-gray-400 mb-1 font-medium scale-90 origin-center whitespace-nowrap">消费金</div>
-                <div className="text-sm font-bold text-gray-800 font-[DINAlternate-Bold] whitespace-nowrap leading-none">{userInfo?.score || 0}</div>
-                <div className="absolute right-0 top-1 bottom-1 w-[0.5px] bg-gray-100"></div>
-              </div>
-
-              <div
-                className="flex-1 cursor-pointer active:opacity-70 transition-opacity flex flex-col items-center justify-center"
-                onClick={() => onNavigate('asset-view:2')}
-              >
-                <div className="text-[10px] text-gray-400 mb-1 font-medium scale-90 origin-center whitespace-nowrap">确权金</div>
-                <div className="text-sm font-bold text-gray-800 font-[DINAlternate-Bold] whitespace-nowrap leading-none">¥ {formatAmount(userInfo?.confirm_rights_gold)}</div>
+                <div className="text-xs text-gray-400 mb-1">消费金</div>
+                <div className="text-xl font-bold text-gray-800 font-[DINAlternate-Bold,Roboto,sans-serif]">
+                  {userInfo?.score || 0}
+                </div>
               </div>
             </div>
           </div>

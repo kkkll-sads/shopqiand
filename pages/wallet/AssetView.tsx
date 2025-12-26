@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { FileText, ShoppingBag, X, AlertCircle, CheckCircle } from 'lucide-react';
+import { FileText, ShoppingBag, X, AlertCircle, CheckCircle, ArrowRight } from 'lucide-react';
 import PageContainer from '../../components/layout/PageContainer';
 import { LoadingSpinner, EmptyState, LazyImage } from '../../components/common';
 import { formatAmount } from '../../utils/format';
@@ -614,9 +614,9 @@ const AssetView: React.FC<AssetViewProps> = ({ onBack, onNavigate, onProductSele
         const res = await getMyWithdrawList({ page, limit: 10, token });
         if (res.code === 1 && res.data) {
           if (page === 1) {
-            setWithdrawOrders(res.data.data || []);
+            setWithdrawOrders(res.data.list || []);
           } else {
-            setWithdrawOrders(prev => [...prev, ...(res.data?.data || [])]);
+            setWithdrawOrders(prev => [...prev, ...(res.data?.list || [])]);
           }
           setHasMore(res.data.has_more || false);
         } else {
@@ -842,17 +842,16 @@ const AssetView: React.FC<AssetViewProps> = ({ onBack, onNavigate, onProductSele
             <div className="flex gap-2 flex-wrap">
               {/* 优先使用 status_text 字段显示状态 */}
               {item.status_text ? (
-                <div className={`text-xs px-2 py-1 rounded-full border ${
-                  item.status_text.includes('寄售') || item.status_text.includes('出售')
-                    ? 'bg-blue-50 text-blue-600 border-blue-200'
-                    : item.status_text.includes('确权') || item.status_text.includes('成功') || item.status_text.includes('已售出')
-                      ? 'bg-green-50 text-green-600 border-green-200'
-                      : item.status_text.includes('失败') || item.status_text.includes('取消')
-                        ? 'bg-red-50 text-red-600 border-red-200'
-                        : item.status_text.includes('提货') || item.status_text.includes('待')
-                          ? 'bg-orange-50 text-orange-600 border-orange-200'
-                          : 'bg-gray-50 text-gray-600 border-gray-200'
-                }`}>
+                <div className={`text-xs px-2 py-1 rounded-full border ${item.status_text.includes('寄售') || item.status_text.includes('出售')
+                  ? 'bg-blue-50 text-blue-600 border-blue-200'
+                  : item.status_text.includes('确权') || item.status_text.includes('成功') || item.status_text.includes('已售出')
+                    ? 'bg-green-50 text-green-600 border-green-200'
+                    : item.status_text.includes('失败') || item.status_text.includes('取消')
+                      ? 'bg-red-50 text-red-600 border-red-200'
+                      : item.status_text.includes('提货') || item.status_text.includes('待')
+                        ? 'bg-orange-50 text-orange-600 border-orange-200'
+                        : 'bg-gray-50 text-gray-600 border-gray-200'
+                  }`}>
                   {item.status_text}
                 </div>
               ) : (
@@ -1079,8 +1078,9 @@ const AssetView: React.FC<AssetViewProps> = ({ onBack, onNavigate, onProductSele
           历史记录
         </button>
       }
+      padding={false}
     >
-      <div className="p-2">
+      <div className="p-3 pb-20">
         <AssetHeaderCard userInfo={userInfo} onNavigate={onNavigate} />
         <AssetActionsGrid onNavigate={onNavigate} />
         <AssetTabSwitcher tabs={tabs} activeTab={activeTab} onChange={handleTabChange} />
@@ -1325,7 +1325,7 @@ const AssetView: React.FC<AssetViewProps> = ({ onBack, onNavigate, onProductSele
                 : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                 }`}
             >
-            {actionLoading
+              {actionLoading
                 ? '提交中...'
                 : actionTab === 'delivery'
                   ? '权益分割'

@@ -352,14 +352,14 @@ const RealNameAuth: React.FC<RealNameAuthProps> = ({ onBack }) => {
                 您的身份信息已通过审核，现在可以享受平台的全部服务
               </p>
 
-              <div className="w-full bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-                <div className="p-4 border-b border-gray-50 flex items-center justify-between">
-                  <span className="text-sm text-gray-500">真实姓名</span>
-                  <span className="text-sm font-bold text-gray-800">{status?.real_name || realName}</span>
+              <div className="w-full bg-white px-4 border-t border-b border-gray-100">
+                <div className="py-4 border-b border-gray-50 flex items-center justify-between">
+                  <span className="text-base text-gray-500">真实姓名</span>
+                  <span className="text-base font-bold text-gray-800">{status?.real_name || realName}</span>
                 </div>
-                <div className="p-4 flex items-center justify-between">
-                  <span className="text-sm text-gray-500">身份证号</span>
-                  <span className="text-sm font-bold text-gray-800">{formatIdCard(status?.id_card || idCard)}</span>
+                <div className="py-4 flex items-center justify-between">
+                  <span className="text-base text-gray-500">身份证号</span>
+                  <span className="text-base font-bold text-gray-800">{formatIdCard(status?.id_card || idCard)}</span>
                 </div>
               </div>
             </div>
@@ -404,25 +404,25 @@ const RealNameAuth: React.FC<RealNameAuthProps> = ({ onBack }) => {
               )}
 
               {/* 基本信息 */}
-              <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden mb-4">
-                <div className="px-4 py-3 border-b border-gray-50 flex items-center">
-                  <span className="w-20 text-sm text-gray-600">真实姓名</span>
+              <div className="bg-white px-4 mb-6">
+                <div className="py-4 border-b border-gray-100 flex items-center">
+                  <span className="w-24 text-base text-gray-800">真实姓名</span>
                   <input
                     type="text"
                     value={realName}
                     onChange={(e) => setRealName(e.target.value)}
                     placeholder="请输入身份证上的姓名"
-                    className="flex-1 text-sm text-gray-900 outline-none bg-transparent placeholder:text-gray-400 text-right"
+                    className="flex-1 text-base text-gray-900 outline-none bg-transparent placeholder:text-gray-300 text-right font-medium"
                   />
                 </div>
-                <div className="px-4 py-3 flex items-center">
-                  <span className="w-20 text-sm text-gray-600">身份证号</span>
+                <div className="py-4 border-b border-gray-100 flex items-center">
+                  <span className="w-24 text-base text-gray-800">身份证号</span>
                   <input
                     type="text"
                     value={idCard}
                     onChange={(e) => setIdCard(e.target.value)}
                     placeholder="请输入身份证号码"
-                    className="flex-1 text-sm text-gray-900 outline-none bg-transparent placeholder:text-gray-400 text-right"
+                    className="flex-1 text-base text-gray-900 outline-none bg-transparent placeholder:text-gray-300 text-right font-medium"
                   />
                 </div>
               </div>

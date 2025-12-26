@@ -146,13 +146,13 @@ const MyFriends: React.FC<MyFriendsProps> = ({ onBack, onNavigate }) => {
                 <img
                   src={
                     normalizeAssetUrl(friend.avatar) ||
-                    'http://18.166.211.131/static/images/avatar.png'
+                    '/static/images/avatar.png'
                   }
                   alt={friend.nickname || friend.username}
                   className="w-10 h-10 rounded-full object-cover"
                   onError={(e) => {
                     const target = e.target as HTMLImageElement;
-                    target.src = 'http://18.166.211.131/static/images/avatar.png';
+                    target.src = '/static/images/avatar.png';
                   }}
                 />
                 <div className="flex-1">

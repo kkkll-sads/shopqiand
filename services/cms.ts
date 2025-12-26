@@ -75,8 +75,17 @@ export interface AnnouncementItem {
     title: string;
     content: string;
     type: string;
+    type_text?: string;
     status: string;
+    status_text?: string;
+    is_popup?: number;  // 是否弹出：1=弹出，0=不弹出
+    popup_delay?: number;  // 弹出延迟（秒）
+    sort?: number;
+    start_time?: string;
+    end_time?: string;
+    view_count?: number;
     createtime: string;
+    updatetime?: string;
     [key: string]: any;
 }
 
@@ -90,14 +99,16 @@ export interface FetchAnnouncementsParams {
     page?: number;
     limit?: number;
     type?: string;
+    title?: string;
 }
 
 export async function fetchAnnouncements(params: FetchAnnouncementsParams = {}): Promise<ApiResponse<AnnouncementListData>> {
-    const { page, limit, type = 'normal' } = params;
+    const { page, limit, type = 'normal', title } = params;
     const search = new URLSearchParams();
     if (page !== undefined) search.set('page', String(page));
     if (limit !== undefined) search.set('limit', String(limit));
     if (type) search.set('type', type);
+    if (title) search.set('title', title);
 
     const path = `${API_ENDPOINTS.announcement.list}?${search.toString()}`;
     return apiFetch<AnnouncementListData>(path, {

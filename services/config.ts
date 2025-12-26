@@ -47,15 +47,32 @@ export const API_ASSET_ORIGIN = resolveApiOrigin();
 export const normalizeAssetUrl = (raw?: string) => {
     if (!raw) return '';
 
-    // 如果是完整URL，且指向后端服务器，转换为相对路径以使用代理
+    // 1. 处理旧的硬编码 IP (18.166.211.131)，替换为相对路径或当前 API Origin
+    if (raw.includes('18.166.211.131')) {
+        raw = raw.replace(/^https?:\/\/18\.166\.211\.131/, '');
+    }
+
+    // 2. 如果是完整URL
     if (raw.startsWith('http')) {
         try {
             const url = new URL(raw);
-            // 检查是否指向后端服务器
             const apiOrigin = new URL(API_ASSET_ORIGIN);
-            if (url.host === apiOrigin.host) {
-                // 转换为相对路径，通过本地代理访问
-                return url.pathname + url.search;
+
+            // 检查是否指向后端服务器 (包括 47.76.239.170 或配置的 API_ASSET_ORIGIN)
+            // 或者是旧的 IP (虽然上面处理了，这里做个兜底)
+            // 或者是当前域名（说明后端返回了前端域名的完整URL，需要转为相对路径通过代理访问）
+            const isBackendServer =
+                url.host === apiOrigin.host ||
+                url.host === '47.76.239.170:8080' ||
+                url.host === '18.166.211.131';
+
+            const isCurrentDomain = typeof window !== 'undefined' &&
+                url.host === window.location.host;
+
+            if (isBackendServer || isCurrentDomain) {
+                // 转换为相对路径，通过本地代理访问 (解决 Mixed Content 和 跨域问题)
+                const relativePath = url.pathname + url.search;
+                return relativePath.startsWith('/') ? relativePath : '/' + relativePath;
             }
         } catch {
             // URL解析失败，返回原始值
@@ -65,12 +82,11 @@ export const normalizeAssetUrl = (raw?: string) => {
 
     if (raw.startsWith('//')) {
         try {
-            const originUrl = new URL(API_ASSET_ORIGIN);
-            return `${originUrl.protocol}${raw}`;
-        } catch {
-            const protocol =
-                typeof window !== 'undefined' ? window.location.protocol : 'https:';
+            // 尝试使用当前页面协议
+            const protocol = typeof window !== 'undefined' ? window.location.protocol : 'https:';
             return `${protocol}${raw}`;
+        } catch {
+            return `https:${raw}`;
         }
     }
 

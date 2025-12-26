@@ -153,16 +153,17 @@ const EditProfile: React.FC<EditProfileProps> = ({ onBack, onLogout }) => {
 
   return (
     <PageContainer title="编辑资料" onBack={onBack} bgColor="bg-gray-100" padding={false}>
-      {/* 头像行 */}
-      <div className="bg-white mt-2">
+      {/* 表单区域 */}
+      <div className="bg-white mt-2 px-4">
+        {/* 头像行 */}
         <button
-          className="w-full px-4 py-3 flex items-center justify-between active:bg-gray-50 disabled:opacity-50"
+          className="w-full py-4 flex items-center justify-between border-b border-gray-100 active:opacity-70 disabled:opacity-50"
           onClick={handleAvatarClick}
           disabled={avatarUploading}
         >
-          <span className="text-sm text-gray-800">头像</span>
+          <span className="text-base text-gray-800">头像</span>
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-orange-200 overflow-hidden flex items-center justify-center text-base font-bold text-orange-700">
+            <div className="w-12 h-12 rounded-full bg-orange-100 overflow-hidden flex items-center justify-center text-lg font-bold text-orange-600">
               {avatarPreview ? (
                 <img
                   src={avatarPreview}
@@ -173,7 +174,7 @@ const EditProfile: React.FC<EditProfileProps> = ({ onBack, onLogout }) => {
                 displayAvatarText
               )}
             </div>
-            <ChevronRight size={16} className="text-gray-400" />
+            <ChevronRight size={18} className="text-gray-300" />
           </div>
         </button>
         <input
@@ -183,18 +184,16 @@ const EditProfile: React.FC<EditProfileProps> = ({ onBack, onLogout }) => {
           className="hidden"
           onChange={handleAvatarChange}
         />
-      </div>
 
-      {/* 昵称行 */}
-      <div className="bg-white mt-2">
-        <div className="px-4 py-3 flex items-center border-t border-gray-100">
-          <span className="text-sm text-gray-800 w-14">昵称</span>
+        {/* 昵称行 */}
+        <div className="py-4 flex items-center border-b border-gray-100">
+          <span className="text-base text-gray-800 w-20">昵称</span>
           <input
             type="text"
             value={nickname}
             onChange={(e) => setNickname(e.target.value)}
             placeholder="请输入昵称"
-            className="flex-1 text-sm text-gray-900 outline-none bg-transparent"
+            className="flex-1 text-base text-gray-900 outline-none bg-transparent placeholder:text-gray-300"
           />
         </div>
       </div>

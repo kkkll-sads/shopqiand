@@ -239,17 +239,13 @@ const AddressList: React.FC<AddressListProps> = ({ onBack }) => {
 
         {(mode === 'add' || mode === 'edit') && (
           <form
-            className="bg-white rounded-2xl p-6 shadow-xl shadow-orange-100/50 space-y-4 border border-orange-50"
+            className="bg-white mt-2 px-4"
             onSubmit={handleSubmit}
           >
-            <div className="text-base font-bold text-gray-900 mb-3">
-              {mode === 'edit' ? '编辑收货地址' : '新增收货地址'}
-            </div>
-
-            <label className="text-sm text-gray-700 flex flex-col gap-2">
-              <span className="font-medium">收货人姓名 <span className="text-red-500">*</span></span>
+            <div className="py-4 border-b border-gray-100">
+              <span className="block text-sm text-gray-500 mb-1">收货人姓名 <span className="text-red-500">*</span></span>
               <input
-                className="border-2 border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-800 focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 focus:outline-none transition-all placeholder:text-gray-400"
+                className="w-full text-base text-gray-900 outline-none placeholder:text-gray-300 bg-transparent font-medium"
                 type="text"
                 placeholder="请输入收货人姓名"
                 value={formValues.name}
@@ -257,12 +253,12 @@ const AddressList: React.FC<AddressListProps> = ({ onBack }) => {
                   handleFormInputChange('name', e.target.value)
                 }
               />
-            </label>
+            </div>
 
-            <label className="text-sm text-gray-700 flex flex-col gap-2">
-              <span className="font-medium">手机号 <span className="text-red-500">*</span></span>
+            <div className="py-4 border-b border-gray-100">
+              <span className="block text-sm text-gray-500 mb-1">手机号 <span className="text-red-500">*</span></span>
               <input
-                className="border-2 border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-800 focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 focus:outline-none transition-all placeholder:text-gray-400"
+                className="w-full text-base text-gray-900 outline-none placeholder:text-gray-300 bg-transparent font-medium"
                 type="tel"
                 placeholder="请输入手机号"
                 value={formValues.phone}
@@ -270,68 +266,51 @@ const AddressList: React.FC<AddressListProps> = ({ onBack }) => {
                   handleFormInputChange('phone', e.target.value)
                 }
               />
-            </label>
+            </div>
 
             {/* 省市区选择 */}
-            <div className="space-y-2">
-              <span className="text-sm text-gray-700 font-medium">省份 / 城市 <span className="text-red-500">*</span></span>
-              <div
-                className="border-2 border-gray-200 rounded-xl px-4 py-4 flex items-center justify-between hover:border-orange-300 active:bg-orange-50/30 transition-all cursor-pointer bg-gray-50/50 focus-within:ring-2 focus-within:ring-orange-500/20 focus-within:border-orange-500"
-                onClick={() => setShowRegionPicker(true)}
-              >
-                <div className="flex-1">
-                  <div className={`text-sm ${formValues.province ? 'text-gray-900 font-medium' : 'text-gray-400'}`}>
-                    {formValues.province && formValues.city
-                      ? `${formValues.province} ${formValues.city}`
-                      : '点击选择省市'
-                    }
-                  </div>
+            <div className="py-4 border-b border-gray-100" onClick={() => setShowRegionPicker(true)}>
+              <span className="block text-sm text-gray-500 mb-1">所在地区 <span className="text-red-500">*</span></span>
+              <div className="flex items-center justify-between">
+                <div className={`text-base font-medium ${formValues.province ? 'text-gray-900' : 'text-gray-300'}`}>
+                  {formValues.province && formValues.city
+                    ? `${formValues.province} ${formValues.city} ${formValues.district || ''}`
+                    : '点击选择省市区'
+                  }
                 </div>
-                <div className="text-orange-500">
-                  <MapPin size={20} />
-                </div>
+                <MapPin size={18} className="text-gray-400" />
               </div>
             </div>
 
-            <label className="text-sm text-gray-700 flex flex-col gap-2">
-              <span className="font-medium">区 / 县（选填）</span>
-              <input
-                className="border-2 border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-800 focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 focus:outline-none transition-all placeholder:text-gray-400"
-                type="text"
-                placeholder="如：西湖区"
-                value={formValues.district}
-                onChange={(e) =>
-                  handleFormInputChange('district', e.target.value)
-                }
-              />
-            </label>
-
-            <label className="text-sm text-gray-700 flex flex-col gap-2">
-              <span className="font-medium">详细地址 <span className="text-red-500">*</span></span>
+            <div className="py-4 border-b border-gray-100">
+              <span className="block text-sm text-gray-500 mb-1">详细地址 <span className="text-red-500">*</span></span>
               <textarea
-                className="border-2 border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-800 resize-none min-h-[96px] focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 focus:outline-none transition-all placeholder:text-gray-400"
+                className="w-full text-base text-gray-900 outline-none placeholder:text-gray-300 bg-transparent font-medium resize-none min-h-[80px]"
                 placeholder="街道、小区、楼栋、门牌号等"
                 value={formValues.address}
                 onChange={(e) =>
                   handleFormInputChange('address', e.target.value)
                 }
               />
-            </label>
+            </div>
 
-            <label className="flex items-center justify-between text-xs text-gray-600 mt-1">
-              <span className="mr-3">设为默认地址</span>
-              <input
-                type="checkbox"
-                className="w-4 h-4 accent-orange-500"
-                checked={formValues.is_default}
-                onChange={(e) =>
-                  handleFormInputChange('is_default', e.target.checked)
-                }
-              />
+            <label className="flex items-center justify-between py-4">
+              <span className="text-base text-gray-800">设为默认地址</span>
+              <div className="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  className="sr-only peer"
+                  checked={formValues.is_default}
+                  onChange={(e) =>
+                    handleFormInputChange('is_default', e.target.checked)
+                  }
+                />
+                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-orange-500"></div>
+              </div>
             </label>
 
             {formError && (
-              <div className="bg-red-50 text-red-600 text-xs px-3 py-2 rounded-md">
+              <div className="bg-red-50 text-red-600 text-xs px-3 py-2 rounded-md mb-4">
                 {formError}
               </div>
             )}
@@ -339,7 +318,7 @@ const AddressList: React.FC<AddressListProps> = ({ onBack }) => {
             <button
               type="submit"
               disabled={formLoading}
-              className="w-full bg-gradient-to-r from-[#FF6B35] to-[#FF9F2E] text-white text-base font-bold py-3.5 rounded-xl shadow-lg shadow-orange-200 active:scale-[0.98] transition-transform disabled:opacity-60 disabled:cursor-not-allowed mt-2"
+              className="w-full bg-gradient-to-r from-[#FF6B35] to-[#FF9F2E] text-white text-base font-bold py-3.5 rounded-full shadow-lg shadow-orange-200 active:scale-[0.98] transition-transform disabled:opacity-60 disabled:cursor-not-allowed mt-4 mb-8"
             >
               {formLoading ? '提交中...' : '保存地址'}
             </button>
@@ -450,13 +429,15 @@ const AddressList: React.FC<AddressListProps> = ({ onBack }) => {
       <RegionPicker
         visible={showRegionPicker}
         onClose={() => setShowRegionPicker(false)}
-        onConfirm={(province, city) => {
+        onConfirm={(province, city, district) => {
           handleFormInputChange('province', province);
           handleFormInputChange('city', city);
+          handleFormInputChange('district', district || '');
           setShowRegionPicker(false);
         }}
         initialProvince={formValues.province}
         initialCity={formValues.city}
+        initialDistrict={formValues.district}
       />
     </SubPageLayout>
   );

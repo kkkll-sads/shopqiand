@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import BottomNav from './components/BottomNav';
 import { Tab, Product, NewsItem, LoginSuccessPayload } from './types';
 import { fetchAnnouncements, AnnouncementItem, fetchProfile, fetchRealNameStatus, MyCollectionItem } from './services/api';
+import PopupAnnouncementModal from './components/common/PopupAnnouncementModal';
 import { STORAGE_KEYS } from './constants/storageKeys';
 import useAuth from './hooks/useAuth';
 // 路由统一编码/解码工具，逐步替换散落的字符串 subPage
@@ -108,6 +109,9 @@ const AppContent: React.FC = () => {
   const [consignmentTicketCount, setConsignmentTicketCount] = useState<number>(0);
   // 新闻已读状态统一通过 hook 管理
   const { newsList, initWith: initNews, markAllRead: markAllNewsRead, markReadById } = useNewsReadState([]);
+  // 弹窗公告状态
+  const [popupAnnouncement, setPopupAnnouncement] = useState<AnnouncementItem | null>(null);
+  const [showPopupAnnouncement, setShowPopupAnnouncement] = useState(false);
   // 待导航页面（用于登录/实名后自动跳转）
   const { pending, setPendingNav, consumePending } = usePendingNavigation();
 
@@ -180,39 +184,39 @@ const AppContent: React.FC = () => {
       const token = readStorage(STORAGE_KEYS.AUTH_TOKEN_KEY);
       const authFlag = readStorage(STORAGE_KEYS.AUTH_KEY);
 
-          // 如果本地存储显示已登录，验证token是否有效
-          if (authFlag === 'true' && token) {
-            try {
-              // 尝试获取用户信息来验证token是否有效
-              const response = await fetchProfile(token);
-              if (response.code === 1 && response.data?.userInfo) {
-                // Token有效，更新用户信息
-                writeJSON(STORAGE_KEYS.USER_INFO_KEY, response.data.userInfo);
-                loginFromHook({ token, userInfo: response.data.userInfo });
-                debugLog('auth.verify', '登录状态验证成功');
-              } else {
-                // Token无效，清除登录状态
-                warnLog('auth.verify', 'Token无效，清除登录状态');
-                handleLogout();
-              }
-            } catch (error: any) {
-              errorLog('auth.verify', '验证登录状态失败', error);
-              // NeedLoginError (303) 表示token无效，需要重新登录
-              // 其他错误也应该清除登录状态以保证安全
-              if (error.name === 'NeedLoginError' || error.code === 303) {
-                warnLog('auth.verify', 'Token已失效（303错误），清除登录状态并跳转到登录页');
-                handleLogout();
-              } else {
-                // 其他错误（如网络错误）也清除状态
-                handleLogout();
-              }
-            }
-          } else if (authFlag === 'true' && !token) {
-            // 有登录标记但没有token，清除状态
-            warnLog('auth.verify', '登录标记存在但缺少token，清除登录状态');
+      // 如果本地存储显示已登录，验证token是否有效
+      if (authFlag === 'true' && token) {
+        try {
+          // 尝试获取用户信息来验证token是否有效
+          const response = await fetchProfile(token);
+          if (response.code === 1 && response.data?.userInfo) {
+            // Token有效，更新用户信息
+            writeJSON(STORAGE_KEYS.USER_INFO_KEY, response.data.userInfo);
+            loginFromHook({ token, userInfo: response.data.userInfo });
+            debugLog('auth.verify', '登录状态验证成功');
+          } else {
+            // Token无效，清除登录状态
+            warnLog('auth.verify', 'Token无效，清除登录状态');
             handleLogout();
           }
-        };
+        } catch (error: any) {
+          errorLog('auth.verify', '验证登录状态失败', error);
+          // NeedLoginError (303) 表示token无效，需要重新登录
+          // 其他错误也应该清除登录状态以保证安全
+          if (error.name === 'NeedLoginError' || error.code === 303) {
+            warnLog('auth.verify', 'Token已失效（303错误），清除登录状态并跳转到登录页');
+            handleLogout();
+          } else {
+            // 其他错误（如网络错误）也清除状态
+            handleLogout();
+          }
+        }
+      } else if (authFlag === 'true' && !token) {
+        // 有登录标记但没有token，清除状态
+        warnLog('auth.verify', '登录标记存在但缺少token，清除登录状态');
+        handleLogout();
+      }
+    };
 
     verifyLoginStatus();
   }, []); // 只在组件挂载时执行一次
@@ -221,6 +225,7 @@ const AppContent: React.FC = () => {
   useEffect(() => {
     const loadAnnouncements = async () => {
       try {
+        console.log('[公告] 开始加载公告数据...');
         const readIds = getReadNewsIds();
 
         // 同时请求平台公告（normal）和平台动态（important）
@@ -229,8 +234,20 @@ const AppContent: React.FC = () => {
           fetchAnnouncements({ page: 1, limit: 10, type: 'important' }),
         ]);
 
+        console.log('[公告] API响应:', {
+          announcementRes,
+          dynamicRes,
+        });
+
         const announcementList = announcementRes.data?.list ?? [];
         const dynamicList = dynamicRes.data?.list ?? [];
+
+        console.log('[公告] 获取到的数据:', {
+          announcementCount: announcementList.length,
+          dynamicCount: dynamicList.length,
+          announcementList,
+          dynamicList,
+        });
 
         // 合并两种类型的数据
         const allMapped = [
@@ -239,8 +256,61 @@ const AppContent: React.FC = () => {
         ];
 
         initNews(allMapped);
+
+        // 检查是否有弹窗公告
+        const allAnnouncements = [...announcementList, ...dynamicList];
+        console.log('[公告] 检查弹窗公告，总数:', allAnnouncements.length);
+
+        allAnnouncements.forEach((item, index) => {
+          console.log(`[公告] 公告 #${index + 1}:`, {
+            id: item.id,
+            title: item.title,
+            is_popup: item.is_popup,
+            is_popup_type: typeof item.is_popup,
+            is_popup_number: Number(item.is_popup),
+            matches: Number(item.is_popup) === 1,
+          });
+        });
+
+        const popupAnn = allAnnouncements.find((item) => Number(item.is_popup) === 1);
+
+        console.log('[公告] 找到的弹窗公告:', popupAnn);
+
+        if (popupAnn) {
+          // 检查今天是否已经关闭过这个公告
+          const dismissedKey = `popup_dismissed_${popupAnn.id}`;
+          let dismissedDate: string | null = null;
+          try {
+            dismissedDate = localStorage.getItem(dismissedKey);
+          } catch (e) {
+            // ignore
+          }
+          const today = new Date().toDateString();
+
+          console.log('[公告] 弹窗检查:', {
+            dismissedDate,
+            today,
+            shouldShow: dismissedDate !== today,
+            popup_delay: popupAnn.popup_delay,
+          });
+
+          if (dismissedDate !== today) {
+            // 根据 popup_delay 延迟显示
+            const delay = (popupAnn.popup_delay || 0) * 1000;
+            console.log(`[公告] 将在 ${delay}ms 后显示弹窗`);
+            setTimeout(() => {
+              console.log('[公告] 显示弹窗');
+              setPopupAnnouncement(popupAnn);
+              setShowPopupAnnouncement(true);
+            }, delay);
+          } else {
+            console.log('[公告] 今日已关闭，不再显示');
+          }
+        } else {
+          console.log('[公告] 没有找到需要弹窗的公告');
+        }
       } catch (error) {
-        console.error('加载资讯失败:', error);
+        console.error('[公告] 加载资讯失败:', error);
       }
     };
 
@@ -435,9 +505,9 @@ const AppContent: React.FC = () => {
         handleProductSelect,
         setProductDetailOrigin,
         productDetailOrigin,
-      handleLogout: handleLogout,
-      selectedCollectionItem,
-      setSelectedCollectionItem,
+        handleLogout: handleLogout,
+        selectedCollectionItem,
+        setSelectedCollectionItem,
         markAllNewsRead,
       });
       if (resolved) return resolved;
@@ -595,6 +665,23 @@ const AppContent: React.FC = () => {
           setShowRealNameModal(false);
           setActiveTab('profile');
           navigateRoute(null);
+        }}
+      />
+
+      {/* 弹窗公告 */}
+      <PopupAnnouncementModal
+        visible={showPopupAnnouncement}
+        announcement={popupAnnouncement}
+        onClose={() => setShowPopupAnnouncement(false)}
+        onDontShowToday={() => {
+          if (popupAnnouncement) {
+            const dismissedKey = `popup_dismissed_${popupAnnouncement.id}`;
+            try {
+              localStorage.setItem(dismissedKey, new Date().toDateString());
+            } catch (e) {
+              // ignore
+            }
+          }
         }}
       />
 

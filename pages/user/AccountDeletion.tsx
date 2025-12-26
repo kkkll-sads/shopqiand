@@ -110,25 +110,25 @@ const AccountDeletion: React.FC<AccountDeletionProps> = ({ onBack }) => {
       <form className="flex flex-col flex-1" onSubmit={handleSubmit}>
         <main className="px-4 pt-4 flex flex-col gap-3 flex-1">
           {/* 注销提示 */}
-          <section className="rounded-xl bg-white shadow-sm border border-gray-100">
-            <h2 className="px-4 py-3 text-sm font-semibold text-gray-900 border-b border-gray-100">
+          <section className="bg-white mt-2 pb-2">
+            <h2 className="px-4 py-4 text-base font-bold text-gray-900 border-b border-gray-100">
               注销提示
             </h2>
-            <p className="px-4 py-3 text-xs leading-5 text-gray-600">
+            <p className="px-4 py-3 text-sm leading-6 text-gray-600">
               注销成功后，您将无法使用当前账号，相关数据也将被删除无法找回。
             </p>
           </section>
 
           {/* 注销条件 */}
-          <section className="rounded-xl bg-white shadow-sm border border-gray-100">
-            <h2 className="px-4 py-3 text-sm font-semibold text-gray-900 border-b border-gray-100">
+          <section className="bg-white mt-2 pb-2">
+            <h2 className="px-4 py-4 text-base font-bold text-gray-900 border-b border-gray-100">
               注销条件
             </h2>
-            <div className="px-4 py-3 text-xs leading-5 text-gray-600">
-              <p className="mb-3">
+            <div className="px-4 py-3 text-sm leading-6 text-gray-600">
+              <p className="mb-2">
                 您提交的注销申请生效前，平台将进行以下验证，以保证您的账户与财产安全：
               </p>
-              <ol className="list-decimal pl-4 space-y-2">
+              <ol className="list-decimal pl-4 space-y-1">
                 {tips.map((tip) => (
                   <li key={tip}>{tip}</li>
                 ))}
@@ -137,49 +137,49 @@ const AccountDeletion: React.FC<AccountDeletionProps> = ({ onBack }) => {
           </section>
 
           {/* 身份验证 */}
-          <section className="rounded-xl bg-white shadow-sm border border-gray-100">
-            <h2 className="px-4 py-3 text-sm font-semibold text-gray-900 border-b border-gray-100">
+          <section className="bg-white mt-2">
+            <h2 className="px-4 py-4 text-base font-bold text-gray-900 border-b border-gray-100">
               身份验证
             </h2>
-            <div className="px-4 py-3 flex flex-col gap-4">
-              <label className="text-sm text-gray-800">
-                <span className="mb-2 block font-medium">请输入登录密码</span>
+            <div className="px-4 pb-4">
+              <div className="py-4 border-b border-gray-100">
+                <div className="text-sm text-gray-500 mb-1">请输入登录密码</div>
                 <input
                   type="password"
-                  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-orange-500 focus:outline-none"
+                  className="w-full text-base text-gray-900 outline-none bg-transparent placeholder:text-gray-300"
                   placeholder="请输入登录密码"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   disabled={loading}
                 />
-              </label>
+              </div>
 
-              <label className="text-sm text-gray-800">
-                <span className="mb-2 block font-medium">再次输入密码确认注销</span>
+              <div className="py-4 border-b border-gray-100">
+                <div className="text-sm text-gray-500 mb-1">再次输入密码确认注销</div>
                 <input
                   type="password"
-                  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-orange-500 focus:outline-none"
+                  className="w-full text-base text-gray-900 outline-none bg-transparent placeholder:text-gray-300"
                   placeholder="请再次输入登录密码"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   disabled={loading}
                 />
-              </label>
+              </div>
 
-              <label className="text-sm text-gray-800">
-                <span className="mb-2 block font-medium">注销原因（选填）</span>
+              <div className="py-4 border-b border-gray-100">
+                <div className="text-sm text-gray-500 mb-1">注销原因（选填）</div>
                 <textarea
-                  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-orange-500 focus:outline-none"
+                  className="w-full text-base text-gray-900 outline-none bg-transparent placeholder:text-gray-300 resize-none min-h-[60px]"
                   placeholder="请输入注销原因，我们将用于优化体验"
                   rows={3}
                   value={reason}
                   onChange={(e) => setReason(e.target.value)}
                   disabled={loading}
                 />
-              </label>
+              </div>
 
               {error && (
-                <p className="text-xs text-red-500" role="alert">
+                <p className="mt-4 text-sm text-red-500" role="alert">
                   {error}
                 </p>
               )}

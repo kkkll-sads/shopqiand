@@ -520,14 +520,15 @@ export interface MyCollectionItem {
     [key: string]: any;
 }
 
-export async function getMyCollection(params: { page?: number; type?: string; token?: string } = {}): Promise<ApiResponse<{ list: MyCollectionItem[], total: number, has_more?: boolean }>> {
+export async function getMyCollection(params: { page?: number; limit?: number; type?: string; token?: string } = {}): Promise<ApiResponse<{ list: MyCollectionItem[], total: number, has_more?: boolean, consignment_coupon?: number }>> {
     const token = params.token || localStorage.getItem(AUTH_TOKEN_KEY) || '';
     const search = new URLSearchParams();
     if (params.page) search.set('page', String(params.page));
+    if (params.limit) search.set('limit', String(params.limit));
     if (params.type) search.set('type', params.type);
 
     const path = `${API_ENDPOINTS.collectionItem.purchaseRecords}?${search.toString()}`;
-    return authedFetch<{ list: MyCollectionItem[], total: number, has_more?: boolean }>(path, {
+    return authedFetch<{ list: MyCollectionItem[], total: number, has_more?: boolean, consignment_coupon?: number }>(path, {
         method: 'GET',
         token,
     });

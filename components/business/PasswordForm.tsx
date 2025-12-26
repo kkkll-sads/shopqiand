@@ -407,7 +407,7 @@ const PasswordForm: React.FC<PasswordFormProps> = ({
                     {(currentType === 'reset_login' || currentType === 'reset_pay') && onNavigateForgotPassword && (
                         <button
                             type="button"
-                            className="absolute right-0 text-sm text-orange-600 font-semibold active:opacity-70"
+                            className="absolute right-0 text-sm text-orange-600 font-medium active:opacity-70"
                             onClick={() => {
                                 if (currentType === 'reset_pay') {
                                     setCurrentType('reset_pay_sms');
@@ -429,147 +429,144 @@ const PasswordForm: React.FC<PasswordFormProps> = ({
             </header>
 
             {/* 表单内容 */}
-            <main className="px-4 pt-6 max-w-lg mx-auto">
-                <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-                    {currentType === 'reset_pay' && (
-                        <div className="mb-6 rounded-xl bg-orange-50 border border-orange-100 p-4">
-                            <div className="flex gap-3">
-                                <div className="text-orange-500 mt-0.5">
-                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                        <path d="M12 22C17.5 22 22 17.5 22 12C22 6.5 17.5 2 12 2C6.5 2 2 6.5 2 12C2 17.5 6.5 22 12 22Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                                        <path d="M12 8V13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                                        <path d="M11.9945 16H12.0035" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                                    </svg>
-                                </div>
-                                <p className="text-sm text-orange-700 leading-relaxed">
-                                    支持通过短信验证码重置交易密码；若忘记旧支付密码，请点击右上角“短信重置”。
-                                </p>
+            <main className="pt-2">
+                {currentType === 'reset_pay' && (
+                    <div className="mx-4 mb-4 rounded-xl bg-orange-50 p-4">
+                        <div className="flex gap-3">
+                            <div className="text-orange-500 mt-0.5">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M12 22C17.5 22 22 17.5 22 12C22 6.5 17.5 2 12 2C6.5 2 2 6.5 2 12C2 17.5 6.5 22 12 22Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                                    <path d="M12 8V13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                                    <path d="M11.9945 16H12.0035" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                </svg>
+                            </div>
+                            <p className="text-sm text-orange-700 leading-relaxed">
+                                支持通过短信验证码重置交易密码；若忘记旧支付密码，请点击右上角“短信重置”。
+                            </p>
+                        </div>
+                    </div>
+                )}
+
+                <form className="bg-white px-4" onSubmit={handleSubmit}>
+                    {/* 账号输入（找回密码场景：手机号） */}
+                    {config.showPhone && (
+                        <div className="py-4 border-b border-gray-100">
+                            <div className="text-sm text-gray-500 mb-1">账号（手机号）</div>
+                            <input
+                                type="tel"
+                                className={`w-full text-base text-gray-900 outline-none bg-transparent placeholder:text-gray-300 font-medium ${isAccountDisabled ? 'text-gray-500' : ''}`}
+                                placeholder="请输入注册时使用的手机号"
+                                value={phone}
+                                onChange={(e) => setPhone(e.target.value)}
+                                disabled={isAccountDisabled}
+                                readOnly={isAccountDisabled}
+                            />
+                        </div>
+                    )}
+
+                    {/* 验证码输入（找回密码场景） */}
+                    {config.showCode && (
+                        <div className="py-4 border-b border-gray-100">
+                            <div className="text-sm text-gray-500 mb-1">验证码</div>
+                            <div className="flex items-center gap-3">
+                                <input
+                                    type="text"
+                                    className="flex-1 text-base text-gray-900 outline-none bg-transparent placeholder:text-gray-300 font-medium"
+                                    placeholder="请输入短信验证码"
+                                    value={code}
+                                    onChange={(e) => setCode(e.target.value)}
+                                    disabled={loading}
+                                />
+                                <button
+                                    type="button"
+                                    className={`text-sm font-medium transition-opacity whitespace-nowrap ${countdown > 0 || loading
+                                        ? 'text-gray-400 cursor-not-allowed'
+                                        : 'text-orange-600 active:opacity-70'
+                                        }`}
+                                    onClick={handleSendCode}
+                                    disabled={loading || countdown > 0}
+                                >
+                                    {countdown > 0 ? `${countdown}s后重试` : '获取验证码'}
+                                </button>
                             </div>
                         </div>
                     )}
 
-                    <form className="flex flex-col gap-5" onSubmit={handleSubmit}>
-                        {/* 账号输入（找回密码场景：手机号） */}
-                        {config.showPhone && (
-                            <label className="block">
-                                <span className="mb-2 block text-sm font-semibold text-gray-900">账号（手机号）</span>
-                                <input
-                                    type="tel"
-                                    className={`w-full rounded-xl border border-gray-200 px-4 py-3.5 text-base text-gray-900 placeholder:text-gray-400 transition-all duration-200 
-                                      ${isAccountDisabled
-                                            ? 'bg-gray-100 text-gray-500 cursor-not-allowed border-gray-100'
-                                            : 'bg-gray-50/50 focus:border-orange-500 focus:bg-white focus:outline-none focus:ring-4 focus:ring-orange-500/10'
-                                        }`}
-                                    placeholder="请输入注册时使用的手机号"
-                                    value={phone}
-                                    onChange={(e) => setPhone(e.target.value)}
-                                    disabled={isAccountDisabled}
-                                    readOnly={isAccountDisabled}
-                                />
-                            </label>
-                        )}
-
-                        {/* 验证码输入（找回密码场景） */}
-                        {config.showCode && (
-                            <div className="block">
-                                <span className="mb-2 block text-sm font-semibold text-gray-900">验证码</span>
-                                <div className="flex items-center gap-3">
-                                    <input
-                                        type="text"
-                                        className="flex-1 rounded-xl border border-gray-200 bg-gray-50/50 px-4 py-3.5 text-base text-gray-900 placeholder:text-gray-400 focus:border-orange-500 focus:bg-white focus:outline-none focus:ring-4 focus:ring-orange-500/10 transition-all duration-200"
-                                        placeholder="请输入短信验证码"
-                                        value={code}
-                                        onChange={(e) => setCode(e.target.value)}
-                                        disabled={loading}
-                                    />
-                                    <button
-                                        type="button"
-                                        className={`rounded-xl px-4 py-3.5 text-sm font-semibold transition-all duration-200 shadow-sm whitespace-nowrap ${countdown > 0
-                                                ? 'bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200'
-                                                : 'bg-orange-50 text-orange-600 hover:bg-orange-100 border border-orange-100 active:scale-95'
-                                            }`}
-                                        onClick={handleSendCode}
-                                        disabled={loading || countdown > 0}
-                                    >
-                                        {countdown > 0 ? `${countdown}s 后重试` : '获取验证码'}
-                                    </button>
-                                </div>
-                            </div>
-                        )}
-
-                        {/* 旧密码输入 */}
-                        {config.oldLabel && (
-                            <label className="block">
-                                <span className="mb-2 block text-sm font-semibold text-gray-900">{config.oldLabel}</span>
-                                <input
-                                    type="password"
-                                    className="w-full rounded-xl border border-gray-200 bg-gray-50/50 px-4 py-3.5 text-base text-gray-900 placeholder:text-gray-400 focus:border-orange-500 focus:bg-white focus:outline-none focus:ring-4 focus:ring-orange-500/10 transition-all duration-200"
-                                    placeholder={config.oldPlaceholder}
-                                    value={oldPassword}
-                                    onChange={(e) => setOldPassword(e.target.value)}
-                                    disabled={loading}
-                                />
-                            </label>
-                        )}
-
-                        {/* 新密码输入 */}
-                        <label className="block">
-                            <span className="mb-2 block text-sm font-semibold text-gray-900">{config.newLabel}</span>
+                    {/* 旧密码输入 */}
+                    {config.oldLabel && (
+                        <div className="py-4 border-b border-gray-100">
+                            <div className="text-sm text-gray-500 mb-1">{config.oldLabel}</div>
                             <input
                                 type="password"
-                                className="w-full rounded-xl border border-gray-200 bg-gray-50/50 px-4 py-3.5 text-base text-gray-900 placeholder:text-gray-400 focus:border-orange-500 focus:bg-white focus:outline-none focus:ring-4 focus:ring-orange-500/10 transition-all duration-200"
-                                placeholder={config.newPlaceholder}
-                                value={newPassword}
-                                onChange={(e) => setNewPassword(e.target.value)}
+                                className="w-full text-base text-gray-900 outline-none bg-transparent placeholder:text-gray-300 font-medium"
+                                placeholder={config.oldPlaceholder}
+                                value={oldPassword}
+                                onChange={(e) => setOldPassword(e.target.value)}
                                 disabled={loading}
                             />
-                        </label>
+                        </div>
+                    )}
 
-                        {/* 确认新密码输入 */}
-                        {config.confirmLabel && (
-                            <label className="block">
-                                <span className="mb-2 block text-sm font-semibold text-gray-900">{config.confirmLabel}</span>
-                                <input
-                                    type="password"
-                                    className="w-full rounded-xl border border-gray-200 bg-gray-50/50 px-4 py-3.5 text-base text-gray-900 placeholder:text-gray-400 focus:border-orange-500 focus:bg-white focus:outline-none focus:ring-4 focus:ring-orange-500/10 transition-all duration-200"
-                                    placeholder={config.confirmPlaceholder}
-                                    value={confirmPassword}
-                                    onChange={(e) => setConfirmPassword(e.target.value)}
-                                    disabled={loading}
-                                />
-                            </label>
-                        )}
-
-                        {/* 错误提示 */}
-                        {error && (
-                            <div className="rounded-lg bg-red-50 p-3 flex items-start gap-2 animate-in fade-in slide-in-from-top-1">
-                                <div className="text-red-500 mt-0.5">
-                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                        <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" />
-                                        <path d="M12 8V12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-                                        <path d="M12 16H12.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-                                    </svg>
-                                </div>
-                                <p className="text-sm text-red-600 font-medium">
-                                    {error}
-                                </p>
-                            </div>
-                        )}
-
-                        {/* 提交按钮 */}
-                        <button
-                            type="submit"
-                            className="mt-4 w-full rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 py-3.5 text-base font-bold text-white shadow-lg shadow-orange-500/20 active:scale-[0.98] active:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none transition-all duration-200"
+                    {/* 新密码输入 */}
+                    <div className="py-4 border-b border-gray-100">
+                        <div className="text-sm text-gray-500 mb-1">{config.newLabel}</div>
+                        <input
+                            type="password"
+                            className="w-full text-base text-gray-900 outline-none bg-transparent placeholder:text-gray-300 font-medium"
+                            placeholder={config.newPlaceholder}
+                            value={newPassword}
+                            onChange={(e) => setNewPassword(e.target.value)}
                             disabled={loading}
-                        >
-                            {loading ? (
-                                <span className="flex items-center justify-center gap-2">
-                                    <LoadingSpinner size="sm" color="white" />
-                                    <span>处理中...</span>
-                                </span>
-                            ) : config.submitText}
-                        </button>
-                    </form>
+                        />
+                    </div>
+
+                    {/* 确认新密码输入 */}
+                    {config.confirmLabel && (
+                        <div className="py-4 border-b border-gray-100">
+                            <div className="text-sm text-gray-500 mb-1">{config.confirmLabel}</div>
+                            <input
+                                type="password"
+                                className="w-full text-base text-gray-900 outline-none bg-transparent placeholder:text-gray-300 font-medium"
+                                placeholder={config.confirmPlaceholder}
+                                value={confirmPassword}
+                                onChange={(e) => setConfirmPassword(e.target.value)}
+                                disabled={loading}
+                            />
+                        </div>
+                    )}
+                </form>
+
+                <div className="px-4 mt-6">
+                    {/* 错误提示 */}
+                    {error && (
+                        <div className="mb-4 rounded-lg bg-red-50 p-3 flex items-start gap-2">
+                            <div className="text-red-500 mt-0.5">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" />
+                                    <path d="M12 8V12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                                    <path d="M12 16H12.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                                </svg>
+                            </div>
+                            <p className="text-sm text-red-600 font-medium">
+                                {error}
+                            </p>
+                        </div>
+                    )}
+
+                    {/* 提交按钮 */}
+                    <button
+                        type="submit"
+                        onClick={handleSubmit}
+                        className="w-full rounded-full bg-gradient-to-r from-orange-500 to-orange-600 py-3.5 text-base font-bold text-white shadow-lg shadow-orange-500/20 active:scale-[0.98] active:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none transition-all duration-200"
+                        disabled={loading}
+                    >
+                        {loading ? (
+                            <span className="flex items-center justify-center gap-2">
+                                <LoadingSpinner size="sm" color="white" />
+                                <span>处理中...</span>
+                            </span>
+                        ) : config.submitText}
+                    </button>
                 </div>
             </main>
         </div>
