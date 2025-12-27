@@ -31,6 +31,7 @@ import RealNameAuth from './pages/user/RealNameAuth';
 import Settings from './pages/user/Settings';
 import AgentAuth from './pages/user/AgentAuth';
 import MyFriends from './pages/user/MyFriends';
+import FriendDetail from './pages/user/FriendDetail';
 import InviteFriends from './pages/user/InviteFriends';
 import AccountDeletion from './pages/user/AccountDeletion';
 import UserSurvey from './pages/user/UserSurvey';
@@ -606,6 +607,17 @@ const AppContent: React.FC = () => {
         }
         return <AnnouncementDetail newsItem={newsItem} onBack={() => navigateRoute(null)} />;
       }
+    }
+
+    // Handle Friend Detail Page
+    if (currentRoute?.name === 'friend-detail') {
+      return (
+        <FriendDetail
+          id={currentRoute.id}
+          friend={currentRoute.friend}
+          onBack={() => navigateRoute(null)}
+        />
+      );
     }
 
     // Handle Artist Detail Page: "artist-detail:ID"

@@ -9,7 +9,7 @@
 
 
 import React, { useState, useEffect } from 'react';
-import { ChevronLeft, XCircle, User, Lock, Smartphone, CreditCard, ShieldCheck, Check } from 'lucide-react';
+import { ChevronLeft, XCircle, User, Lock, Smartphone, CreditCard, ShieldCheck, Check, Eye, EyeOff } from 'lucide-react';
 import { register, RegisterParams } from '../../services/api';
 import { sendSmsCode } from '../../services/common';
 import { isValidPhone } from '../../utils/validation';
@@ -53,6 +53,10 @@ const Register: React.FC<RegisterProps> = ({
   const [agreed, setAgreed] = useState(false);
   const [loading, setLoading] = useState(false);
   const [countdown, setCountdown] = useState(0);
+
+  // Password visibility states
+  const [showPassword, setShowPassword] = useState(false);
+  const [showPayPassword, setShowPayPassword] = useState(false);
 
   // 组件加载时从URL参数中读取邀请码
   useEffect(() => {
@@ -225,28 +229,43 @@ const Register: React.FC<RegisterProps> = ({
           />
         </div>
 
+
         {/* 登录密码 */}
         <div className="bg-white rounded-lg flex items-center px-4 py-3 shadow-sm">
           <Lock className="text-gray-500 mr-3" size={20} />
           <input
-            type="password"
+            type={showPassword ? "text" : "password"}
             placeholder="设置登录密码"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             className="flex-1 text-base outline-none placeholder-gray-400 bg-transparent text-gray-800"
           />
+          <button
+            type="button"
+            onClick={() => setShowPassword(!showPassword)}
+            className="ml-2 text-gray-400 focus:outline-none"
+          >
+            {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+          </button>
         </div>
 
         {/* 支付密码 */}
         <div className="bg-white rounded-lg flex items-center px-4 py-3 shadow-sm">
           <CreditCard className="text-gray-500 mr-3" size={20} />
           <input
-            type="password"
+            type={showPayPassword ? "text" : "password"}
             placeholder="设置支付密码 (6位数字)"
             value={payPassword}
             onChange={(e) => setPayPassword(e.target.value)}
             className="flex-1 text-base outline-none placeholder-gray-400 bg-transparent text-gray-800"
           />
+          <button
+            type="button"
+            onClick={() => setShowPayPassword(!showPayPassword)}
+            className="ml-2 text-gray-400 focus:outline-none"
+          >
+            {showPayPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+          </button>
         </div>
 
         {/* 验证码 */}

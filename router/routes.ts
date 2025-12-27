@@ -4,6 +4,8 @@
  * 将散落的字符串路由统一收敛为 Route 对象，提供编码/解码与类型辅助。
  */
 
+import { TeamMember } from '../types';
+
 // Route 主体定义（不含 back 字段，避免递归定义）
 export type RoutePayload =
   // 基础/静态页面
@@ -62,7 +64,8 @@ export type RoutePayload =
   | { name: 'my-collection-detail'; id: string }
   | { name: 'my-collection-consignment'; id: string }
   | { name: 'claim-history' }
-  | { name: 'claim-detail'; id: string };
+  | { name: 'claim-detail'; id: string }
+  | { name: 'friend-detail'; id: string; friend?: TeamMember };
 
 // 导航过程中可携带 back，类型安全的回退路径
 export type Route = RoutePayload & { back?: RoutePayload | null };
@@ -135,6 +138,8 @@ export function encodeRoute(r: RoutePayload): string {
       return `my-collection-detail:${r.id}`;
     case 'my-collection-consignment':
       return `my-collection-action:consignment:${r.id}`;
+    case 'friend-detail':
+      return `friend-detail:${r.id}`;
     default:
       return r.name;
   }
@@ -207,6 +212,8 @@ export function decodeRoute(s: string): RoutePayload {
         return { name: 'my-collection-consignment', id: parts[2] || '' };
       }
       return { name: 'my-collection' };
+    case 'friend-detail':
+      return { name: 'friend-detail', id: parts[1] || '' };
     case 'service-center':
       switch (parts[1]) {
         case 'settings':

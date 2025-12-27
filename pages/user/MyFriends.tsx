@@ -163,7 +163,10 @@ const MyFriends: React.FC<MyFriendsProps> = ({ onBack, onNavigate }) => {
                     加入时间: {formatDate(friend.join_time, friend.join_date)}
                   </div>
                 </div>
-                <button className="text-xs bg-gray-100 text-gray-600 px-3 py-1.5 rounded-full">
+                <button
+                  onClick={() => onNavigate?.({ name: 'friend-detail', id: String(friend.id), friend })}
+                  className="text-xs bg-gray-100 text-gray-600 px-3 py-1.5 rounded-full"
+                >
                   查看
                 </button>
               </div>
