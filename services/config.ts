@@ -208,6 +208,8 @@ export const API_ENDPOINTS = {
         sales: '/shopProduct/sales',
         /** 最新商品列表 */
         latest: '/shopProduct/latest',
+        /** 商品分享信息 */
+        share: '/shopProduct/share',
     },
     shopOrder: {
         /** 创建订单 */

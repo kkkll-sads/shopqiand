@@ -26,6 +26,8 @@ export {
     fetchShopProductCategories,
     fetchShopProductsBySales,
     fetchShopProductsByLatest,
+    fetchShopProductShare,
+    type ShopProductShareData,
     // 订单类型
     type ShopOrderItemDetail,
     type ShopOrderItem,

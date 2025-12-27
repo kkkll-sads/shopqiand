@@ -98,6 +98,31 @@ export async function fetchShopProductsByLatest(params: FetchShopProductsParams 
     });
 }
 
+
+export interface ShopProductShareData {
+    product: {
+        id: number;
+        name: string;
+        thumbnail: string;
+        price: number;
+        score_price: number;
+        purchase_type: string;
+        category: string;
+    };
+    share_url: string;
+    share_title: string;
+    share_desc: string;
+    share_image: string;
+    share_code: string;
+}
+
+export async function fetchShopProductShare(id: number | string): Promise<ApiResponse<ShopProductShareData>> {
+    const path = `${API_ENDPOINTS.shopProduct.share}?id=${id}`;
+    return authedFetch<ShopProductShareData>(path, {
+        method: 'GET',
+    });
+}
+
 // ============================================================================
 // 订单相关接口
 // ============================================================================
