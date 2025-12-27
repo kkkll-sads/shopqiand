@@ -409,7 +409,7 @@ const MessageCenter: React.FC<MessageCenterProps> = ({ onBack, onNavigate }) => 
         unreadCount > 0 ? (
           <button
             onClick={handleMarkAllAsRead}
-            className="text-sm text-blue-600 active:opacity-70"
+            className="text-sm text-gray-600 active:opacity-70 font-medium"
           >
             全部已读
           </button>
@@ -418,14 +418,15 @@ const MessageCenter: React.FC<MessageCenterProps> = ({ onBack, onNavigate }) => 
     >
       <div className="p-4">
         {/* 统计卡片 */}
-        <div className="bg-gradient-to-br from-blue-400 to-blue-600 rounded-2xl p-6 text-white shadow-lg mb-6 relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-white opacity-5 rounded-full -translate-y-1/2 translate-x-1/2"></div>
+        <div className="bg-gradient-to-br from-[#FF884D] to-[#FF5500] rounded-2xl p-6 text-white shadow-lg mb-6 relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-white opacity-10 rounded-full -translate-y-1/2 translate-x-1/2 blur-2xl"></div>
+          <div className="absolute bottom-0 left-0 w-24 h-24 bg-orange-300 opacity-20 rounded-full translate-y-1/2 -translate-x-1/4 blur-xl"></div>
           <div className="relative z-10">
             <div className="flex items-center gap-2 mb-2">
-              <MessageSquare size={24} />
-              <div className="text-sm opacity-90">我的消息</div>
+              <MessageSquare size={24} className="opacity-90" />
+              <div className="text-sm opacity-90 font-medium">我的消息</div>
             </div>
-            <div className="text-4xl font-bold mb-2">{unreadCount}</div>
+            <div className="text-4xl font-bold mb-2 font-[DINAlternate-Bold,Roboto,sans-serif]">{unreadCount}</div>
             <div className="text-sm opacity-80">
               {unreadCount > 0 ? '条未读消息' : '暂无未读消息'}
             </div>
@@ -433,26 +434,26 @@ const MessageCenter: React.FC<MessageCenterProps> = ({ onBack, onNavigate }) => 
         </div>
 
         {/* 标签切换 */}
-        <div className="flex bg-white rounded-xl p-1 mb-4 shadow-sm">
+        <div className="flex bg-gray-100 rounded-xl p-1 mb-4">
           <button
             onClick={() => setActiveTab('all')}
-            className={`flex-1 py-2 text-sm font-medium rounded-lg transition-colors ${activeTab === 'all'
-              ? 'bg-blue-100 text-blue-600'
-              : 'text-gray-500'
+            className={`flex-1 py-2 text-sm font-medium rounded-lg transition-all ${activeTab === 'all'
+              ? 'bg-white text-orange-600 shadow-sm'
+              : 'text-gray-500 hover:text-gray-600'
               }`}
           >
             全部消息
           </button>
           <button
             onClick={() => setActiveTab('unread')}
-            className={`flex-1 py-2 text-sm font-medium rounded-lg transition-colors relative ${activeTab === 'unread'
-              ? 'bg-blue-100 text-blue-600'
-              : 'text-gray-500'
+            className={`flex-1 py-2 text-sm font-medium rounded-lg transition-all relative ${activeTab === 'unread'
+              ? 'bg-white text-orange-600 shadow-sm'
+              : 'text-gray-500 hover:text-gray-600'
               }`}
           >
             未读消息
             {unreadCount > 0 && (
-              <span className="absolute top-1 right-4 w-2 h-2 bg-red-500 rounded-full"></span>
+              <span className="absolute top-1.5 right-4 w-2 h-2 bg-red-500 rounded-full"></span>
             )}
           </button>
         </div>
@@ -477,10 +478,13 @@ const MessageCenter: React.FC<MessageCenterProps> = ({ onBack, onNavigate }) => 
             {filteredMessages.map((message) => (
               <div
                 key={message.id}
-                className={`bg-white rounded-xl p-4 shadow-sm cursor-pointer active:bg-gray-50 transition-colors ${!message.isRead ? 'border-l-4 border-blue-500' : ''
+                className={`bg-white rounded-xl p-4 shadow-sm cursor-pointer active:bg-gray-50 transition-colors relative overflow-hidden ${!message.isRead ? 'bg-orange-50/30' : ''
                   }`}
                 onClick={() => handleMessageClick(message)}
               >
+                {!message.isRead && (
+                  <div className="absolute left-0 top-0 bottom-0 w-1 bg-red-500"></div>
+                )}
                 <div className="flex items-start gap-3">
                   <div
                     className={`w-10 h-10 rounded-full ${message.bgColor} flex items-center justify-center flex-shrink-0`}
@@ -489,14 +493,14 @@ const MessageCenter: React.FC<MessageCenterProps> = ({ onBack, onNavigate }) => 
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between mb-1">
-                      <div className="text-sm font-medium text-gray-800">
+                      <div className={`text-sm font-medium ${!message.isRead ? 'text-gray-900 font-bold' : 'text-gray-700'}`}>
                         {message.title}
                       </div>
                       {!message.isRead && (
-                        <div className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0 mt-1.5"></div>
+                        <div className="w-2 h-2 bg-red-500 rounded-full flex-shrink-0 mt-1.5"></div>
                       )}
                     </div>
-                    <div className="text-xs text-gray-600 mb-2 line-clamp-2">
+                    <div className="text-xs text-gray-600 mb-2 line-clamp-2 leading-relaxed">
                       {message.content}
                     </div>
                     <div className="flex items-center justify-between">
