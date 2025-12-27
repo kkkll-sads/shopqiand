@@ -533,7 +533,7 @@ const SignIn: React.FC<SignInProps> = ({ onBack, onNavigate }) => {
                                     <div className="w-24 shrink-0 flex justify-center">
                                         <span className="text-xs px-2 py-0.5 rounded-md w-full text-center font-medium block bg-purple-100 text-purple-600">邀请好友奖励</span>
                                     </div>
-                                    <p className="text-sm text-gray-600 flex-1 leading-relaxed">邀请好友注册可获得 <span className="text-red-500 font-bold">2.00 - 2.00</span> 元随机金额奖励</p>
+                                    <p className="text-sm text-gray-600 flex-1 leading-relaxed">邀请好友注册可获得 <span className="text-red-500 font-bold">1.5 元 - 2.0 元 / 人</span></p>
                                 </div>
                                 <div className="flex items-start gap-3 bg-gray-50 rounded-lg p-3">
                                     <div className="w-24 shrink-0 flex justify-center">
