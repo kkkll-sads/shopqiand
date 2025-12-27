@@ -3,6 +3,7 @@ import { Trash2, ArrowRight, ChevronLeft } from 'lucide-react';
 import { EmptyState } from '../../components/common';
 import { NewsItem } from '../../types';
 import { STORAGE_KEYS } from '../../constants/storageKeys';
+import { formatTime } from '../../utils/format';
 
 interface NewsProps {
   newsList: NewsItem[];
@@ -116,7 +117,7 @@ const News: React.FC<NewsProps> = ({ newsList, onNavigate, onMarkAllRead, onBack
               {item.isUnread && (
                 <div className="absolute top-4 right-4 w-2 h-2 bg-red-500 rounded-full ring-4 ring-white" />
               )}
-              <div className="text-xs text-gray-400 mb-3">{item.date}</div>
+              <div className="text-xs text-gray-400 mb-3">{formatTime(item.date, 'YYYY-MM-DD HH:mm')}</div>
               <h3 className="text-sm text-gray-800 font-medium leading-relaxed mb-4 pr-4">
                 {item.title}
               </h3>

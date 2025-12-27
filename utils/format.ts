@@ -37,6 +37,11 @@ export const formatTime = (
         // 如果是10位数字，认为是秒级时间戳，需要转换为毫秒
         const ts = timestamp < 10000000000 ? timestamp * 1000 : timestamp;
         date = new Date(ts);
+    } else if (typeof timestamp === 'string' && /^\d+$/.test(timestamp)) {
+        // 如果是纯数字字符串，也作为时间戳处理
+        const num = parseInt(timestamp, 10);
+        const ts = num < 10000000000 ? num * 1000 : num;
+        date = new Date(ts);
     } else {
         date = new Date(timestamp);
     }
