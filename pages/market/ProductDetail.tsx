@@ -404,7 +404,13 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, onNaviga
                   {txHash ? (
                     <div className="bg-black/30 p-2 rounded text-green-400 break-all">{txHash}</div>
                   ) : (
-                    <div className="text-gray-500">暂无上链交易哈希</div>
+                    <div className="flex items-center gap-2 text-amber-600 bg-amber-50 p-2 rounded border border-amber-100">
+                      <div className="relative w-4 h-4 flex items-center justify-center">
+                        <div className="absolute inset-0 border-2 border-transparent border-t-amber-500 rounded-full animate-[spin_1.5s_linear_infinite]"></div>
+                        <div className="absolute inset-1 border-2 border-transparent border-b-amber-300 rounded-full animate-[spin_2s_linear_infinite_reverse]"></div>
+                      </div>
+                      <span className="text-xs font-bold animate-pulse">⛓️ 链上节点正在算力撮合中...</span>
+                    </div>
                   )}
                 </div>
                 {supplierName && (
