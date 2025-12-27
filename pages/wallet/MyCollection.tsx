@@ -735,6 +735,16 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onBack, onItemSelect, initi
             {item.order_no && (
               <div className="text-xs text-gray-400 mb-1">订单号: {item.order_no}</div>
             )}
+            {item.asset_code && (
+              <div className="text-xs text-gray-400 mb-1 truncate" title={item.asset_code}>
+                确权编号: {item.asset_code}
+              </div>
+            )}
+            {item.fingerprint && (
+              <div className="text-xs text-gray-400 mb-1 truncate" title={item.fingerprint}>
+                存证指纹: {item.fingerprint.length > 20 ? `${item.fingerprint.substring(0, 10)}...${item.fingerprint.substring(item.fingerprint.length - 10)}` : item.fingerprint}
+              </div>
+            )}
             <div className="text-xs text-gray-500 mb-2">购买时间: {item.pay_time_text || item.buy_time_text}</div>
             <div className="text-sm font-bold text-gray-900 mb-2">¥ {item.price}</div>
 

@@ -519,6 +519,10 @@ export interface MyCollectionItem {
     consignment_status_text: string;
     user_collection_id?: number | string;
     original_record?: any;
+    /** 确权编号（防伪溯源） */
+    asset_code?: string;
+    /** MD5存证指纹（唯一性验证） */
+    fingerprint?: string;
     [key: string]: any;
 }
 
@@ -561,7 +565,7 @@ export interface CollectionItemDetail {
 export async function queryCollectionByCode(params: QueryByCodeParams): Promise<ApiResponse<CollectionItemDetail>> {
     const search = new URLSearchParams();
     search.set('code', params.code);
-    
+
     const path = `${API_ENDPOINTS.collectionItem.queryByCode}?${search.toString()}`;
     return authedFetch<CollectionItemDetail>(path, { method: 'GET' });
 }
