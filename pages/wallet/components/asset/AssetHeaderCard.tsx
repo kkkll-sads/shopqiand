@@ -14,6 +14,7 @@ interface AssetHeaderCardProps {
 // 余额类型与公告标题的映射
 const BALANCE_HELP_TITLES: Record<string, string> = {
   'supply_chain_fund': '供应链专项金',
+  'total_assets': '总资产',
   'withdrawable_income': '可调度收益',
   'green_power': '绿色算力',
   'consumer_points': '消费金',
