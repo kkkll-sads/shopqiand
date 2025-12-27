@@ -29,9 +29,10 @@ const CoinsIcon = ({ size, className }: { size: number, className: string }) => 
 
 interface ProfileProps {
   onNavigate: (path: string) => void;
+  unreadCount?: number;
 }
 
-const Profile: React.FC<ProfileProps> = ({ onNavigate }) => {
+const Profile: React.FC<ProfileProps> = ({ onNavigate, unreadCount = 0 }) => {
   const [userInfo, setUserInfo] = useState<UserInfo | null>(() => {
     try {
       const cached = localStorage.getItem(USER_INFO_KEY);
@@ -184,7 +185,12 @@ const Profile: React.FC<ProfileProps> = ({ onNavigate }) => {
             </div>
           </div>
           <div className="flex gap-4">
-            <button onClick={() => onNavigate('service-center:message')} className="text-gray-600 hover:text-gray-900 transition-colors"><MessageSquare size={22} /></button>
+            <button onClick={() => onNavigate('service-center:message')} className="text-gray-600 hover:text-gray-900 transition-colors relative">
+              <MessageSquare size={22} />
+              {unreadCount > 0 && (
+                <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white box-content"></span>
+              )}
+            </button>
             <button onClick={() => onNavigate('service-center:settings')} className="text-gray-600 hover:text-gray-900 transition-colors"><Settings size={22} /></button>
           </div>
         </div>

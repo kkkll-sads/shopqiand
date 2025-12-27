@@ -665,7 +665,7 @@ const AppContent: React.FC = () => {
       case 'orders':
         return <OrdersEntry onNavigate={(route) => navigateRoute(route)} />;
       case 'profile':
-        return <ProfileEntry onNavigate={(route) => navigateRoute(route)} />;
+        return <ProfileEntry onNavigate={(route) => navigateRoute(route)} unreadCount={newsList.filter(n => n.isUnread).length} />;
       default:
         return (
           <HomeEntry

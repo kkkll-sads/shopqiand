@@ -85,11 +85,18 @@ const MessageCenter: React.FC<MessageCenterProps> = ({ onBack, onNavigate }) => 
             fetchAnnouncements({ page: 1, limit: 10, type: 'important' }),
           ]);
 
+          // 读取全局的新闻已读状态
+          const storedNewsReadIds = localStorage.getItem(STORAGE_KEYS.READ_NEWS_IDS_KEY);
+          const newsReadIds: string[] = storedNewsReadIds ? JSON.parse(storedNewsReadIds) : [];
+
           // 处理平台公告
           if (announcementRes.code === 1 && announcementRes.data?.list) {
             announcementRes.data.list.forEach((item: AnnouncementItem) => {
               const id = `announcement-${item.id}`;
               const timestamp = item.createtime ? new Date(item.createtime).getTime() : Date.now();
+              // 优先使用全局的新闻已读状态判断
+              const isRead = newsReadIds.includes(String(item.id));
+
               allMessages.push({
                 id,
                 type: 'notice',
@@ -97,7 +104,7 @@ const MessageCenter: React.FC<MessageCenterProps> = ({ onBack, onNavigate }) => 
                 content: item.title || '',
                 time: item.createtime || '',
                 timestamp,
-                isRead: readIds.includes(id),
+                isRead: isRead,
                 icon: AlertCircle,
                 color: 'text-red-600',
                 bgColor: 'bg-red-50',
@@ -111,6 +118,9 @@ const MessageCenter: React.FC<MessageCenterProps> = ({ onBack, onNavigate }) => 
             dynamicRes.data.list.forEach((item: AnnouncementItem) => {
               const id = `dynamic-${item.id}`;
               const timestamp = item.createtime ? new Date(item.createtime).getTime() : Date.now();
+              // 优先使用全局的新闻已读状态判断
+              const isRead = newsReadIds.includes(String(item.id));
+
               allMessages.push({
                 id,
                 type: 'activity',
@@ -118,7 +128,7 @@ const MessageCenter: React.FC<MessageCenterProps> = ({ onBack, onNavigate }) => 
                 content: item.title || '',
                 time: item.createtime || '',
                 timestamp,
-                isRead: readIds.includes(id),
+                isRead: isRead,
                 icon: Info,
                 color: 'text-orange-600',
                 bgColor: 'bg-orange-50',
@@ -342,10 +352,29 @@ const MessageCenter: React.FC<MessageCenterProps> = ({ onBack, onNavigate }) => 
     ? messages.filter(m => !m.isRead)
     : messages;
 
-  const handleMarkAsRead = (id: string) => {
+  const handleMarkAsRead = (id: string, message?: MessageItem) => {
     setMessages(prev => {
       const updated = prev.map(msg => msg.id === id ? { ...msg, isRead: true } : msg);
-      // 更新本地存储
+
+      const targetMsg = message || prev.find(m => m.id === id);
+
+      // 如果是公告或动态，更新全局新闻已读状态
+      if (targetMsg && (targetMsg.type === 'notice' || targetMsg.type === 'activity') && targetMsg.sourceId) {
+        try {
+          const storedNewsReadIds = localStorage.getItem(STORAGE_KEYS.READ_NEWS_IDS_KEY);
+          const currentNewsIds: string[] = storedNewsReadIds ? JSON.parse(storedNewsReadIds) : [];
+          const newsId = String(targetMsg.sourceId);
+
+          if (!currentNewsIds.includes(newsId)) {
+            const newIds = [...currentNewsIds, newsId];
+            localStorage.setItem(STORAGE_KEYS.READ_NEWS_IDS_KEY, JSON.stringify(newIds));
+          }
+        } catch (e) {
+          console.error('保存新闻已读状态失败', e);
+        }
+      }
+
+      // 更新消息中心本地已读ID（用于其他类消息）
       const readIds = getReadMessageIds();
       if (!readIds.includes(id)) {
         saveReadMessageIds([...readIds, id]);
@@ -357,9 +386,31 @@ const MessageCenter: React.FC<MessageCenterProps> = ({ onBack, onNavigate }) => 
   const handleMarkAllAsRead = () => {
     setMessages(prev => {
       const updated = prev.map(msg => ({ ...msg, isRead: true }));
-      // 更新本地存储
+
+      // 1. 更新普通消息已读列表
       const allIds = updated.map(msg => msg.id);
       saveReadMessageIds(allIds);
+
+      // 2. 更新全局新闻已读列表
+      try {
+        const storedNewsReadIds = localStorage.getItem(STORAGE_KEYS.READ_NEWS_IDS_KEY);
+        const currentNewsIds: string[] = storedNewsReadIds ? JSON.parse(storedNewsReadIds) : [];
+
+        const newNewsIds = [...currentNewsIds];
+        updated.forEach(msg => {
+          if ((msg.type === 'notice' || msg.type === 'activity') && msg.sourceId) {
+            const newsId = String(msg.sourceId);
+            if (!newNewsIds.includes(newsId)) {
+              newNewsIds.push(newsId);
+            }
+          }
+        });
+
+        localStorage.setItem(STORAGE_KEYS.READ_NEWS_IDS_KEY, JSON.stringify(newNewsIds));
+      } catch (e) {
+        console.error('批量保存新闻已读状态失败', e);
+      }
+
       return updated;
     });
   };
