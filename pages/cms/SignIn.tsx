@@ -512,7 +512,11 @@ const SignIn: React.FC<SignInProps> = ({ onBack, onNavigate }) => {
                                         {rule.title}
                                     </span>
                                 </div>
-                                <p className="text-sm text-gray-600 flex-1 leading-relaxed">{rule.description}</p>
+                                <p className="text-sm text-gray-600 flex-1 leading-relaxed">
+                                    {rule.key === 'invite_reward'
+                                        ? <>邀请好友注册可获得 <span className="text-red-500 font-bold">1.5 - 2.0 元随机金额奖励</span></>
+                                        : rule.description}
+                                </p>
                             </div>
                         ))}
                         {!activityInfo?.rules && (
