@@ -16,6 +16,7 @@ import {
 import { getStoredToken } from '../../services/client';
 import { Route } from '../../router/routes';
 import { useNotification } from '../../context/NotificationContext';
+import { AUTH_TOKEN_KEY } from '../../constants/storageKeys';
 
 interface SignInProps {
     onBack: () => void;
@@ -237,6 +238,10 @@ const SignIn: React.FC<SignInProps> = ({ onBack, onNavigate }) => {
         }
         if (!payPassword) {
             setWithdrawError('请输入支付密码');
+            return;
+        }
+        if (!/^\d{6}$/.test(payPassword)) {
+            setWithdrawError('支付密码必须为6位数字');
             return;
         }
 

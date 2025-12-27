@@ -100,15 +100,17 @@ export interface FetchAnnouncementsParams {
     limit?: number;
     type?: string;
     title?: string;
+    is_popup?: number;  // 是否弹窗：1=弹窗公告，0=普通公告
 }
 
 export async function fetchAnnouncements(params: FetchAnnouncementsParams = {}): Promise<ApiResponse<AnnouncementListData>> {
-    const { page, limit, type = 'normal', title } = params;
+    const { page, limit, type = 'normal', title, is_popup } = params;
     const search = new URLSearchParams();
     if (page !== undefined) search.set('page', String(page));
     if (limit !== undefined) search.set('limit', String(limit));
     if (type) search.set('type', type);
     if (title) search.set('title', title);
+    if (is_popup !== undefined) search.set('is_popup', String(is_popup));
 
     const path = `${API_ENDPOINTS.announcement.list}?${search.toString()}`;
     return apiFetch<AnnouncementListData>(path, {

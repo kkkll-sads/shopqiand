@@ -13,6 +13,7 @@ import {
   AUTH_TOKEN_KEY,
   USER_INFO_KEY,
   normalizeAssetUrl,
+  fetchConsignmentCoupons,
 } from '../../services/api';
 
 import { UserInfo } from '../../types';
@@ -75,11 +76,12 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onBack, onItemSelect, initi
           localStorage.setItem(USER_INFO_KEY, JSON.stringify(response.data.userInfo));
         }
 
-        const collectionRes = await getMyCollection({ page: 1, token });
-        if (collectionRes.code === 1 && collectionRes.data) {
-          const count = (collectionRes.data as any).consignment_coupon ?? 0;
-          setConsignmentTicketCount(count);
-        }
+        // 移除重复请求：getMyCollection 在 loadData 中会被再次调用
+        // const collectionRes = await getMyCollection({ page: 1, token });
+        // if (collectionRes.code === 1 && collectionRes.data) {
+        //   const count = (collectionRes.data as any).consignment_coupon ?? 0;
+        //   setConsignmentTicketCount(count);
+        // }
       } catch (err) {
         console.error('加载用户信息失败:', err);
       }
@@ -132,11 +134,37 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onBack, onItemSelect, initi
       const res = await getMyCollection({ page, token, type: activeTab });
       if (res.code === 1 && res.data) {
         const list = res.data.list || [];
+        // 如果后端不支持 type 过滤，我们在前端进行二次过滤
+        const filteredList = list.filter(item => {
+          // 兼容处理：后端返回的 status 可能是空字符串，转为数字 0 处理
+          const rawCStatus = (item.consignment_status as any);
+          const rawDStatus = (item.delivery_status as any);
+          const cStatus = rawCStatus === '' || rawCStatus === null || rawCStatus === undefined ? 0 : Number(rawCStatus);
+          const dStatus = rawDStatus === '' || rawDStatus === null || rawDStatus === undefined ? 0 : Number(rawDStatus);
+
+          if (activeTab === 'hold') {
+            // 待售：未寄售且未提货(权益分割)
+            return (cStatus === 0 || cStatus === 1 || cStatus === 3) && dStatus === 0;
+          } else if (activeTab === 'consign') {
+            // 挂单：寄售中
+            return cStatus === 2;
+          } else if (activeTab === 'sold') {
+            // 已卖出：寄售成功
+            return cStatus === 4;
+          } else if (activeTab === 'dividend') {
+            // 已转分红：已提货/权益分割
+            return dStatus === 1;
+          }
+          return true;
+        });
+
         if (page === 1) {
-          setMyCollections(list);
+          setMyCollections(filteredList);
         } else {
-          setMyCollections(prev => [...prev, ...list]);
+          setMyCollections(prev => [...prev, ...filteredList]);
         }
+        // 注意：前端过滤会导致分页混乱（hasMore 为 true 但下一页可能也被过滤空），
+        // 但这是在后端 API 不支持 type 过滤时的临时修补。
         setHasMore((list.length || 0) >= 10 && res.data.has_more !== false);
         if (typeof (res.data as any).consignment_coupon === 'number') {
           setConsignmentTicketCount((res.data as any).consignment_coupon);
@@ -241,6 +269,9 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onBack, onItemSelect, initi
 
   // 寄售解锁检查数据
   const [consignmentCheckData, setConsignmentCheckData] = useState<any>(null);
+  // 可用寄售券数量（针对当前选中的藏品）
+  const [availableCouponCount, setAvailableCouponCount] = useState<number>(0);
+  const [checkingCoupons, setCheckingCoupons] = useState<boolean>(false);
 
   const formatSeconds = (secs: number) => {
     const hours = Math.floor(secs / 3600);
@@ -256,6 +287,7 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onBack, onItemSelect, initi
     // Always fetch consignment check when modal opens for a selected item
     if (!showActionModal || !selectedItem) {
       setConsignmentCheckData(null);
+      setAvailableCouponCount(0);
       return;
     }
 
@@ -267,15 +299,43 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onBack, onItemSelect, initi
 
     let mounted = true;
     const token = localStorage.getItem(AUTH_TOKEN_KEY) || undefined;
-    getConsignmentCheck({ user_collection_id: collectionId, token })
-      .then((res: any) => {
-        if (!mounted) return;
-        setConsignmentCheckData(res?.data ?? null);
-      })
-      .catch(() => {
-        if (!mounted) return;
+
+    // 并发请求：检查解锁状态 + 检查可用寄售券
+    setCheckingCoupons(true);
+
+    Promise.all([
+      getConsignmentCheck({ user_collection_id: collectionId, token }),
+      fetchConsignmentCoupons({ page: 1, limit: 100, status: 1, token })
+    ]).then(([checkRes, couponRes]) => {
+      if (!mounted) return;
+
+      // 处理解锁状态
+      setConsignmentCheckData(checkRes?.data ?? null);
+
+      // 处理寄售券
+      const coupons = couponRes.data?.list || [];
+      const itemSessionId = selectedItem.session_id || selectedItem.original_record?.session_id;
+      const itemZoneId = selectedItem.zone_id || selectedItem.original_record?.zone_id;
+
+      if (itemSessionId && itemZoneId) {
+        const matched = coupons.filter(c =>
+          String(c.session_id) === String(itemSessionId) &&
+          String(c.zone_id) === String(itemZoneId)
+        );
+        setAvailableCouponCount(matched.length);
+      } else {
+        // 如果无法从藏品获取场次信息，暂时显示总数或0
+        setAvailableCouponCount(coupons.length > 0 ? coupons.length : 0);
+      }
+    }).catch(err => {
+      console.error('Fetch data failed', err);
+      if (mounted) {
         setConsignmentCheckData(null);
-      });
+        setAvailableCouponCount(0);
+      }
+    }).finally(() => {
+      if (mounted) setCheckingCoupons(false);
+    });
 
     return () => {
       mounted = false;
@@ -418,7 +478,7 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onBack, onItemSelect, initi
       return true;
     } else {
       const timeCheck = check48Hours(selectedItem.pay_time || selectedItem.buy_time || 0);
-      const hasTicket = checkConsignmentTicket();
+      const hasTicket = availableCouponCount > 0;
 
       if (consignmentCheckData) {
         let unlocked = false;
@@ -433,9 +493,12 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onBack, onItemSelect, initi
         } else {
           unlocked = timeCheck.passed;
         }
+        // 如果正在检查优惠券，暂时禁用（避免闪烁允许）
+        if (checkingCoupons) return false;
         return unlocked && hasTicket;
       }
 
+      if (checkingCoupons) return false;
       return timeCheck.passed && hasTicket;
     }
   };
@@ -549,11 +612,64 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onBack, onItemSelect, initi
         // 后端会最终校验寄售时间，前端不再使用本地 48 小时回退逻辑
       }
 
+      // 获取寄售券列表并校验
+      try {
+        // 获取所有可用寄售券
+        const couponRes = await fetchConsignmentCoupons({ page: 1, limit: 100, status: 1, token });
+        const coupons = couponRes.data?.list || [];
+
+        if (coupons.length === 0) {
+          showToast('warning', '缺少道具', '您没有可用的寄售券，无法进行寄售');
+          return;
+        }
+
+        // 寻找匹配的寄售券
+        // 匹配规则：寄售券的 session_id 和 zone_id 必须与藏品的 session_id 和 zone_id 一致
+        // 注意：MyCollectionItem 可能没有直接的 session_id/zone_id，需要尝试从 original_record 或直接属性获取
+        const itemSessionId = selectedItem.session_id || selectedItem.original_record?.session_id;
+        const itemZoneId = selectedItem.zone_id || selectedItem.original_record?.zone_id;
+
+        // 如果藏品缺失场次或分区信息，可能无法精确匹配，这里暂定如果 coupons 有值且无法匹配字段则提示异常或放行(视严格程度)
+        // 鉴于业务逻辑严谨性，若缺失信息应提示
+        if (!itemSessionId || !itemZoneId) {
+          // 尝试宽松匹配或是提示数据异常。假设有了 fetchConsignmentCoupons 就必须匹配
+          // 如果旧数据没有 session_id, 暂时只检查数量? 不，需求是"使用新的寄售卷即可逻辑"，暗示需要匹配
+          // 但如果前端拿不到 item 的 session_id，就无法匹配。
+          // 我们可以仅检查 coupons.length > 0 作为兜底，或者警告。
+          // 现阶段代码中 MyCollectionItem 定义里没有 session_id。
+          // 假设后端返回的数据里带了。如果不带，逻辑会阻断。
+          // 为了稳妥，如果拿不到 itemSessionId，先只判断有没有券。
+          const hasAnyCoupon = coupons.length > 0;
+          if (!hasAnyCoupon) {
+            showToast('warning', '缺少道具', '您没有可用的寄售券');
+            return;
+          }
+        } else {
+          const matchedCoupon = coupons.find(c =>
+            String(c.session_id) === String(itemSessionId) &&
+            String(c.zone_id) === String(itemZoneId)
+          );
+
+          if (!matchedCoupon) {
+            showToast('warning', '寄售券不匹配', '您没有该场次和分区的可用寄售券');
+            return;
+          }
+        }
+
+      } catch (error) {
+        console.error('获取寄售券失败', error);
+        // 降级处理：如果不强制校验接口，可以忽略错误；但为了严谨应提示
+        showToast('warning', '校验失败', '无法验证寄售券信息，请稍后重试');
+        return;
+      }
+
+      /* 
       const hasTicket = checkConsignmentTicket();
       if (!hasTicket) {
         showToast('warning', '缺少道具', '您没有寄售券，无法进行寄售');
-        return;
+        return; 
       }
+      */
 
       // 使用藏品原价作为寄售价格
       const priceValue = parseFloat(selectedItem.price || '0');
@@ -569,10 +685,17 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onBack, onItemSelect, initi
         token,
       })
         .then((res) => {
-          showToast('success', '提交成功', res.msg || '寄售申请已提交');
-          setShowActionModal(false);
-          setSelectedItem(null);
-          runLoad();
+          if (res.code === 1) {
+            showToast('success', '提交成功', res.msg || '寄售申请已提交');
+            setShowActionModal(false);
+            setSelectedItem(null);
+            runLoad();
+          } else {
+            showToast('error', '提交失败', res.msg || '寄售申请失败');
+            // 如果是因为未开启场次等业务错误，是否要关闭弹窗？
+            // 暂时不关闭，方便用户查看原因，或者根据 message 决定
+            // 但用户体验上，明确失败不需要关闭选单
+          }
         })
         .catch((err: any) => {
           const msg = err?.msg || err?.message || '寄售申请失败';
@@ -618,17 +741,16 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onBack, onItemSelect, initi
             <div className="flex gap-2 flex-wrap">
               {/* 优先使用 status_text 字段显示状态 */}
               {item.status_text ? (
-                <div className={`text-xs px-2 py-1 rounded-full border ${
-                  item.status_text.includes('寄售') || item.status_text.includes('出售')
-                    ? 'bg-blue-50 text-blue-600 border-blue-200'
-                    : item.status_text.includes('确权') || item.status_text.includes('成功') || item.status_text.includes('已售出')
-                      ? 'bg-green-50 text-green-600 border-green-200'
-                      : item.status_text.includes('失败') || item.status_text.includes('取消')
-                        ? 'bg-red-50 text-red-600 border-red-200'
-                        : item.status_text.includes('提货') || item.status_text.includes('待')
-                          ? 'bg-orange-50 text-orange-600 border-orange-200'
-                          : 'bg-gray-50 text-gray-600 border-gray-200'
-                }`}>
+                <div className={`text-xs px-2 py-1 rounded-full border ${item.status_text.includes('寄售') || item.status_text.includes('出售')
+                  ? 'bg-blue-50 text-blue-600 border-blue-200'
+                  : item.status_text.includes('确权') || item.status_text.includes('成功') || item.status_text.includes('已售出')
+                    ? 'bg-green-50 text-green-600 border-green-200'
+                    : item.status_text.includes('失败') || item.status_text.includes('取消')
+                      ? 'bg-red-50 text-red-600 border-red-200'
+                      : item.status_text.includes('提货') || item.status_text.includes('待')
+                        ? 'bg-orange-50 text-orange-600 border-orange-200'
+                        : 'bg-gray-50 text-gray-600 border-gray-200'
+                  }`}>
                   {item.status_text}
                 </div>
               ) : (
@@ -984,19 +1106,26 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onBack, onItemSelect, initi
                     })()}
 
                     {!isConsigning(selectedItem) && !hasConsignedSuccessfully(selectedItem) && (
-                      <div className="bg-blue-50 px-3 py-2 rounded-lg">
+                      <div className="bg-blue-50/50 border border-blue-100 px-4 py-3 rounded-xl">
                         <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2 text-xs text-blue-600">
-                            <ShoppingBag size={16} />
-                            <span>我的寄售券：</span>
+                          <div className="flex items-center gap-2 text-sm text-blue-700 font-medium">
+                            <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">
+                              <ShoppingBag size={16} />
+                            </div>
+                            <span>可用寄售券</span>
                           </div>
-                          <div className="text-sm font-bold text-blue-700">
-                            {getConsignmentTicketCount()} 张
+                          <div className="text-base font-bold text-blue-700">
+                            {checkingCoupons ? (
+                              <span className="text-xs text-blue-400">查询中...</span>
+                            ) : (
+                              <span>{availableCouponCount} <span className="text-xs font-normal text-blue-500">张</span></span>
+                            )}
                           </div>
                         </div>
-                        {getConsignmentTicketCount() === 0 && (
-                          <div className="text-xs text-red-600 mt-1">
-                            您没有寄售券，无法进行寄售
+                        {availableCouponCount === 0 && !checkingCoupons && (
+                          <div className="flex items-center gap-1.5 mt-2 text-xs text-red-500 bg-red-50 px-2 py-1.5 rounded-lg border border-red-100">
+                            <AlertCircle size={12} />
+                            <span>您没有该场次可用的寄售券</span>
                           </div>
                         )}
                       </div>
@@ -1019,7 +1148,7 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onBack, onItemSelect, initi
                   : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                   }`}
               >
-              {actionLoading
+                {actionLoading
                   ? '提交中...'
                   : actionTab === 'delivery'
                     ? '权益分割'

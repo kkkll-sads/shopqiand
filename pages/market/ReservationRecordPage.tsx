@@ -121,20 +121,29 @@ const ReservationRecordPage: React.FC<ReservationRecordPageProps> = ({ onBack, o
         }
     };
 
-    // Format timestamp to date string
-    const formatTime = (timestamp: number | string | undefined) => {
-        if (!timestamp) return '';
-        // If string and looks like seconds (10 digits), multiply by 1000
-        // If number and small (seconds), multiply by 1000
+    // Format time - 后端返回的时间字段已是格式化字符串，直接使用
+    // 如果是数字时间戳（如公告的 createtime），则需要转换
+    const formatTime = (time: number | string | undefined) => {
+        if (!time) return '';
+
+        // 如果已经是格式化好的日期字符串（包含"-"或"/"），直接返回
+        if (typeof time === 'string' && (time.includes('-') || time.includes('/'))) {
+            return time;
+        }
+
+        // 数字时间戳处理
         let timeMs = 0;
-        if (typeof timestamp === 'string') {
-            const parsed = parseInt(timestamp);
+        if (typeof time === 'string') {
+            const parsed = parseInt(time);
+            if (isNaN(parsed)) return time; // 无法解析，直接返回原始值
             timeMs = parsed < 10000000000 ? parsed * 1000 : parsed;
         } else {
-            timeMs = timestamp < 10000000000 ? timestamp * 1000 : timestamp;
+            timeMs = time < 10000000000 ? time * 1000 : time;
         }
 
         const date = new Date(timeMs);
+        if (isNaN(date.getTime())) return String(time); // 无效日期，返回原始值
+
         return date.toLocaleString('zh-CN', {
             year: 'numeric',
             month: '2-digit',
@@ -245,16 +254,11 @@ const ReservationRecordPage: React.FC<ReservationRecordPageProps> = ({ onBack, o
                     </div>
                 ) : (
                     records.map(record => (
-                        <div key={record.id} className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-                            {/* Header: Status & ID */}
+                        <div key={record.id} className="bg-white rounded-xl p-5 shadow-lg border border-gray-100 mb-4 hover:shadow-xl transition-shadow duration-200">
+                            {/* Header: Status & Time */}
                             <div className="flex justify-between items-start mb-3 pb-3 border-b border-gray-50">
-                                <div>
-                                    <div className="flex items-center gap-2 mb-1">
-                                        <span className="text-xs text-gray-400 font-mono">预约ID: {record.id}</span>
-                                    </div>
-                                    <div className="text-[10px] text-gray-400">
-                                        {record.create_time_str || formatTime(record.create_time)}
-                                    </div>
+                                <div className="text-xs text-gray-400">
+                                    {record.create_time || ''}
                                 </div>
                                 {getStatusBadge(record)}
                             </div>
@@ -273,11 +277,7 @@ const ReservationRecordPage: React.FC<ReservationRecordPageProps> = ({ onBack, o
                                         <span>场次时间: {record.session_start_time || '--:--'} - {record.session_end_time || '--:--'}</span>
                                     </div>
                                 )}
-                                {(record.zone_min_price !== undefined || record.zone_max_price !== undefined) && (
-                                    <div className="text-xs text-gray-400 mt-1">
-                                        价格区间: ¥{record.zone_min_price ?? 0} - ¥{record.zone_max_price ?? 0}
-                                    </div>
-                                )}
+
                             </div>
 
                             {/* Stats Grid */}
@@ -302,7 +302,7 @@ const ReservationRecordPage: React.FC<ReservationRecordPageProps> = ({ onBack, o
                             <div className="flex justify-between items-center text-xs">
                                 <div className="text-gray-400">
                                     {record.status === 0 && record.session_end_time && `预计 ${record.session_end_time} 结束撮合`}
-                                    {record.status === 1 && record.match_time && `撮合时间: ${formatTime(record.match_time)}`}
+                                    {record.status === 1 && record.match_time && `撮合时间: ${record.match_time}`}
                                     {record.status === 2 && '未中签，冻结金额已退回'}
                                 </div>
 

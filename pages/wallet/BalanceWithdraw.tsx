@@ -99,6 +99,10 @@ const BalanceWithdraw: React.FC<BalanceWithdrawProps> = ({ onBack, onNavigate })
       setSubmitError('请输入支付密码');
       return;
     }
+    if (!/^\d{6}$/.test(payPassword)) {
+      setSubmitError('支付密码必须为6位数字');
+      return;
+    }
     setSubmitting(true);
     setSubmitError(null);
     try {

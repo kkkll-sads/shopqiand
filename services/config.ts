@@ -154,6 +154,7 @@ export const API_ENDPOINTS = {
         agentReviewStatus: '/User/agentReviewStatus',
         submitAgentReview: '/User/submitAgentReview',
         getH5AuthToken: '/User/getH5AuthToken',
+        consignmentCoupons: '/user/consignmentCoupons',
     },
     yidun: {
         livePersonCheck: '/YidunOcr/livePersonCheck',

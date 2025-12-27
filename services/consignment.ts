@@ -8,10 +8,65 @@
  */
 
 import { ApiResponse } from './networking';
-import { API_ENDPOINTS } from './config';
+import { API_ENDPOINTS, AUTH_TOKEN_KEY } from './config';
 // 统一的带 token 请求封装，避免重复从 localStorage 取值
 import { authedFetch } from './client';
 import type { ShopOrderItem } from './shop';
+
+// ============================================================================
+// 寄售券相关
+// ============================================================================
+
+/**
+ * 寄售券项目接口
+ * 对应后端表结构: ba_user_consignment_coupon
+ */
+export interface ConsignmentCouponItem {
+    id: number;                   // 主键
+    user_id: number;              // 用户ID
+    session_id: number;           // 绑定场次ID
+    zone_id: number;              // 绑定价格区间ID
+    price_zone: string;           // 价格区间名称 (例如: "500元区", "1000元区")
+    expire_time: number;          // 过期时间戳
+    status: number;               // 状态: 1=可用, 0=已使用
+    create_time: number;          // 创建时间戳
+    update_time: number;          // 更新时间戳
+    [key: string]: any;           // 其他额外字段
+}
+
+/**
+ * 寄售券列表返回数据接口
+ */
+export interface ConsignmentCouponListData {
+    list: ConsignmentCouponItem[]; // 寄售券列表
+    total: number;                 // 总记录数
+    has_more?: boolean;            // 是否有更多
+}
+
+/**
+ * 获取用户寄售券列表
+ * API: GET /api/user/consignmentCoupons (需后端确认实际接口路径)
+ * 
+ * @param params - 查询参数
+ * @param params.page - 页码，默认1
+ * @param params.limit - 每页数量，默认20
+ * @param params.status - 状态筛选: 1=可用, 0=已使用, 不传=全部
+ */
+export async function fetchConsignmentCoupons(params: {
+    page?: number;
+    limit?: number;
+    status?: number;
+    token?: string;
+} = {}): Promise<ApiResponse<ConsignmentCouponListData>> {
+    const search = new URLSearchParams();
+    if (params.page) search.set('page', String(params.page));
+    if (params.limit) search.set('limit', String(params.limit));
+    if (params.status !== undefined) search.set('status', String(params.status));
+
+    // 寄售券列表接口
+    const path = `${API_ENDPOINTS.user.consignmentCoupons}?${search.toString()}`;
+    return authedFetch<ConsignmentCouponListData>(path, { method: 'GET', token: params.token });
+}
 
 // ============================================================================
 // 寄售相关
@@ -265,6 +320,8 @@ export interface ConsignmentCheckData {
     unlocked?: boolean;
     remaining_seconds?: number;
     remaining_text?: string;
+    unlock_hours?: number;
+    consignment_unlock_hours?: number;
     [key: string]: any;
 }
 

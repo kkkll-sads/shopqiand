@@ -61,28 +61,23 @@ const CumulativeRights: React.FC<CumulativeRightsProps> = ({ onBack }) => {
     loadData();
   }, []);
 
-  // 计算累计收益
-  const totalIncome = userInfo
-    ? parseFloat(userInfo.static_income || '0') + parseFloat(userInfo.dynamic_income || '0')
-    : 0;
-
   // 权益数据
   const rightsData = [
     {
       icon: Award,
-      label: '累计充值',
+      label: '总资产',
       value: formatAmount(userInfo?.money || 0),
       color: 'text-blue-600',
       bgColor: 'bg-blue-50',
-      description: '当前可用余额',
+      description: '所有账户资产总和',
     },
     {
       icon: TrendingUp,
-      label: '累计收益',
-      value: formatAmount(totalIncome),
-      color: 'text-green-600',
-      bgColor: 'bg-green-50',
-      description: '静态收益 + 动态收益',
+      label: '专项金(可用)',
+      value: formatAmount(userInfo?.balance_available || 0),
+      color: 'text-indigo-600',
+      bgColor: 'bg-indigo-50',
+      description: '充值余额，优先购买扣除',
     },
     {
       icon: Gift,
@@ -90,20 +85,36 @@ const CumulativeRights: React.FC<CumulativeRightsProps> = ({ onBack }) => {
       value: formatAmount(userInfo?.withdrawable_money || 0),
       color: 'text-orange-600',
       bgColor: 'bg-orange-50',
-      description: '可提现的金额',
+      description: '收益/分红/奖励，可申请提现',
     },
     {
       icon: ShieldCheck,
-      label: '当前消费金',
+      label: '消费金',
       value: userInfo?.score?.toString() || '0',
       color: 'text-purple-600',
       bgColor: 'bg-purple-50',
-      description: '当前拥有的消费金',
+      description: '利润/分红转化，用于商城消费',
+    },
+    {
+      icon: TrendingUp,
+      label: '确权金',
+      value: formatAmount(userInfo?.service_fee_balance || 0),
+      color: 'text-green-600',
+      bgColor: 'bg-green-50',
+      description: '寄售手续费账户',
+    },
+    {
+      icon: Award,
+      label: '待激活金',
+      value: formatAmount(userInfo?.pending_activation_gold || 0),
+      color: 'text-yellow-600',
+      bgColor: 'bg-yellow-50',
+      description: '旧资产解锁，独立核算',
     },
   ];
 
   return (
-    <PageContainer title="累计权益" onBack={onBack}>
+    <PageContainer title="权益总览" onBack={onBack}>
       {/* 加载状态 */}
       {loading && <LoadingSpinner text="加载中..." />}
 
@@ -126,10 +137,10 @@ const CumulativeRights: React.FC<CumulativeRightsProps> = ({ onBack }) => {
             <div className="relative z-10">
               <div className="flex items-center gap-2 mb-2">
                 <ShieldCheck size={24} />
-                <div className="text-sm opacity-90">累计权益</div>
+                <div className="text-sm opacity-90">我的权益</div>
               </div>
-              <div className="text-2xl font-bold mb-4">权益总览</div>
-              <div className="text-sm opacity-80">查看您的累计权益统计信息</div>
+              <div className="text-2xl font-bold mb-4">资产全景</div>
+              <div className="text-sm opacity-80">当前所有资金账户概览</div>
             </div>
           </div>
 
@@ -137,13 +148,13 @@ const CumulativeRights: React.FC<CumulativeRightsProps> = ({ onBack }) => {
           <div className="grid grid-cols-2 gap-4 mb-6">
             {rightsData.map((item, idx) => (
               <div key={idx} className="bg-white rounded-xl p-4 shadow-sm">
-                <div className={`w-12 h-12 rounded-full ${item.bgColor} flex items-center justify-center mb-3`}>
-                  <item.icon size={24} className={item.color} />
+                <div className={`w-10 h-10 rounded-full ${item.bgColor} flex items-center justify-center mb-2`}>
+                  <item.icon size={20} className={item.color} />
                 </div>
-                <div className="text-xs text-gray-500 mb-1">{item.label}</div>
-                <div className={`text-lg font-bold ${item.color} mb-1`}>{item.value}</div>
+                <div className="text-xs text-gray-500 mb-0.5">{item.label}</div>
+                <div className={`text-lg font-bold ${item.color} mb-1 font-[DINAlternate-Bold,Roboto,sans-serif]`}>{item.value}</div>
                 {item.description && (
-                  <div className="text-xs text-gray-400">{item.description}</div>
+                  <div className="text-[10px] text-gray-400 leading-tight">{item.description}</div>
                 )}
               </div>
             ))}
@@ -152,24 +163,24 @@ const CumulativeRights: React.FC<CumulativeRightsProps> = ({ onBack }) => {
           {/* 权益说明 */}
           <div className="bg-white rounded-xl p-4 shadow-sm">
             <div className="text-sm font-bold text-gray-800 mb-3 border-l-4 border-blue-300 pl-2">
-              权益说明
+              资金说明
             </div>
             <div className="space-y-2 text-xs text-gray-600">
               <div className="flex items-start gap-2">
                 <div className="w-1.5 h-1.5 rounded-full bg-blue-500 mt-1.5 flex-shrink-0" />
-                <div>可用余额：您当前账户中可用的资金余额</div>
+                <div>总资产：显示值为所有账户（专项金+可提现+消费金+确权金）之和，仅供展示。</div>
               </div>
               <div className="flex items-start gap-2">
-                <div className="w-1.5 h-1.5 rounded-full bg-green-500 mt-1.5 flex-shrink-0" />
-                <div>累计收益：您的静态收益和动态收益的总和</div>
+                <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 mt-1.5 flex-shrink-0" />
+                <div>专项金：主要用于购买藏品，优先扣除。</div>
               </div>
               <div className="flex items-start gap-2">
                 <div className="w-1.5 h-1.5 rounded-full bg-orange-500 mt-1.5 flex-shrink-0" />
-                <div>可提现余额：您可以申请提现的金额</div>
+                <div>可提现：所有的成交回款、分红收益、现金奖励均进入此账户，可直接提现。</div>
               </div>
               <div className="flex items-start gap-2">
-                <div className="w-1.5 h-1.5 rounded-full bg-purple-500 mt-1.5 flex-shrink-0" />
-                <div>当前消费金：您当前拥有的消费金数量</div>
+                <div className="w-1.5 h-1.5 rounded-full bg-green-500 mt-1.5 flex-shrink-0" />
+                <div>确权金：用于支付寄售手续费，可由其他账户划转，不可逆。</div>
               </div>
             </div>
           </div>

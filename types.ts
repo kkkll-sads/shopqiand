@@ -81,12 +81,19 @@ export interface UserInfo {
   balance_available: string;
   service_fee_balance: string;
   withdrawable_money: string;
-  usdt: string;
-  static_income: string;
-  dynamic_income: string;
   score: number;
+
   /** 绿色算力 */
   green_power: string | number;
+  /** 待激活金 (独立核算，不计入总资产) */
+  pending_activation_gold?: number | string;
+
+  /** @deprecated 已废弃，合并至 withdrawable_money */
+  static_income?: string;
+  /** @deprecated 已废弃，与 service_fee_balance 重复 */
+  dynamic_income?: string;
+
+  usdt: string;
   last_login_time: number;
   last_login_ip: string;
   join_time: number;
@@ -99,10 +106,15 @@ export interface UserInfo {
   /** 代理商审核状态(-1=未申请,0=待审核,1=已通过,2=已拒绝) */
   agent_review_status: number;
 
-  /** 待激活确权金 */
+  /** 待激活确权金 (可能与 pending_activation_gold 是同一个，保留兼容) */
   confirm_rights_gold?: number | string;
   /** 旧资产冻结余额 (对应 PHP legacy_frozen) */
   legacy_frozen?: number | string;
+
+  /** 实名认证姓名 */
+  real_name?: string;
+  /** 实名认证状态 */
+  real_name_status?: number;
 }
 
 export interface ProfileResponse {

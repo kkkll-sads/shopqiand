@@ -1,6 +1,6 @@
+// 省略 hardcoded import
 import React, { useState, useEffect, useMemo } from 'react';
 import { X, Check } from 'lucide-react';
-import { getProvinces, getCities, getDistricts } from '../../utils/regions';
 
 interface RegionPickerProps {
     /** 是否显示 */
@@ -17,26 +17,18 @@ interface RegionPickerProps {
     initialDistrict?: string;
 }
 
-/**
- * 地区选择器组件
- * 
- * 底部弹出的滚动选择器，用于选择省份、城市和区县
- * 
- * @example
- * ```tsx
- * <RegionPicker
- *   visible={showPicker}
- *   onClose={() => setShowPicker(false)}
- *   onConfirm={(province, city, district) => {
- *     setAddress(prev => ({ ...prev, province, city, district }));
- *     setShowPicker(false);
- *   }}
- *   initialProvince={address.province}
- *   initialCity={address.city}
- *   initialDistrict={address.district}
- * />
- * ```
- */
+interface DistrictData {
+    [city: string]: string[];
+}
+
+interface ProvinceData {
+    cities: string[];
+    districts?: DistrictData;
+}
+
+// 缓存数据，避免重复请求
+let cachedRegionData: Record<string, ProvinceData> | null = null;
+
 const RegionPicker: React.FC<RegionPickerProps> = ({
     visible,
     onClose,
@@ -49,60 +41,120 @@ const RegionPicker: React.FC<RegionPickerProps> = ({
     const [animating, setAnimating] = useState(false);
     const [render, setRender] = useState(false);
 
+    // 数据加载状态
+    const [loading, setLoading] = useState(false);
+    const [regionData, setRegionData] = useState<Record<string, ProvinceData>>({});
+
     // 选择状态
     const [selectedProvince, setSelectedProvince] = useState<string>('');
     const [selectedCity, setSelectedCity] = useState<string>('');
     const [selectedDistrict, setSelectedDistrict] = useState<string>('');
 
-    // 数据源
-    const provinces = useMemo(() => getProvinces(), []);
-    const cities = useMemo(() => getCities(selectedProvince), [selectedProvince]);
-    const districts = useMemo(() => getDistricts(selectedProvince, selectedCity), [selectedProvince, selectedCity]);
+    // 加载数据
+    useEffect(() => {
+        const loadData = async () => {
+            if (cachedRegionData) {
+                setRegionData(cachedRegionData);
+                return;
+            }
 
-    // 处理显示/隐藏动画
+            setLoading(true);
+            try {
+                // 加载本地 JSON 数据
+                const response = await fetch('/data/pca-code.json');
+                if (!response.ok) throw new Error('Failed to load region data');
+                const data = await response.json();
+                cachedRegionData = data;
+                setRegionData(data);
+            } catch (error) {
+                console.error('Error loading region data:', error);
+                // 可以在这里添加 fallback 数据或错误提示
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        loadData();
+    }, []);
+
+    // 计算衍生数据
+    const provinces = useMemo(() => Object.keys(regionData), [regionData]);
+
+    const cities = useMemo(() => {
+        if (!selectedProvince || !regionData[selectedProvince]) return [];
+        return regionData[selectedProvince].cities || [];
+    }, [selectedProvince, regionData]);
+
+    const districts = useMemo(() => {
+        if (!selectedProvince || !selectedCity || !regionData[selectedProvince]) return [];
+        const provinceInfo = regionData[selectedProvince];
+        if (!provinceInfo.districts) return [];
+        return provinceInfo.districts[selectedCity] || [];
+    }, [selectedProvince, selectedCity, regionData]);
+
+    // 处理显示/隐藏动画及初始化
     useEffect(() => {
         if (visible) {
             setRender(true);
-            // 下一帧开始动画
             requestAnimationFrame(() => setAnimating(true));
 
-            // 初始化选中状态
-            if (initialProvince && provinces.includes(initialProvince)) {
-                setSelectedProvince(initialProvince);
-                const availableCities = getCities(initialProvince);
-                if (initialCity && availableCities.includes(initialCity)) {
-                    setSelectedCity(initialCity);
-                    const availableDistricts = getDistricts(initialProvince, initialCity);
-                    if (initialDistrict && availableDistricts.includes(initialDistrict)) {
-                        setSelectedDistrict(initialDistrict);
-                    } else if (availableDistricts.length > 0) {
-                        setSelectedDistrict(availableDistricts[0]);
-                    } else {
-                        setSelectedDistrict('');
-                    }
-                } else if (availableCities.length > 0) {
-                    setSelectedCity(availableCities[0]);
-                    const firstDistricts = getDistricts(initialProvince, availableCities[0]);
-                    setSelectedDistrict(firstDistricts.length > 0 ? firstDistricts[0] : '');
-                }
-            } else if (provinces.length > 0) {
-                // 默认选中第一个
-                const firstProvince = provinces[0];
-                setSelectedProvince(firstProvince);
-                const firstCities = getCities(firstProvince);
-                if (firstCities.length > 0) {
-                    setSelectedCity(firstCities[0]);
-                    const firstDistricts = getDistricts(firstProvince, firstCities[0]);
-                    setSelectedDistrict(firstDistricts.length > 0 ? firstDistricts[0] : '');
-                }
+            // 如果数据已加载，进行初始化选中
+            if (Object.keys(regionData).length > 0) {
+                initSelection();
             }
         } else {
             setAnimating(false);
-            // 动画结束后移除 DOM
             const timer = setTimeout(() => setRender(false), 300);
             return () => clearTimeout(timer);
         }
-    }, [visible, initialProvince, initialCity, initialDistrict, provinces]);
+    }, [visible, regionData]); // 添加 regionData 依赖，确保数据加载后能初始化
+
+    // 初始化选中逻辑抽离
+    const initSelection = () => {
+        // 如果已经有选中值且在新的打开行为中我们想保留，可以不重置。
+        // 但通常 region picker 每次打开可能希望回显 initialProps。
+
+        // 只有当当前没有有效选中 或者 需要强制回显 initial 时执行
+        // 这里简单处理：优先回显 initial
+
+        const validProvinces = Object.keys(regionData);
+        if (validProvinces.length === 0) return;
+
+        if (initialProvince && validProvinces.includes(initialProvince)) {
+            setSelectedProvince(initialProvince);
+
+            const availableCities = regionData[initialProvince]?.cities || [];
+            if (initialCity && availableCities.includes(initialCity)) {
+                setSelectedCity(initialCity);
+
+                const availableDistricts = regionData[initialProvince]?.districts?.[initialCity] || [];
+                if (initialDistrict && availableDistricts.includes(initialDistrict)) {
+                    setSelectedDistrict(initialDistrict);
+                } else if (availableDistricts.length > 0) {
+                    setSelectedDistrict(availableDistricts[0]);
+                } else {
+                    setSelectedDistrict('');
+                }
+            } else if (availableCities.length > 0) {
+                setSelectedCity(availableCities[0]);
+                // 级联选择第一个区
+                const firstDistricts = regionData[initialProvince]?.districts?.[availableCities[0]] || [];
+                setSelectedDistrict(firstDistricts.length > 0 ? firstDistricts[0] : '');
+            }
+        } else {
+            // 默认选中第一个
+            const firstProvince = validProvinces[0];
+            setSelectedProvince(firstProvince);
+            const firstCities = regionData[firstProvince]?.cities || [];
+            if (firstCities.length > 0) {
+                setSelectedCity(firstCities[0]);
+                const firstDistricts = regionData[firstProvince]?.districts?.[firstCities[0]] || [];
+                setSelectedDistrict(firstDistricts.length > 0 ? firstDistricts[0] : '');
+            }
+        }
+    };
+
+    // 如果 visible 且数据刚加载完，也尝试初始化 (在 useEffect [visible, regionData] 中处理了)
 
     // 处理省份变化
     const handleProvinceSelect = (province: string) => {
@@ -110,10 +162,11 @@ const RegionPicker: React.FC<RegionPickerProps> = ({
 
         setSelectedProvince(province);
         // 自动选中第一个城市
-        const newCities = getCities(province);
+        const newCities = regionData[province]?.cities || [];
         if (newCities.length > 0) {
-            setSelectedCity(newCities[0]);
-            const newDistricts = getDistricts(province, newCities[0]);
+            const firstCity = newCities[0];
+            setSelectedCity(firstCity);
+            const newDistricts = regionData[province]?.districts?.[firstCity] || [];
             setSelectedDistrict(newDistricts.length > 0 ? newDistricts[0] : '');
         } else {
             setSelectedCity('');
@@ -127,9 +180,10 @@ const RegionPicker: React.FC<RegionPickerProps> = ({
 
         setSelectedCity(city);
         // 自动选中第一个区县
-        const newDistricts = getDistricts(selectedProvince, city);
+        const newDistricts = regionData[selectedProvince]?.districts?.[city] || [];
         setSelectedDistrict(newDistricts.length > 0 ? newDistricts[0] : '');
     };
+
 
     // 处理点击确认
     const handleConfirm = () => {

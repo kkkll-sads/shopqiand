@@ -42,7 +42,7 @@ const ServiceRecharge: React.FC<ServiceRechargeProps> = ({ onBack }) => {
     try {
       const response = await rechargeServiceFee({
         amount: Number(amount),
-        source: payType === 'withdraw' ? 'withdrawable_money' : undefined,
+        source: payType === 'withdraw' ? 'withdrawable_money' : 'balance_available',
         token,
       });
 
@@ -68,7 +68,7 @@ const ServiceRecharge: React.FC<ServiceRechargeProps> = ({ onBack }) => {
   };
 
   const currentBalance = payType === 'money'
-    ? Number(userInfo?.balance_available || 0)
+    ? Number(userInfo?.money || 0)
     : Number(userInfo?.withdrawable_money || 0);
 
   return (
@@ -137,8 +137,8 @@ const ServiceRecharge: React.FC<ServiceRechargeProps> = ({ onBack }) => {
                 <Wallet size={20} />
               </div>
               <div>
-                <div className="font-bold text-gray-900">可用余额支付</div>
-                <div className="text-xs text-gray-500 mt-0.5">可用: ¥ {userInfo?.balance_available || '0.00'}</div>
+                <div className="font-bold text-gray-900">专项金支付</div>
+                <div className="text-xs text-gray-500 mt-0.5">可用: ¥ {formatAmount(userInfo?.money)}</div>
               </div>
             </div>
             <div className={`w-5 h-5 rounded-full border flex items-center justify-center ${payType === 'money' ? 'border-orange-500 bg-orange-500' : 'border-gray-300'}`}>
@@ -157,7 +157,7 @@ const ServiceRecharge: React.FC<ServiceRechargeProps> = ({ onBack }) => {
               </div>
               <div>
                 <div className="font-bold text-gray-900">提现余额支付</div>
-                <div className="text-xs text-gray-500 mt-0.5">可用: ¥ {userInfo?.withdrawable_money || '0.00'}</div>
+                <div className="text-xs text-gray-500 mt-0.5">可用: ¥ {formatAmount(userInfo?.withdrawable_money)}</div>
               </div>
             </div>
             <div className={`w-5 h-5 rounded-full border flex items-center justify-center ${payType === 'withdraw' ? 'border-orange-500 bg-orange-500' : 'border-gray-300'}`}>

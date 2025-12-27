@@ -56,6 +56,7 @@ export interface CollectionItem {
     artist?: string;      // 艺术家/创作者
     description?: string; // 商品描述
     price_zone?: string;  // 价格分区 (例如: "500元区", "1000元区")
+    package_name?: string; // 资产包名称
     [key: string]: any;   // 其他额外字段
 }
 
@@ -76,6 +77,7 @@ export interface CollectionItemDetailData {
     supplier_name?: string; // 供应方名称
     tx_hash?: string;        // 上链交易哈希
     asset_code?: string;     // 资产编码
+    type?: string;           // 详情类型：market（市场）/ my（我的）
     [key: string]: any;   // 其他额外字段
 }
 

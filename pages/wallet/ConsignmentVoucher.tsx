@@ -9,10 +9,11 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { Receipt, FileText, ShoppingBag, Clock, CheckCircle } from 'lucide-react';
+import { Receipt, FileText, ShoppingBag, Clock, Tag, Calendar } from 'lucide-react';
 import PageContainer from '../../components/layout/PageContainer';
 import { LoadingSpinner, EmptyState } from '../../components/common';
-import { AUTH_TOKEN_KEY, getMyCollection } from '../../services/api';
+import { AUTH_TOKEN_KEY } from '../../services/api';
+import { fetchConsignmentCoupons, ConsignmentCouponItem } from '../../services/consignment';
 import { formatTime } from '../../utils/format';
 
 /**
@@ -23,25 +24,13 @@ interface ConsignmentVoucherProps {
 }
 
 /**
- * 寄售券记录接口
- */
-interface VoucherRecord {
-  id: string;
-  type: 'earned' | 'used';
-  title: string;
-  time: string;
-  amount: number;
-  status: 'active' | 'used' | 'expired';
-}
-
-/**
  * ConsignmentVoucher 寄售券页面组件
  */
 const ConsignmentVoucher: React.FC<ConsignmentVoucherProps> = ({ onBack }) => {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const [voucherCount, setVoucherCount] = useState<number>(0);
-  const [records, setRecords] = useState<VoucherRecord[]>([]);
+  const [coupons, setCoupons] = useState<ConsignmentCouponItem[]>([]);
+  const [total, setTotal] = useState<number>(0);
 
   // 加载数据
   useEffect(() => {
@@ -57,35 +46,22 @@ const ConsignmentVoucher: React.FC<ConsignmentVoucherProps> = ({ onBack }) => {
       setError(null);
 
       try {
-        const response = await getMyCollection({ page: 1, limit: 1, token });
-        if (response.code === 1 && response.data) {
-          const count = response.data.consignment_coupon ?? 0;
-          setVoucherCount(count);
+        // 使用新的寄售券接口获取列表
+        const response = await fetchConsignmentCoupons({
+          page: 1,
+          limit: 50,
+          status: 1, // 只获取可用的
+          token
+        });
 
-          // 模拟记录（实际应从 API 获取）
-          const mockRecords: VoucherRecord[] = [
-            {
-              id: '1',
-              type: 'earned',
-              title: '购买商品获得',
-              time: new Date().toISOString(),
-              amount: 1,
-              status: 'active',
-            },
-            {
-              id: '2',
-              type: 'used',
-              title: '寄售商品使用',
-              time: new Date(Date.now() - 86400000).toISOString(),
-              amount: 1,
-              status: 'used',
-            },
-          ];
-          setRecords(mockRecords);
+        if (response.code === 1 && response.data) {
+          setCoupons(response.data.list || []);
+          setTotal(response.data.total || 0);
         } else {
           setError(response.msg || '获取寄售券信息失败');
         }
       } catch (err: any) {
+        console.error('Failed to load consignment coupons:', err);
         setError(err?.msg || err?.message || '获取寄售券信息失败');
       } finally {
         setLoading(false);
@@ -121,8 +97,8 @@ const ConsignmentVoucher: React.FC<ConsignmentVoucherProps> = ({ onBack }) => {
                 <Receipt size={24} />
                 <div className="text-sm opacity-90">我的寄售券</div>
               </div>
-              <div className="text-4xl font-bold mb-2">{voucherCount}</div>
-              <div className="text-sm opacity-80">可用于寄售商品</div>
+              <div className="text-4xl font-bold mb-2">{total}</div>
+              <div className="text-sm opacity-80">当前可用张数</div>
             </div>
           </div>
 
@@ -134,70 +110,75 @@ const ConsignmentVoucher: React.FC<ConsignmentVoucherProps> = ({ onBack }) => {
             <div className="space-y-2 text-xs text-gray-600">
               <div className="flex items-start gap-2">
                 <div className="w-1.5 h-1.5 rounded-full bg-orange-500 mt-1.5 flex-shrink-0" />
-                <div>寄售券可用于寄售您购买的藏品商品</div>
+                <div>寄售券绑定到<span className="font-medium text-orange-600">场次+价格区间</span>，需匹配对应场次才能使用</div>
               </div>
               <div className="flex items-start gap-2">
                 <div className="w-1.5 h-1.5 rounded-full bg-orange-500 mt-1.5 flex-shrink-0" />
-                <div>每次寄售商品需要消耗1张寄售券</div>
+                <div>可用于同一区间或相邻区间寄售（允许跨一个区间）</div>
               </div>
               <div className="flex items-start gap-2">
                 <div className="w-1.5 h-1.5 rounded-full bg-orange-500 mt-1.5 flex-shrink-0" />
-                <div>寄售券可通过购买商品、参与活动等方式获得</div>
+                <div>寄售券有效期为<span className="font-medium text-orange-600">30天</span>，过期自动失效</div>
               </div>
               <div className="flex items-start gap-2">
                 <div className="w-1.5 h-1.5 rounded-full bg-orange-500 mt-1.5 flex-shrink-0" />
-                <div>寄售商品需满足购买后48小时的条件</div>
+                <div>交易用户每次购买藏品都会获得一张寄售券</div>
+              </div>
+              <div className="flex items-start gap-2">
+                <div className="w-1.5 h-1.5 rounded-full bg-orange-500 mt-1.5 flex-shrink-0" />
+                <div>普通用户首次升级为交易用户时赠送一张寄售券</div>
+              </div>
+              <div className="flex items-start gap-2">
+                <div className="w-1.5 h-1.5 rounded-full bg-orange-500 mt-1.5 flex-shrink-0" />
+                <div>寄售时系统自动匹配可用寄售券，优先使用快过期的</div>
               </div>
             </div>
           </div>
 
-          {/* 使用记录 */}
+          {/* 券列表 */}
           <div className="bg-white rounded-xl p-4 shadow-sm">
             <div className="text-sm font-bold text-gray-800 mb-4 border-l-4 border-orange-300 pl-2">
-              使用记录
+              可用券列表
             </div>
-            {records.length === 0 ? (
+            {coupons.length === 0 ? (
               <EmptyState
                 icon={<ShoppingBag size={48} className="text-gray-300" />}
-                title="暂无使用记录"
+                title="暂无可用寄售券"
               />
             ) : (
               <div className="space-y-3">
-                {records.map((record) => (
+                {coupons.map((coupon) => (
                   <div
-                    key={record.id}
-                    className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg"
+                    key={coupon.id}
+                    className="flex flex-col p-3 bg-orange-50 border border-orange-100 rounded-lg"
                   >
-                    <div
-                      className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${record.type === 'earned' ? 'bg-green-100' : 'bg-orange-100'
-                        }`}
-                    >
-                      {record.status === 'used' ? (
-                        <CheckCircle
-                          size={20}
-                          className={record.type === 'earned' ? 'text-green-600' : 'text-orange-600'}
-                        />
-                      ) : (
-                        <Receipt
-                          size={20}
-                          className={record.type === 'earned' ? 'text-green-600' : 'text-orange-600'}
-                        />
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between mb-1">
-                        <div className="text-sm font-medium text-gray-800">{record.title}</div>
-                        <div
-                          className={`text-sm font-bold ${record.type === 'earned' ? 'text-green-600' : 'text-orange-600'
-                            }`}
-                        >
-                          {record.type === 'earned' ? '+' : '-'}
-                          {record.amount} 张
+                    <div className="flex justify-between items-start mb-2">
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 rounded-full bg-orange-100 flex items-center justify-center text-orange-600">
+                          <Tag size={16} />
+                        </div>
+                        <div>
+                          <div className="text-sm font-bold text-gray-800">
+                            {coupon.price_zone || `价格区间 ${coupon.zone_id}`}
+                          </div>
+                          <div className="text-xs text-orange-600 bg-orange-100 px-1.5 py-0.5 rounded inline-block mt-0.5">
+                            场次ID: {coupon.session_id}
+                          </div>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2 text-xs text-gray-500">
+                      <span className="text-xs font-medium px-2 py-0.5 bg-green-100 text-green-700 rounded-full">
+                        未使用
+                      </span>
+                    </div>
+
+                    <div className="border-t border-orange-100 my-2 pt-2 flex flex-col gap-1">
+                      <div className="flex items-center gap-1 text-xs text-gray-500">
                         <Clock size={12} />
-                        <span>{formatTime(record.time, 'YYYY-MM-DD HH:mm')}</span>
+                        <span>获取时间: {formatTime(coupon.create_time)}</span>
+                      </div>
+                      <div className="flex items-center gap-1 text-xs text-red-500">
+                        <Calendar size={12} />
+                        <span>过期时间: {formatTime(coupon.expire_time)}</span>
                       </div>
                     </div>
                   </div>

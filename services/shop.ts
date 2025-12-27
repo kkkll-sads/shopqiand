@@ -203,7 +203,7 @@ export async function payOrder(params: { id: number | string; token?: string }):
 export async function deleteOrder(params: { id: number | string; token?: string }): Promise<ApiResponse> {
     const token = params.token ?? getStoredToken();
     const payload = new FormData();
-    payload.append('id', String(params.id));
+    payload.append('order_id', String(params.id));
 
     return authedFetch(API_ENDPOINTS.shopOrder.delete, {
         method: 'POST', body: payload, token

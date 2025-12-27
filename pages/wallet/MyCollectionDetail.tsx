@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ChevronLeft, Share2, Copy, Shield, Fingerprint, Award, ExternalLink, ArrowRightLeft, Store } from 'lucide-react';
 import { MyCollectionItem, fetchProfile, fetchRealNameStatus, AUTH_TOKEN_KEY } from '../../services/api';
 import { UserInfo } from '../../types';
+import { useNotification } from '../../context/NotificationContext';
 import { Route } from '../../router/routes';
 
 interface MyCollectionDetailProps {
@@ -12,6 +13,7 @@ interface MyCollectionDetailProps {
 
 const MyCollectionDetail: React.FC<MyCollectionDetailProps> = ({ item, onBack, onNavigate }) => {
     const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
+    const { showToast } = useNotification();
 
     useEffect(() => {
         const loadData = async () => {
@@ -113,7 +115,14 @@ const MyCollectionDetail: React.FC<MyCollectionDetailProps> = ({ item, onBack, o
 
                             {/* Line 3: Holder */}
                             <div className="text-base font-bold text-gray-800 tracking-wide relative z-10 mb-4">
-                                持有人：{userInfo?.real_name || '未认证'}
+                                持有人：{(() => {
+                                    const name = userInfo?.real_name;
+                                    if (!name) return '未认证';
+                                    if (name.length <= 2) {
+                                        return name.charAt(0) + '*';
+                                    }
+                                    return name.charAt(0) + '*'.repeat(name.length - 2) + name.charAt(name.length - 1);
+                                })()}
                             </div>
 
                             {/* Stamp */}

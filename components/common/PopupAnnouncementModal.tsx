@@ -47,7 +47,23 @@ const PopupAnnouncementModal: React.FC<PopupAnnouncementModalProps> = ({
                         {announcement.title}
                     </h3>
                     {announcement.createtime && (
-                        <p className="text-xs text-gray-400 mt-1">{announcement.createtime}</p>
+                        <p className="text-xs text-gray-400 mt-1">
+                            {(() => {
+                                // 格式化时间戳为可读日期
+                                const timestamp = typeof announcement.createtime === 'number'
+                                    ? announcement.createtime
+                                    : parseInt(announcement.createtime, 10);
+                                if (isNaN(timestamp)) return '';
+                                // Unix时间戳是秒，JavaScript Date需要毫秒
+                                const date = new Date(timestamp * 1000);
+                                const year = date.getFullYear();
+                                const month = String(date.getMonth() + 1).padStart(2, '0');
+                                const day = String(date.getDate()).padStart(2, '0');
+                                const hours = String(date.getHours()).padStart(2, '0');
+                                const minutes = String(date.getMinutes()).padStart(2, '0');
+                                return `${year}-${month}-${day} ${hours}:${minutes}`;
+                            })()}
+                        </p>
                     )}
                 </div>
 

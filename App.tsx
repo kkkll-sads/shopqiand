@@ -246,10 +246,10 @@ const AppContent: React.FC = () => {
         console.log('[公告] 开始加载公告数据...');
         const readIds = getReadNewsIds();
 
-        // 同时请求平台公告（normal）和平台动态（important）
+        // 只请求弹窗公告（is_popup=1），同时请求平台公告（normal）和平台动态（important）类型
         const [announcementRes, dynamicRes] = await Promise.all([
-          fetchAnnouncements({ page: 1, limit: 10, type: 'normal' }),
-          fetchAnnouncements({ page: 1, limit: 10, type: 'important' }),
+          fetchAnnouncements({ page: 1, limit: 10, type: 'normal', is_popup: 1 }),
+          fetchAnnouncements({ page: 1, limit: 10, type: 'important', is_popup: 1 }),
         ]);
 
         console.log('[公告] API响应:', {

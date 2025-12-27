@@ -861,11 +861,15 @@ export async function exchangeScoreToGreenPower(params: ExchangeScoreToGreenPowe
  */
 export interface CheckOldAssetsUnlockStatusResult {
     unlock_status: number; // 0=未解锁,1=已解锁
+    unlocked_count?: number; // 已解锁次数
+    available_quota?: number; // 可用解锁资格
     unlock_conditions: {
         has_transaction: boolean; // 是否完成过交易
         transaction_count: number; // 交易次数
         direct_referrals_count: number; // 直推用户总数
         qualified_referrals: number; // 有交易记录的直推用户数
+        unlocked_count?: number; // 已解锁次数
+        available_quota?: number; // 可用解锁资格
         is_qualified: boolean; // 是否满足解锁条件
         messages: string[]; // 状态说明信息
     };
@@ -878,20 +882,17 @@ export interface CheckOldAssetsUnlockStatusResult {
  * 解锁旧资产接口返回数据
  */
 export interface UnlockOldAssetsResult {
-    unlock_status: number; // 0=条件未满足,1=成功
-    consumed_gold?: number; // 消耗的待激活金(成功时返回)
-    reward_equity_package?: number; // 获得的权益资产包价值(成功时返回)
-    reward_consignment_coupon?: number; // 获得的寄售券数量(成功时返回)
-    unlock_conditions: {
-        has_transaction: boolean; // 是否完成过交易
-        transaction_count: number; // 交易次数
-        direct_referrals_count: number; // 直推用户总数
-        qualified_referrals: number; // 有交易记录的直推用户数
-        is_qualified: boolean; // 是否满足解锁条件
-        messages: string[]; // 状态说明信息
-    };
-    required_gold: number; // 需要的待激活金
-    current_gold: number; // 当前待激活金余额
+    unlock_count?: number; // 当前解锁次数
+    consumed_gold: number; // 消耗的待激活金
+    reward_item_id?: number; // 获得的藏品ID
+    reward_item_title?: string; // 获得的藏品名称
+    reward_item_price?: number; // 藏品价值
+    user_collection_id?: number; // 用户藏品记录ID
+    reward_consignment_coupon: number; // 获得的寄售券数量
+    remaining_quota?: number; // 剩余可用解锁资格
+    unlock_conditions?: any; // 本次解锁时的条件详情
+    message?: string; // 友好提示信息
+    [key: string]: any;
 }
 
 /**

@@ -157,6 +157,7 @@ export interface AllLogItem {
     memo: string;
     createtime: number;
     type: 'balance_available' | 'withdrawable_money' | 'service_fee_balance' | 'score' | string;
+    field_type?: string;     // 精确字段类型
     before_value: number;
     after_value: number;
     remark?: string;
@@ -250,7 +251,7 @@ export async function transferBalanceToServiceFee(
 export interface RechargeServiceFeeParams {
     amount: number | string;
     remark?: string;
-    source?: 'withdrawable_money' | '';
+    source?: 'balance_available' | 'withdrawable_money' | '';
     token?: string;
 }
 

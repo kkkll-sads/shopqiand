@@ -2,7 +2,7 @@ import React from 'react';
 import { useState, useEffect } from 'react';
 import { LoadingSpinner, LazyImage } from '../../components/common';
 import { Product } from '../../types';
-import { fetchShopProductDetail, ShopProductDetailData, createOrder, fetchAddressList, AddressItem } from '../../services/api';
+import { fetchShopProductDetail, ShopProductDetailData, createOrder, buyShopOrder, fetchAddressList, AddressItem } from '../../services/api';
 import { useNotification } from '../../context/NotificationContext';
 import { AUTH_TOKEN_KEY } from '../../constants/storageKeys';
 import { Route } from '../../router/routes';
@@ -94,7 +94,7 @@ const PointsProductDetail: React.FC<PointsProductDetailProps> = ({ product, onBa
                 description: '您还没有设置收货地址，请先添加地址',
                 confirmText: '去添加',
                 cancelText: '取消',
-                    onConfirm: () => onNavigate({ name: 'address-list', back: { name: 'points-product-detail' } })
+                onConfirm: () => onNavigate({ name: 'address-list', back: { name: 'points-product-detail' } })
             });
             return;
         }
@@ -112,24 +112,21 @@ const PointsProductDetail: React.FC<PointsProductDetailProps> = ({ product, onBa
 
         try {
             setSubmitting(true);
-            // Call createOrder
-            const response = await createOrder({
+            // Call buyShopOrder instead of createOrder
+            const response = await buyShopOrder({
                 items: [{ product_id: Number(product.id), quantity: quantity }],
                 pay_type: isScoreProduct ? 'score' : 'money',
                 address_id: selectedAddress.id
             });
 
-            if (response.code === 1 && response.data) {
+            if (response.code === 1) {
                 setShowConfirmModal(false);
-                const orderId = response.data.order_id || response.data.id;
-                if (orderId) {
-                    onNavigate({ name: 'cashier', orderId: String(orderId), back: { name: 'points-product-detail' } });
-                } else {
-                    showToast('success', '下单成功', '请前往订单列表支付');
+                showToast('success', '购买成功');
+                setTimeout(() => {
                     onNavigate({ name: 'order-list', kind: 'points', status: 0, back: { name: 'points-product-detail' } });
-                }
+                }, 1500);
             } else {
-                showToast('error', '下单失败', response.msg || '操作失败');
+                showToast('error', '购买失败', response.msg || '操作失败');
             }
         } catch (err: any) {
             console.error('Create order failed', err);

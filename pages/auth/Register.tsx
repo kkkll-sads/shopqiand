@@ -107,6 +107,12 @@ const Register: React.FC<RegisterProps> = ({
       return;
     }
 
+    // 验证支付密码格式（6位数字）
+    if (!/^\d{6}$/.test(payPassword)) {
+      showToast('warning', '支付密码格式错误', '支付密码必须为6位数字');
+      return;
+    }
+
     // 使用验证工具函数验证手机号
     const phoneValidation = isValidPhone(phone);
     if (!phoneValidation.valid) {
@@ -236,7 +242,7 @@ const Register: React.FC<RegisterProps> = ({
           <CreditCard className="text-gray-500 mr-3" size={20} />
           <input
             type="password"
-            placeholder="设置支付密码"
+            placeholder="设置支付密码 (6位数字)"
             value={payPassword}
             onChange={(e) => setPayPassword(e.target.value)}
             className="flex-1 text-base outline-none placeholder-gray-400 bg-transparent text-gray-800"

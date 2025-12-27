@@ -13,6 +13,7 @@ import { UserInfo } from '../../types';
 
 import { formatAmount } from '../../utils/format';
 import { useNotification } from '../../context/NotificationContext';
+import { USER_INFO_KEY, AUTH_TOKEN_KEY } from '../../constants/storageKeys';
 
 interface ExtensionWithdrawProps {
   onBack: () => void;
@@ -129,6 +130,10 @@ const ExtensionWithdraw: React.FC<ExtensionWithdrawProps> = ({ onBack, onNavigat
   const handleConfirmWithdraw = async () => {
     if (!payPassword) {
       setSubmitError('请输入支付密码');
+      return;
+    }
+    if (!/^\d{6}$/.test(payPassword)) {
+      setSubmitError('支付密码必须为6位数字');
       return;
     }
 

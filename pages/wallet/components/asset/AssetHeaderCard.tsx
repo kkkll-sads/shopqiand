@@ -92,8 +92,8 @@ const AssetHeaderCard: React.FC<AssetHeaderCardProps> = ({ userInfo, onNavigate 
         <div className="relative z-10 p-3">
           <div className="mb-4 text-center">
             <div className="flex items-center justify-center gap-1 opacity-90 text-sm font-medium mb-1">
-              供应链专项金 (元)
-              <HelpIcon type="supply_chain_fund" />
+              总资产 (CNY)
+              <HelpIcon type="total_assets" />
             </div>
             <div className="text-3xl font-[DINAlternate-Bold,Roboto,sans-serif] font-bold tracking-tight drop-shadow-sm">
               {formatAmount(userInfo?.money)}
@@ -102,9 +102,17 @@ const AssetHeaderCard: React.FC<AssetHeaderCardProps> = ({ userInfo, onNavigate 
 
           <div className="w-full h-px bg-white/20 mb-3"></div>
 
-          <div className="grid grid-cols-3 gap-2 items-start relative">
-            <div className="absolute left-1/3 top-2 bottom-2 w-px bg-white/10"></div>
-            <div className="absolute right-1/3 top-2 bottom-2 w-px bg-white/10"></div>
+          <div className="grid grid-cols-2 gap-y-4 gap-x-2 relative mb-2">
+            {/* Row 1 */}
+            <div className="text-center border-r border-white/10">
+              <div className="text-xs text-white/80 mb-1 flex items-center justify-center">
+                供应链专项金
+                <HelpIcon type="supply_chain_fund" />
+              </div>
+              <div className="text-lg font-bold font-[DINAlternate-Bold,Roboto,sans-serif]">
+                {formatAmount(userInfo?.balance_available)}
+              </div>
+            </div>
 
             <div className="text-center">
               <div className="text-xs text-white/80 mb-1 flex items-center justify-center">
@@ -116,9 +124,20 @@ const AssetHeaderCard: React.FC<AssetHeaderCardProps> = ({ userInfo, onNavigate 
               </div>
             </div>
 
+            {/* Row 2 */}
+            <div className="text-center border-r border-white/10 border-t border-white/10 pt-3">
+              <div className="text-xs text-white/80 mb-1 flex items-center justify-center">
+                消费金
+                <HelpIcon type="consumer_points" />
+              </div>
+              <div className="text-lg font-bold font-[DINAlternate-Bold,Roboto,sans-serif]">
+                {userInfo?.score ?? 0}
+              </div>
+            </div>
+
             <button
               type="button"
-              className="text-center"
+              className="text-center border-t border-white/10 pt-3"
               onClick={() =>
                 onNavigate({ name: 'hashrate-exchange', source: 'asset-view', back: { name: 'asset-view' } })
               }
@@ -133,16 +152,6 @@ const AssetHeaderCard: React.FC<AssetHeaderCardProps> = ({ userInfo, onNavigate 
                 {userInfo?.green_power || 0} <span className="text-xs font-normal opacity-70">GHs</span>
               </div>
             </button>
-
-            <div className="text-center">
-              <div className="text-xs text-white/80 mb-1 flex items-center justify-center">
-                消费金
-                <HelpIcon type="consumer_points" />
-              </div>
-              <div className="text-lg font-bold font-[DINAlternate-Bold,Roboto,sans-serif]">
-                {userInfo?.score ?? 0}
-              </div>
-            </div>
           </div>
 
           <div className="mt-2 pt-2 flex justify-between text-xs text-white/95 border-t border-white/20 px-1 font-medium tracking-wide">
@@ -151,7 +160,7 @@ const AssetHeaderCard: React.FC<AssetHeaderCardProps> = ({ userInfo, onNavigate 
               <HelpIcon type="rights_fund" />
             </span>
             <span className="flex items-center">
-              待激活: ¥{formatAmount(userInfo?.pending_service_fee || 0)}
+              待激活: ¥{formatAmount(userInfo?.pending_activation_gold || 0)}
               <HelpIcon type="pending_activation" />
             </span>
           </div>
