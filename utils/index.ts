@@ -50,3 +50,13 @@ export {
     disableDebugLog,
     isDebugLogEnabled,
 } from './logger';
+
+// API 错误处理工具
+export {
+    getApiErrorMessage,
+    isApiSuccess,
+    isRateLimitError,
+    getErrorMessage,
+    formatRateLimitMessage,
+    handleApiError,
+} from './apiErrorHandler';

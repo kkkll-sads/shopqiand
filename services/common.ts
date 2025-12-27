@@ -125,9 +125,19 @@ export async function sendSmsCode(params: SendSmsParams, token?: string): Promis
         payload.append('password', params.password);
     }
 
-    return authedFetch(API_ENDPOINTS.sms.send, {
+    const response = await authedFetch(API_ENDPOINTS.sms.send, {
         method: 'POST',
         body: payload,
         token,
     });
+
+    // 检查返回码，code !== 1 表示失败
+    if (Number(response.code) !== 1) {
+        const error = new Error(response.msg || '发送验证码失败');
+        (error as any).msg = response.msg;
+        (error as any).code = response.code;
+        throw error;
+    }
+
+    return response;
 }

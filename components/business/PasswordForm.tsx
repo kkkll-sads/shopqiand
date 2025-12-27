@@ -29,6 +29,7 @@ import { useNotification } from '../../context/NotificationContext';
 import { clearAuthStorage } from '../../utils/storageAccess';
 import { readJSON } from '../../utils/storageAccess';
 import { STORAGE_KEYS } from '../../constants/storageKeys';
+import { handleApiError, getApiErrorMessage, isApiSuccess } from '../../utils/apiErrorHandler';
 
 /**
  * 表单类型枚举
@@ -204,7 +205,7 @@ const PasswordForm: React.FC<PasswordFormProps> = ({
                 });
             }, 1000);
         } catch (error: any) {
-            const msg = error.message || error.msg || '发送验证码失败';
+            const msg = handleApiError(error, '发送验证码失败');
             showToast('error', '发送失败', msg);
         }
     };

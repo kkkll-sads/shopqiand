@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import BottomNav from './components/BottomNav';
 import { Tab, Product, NewsItem, LoginSuccessPayload } from './types';
 import { fetchAnnouncements, AnnouncementItem, fetchProfile, fetchRealNameStatus, MyCollectionItem } from './services/api';
@@ -109,11 +109,13 @@ const AppContent: React.FC = () => {
   const [consignmentTicketCount, setConsignmentTicketCount] = useState<number>(0);
   // 新闻已读状态统一通过 hook 管理
   const { newsList, initWith: initNews, markAllRead: markAllNewsRead, markReadById } = useNewsReadState([]);
-  // 弹窗公告状态
-  const [popupAnnouncement, setPopupAnnouncement] = useState<AnnouncementItem | null>(null);
+  // 弹窗公告队列状态（支持多个弹窗依次显示）
+  const [popupQueue, setPopupQueue] = useState<AnnouncementItem[]>([]);
   const [showPopupAnnouncement, setShowPopupAnnouncement] = useState(false);
   // 待导航页面（用于登录/实名后自动跳转）
   const { pending, setPendingNav, consumePending } = usePendingNavigation();
+  // 追踪上一次的路由，用于智能刷新实名状态
+  const prevRouteNameRef = useRef<string | null | undefined>(null);
 
   const navigateRoute = useCallback(
     (route: Route | string | null, options?: { replace?: boolean; back?: Route | null; clearHistory?: boolean }) => {
@@ -144,13 +146,20 @@ const AppContent: React.FC = () => {
     return () => clearNeedLoginHandler();
   }, [logoutFromHook, navigateRoute, reset]);
 
-  // 刷新实名认证状态当页面切换时
+  // 智能刷新实名认证状态：只在离开实名认证页面时刷新（避免频繁请求）
   useEffect(() => {
-    // 当用户已登录且切换tab或subPage时，刷新实名认证状态
-    if (isLoggedIn) {
+    const prevRouteName = prevRouteNameRef.current;
+    const currentRouteName = currentRoute?.name;
+
+    // 从实名认证页面离开时，刷新状态
+    if (prevRouteName === 'real-name-auth' && currentRouteName !== 'real-name-auth' && isLoggedIn) {
+      console.log('[实名状态] 从实名认证页面返回，刷新状态');
       refreshRealNameStatus();
     }
-  }, [activeTab, currentRoute, isLoggedIn, refreshRealNameStatus]);
+
+    // 更新 ref
+    prevRouteNameRef.current = currentRouteName;
+  }, [currentRoute?.name, isLoggedIn, refreshRealNameStatus]);
 
   // 将公告接口返回的数据转换为前端使用的 NewsItem 结构
   const mapAnnouncementToNewsItem = (item: AnnouncementItem, readIds: string[], newsType: 'announcement' | 'dynamic'): NewsItem => {
@@ -201,13 +210,17 @@ const AppContent: React.FC = () => {
           }
         } catch (error: any) {
           errorLog('auth.verify', '验证登录状态失败', error);
-          // NeedLoginError (303) 表示token无效，需要重新登录
-          // 其他错误也应该清除登录状态以保证安全
+          // 只有在明确的认证错误时才清除登录状态
+          // 网络错误等临时问题不应该强制登出用户
           if (error.name === 'NeedLoginError' || error.code === 303) {
             warnLog('auth.verify', 'Token已失效（303错误），清除登录状态并跳转到登录页');
             handleLogout();
+          } else if (error.isCorsError || error.name === 'TypeError') {
+            // 网络错误或跨域错误，保留登录状态，让用户可以重试
+            warnLog('auth.verify', '网络错误，保留登录状态，用户可以重试');
           } else {
-            // 其他错误（如网络错误）也清除状态
+            // 其他未知错误：为了安全，清除登录状态
+            warnLog('auth.verify', '未知错误，清除登录状态以确保安全');
             handleLogout();
           }
         }
@@ -221,8 +234,13 @@ const AppContent: React.FC = () => {
     verifyLoginStatus();
   }, []); // 只在组件挂载时执行一次
 
-  // 首次加载时从接口获取平台公告和平台动态列表
+  // 仅在用户登录且进入首页时加载公告
   useEffect(() => {
+    // 只有在用户已登录且在首页时才加载公告
+    if (!isLoggedIn || activeTab !== 'home') {
+      return;
+    }
+
     const loadAnnouncements = async () => {
       try {
         console.log('[公告] 开始加载公告数据...');
@@ -272,39 +290,45 @@ const AppContent: React.FC = () => {
           });
         });
 
-        const popupAnn = allAnnouncements.find((item) => Number(item.is_popup) === 1);
+        // 检查所有弹窗公告（支持多个）
+        const allPopupAnnouncements = allAnnouncements.filter((item) => Number(item.is_popup) === 1);
 
-        console.log('[公告] 找到的弹窗公告:', popupAnn);
+        console.log('[公告] 找到的弹窗公告:', allPopupAnnouncements);
 
-        if (popupAnn) {
-          // 检查今天是否已经关闭过这个公告
-          const dismissedKey = `popup_dismissed_${popupAnn.id}`;
-          let dismissedDate: string | null = null;
-          try {
-            dismissedDate = localStorage.getItem(dismissedKey);
-          } catch (e) {
-            // ignore
-          }
+        if (allPopupAnnouncements.length > 0) {
+          // 过滤掉今天已关闭的公告
           const today = new Date().toDateString();
-
-          console.log('[公告] 弹窗检查:', {
-            dismissedDate,
-            today,
-            shouldShow: dismissedDate !== today,
-            popup_delay: popupAnn.popup_delay,
+          const validPopups = allPopupAnnouncements.filter((item) => {
+            const dismissedKey = `popup_dismissed_${item.id}`;
+            let dismissedDate: string | null = null;
+            try {
+              dismissedDate = localStorage.getItem(dismissedKey);
+            } catch (e) {
+              // ignore
+            }
+            const shouldShow = dismissedDate !== today;
+            console.log(`[公告] 公告 #${item.id} "${item.title}" 检查:`, {
+              dismissedDate,
+              today,
+              shouldShow,
+            });
+            return shouldShow;
           });
 
-          if (dismissedDate !== today) {
-            // 根据 popup_delay 延迟显示
-            const delay = (popupAnn.popup_delay || 0) * 1000;
-            console.log(`[公告] 将在 ${delay}ms 后显示弹窗`);
+          console.log('[公告] 过滤后待显示的弹窗数量:', validPopups.length);
+
+          if (validPopups.length > 0) {
+            // 获取第一个公告的延迟时间
+            const firstDelay = Number(validPopups[0].popup_delay) || 0;
+            console.log(`[公告] 将在 ${firstDelay}ms 后开始显示 ${validPopups.length} 个弹窗`);
+
             setTimeout(() => {
-              console.log('[公告] 显示弹窗');
-              setPopupAnnouncement(popupAnn);
+              console.log('[公告] 显示弹窗队列，共', validPopups.length, '个');
+              setPopupQueue(validPopups);
               setShowPopupAnnouncement(true);
-            }, delay);
+            }, firstDelay);
           } else {
-            console.log('[公告] 今日已关闭，不再显示');
+            console.log('[公告] 所有弹窗今日都已关闭');
           }
         } else {
           console.log('[公告] 没有找到需要弹窗的公告');
@@ -315,7 +339,7 @@ const AppContent: React.FC = () => {
     };
 
     loadAnnouncements();
-  }, []);
+  }, [isLoggedIn, activeTab]); // 只在登录状态或tab变化时触发
 
   const handleLogin = (payload?: LoginSuccessPayload) => {
     debugLog('auth.login', '开始执行登录', payload);
@@ -668,14 +692,22 @@ const AppContent: React.FC = () => {
         }}
       />
 
-      {/* 弹窗公告 */}
+      {/* 弹窗公告队列（依次显示） */}
       <PopupAnnouncementModal
-        visible={showPopupAnnouncement}
-        announcement={popupAnnouncement}
-        onClose={() => setShowPopupAnnouncement(false)}
+        visible={showPopupAnnouncement && popupQueue.length > 0}
+        announcement={popupQueue[0] || null}
+        onClose={() => {
+          // 移除当前显示的公告，显示下一个
+          setPopupQueue((prev) => prev.slice(1));
+          // 如果队列已空，关闭弹窗
+          if (popupQueue.length <= 1) {
+            setShowPopupAnnouncement(false);
+          }
+        }}
         onDontShowToday={() => {
-          if (popupAnnouncement) {
-            const dismissedKey = `popup_dismissed_${popupAnnouncement.id}`;
+          const currentPopup = popupQueue[0];
+          if (currentPopup) {
+            const dismissedKey = `popup_dismissed_${currentPopup.id}`;
             try {
               localStorage.setItem(dismissedKey, new Date().toDateString());
             } catch (e) {
