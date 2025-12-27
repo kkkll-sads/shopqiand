@@ -94,18 +94,17 @@ const MyCollectionDetail: React.FC<MyCollectionDetailProps> = ({ item, onBack, o
                     {/* Certificate Fields */}
                     <div className="space-y-6 relative z-10 font-sans">
                         <div className="text-center py-6 mb-2 relative">
-                            {/* Pattern Background */}
-                            <div className="absolute inset-0 opacity-[0.15] pointer-events-none rounded-lg border border-amber-900/5"
+                            {/* Pattern Background - Guilloche Style */}
+                            <div className="absolute inset-0 opacity-[0.08] pointer-events-none rounded-lg border border-amber-900/5 overflow-hidden"
                                 style={{
-                                    backgroundImage: 'radial-gradient(circle, #C5A572 1px, transparent 1px), radial-gradient(circle, #C5A572 1px, transparent 1px)',
-                                    backgroundSize: '20px 20px',
-                                    backgroundPosition: '0 0, 10px 10px'
+                                    backgroundImage: `repeating-linear-gradient(45deg, transparent, transparent 10px, #C5A572 10px, #C5A572 11px),
+                                    repeating-linear-gradient(-45deg, transparent, transparent 10px, #C5A572 10px, #C5A572 11px)`
                                 }}>
                             </div>
 
-                            {/* Line 1 */}
-                            <div className="text-xs text-gray-500 font-[DINAlternate-Bold,Roboto,sans-serif] tracking-widest mb-3 relative z-10">
-                                确权编号：37-DATA-2025-{String(item.id || 8821).padStart(4, '0')}
+                            {/* Line 1: Confirmation Number */}
+                            <div className="text-sm text-gray-600 font-[courier,monospace] font-bold tracking-widest mb-3 relative z-10 drop-shadow-sm">
+                                确权编号：37-DATA-****-{String(item.id || 8821).padStart(4, '0')}
                             </div>
 
                             {/* Line 2 */}
@@ -126,28 +125,28 @@ const MyCollectionDetail: React.FC<MyCollectionDetailProps> = ({ item, onBack, o
                             </div>
 
                             {/* Stamp */}
-                            <div className="absolute -right-4 -bottom-6 w-32 h-32 opacity-90 -rotate-12 mix-blend-multiply z-20 pointer-events-none">
+                            <div className="absolute -right-4 -bottom-6 w-32 h-32 opacity-[0.85] -rotate-12 mix-blend-multiply z-20 pointer-events-none filter contrast-125 brightness-90">
                                 <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
                                     <defs>
                                         <path id="textCircleTop" d="M 25,100 A 75,75 0 1,1 175,100" fill="none" />
                                         <filter id="roughPaper">
-                                            <feTurbulence type="fractalNoise" baseFrequency="0.05" numOctaves="2" result="noise" />
-                                            <feDisplacementMap in="SourceGraphic" in2="noise" scale="2" />
+                                            <feTurbulence type="fractalNoise" baseFrequency="0.08" numOctaves="3" result="noise" />
+                                            <feDisplacementMap in="SourceGraphic" in2="noise" scale="3" />
                                         </filter>
                                     </defs>
-                                    <g filter="url(#roughPaper)" fill="#D60000" stroke="none">
-                                        <circle cx="100" cy="100" r="96" fill="none" stroke="#D60000" strokeWidth="3" />
-                                        <circle cx="100" cy="100" r="92" fill="none" stroke="#D60000" strokeWidth="1" />
-                                        <text fontSize="14" fontWeight="bold" fontFamily="SimSun, serif" fill="#D60000">
+                                    <g filter="url(#roughPaper)" fill="#B22222" stroke="none"> {/* Darker Red #B22222 */}
+                                        <circle cx="100" cy="100" r="96" fill="none" stroke="#B22222" strokeWidth="3" />
+                                        <circle cx="100" cy="100" r="92" fill="none" stroke="#B22222" strokeWidth="1" />
+                                        <text fontSize="14" fontWeight="bold" fontFamily="SimSun, serif" fill="#B22222">
                                             <textPath href="#textCircleTop" startOffset="50%" textAnchor="middle" spacing="auto">
                                                 树交所数字资产登记结算中心
                                             </textPath>
                                         </text>
-                                        <text x="100" y="100" fontSize="40" textAnchor="middle" dominantBaseline="middle" fill="#D60000">★</text>
-                                        <text x="100" y="135" fontSize="18" fontWeight="bold" fontFamily="SimHei, sans-serif" textAnchor="middle" fill="#D60000">
+                                        <text x="100" y="100" fontSize="40" textAnchor="middle" dominantBaseline="middle" fill="#B22222">★</text>
+                                        <text x="100" y="135" fontSize="18" fontWeight="bold" fontFamily="SimHei, sans-serif" textAnchor="middle" fill="#B22222">
                                             确权专用章
                                         </text>
-                                        <text x="100" y="155" fontSize="10" fontFamily="Arial, sans-serif" fontWeight="bold" textAnchor="middle" fill="#D60000" letterSpacing="1">
+                                        <text x="100" y="155" fontSize="10" fontFamily="Arial, sans-serif" fontWeight="bold" textAnchor="middle" fill="#B22222" letterSpacing="1">
                                             37010299821
                                         </text>
                                     </g>
