@@ -16,7 +16,7 @@
  */
 
 import React, { useState } from 'react';
-import { ChevronLeft } from 'lucide-react';
+import { ChevronLeft, Eye, EyeOff } from 'lucide-react';
 import { LoadingSpinner } from '../common';
 import {
     updatePassword,
@@ -172,6 +172,11 @@ const PasswordForm: React.FC<PasswordFormProps> = ({
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [countdown, setCountdown] = useState(0);
+
+    // Password visibility states
+    const [showOldPassword, setShowOldPassword] = useState(false);
+    const [showNewPassword, setShowNewPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
     // 判断账号是否禁用（有预设账号或非找回密码模式时禁用）
     const isAccountDisabled = loading || !!presetAccount;
@@ -497,42 +502,69 @@ const PasswordForm: React.FC<PasswordFormProps> = ({
                     {config.oldLabel && (
                         <div className="py-4 border-b border-gray-100">
                             <div className="text-sm text-gray-500 mb-1">{config.oldLabel}</div>
-                            <input
-                                type="password"
-                                className="w-full text-base text-gray-900 outline-none bg-transparent placeholder:text-gray-300 font-medium"
-                                placeholder={config.oldPlaceholder}
-                                value={oldPassword}
-                                onChange={(e) => setOldPassword(e.target.value)}
-                                disabled={loading}
-                            />
+                            <div className="flex items-center">
+                                <input
+                                    type={showOldPassword ? "text" : "password"}
+                                    className="flex-1 text-base text-gray-900 outline-none bg-transparent placeholder:text-gray-300 font-medium"
+                                    placeholder={config.oldPlaceholder}
+                                    value={oldPassword}
+                                    onChange={(e) => setOldPassword(e.target.value)}
+                                    disabled={loading}
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => setShowOldPassword(!showOldPassword)}
+                                    className="p-2 text-gray-400 focus:outline-none"
+                                >
+                                    {showOldPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                                </button>
+                            </div>
                         </div>
                     )}
 
                     {/* 新密码输入 */}
                     <div className="py-4 border-b border-gray-100">
                         <div className="text-sm text-gray-500 mb-1">{config.newLabel}</div>
-                        <input
-                            type="password"
-                            className="w-full text-base text-gray-900 outline-none bg-transparent placeholder:text-gray-300 font-medium"
-                            placeholder={config.newPlaceholder}
-                            value={newPassword}
-                            onChange={(e) => setNewPassword(e.target.value)}
-                            disabled={loading}
-                        />
+                        <div className="flex items-center">
+                            <input
+                                type={showNewPassword ? "text" : "password"}
+                                className="flex-1 text-base text-gray-900 outline-none bg-transparent placeholder:text-gray-300 font-medium"
+                                placeholder={config.newPlaceholder}
+                                value={newPassword}
+                                onChange={(e) => setNewPassword(e.target.value)}
+                                disabled={loading}
+                            />
+                            <button
+                                type="button"
+                                onClick={() => setShowNewPassword(!showNewPassword)}
+                                className="p-2 text-gray-400 focus:outline-none"
+                            >
+                                {showNewPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                            </button>
+                        </div>
                     </div>
 
                     {/* 确认新密码输入 */}
                     {config.confirmLabel && (
                         <div className="py-4 border-b border-gray-100">
                             <div className="text-sm text-gray-500 mb-1">{config.confirmLabel}</div>
-                            <input
-                                type="password"
-                                className="w-full text-base text-gray-900 outline-none bg-transparent placeholder:text-gray-300 font-medium"
-                                placeholder={config.confirmPlaceholder}
-                                value={confirmPassword}
-                                onChange={(e) => setConfirmPassword(e.target.value)}
-                                disabled={loading}
-                            />
+                            <div className="flex items-center">
+                                <input
+                                    type={showConfirmPassword ? "text" : "password"}
+                                    className="flex-1 text-base text-gray-900 outline-none bg-transparent placeholder:text-gray-300 font-medium"
+                                    placeholder={config.confirmPlaceholder}
+                                    value={confirmPassword}
+                                    onChange={(e) => setConfirmPassword(e.target.value)}
+                                    disabled={loading}
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                                    className="p-2 text-gray-400 focus:outline-none"
+                                >
+                                    {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                                </button>
+                            </div>
                         </div>
                     )}
                 </form>
