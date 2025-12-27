@@ -116,16 +116,20 @@ const HashrateExchange: React.FC<HashrateExchangeProps> = ({ onBack, onNavigate 
                             </div>
                         </div>
 
-                        <div className="flex items-baseline gap-2 border-b-2 border-green-50 pb-2 focus-within:border-green-500 transition-colors">
-                            <input
-                                type="number"
-                                value={amount}
-                                onChange={(e) => setAmount(e.target.value)}
-                                placeholder="0"
-                                className="flex-1 text-4xl font-black text-gray-900 bg-transparent outline-none placeholder:text-gray-200 font-[DINAlternate-Bold]"
-                            />
-                            <div className="text-sm font-bold text-green-600 bg-green-50 px-2 py-1 rounded-md">
-                                1 GHs = {SUBSIDIZED_RATE} 消费金
+                        <div className="border-b-2 border-green-50 pb-3 focus-within:border-green-500 transition-colors">
+                            <div className="flex items-baseline gap-2 mb-3">
+                                <input
+                                    type="number"
+                                    value={amount}
+                                    onChange={(e) => setAmount(e.target.value)}
+                                    placeholder="0"
+                                    className="flex-1 text-4xl font-black text-gray-900 bg-transparent outline-none placeholder:text-gray-200 font-[DINAlternate-Bold]"
+                                />
+                            </div>
+                            <div className="flex items-center justify-center sm:justify-end">
+                                <div className="text-base font-bold text-green-700 bg-green-100 px-4 py-2 rounded-lg whitespace-nowrap border border-green-200 shadow-sm">
+                                    1 GHs = {SUBSIDIZED_RATE} 消费金
+                                </div>
                             </div>
                         </div>
 

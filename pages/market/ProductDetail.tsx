@@ -283,7 +283,7 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, onNaviga
               )}
 
               {/* Line 2: Product Name */}
-              <h3 className={`${displayTitle.length > 12 ? 'text-lg' : displayTitle.length > 8 ? 'text-xl' : displayTitle.length > 5 ? 'text-2xl' : 'text-3xl'} font-extrabold text-gray-900 mb-3 font-serif tracking-tight leading-tight relative z-10 drop-shadow-sm whitespace-nowrap overflow-hidden text-ellipsis px-2`}>
+              <h3 className={`${displayTitle.length > 12 ? 'text-lg' : displayTitle.length > 8 ? 'text-xl' : displayTitle.length > 5 ? 'text-2xl' : 'text-3xl'} font-extrabold text-gray-700 mb-3 font-serif tracking-tight leading-tight relative z-10 drop-shadow-sm whitespace-nowrap overflow-hidden text-ellipsis px-2`}>
                 【{displayTitle}】
               </h3>
 
@@ -355,11 +355,11 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, onNaviga
               <div className="grid grid-cols-2 gap-6">
                 <div>
                   <label className="block text-xs font-bold text-gray-400 uppercase mb-1 tracking-wider">Session / 专场</label>
-                  <div className="text-sm font-bold text-gray-800">{sessionName || '—'}</div>
+                  <div className="text-sm font-bold text-gray-600">{sessionName || '—'}</div>
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-gray-400 uppercase mb-1 tracking-wider">Trading Window / 场次时间</label>
-                  <div className="text-sm font-bold text-gray-800">{sessionTime || '—'}</div>
+                  <div className="text-sm font-bold text-gray-600">{sessionTime || '—'}</div>
                 </div>
               </div>
             )}
@@ -372,17 +372,17 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, onNaviga
                   <div className="space-y-1">
                     <label className="block text-xs font-bold text-gray-400 uppercase mb-0.5">Asset Anchor / 资产锚定</label>
                     <div className="space-y-1">
-                      <div className="text-sm font-medium text-gray-800 flex items-start gap-2">
+                      <div className="text-sm font-medium text-gray-600 flex items-start gap-2">
                         <span className="whitespace-nowrap">核心企业：</span>
-                        <span className="text-gray-900 break-words">{coreEnterprise || '—'}</span>
+                        <span className="text-gray-700 break-words">{coreEnterprise || '—'}</span>
                       </div>
-                      <div className="text-sm font-medium text-gray-800 flex items-start gap-2">
+                      <div className="text-sm font-medium text-gray-600 flex items-start gap-2">
                         <span className="whitespace-nowrap">关联农户：</span>
-                        <span className="text-gray-900 break-words">{farmerInfo || '—'}</span>
+                        <span className="text-gray-700 break-words">{farmerInfo || '—'}</span>
                       </div>
-                      <div className="text-sm font-medium text-gray-800 flex items-start gap-2">
+                      <div className="text-sm font-medium text-gray-600 flex items-start gap-2">
                         <span className="whitespace-nowrap">资产状态：</span>
-                        <span className="text-gray-900 break-words">{assetStatus || '—'}</span>
+                        <span className="text-gray-700 break-words">{assetStatus || '—'}</span>
                       </div>
                     </div>
                     <div className="text-[10px] text-gray-500">数据已脱敏，持有人可申请解密查看。</div>
@@ -418,7 +418,7 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, onNaviga
                     <Shield size={14} className="text-amber-600" />
                     <div>
                       <div className="text-xs font-bold text-gray-500 uppercase">Supplier</div>
-                      <div className="text-sm font-medium text-gray-800">{supplierName}</div>
+                      <div className="text-sm font-medium text-gray-600">{supplierName}</div>
                     </div>
                   </div>
                 )}
@@ -433,21 +433,12 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, onNaviga
       <div className="fixed bottom-0 left-0 right-0 p-4 bg-white/90 backdrop-blur-md border-t border-gray-100 z-50">
 
         {/* Market Heat Indicator - Only for Collection */}
+        {/* Frozen Amount & Hashrate Tip - Only for Collection */}
         {!isShopProduct && (
-          <div className="flex items-center justify-between bg-red-50 rounded-full px-3 py-1.5 mb-3 border border-red-100">
-            <div className="flex items-center gap-2">
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
-              </span>
-              <span className="text-[10px] font-bold text-red-600">当前热度：极高 | 剩余额度：28%</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <span className="text-[10px] text-gray-400 font-mono">实时竞价倒计时</span>
-              <span className="text-[11px] font-mono text-red-500 font-bold bg-white px-2 py-0.5 rounded-full border border-red-100">
-                00:14:23
-              </span>
-            </div>
+          <div className="flex justify-end mb-2">
+            <span className="text-[10px] text-gray-900 bg-white px-1 py-0.5">
+              本次申购需冻结：¥{displayPrice.toFixed(2)} | 消耗算力：1.0 GH/s
+            </span>
           </div>
         )}
 

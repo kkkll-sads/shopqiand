@@ -43,6 +43,7 @@ import HelpCenter from '../pages/cms/HelpCenter';
 import UserAgreement from '../pages/cms/UserAgreement';
 import UserSurvey from '../pages/user/UserSurvey';
 import OnlineService from '../pages/cms/OnlineService';
+import SearchPage from '../pages/market/SearchPage';
 import { STORAGE_KEYS } from '../constants/storageKeys';
 import { writeStorage } from '../utils/storageAccess';
 import { type NewsItem, type Product } from '../types';
@@ -62,6 +63,7 @@ export interface RouteHelpers {
   selectedCollectionItem: MyCollectionItem | null;
   setSelectedCollectionItem: (item: MyCollectionItem | null) => void;
   markAllNewsRead: () => void;
+  goBack: () => void;
 }
 
 type RouteRenderer = (route: Route, helpers: RouteHelpers) => React.ReactNode | null;
@@ -77,7 +79,7 @@ export const routeComponents: Partial<Record<Route['name'], RouteRenderer>> = {
     return (
       <AnnouncementDetail
         newsItem={newsItem}
-        onBack={() => helpers.navigateRoute(null)}
+        onBack={() => helpers.goBack()}
       />
     );
   },
@@ -231,13 +233,15 @@ export const routeComponents: Partial<Record<Route['name'], RouteRenderer>> = {
   ),
   'agent-auth': (_route, helpers) => <AgentAuth onBack={() => helpers.navigateRoute(null)} />,
   'help-center': (_route, helpers) => <HelpCenter onBack={() => helpers.navigateRoute(null)} />,
-  'user-agreement': (route, helpers) => {
-    const payload = route as Extract<Route, { name: 'user-agreement' }>;
-    const back = payload.from === 'profile' ? { name: 'my-friends' as const } : null;
-    return <UserAgreement onBack={() => helpers.navigateRoute(back)} />;
+  'user-agreement': (_route, helpers) => {
+    return <UserAgreement onBack={() => helpers.goBack()} />;
   },
   'user-survey': (_route, helpers) => <UserSurvey onBack={() => helpers.navigateRoute(null)} />,
   'online-service': (_route, helpers) => <OnlineService onBack={() => helpers.navigateRoute(null)} />,
+  'search': (route, helpers) => {
+    const payload = route as Extract<Route, { name: 'search' }>;
+    return <SearchPage onBack={() => helpers.navigateRoute(null)} onNavigate={(nextRoute) => helpers.navigateRoute(nextRoute)} initialCode={payload.code} />;
+  },
   'about-us': (route, helpers) => (
     <AboutUs onBack={() => helpers.navigateRoute((route as any).from === 'home' ? null : { name: 'settings' })} />
   ),

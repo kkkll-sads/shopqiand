@@ -92,12 +92,32 @@ const MyFriends: React.FC<MyFriendsProps> = ({ onBack, onNavigate }) => {
   /**
    * 格式化日期
    */
-  const formatDate = (timestamp?: number, dateStr?: string) => {
-    if (dateStr) return dateStr;
-    if (timestamp) {
-      return formatTime(timestamp, 'YYYY-MM-DD');
+  const formatDate = (friend: TeamMember) => {
+    // 优先使用 join_date 字段
+    if (friend.join_date) return friend.join_date;
+    
+    // 尝试使用 join_time 时间戳
+    if (friend.join_time) {
+      return formatTime(friend.join_time, 'YYYY-MM-DD');
     }
-    return '';
+    
+    // 尝试使用其他可能的时间字段
+    const anyFriend = friend as any;
+    if (anyFriend.create_time) {
+      return formatTime(anyFriend.create_time, 'YYYY-MM-DD');
+    }
+    if (anyFriend.createtime) {
+      return formatTime(anyFriend.createtime, 'YYYY-MM-DD');
+    }
+    if (anyFriend.add_time) {
+      return formatTime(anyFriend.add_time, 'YYYY-MM-DD');
+    }
+    if (anyFriend.reg_time) {
+      return formatTime(anyFriend.reg_time, 'YYYY-MM-DD');
+    }
+    
+    // 如果都没有，返回默认值
+    return '-';
   };
 
   return (
@@ -160,7 +180,7 @@ const MyFriends: React.FC<MyFriendsProps> = ({ onBack, onNavigate }) => {
                     {friend.nickname || friend.username}
                   </div>
                   <div className="text-xs text-gray-400">
-                    加入时间: {formatDate(friend.join_time, friend.join_date)}
+                    加入时间: {formatDate(friend)}
                   </div>
                 </div>
                 <button

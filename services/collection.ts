@@ -522,6 +522,50 @@ export interface MyCollectionItem {
     [key: string]: any;
 }
 
+/**
+ * 通过确权编号或MD5指纹查询藏品
+ * API: GET /api/collectionItem/queryByCode
+ * 
+ * @param code - 确权编号（如 37-DATA-0001-000123）或 MD5指纹（如 0x1a2b3c...）
+ * @returns 藏品详细信息，包括持有人信息（如果已交付且未售出）
+ */
+export interface QueryByCodeParams {
+    code: string;
+}
+
+export interface CollectionHolder {
+    user_id: number;
+    username: string;
+    nickname: string;
+    mobile: string; // 脱敏后的手机号
+}
+
+export interface CollectionItemDetail {
+    id: number;
+    session_id: number;
+    title: string;
+    image: string;
+    price: number;
+    issue_price: number;
+    asset_code: string;
+    fingerprint: string;
+    status: string;
+    description: string;
+    core_enterprise: string;
+    farmer_info: string;
+    zone_id: number;
+    holder: CollectionHolder | null;
+    [key: string]: any;
+}
+
+export async function queryCollectionByCode(params: QueryByCodeParams): Promise<ApiResponse<CollectionItemDetail>> {
+    const search = new URLSearchParams();
+    search.set('code', params.code);
+    
+    const path = `${API_ENDPOINTS.collectionItem.queryByCode}?${search.toString()}`;
+    return authedFetch<CollectionItemDetail>(path, { method: 'GET' });
+}
+
 export async function getMyCollection(params: { page?: number; limit?: number; type?: string; token?: string } = {}): Promise<ApiResponse<{ list: MyCollectionItem[], total: number, has_more?: boolean, consignment_coupon?: number }>> {
     const token = params.token || localStorage.getItem(AUTH_TOKEN_KEY) || '';
     const search = new URLSearchParams();

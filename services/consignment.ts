@@ -237,6 +237,8 @@ export interface MyConsignmentItem {
     image: string;                    // 藏品图片
     original_price: number | string;  // 原价
     consignment_price: number | string; // 寄售价格
+    service_fee?: number | string;    // 服务费（从确权金扣除）🆕
+    total_cost?: number | string;     // 实际成本（寄售价格+服务费）🆕
     consignment_status: number;       // 寄售状态: 0=全部, 1=寄售中, 2=已售出, 3=已取消
     consignment_status_text: string;  // 寄售状态文本
     create_time: number;              // 创建时间

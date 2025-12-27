@@ -99,13 +99,21 @@ const AssetHistory: React.FC<AssetHistoryProps> = ({ onBack }) => {
     });
   };
 
-  const getTypeLabel = (type: AllLogItem['type']): string => {
+  const getTypeLabel = (type: AllLogItem['type'], fieldType?: string): string => {
+    // 优先使用 field_type 判断
+    if (fieldType === 'green_power') {
+      return '绿色算力';
+    }
     const labels: Record<AllLogItem['type'], string> = {
       balance_available: '供应链专项金',
       withdrawable_money: '可调度收益',
       service_fee_balance: '确权金',
       score: '消费金',
     };
+    // 如果 type 是 green_power，返回绿色算力
+    if (type === 'green_power') {
+      return '绿色算力';
+    }
     return labels[type] || type;
   };
 
@@ -140,6 +148,11 @@ const AssetHistory: React.FC<AssetHistoryProps> = ({ onBack }) => {
   };
 
   const renderLogItem = (item: AllLogItem) => {
+    // 检测是否是绿色算力相关的记录
+    const isGreenPower = item.field_type === 'green_power' || 
+                         item.type === 'green_power' || 
+                         (item.remark && item.remark.includes('绿色算力'));
+    
     const isScore = item.type === 'score';
     const displayAmount = isScore ? Math.abs(item.amount) : item.amount;
     const displayBefore = isScore ? Math.abs(item.before_value) : item.before_value;
@@ -156,17 +169,17 @@ const AssetHistory: React.FC<AssetHistoryProps> = ({ onBack }) => {
           {/* Middle: Title & Time */}
           <div className="flex-1 min-w-0">
             <div className="text-sm font-bold text-gray-900 mb-1 truncate">
-              {item.remark || getTypeLabel(item.type)}
+              {item.remark || getTypeLabel(item.type, item.field_type)}
             </div>
             <div className="text-xs text-gray-400">
-              {formatTime(item.create_time)}
+              {formatTime(item.create_time || item.createtime)}
             </div>
           </div>
 
           {/* Right: Amount & Balance */}
           <div className="text-right flex-shrink-0">
             <div className={`text-base font-bold mb-1 font-[DINAlternate-Bold,Roboto,sans-serif] ${item.amount >= 0 ? 'text-[#FF6B00]' : 'text-gray-900'}`}>
-              {item.amount >= 0 ? '+' : ''}{displayAmount.toFixed(isScore ? 0 : 2)}{isScore ? '' : '元'}
+              {item.amount >= 0 ? '+' : ''}{displayAmount.toFixed(isScore ? 0 : 2)}{isGreenPower ? '算力' : (isScore ? '' : '元')}
             </div>
             <div className="text-[11px] text-gray-400">
               余额: {displayAfter.toFixed(isScore ? 0 : 2)}
@@ -182,10 +195,10 @@ const AssetHistory: React.FC<AssetHistoryProps> = ({ onBack }) => {
         */}
         <div className="mt-3 pt-2 border-t border-gray-50 flex justify-between items-center">
           <span className="text-xs text-gray-400 bg-gray-50 px-2 py-0.5 rounded">
-            {getTypeLabel(item.type)}
+            {getTypeLabel(item.type, item.field_type)}
           </span>
           <div className="text-xs text-gray-400">
-            {getTypeLabel(item.type)}余额: {displayBefore.toFixed(isScore ? 0 : 2)} → {displayAfter.toFixed(isScore ? 0 : 2)}
+            {getTypeLabel(item.type, item.field_type)}余额: {displayBefore.toFixed(isScore ? 0 : 2)} → {displayAfter.toFixed(isScore ? 0 : 2)}
           </div>
         </div>
       </div>

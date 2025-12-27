@@ -215,7 +215,7 @@ const Home: React.FC<HomeProps> = ({ onNavigate, onSwitchTab, announcements = []
       <header className="px-4 py-3 fixed top-0 left-0 right-0 z-20 bg-gradient-to-r from-[#FFD6A5] to-[#FFC3A0] shadow-sm max-w-md mx-auto">
         <div
           className="flex items-center bg-white rounded-full p-1 pl-4 shadow-sm cursor-pointer active:scale-[0.99] transition-transform"
-          onClick={() => onNavigate({ name: 'asset-trace' })}
+          onClick={() => onNavigate({ name: 'search' })}
         >
           <Search size={16} className="text-gray-400 mr-2 flex-shrink-0" />
           <span className="text-sm text-gray-400 flex-1 truncate">数据资产溯源查询...</span>

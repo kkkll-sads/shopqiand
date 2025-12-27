@@ -105,7 +105,7 @@ const AppContent: React.FC = () => {
   const [productDetailOrigin, setProductDetailOrigin] = useState<'market' | 'artist' | 'trading-zone' | 'reservation-record'>('market');
   const [activeTab, setActiveTab] = useState<Tab>('home');
   const [checkingRealName, setCheckingRealName] = useState(false);
-  const { current: currentRoute, navigate, reset } = useNavigationStack(null);
+  const { current: currentRoute, navigate, reset, goBack } = useNavigationStack(null);
   const subPage = useMemo(() => (currentRoute ? encodeRoute(currentRoute) : null), [currentRoute]);
   const [consignmentTicketCount, setConsignmentTicketCount] = useState<number>(0);
   // 新闻已读状态统一通过 hook 管理
@@ -442,14 +442,14 @@ const AppContent: React.FC = () => {
     if (currentRoute?.name === 'privacy-policy') {
       return (
         <PrivacyPolicy
-          onBack={() => navigateRoute(null)}
+          onBack={() => goBack()}
         />
       );
     }
     if (currentRoute?.name === 'user-agreement') {
       return (
         <UserAgreement
-          onBack={() => navigateRoute(null)}
+          onBack={() => goBack()}
         />
       );
     }
@@ -534,6 +534,7 @@ const AppContent: React.FC = () => {
         selectedCollectionItem,
         setSelectedCollectionItem,
         markAllNewsRead,
+        goBack,
       });
       if (resolved) return resolved;
     }
@@ -605,7 +606,7 @@ const AppContent: React.FC = () => {
         } catch (e) {
           // 忽略存储错误
         }
-        return <AnnouncementDetail newsItem={newsItem} onBack={() => navigateRoute(null)} />;
+        return <AnnouncementDetail newsItem={newsItem} onBack={() => goBack()} />;
       }
     }
 

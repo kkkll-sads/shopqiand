@@ -33,6 +33,7 @@ export type RoutePayload =
   | { name: 'help-center' }
   | { name: 'message-center' }
   | { name: 'asset-trace' }
+  | { name: 'search'; code?: string }
   | { name: 'switch-to-market' }
   // 新闻/内容
   | { name: 'news'; activeTab?: 'announcement' | 'dynamic' }
@@ -269,6 +270,8 @@ export function decodeRoute(s: string): RoutePayload {
       return { name: 'claim-history' };
     case 'asset-trace':
       return { name: 'asset-trace' };
+    case 'search':
+      return { name: 'search' };
     case 'switch-to-market':
       return { name: 'switch-to-market' };
     case 'invite-friends':

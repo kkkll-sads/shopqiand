@@ -6,6 +6,7 @@ export * from './wallet';
 export * from './market';
 export * from './cms';
 export * from './common';
+export * from './collection';
 export * from './consignment';
 export * from './rightsDeclaration';
 

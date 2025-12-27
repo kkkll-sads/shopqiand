@@ -20,6 +20,9 @@ const ReservationPage: React.FC<ReservationPageProps> = ({ product, onBack, onNa
     // 新版预约需要后端提供的场次/分区，若入参缺失则尝试自动补全
     const [sessionId, setSessionId] = useState<number | string | undefined>(product.sessionId);
     const [zoneId, setZoneId] = useState<number | string | undefined>(product.zoneId);
+    
+    // 分区最高价（用于计算冻结金额）
+    const [zoneMaxPrice, setZoneMaxPrice] = useState<number>(product.price);
 
     // 基础算力需求（根据商品价格计算）
     const baseHashrate = Math.ceil(product.price / 100);
@@ -30,8 +33,8 @@ const ReservationPage: React.FC<ReservationPageProps> = ({ product, onBack, onNa
     // 当前用户持有算力（这里应该从API获取，暂时模拟）
     const [availableHashrate, setAvailableHashrate] = useState(10);
 
-    // 冻结金额计算（预约保证金，冻结商品全款）
-    const frozenAmount = product.price;
+    // 冻结金额计算（按场次分区的最高价冻结，撮合后退还差价）
+    const frozenAmount = zoneMaxPrice;
 
     // 账户余额（应该从API获取）
     const [accountBalance, setAccountBalance] = useState(1000);
@@ -68,9 +71,19 @@ const ReservationPage: React.FC<ReservationPageProps> = ({ product, onBack, onNa
                     data.zoneId ??
                     data.priceZoneId ??
                     data.zone?.id;
+                
+                // 获取分区最高价，用于冻结金额计算
+                const detailZoneMaxPrice =
+                    data.zone_max_price ??
+                    data.zoneMaxPrice ??
+                    data.max_price ??
+                    data.maxPrice ??
+                    data.price;  // 如果没有分区最高价，使用商品价格
 
                 if (detailSessionId) setSessionId(detailSessionId);
                 if (detailZoneId) setZoneId(detailZoneId);
+                if (detailZoneMaxPrice) setZoneMaxPrice(Number(detailZoneMaxPrice));
+                
                 return { sessionId: detailSessionId ?? sessionId ?? product.sessionId, zoneId: detailZoneId ?? zoneId ?? product.zoneId };
             }
         } catch (error) {
@@ -102,7 +115,7 @@ const ReservationPage: React.FC<ReservationPageProps> = ({ product, onBack, onNa
                 if (response.code === 1) {
                     // 设置真实的算力和余额
                     setAvailableHashrate(Number(response.data.userInfo.green_power) || 0);
-                    setAccountBalance(Number(response.data.userInfo.money) || 0);
+                    setAccountBalance(Number(response.data.userInfo.balance_available) || 0);
                 }
             } catch (error: any) {
                 console.error('获取用户信息失败:', error);
@@ -261,7 +274,7 @@ const ReservationPage: React.FC<ReservationPageProps> = ({ product, onBack, onNa
                     </h3>
 
                     <div className="flex justify-between text-sm text-gray-600 mb-2">
-                        <span>需冻结专项金</span>
+                        <span>需冻结专项金（该场次最高价）</span>
                         <span className="font-mono font-bold">¥{frozenAmount.toLocaleString()}</span>
                     </div>
                     <div className="flex justify-between items-center mb-2">
@@ -270,8 +283,19 @@ const ReservationPage: React.FC<ReservationPageProps> = ({ product, onBack, onNa
                             ¥{accountBalance.toLocaleString()}
                         </span>
                     </div>
+                    
+                    {/* 差价退还说明 */}
+                    <div className="mt-3 p-2 bg-blue-50 rounded-lg border border-blue-100">
+                        <div className="flex items-start gap-2">
+                            <Info size={14} className="text-blue-500 flex-shrink-0 mt-0.5" />
+                            <p className="text-xs text-blue-700 leading-relaxed">
+                                预约时将冻结该场次的最高金额，撮合成功后若实际藏品金额低于冻结金额，将自动退还差价
+                            </p>
+                        </div>
+                    </div>
+                    
                     {!isFundSufficient && (
-                        <div className="text-xs text-red-500 flex items-center gap-1">
+                        <div className="text-xs text-red-500 flex items-center gap-1 mt-2">
                             <AlertCircle size={12} />
                             余额不足，请充值
                         </div>

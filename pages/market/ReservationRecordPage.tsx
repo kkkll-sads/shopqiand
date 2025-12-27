@@ -286,10 +286,18 @@ const ReservationRecordPage: React.FC<ReservationRecordPageProps> = ({ onBack, o
                                     <span className="text-[10px] text-gray-500 flex items-center gap-1"><Wallet size={10} /> 冻结金额</span>
                                     <span className="text-xs font-bold text-red-600 font-mono">¥{Number(record.freeze_amount || 0).toLocaleString()}</span>
                                 </div>
-                                <div className="flex justify-between items-center">
-                                    <span className="text-[10px] text-gray-500 flex items-center gap-1"><Zap size={10} /> 权重</span>
-                                    <span className="text-xs font-bold text-gray-900 font-mono">{record.weight || 0}</span>
-                                </div>
+                                {record.status === 1 && record.item_price && (
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-[10px] text-gray-500 flex items-center gap-1">实际金额</span>
+                                        <span className="text-xs font-bold text-green-600 font-mono">¥{Number(record.item_price || 0).toLocaleString()}</span>
+                                    </div>
+                                )}
+                                {record.status !== 1 && (
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-[10px] text-gray-500 flex items-center gap-1"><Zap size={10} /> 权重</span>
+                                        <span className="text-xs font-bold text-gray-900 font-mono">{record.weight || 0}</span>
+                                    </div>
+                                )}
                                 {(record.power_used > 0) && (
                                     <div className="flex justify-between items-center">
                                         <span className="text-[10px] text-gray-500 flex items-center gap-1"><Zap size={10} /> 消耗算力</span>
@@ -297,6 +305,16 @@ const ReservationRecordPage: React.FC<ReservationRecordPageProps> = ({ onBack, o
                                     </div>
                                 )}
                             </div>
+                            
+                            {/* 退款差价提示（仅已中签且有差价时显示） */}
+                            {record.status === 1 && record.item_price && Number(record.freeze_amount) > Number(record.item_price) && (
+                                <div className="mb-3 p-2 bg-green-50 rounded-lg border border-green-100">
+                                    <div className="flex items-center gap-2 text-xs text-green-700">
+                                        <CheckCircle2 size={12} className="flex-shrink-0" />
+                                        <span>已退还差价：¥{(Number(record.freeze_amount) - Number(record.item_price)).toLocaleString()}</span>
+                                    </div>
+                                </div>
+                            )}
 
                             {/* Footer Status/Action */}
                             <div className="flex justify-between items-center text-xs">

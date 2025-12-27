@@ -59,11 +59,35 @@ const TransactionOrderList: React.FC<TransactionOrderListProps> = ({
                 {order.title}
               </h3>
               <div className="text-xs text-gray-400 mb-2">
-                原价: ¥{formatOrderPrice(order.original_price)} | 寄售价: ¥{formatOrderPrice(order.consignment_price)}
+                原价: ¥{formatOrderPrice(order.original_price)}
               </div>
+              
+              {/* 费用明细 */}
+              <div className="bg-gray-50 rounded-lg p-2 mb-2 text-xs space-y-1">
+                <div className="flex justify-between text-gray-600">
+                  <span>寄售价格：</span>
+                  <span>¥{formatOrderPrice(order.consignment_price)}</span>
+                </div>
+                {order.service_fee !== undefined && Number(order.service_fee) > 0 && (
+                  <div className="flex justify-between text-gray-600">
+                    <span>服务费：</span>
+                    <span>¥{formatOrderPrice(order.service_fee)}</span>
+                  </div>
+                )}
+                {order.total_cost !== undefined && Number(order.total_cost) > 0 && (
+                  <>
+                    <div className="border-t border-gray-200 my-1"></div>
+                    <div className="flex justify-between text-gray-900 font-bold">
+                      <span>实际成本：</span>
+                      <span>¥{formatOrderPrice(order.total_cost)}</span>
+                    </div>
+                  </>
+                )}
+              </div>
+
               <div className="flex justify-between items-end">
                 <div className="text-sm font-bold text-gray-900">
-                  ¥ {formatOrderPrice(order.consignment_price)}
+                  寄售价 ¥{formatOrderPrice(order.consignment_price)}
                 </div>
                 <div className="flex gap-2">
                   {activeTab === 1 && order.consignment_status === 1 && (

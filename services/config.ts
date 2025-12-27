@@ -264,6 +264,8 @@ export const API_ENDPOINTS = {
         tradeList: '/collectionItem/tradeList',
         /** 获取我的寄售列表 */
         myConsignmentList: '/collectionItem/myConsignmentList',
+        /** 通过确权编号或MD5指纹查询藏品 */
+        queryByCode: '/collectionItem/queryByCode',
         /** 获取寄售详情 */
         consignmentDetail: '/collectionItem/consignmentDetail',
         /** 取消寄售 */
