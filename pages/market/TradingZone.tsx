@@ -282,7 +282,7 @@ const TradingZone: React.FC<TradingZoneProps> = ({ onBack, onProductSelect, onNa
                         <button onClick={handleBack} className="p-2 bg-white/60 backdrop-blur rounded-full shadow-sm hover:bg-white transition-all text-gray-700">
                             <ArrowLeft size={20} />
                         </button>
-                        <div className="text-xs font-bold text-gray-500/50 font-serif tracking-widest uppercase">ASSET POOL</div>
+                        <div className="text-xs font-bold text-gray-500/50 font-serif tracking-widest uppercase"></div>
                     </div>
 
                     {/* 头部大标题卡片 */}
