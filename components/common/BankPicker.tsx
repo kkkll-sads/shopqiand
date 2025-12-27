@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { X, Check, Building2, Search, PlusCircle } from 'lucide-react';
-import { getBanks } from '../../utils/banks';
+import { getBanks, getBankCodeByName } from '../../utils/banks';
+import { getBankIconUrl } from '../../utils/bankIcons';
 
 interface BankPickerProps {
     /** 是否显示 */
@@ -177,25 +178,37 @@ const BankPicker: React.FC<BankPickerProps> = ({
                         </div>
                     )}
 
-                    {filteredBanks.map(bank => (
-                        <div
-                            key={bank}
-                            onClick={() => {
-                                setSelectedBank(bank);
-                                setIsCustomMode(false);
-                            }}
-                            className={`px-5 py-3.5 text-sm flex items-center justify-between cursor-pointer border-b border-gray-50 active:bg-gray-50 transition-colors ${bank === selectedBank
-                                ? 'text-orange-600 font-medium bg-orange-50/20'
-                                : 'text-gray-700'
-                                }`}
-                        >
-                            <div className="flex items-center gap-3">
-                                <Building2 size={18} className={bank === selectedBank ? 'text-orange-500' : 'text-gray-300'} />
-                                <span>{bank}</span>
+                    {filteredBanks.map(bank => {
+                        const bankCode = getBankCodeByName(bank);
+                        const iconUrl = bankCode ? getBankIconUrl(bankCode) : '/images/banks/default.png';
+
+                        return (
+                            <div
+                                key={bank}
+                                onClick={() => {
+                                    setSelectedBank(bank);
+                                    setIsCustomMode(false);
+                                }}
+                                className={`px-5 py-3.5 text-sm flex items-center justify-between cursor-pointer border-b border-gray-50 active:bg-gray-50 transition-colors ${bank === selectedBank
+                                    ? 'text-orange-600 font-medium bg-orange-50/20'
+                                    : 'text-gray-700'
+                                    }`}
+                            >
+                                <div className="flex items-center gap-3">
+                                    <img
+                                        src={iconUrl}
+                                        alt={bank}
+                                        className="w-6 h-6 object-contain rounded"
+                                        onError={(e) => {
+                                            (e.target as HTMLImageElement).src = '/images/banks/default.png';
+                                        }}
+                                    />
+                                    <span>{bank}</span>
+                                </div>
+                                {bank === selectedBank && <Check size={18} className="text-orange-500" />}
                             </div>
-                            {bank === selectedBank && <Check size={18} className="text-orange-500" />}
-                        </div>
-                    ))}
+                        );
+                    })}
 
                     {filteredBanks.length === 0 && !searchText && (
                         <div className="py-12 text-center text-gray-400 text-xs">

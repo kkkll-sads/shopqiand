@@ -1,46 +1,45 @@
 /**
  * 银行列表数据
+ * 使用 bankcard npm 包提供的银行列表
  * 用于银行卡管理页面
  */
-
-export const BANK_LIST = [
-    '中国工商银行',
-    '中国农业银行',
-    '中国银行',
-    '中国建设银行',
-    '交通银行',
-    '中国邮政储蓄银行',
-    '招商银行',
-    '浦发银行',
-    '中信银行',
-    '中国光大银行',
-    '华夏银行',
-    '中国民生银行',
-    '广发银行',
-    '兴业银行',
-    '平安银行',
-    '浙商银行',
-    '恒丰银行',
-    '渤海银行',
-    '北京银行',
-    '上海银行',
-    '江苏银行',
-    '宁波银行',
-    '南京银行',
-    '杭州银行',
-    '徽商银行',
-    '重庆银行',
-    '哈尔滨银行',
-    '天津银行',
-    '大连银行',
-    '盛京银行',
-    '成都银行',
-    '西安银行',
-];
+import { banks } from 'bankcard';
 
 /**
- * 获取银行列表
+ * 银行信息接口
+ */
+export interface BankInfo {
+    code: string;
+    name: string;
+}
+
+/**
+ * 获取完整银行信息列表 (包含 code 和 name)
+ */
+export const getBankList = (): BankInfo[] => {
+    return banks;
+};
+
+/**
+ * 获取银行名称列表
+ * 用于兼容原有的选择器组件
  */
 export const getBanks = (): string[] => {
-    return BANK_LIST;
+    return banks.map(bank => bank.name);
+};
+
+/**
+ * 根据银行 code 获取银行名称
+ */
+export const getBankNameByCode = (code: string): string | undefined => {
+    const bank = banks.find(b => b.code === code);
+    return bank?.name;
+};
+
+/**
+ * 根据银行名称获取银行 code
+ */
+export const getBankCodeByName = (name: string): string | undefined => {
+    const bank = banks.find(b => b.name === name);
+    return bank?.code;
 };

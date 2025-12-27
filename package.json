@@ -13,6 +13,8 @@
     "test": "vitest run --runInBand"
   },
   "dependencies": {
+    "bankcard": "^3.1.5",
+    "element-china-area-data": "^6.1.0",
     "lucide-react": "^0.554.0",
     "md5": "^2.3.0",
     "react": "^19.2.0",

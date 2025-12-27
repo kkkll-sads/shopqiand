@@ -17,6 +17,17 @@ import { useNotification } from '../../context/NotificationContext';
 import { Route } from '../../router/routes';
 import { bizLog, debugLog } from '../../utils/logger';
 
+/**
+ * 从价格分区字符串中提取价格数字
+ * @param priceZone - 价格分区字符串，如 "1000元区"
+ * @returns 提取的价格数字，如果提取失败返回 0
+ */
+const extractPriceFromZone = (priceZone?: string): number => {
+  if (!priceZone) return 0;
+  const match = priceZone.match(/(\d+)/);
+  return match ? Number(match[1]) : 0;
+};
+
 interface ProductDetailProps {
   product: Product;
   onBack: () => void;
@@ -133,7 +144,17 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, onNaviga
 
   const mainImage = isShopProduct ? (shopDetail?.thumbnail || product.image) : (collectionDetail?.images?.[0] || collectionDetail?.image || product.image);
   const displayTitle = isShopProduct ? (shopDetail?.name || product.title) : (collectionDetail?.title || product.title);
-  const displayPrice = isShopProduct ? Number(shopDetail?.price ?? product.price) : Number(collectionDetail?.price ?? product.price);
+  
+  // 价格计算：优先使用价格分区，否则使用实际价格
+  let displayPrice: number;
+  if (isShopProduct) {
+    displayPrice = Number(shopDetail?.price ?? product.price);
+  } else {
+    const actualPrice = Number(collectionDetail?.price ?? product.price);
+    const priceZone = collectionDetail?.price_zone || (collectionDetail as any)?.priceZone;
+    const zonePriceValue = extractPriceFromZone(priceZone);
+    displayPrice = zonePriceValue > 0 ? zonePriceValue : actualPrice;
+  }
 
   // Specific fields for Collection
   const txHash = (collectionDetail as CollectionItemDetailData | undefined)?.tx_hash;
@@ -350,17 +371,30 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, onNaviga
               </div>
             )}
 
-            {/* Collection Specific: Session Info */}
-            {!isShopProduct && (sessionName || sessionTime.trim()) && (
-              <div className="grid grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-xs font-bold text-gray-400 uppercase mb-1 tracking-wider">Session / 专场</label>
-                  <div className="text-sm font-bold text-gray-600">{sessionName || '—'}</div>
+            {/* Collection Specific: Session Info & Price Zone */}
+            {!isShopProduct && (sessionName || sessionTime.trim() || collectionDetail?.price_zone) && (
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-xs font-bold text-gray-400 uppercase mb-1 tracking-wider">Session / 专场</label>
+                    <div className="text-sm font-bold text-gray-600">{sessionName || '—'}</div>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-gray-400 uppercase mb-1 tracking-wider">Trading Window / 场次时间</label>
+                    <div className="text-sm font-bold text-gray-600">{sessionTime || '—'}</div>
+                  </div>
                 </div>
-                <div>
-                  <label className="block text-xs font-bold text-gray-400 uppercase mb-1 tracking-wider">Trading Window / 场次时间</label>
-                  <div className="text-sm font-bold text-gray-600">{sessionTime || '—'}</div>
-                </div>
+                {collectionDetail?.price_zone && (
+                  <div>
+                    <label className="block text-xs font-bold text-gray-400 uppercase mb-1 tracking-wider">Price Zone / 价格分区</label>
+                    <div className="flex items-center gap-2">
+                      <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-orange-50 text-orange-600 border border-orange-200">
+                        {collectionDetail.price_zone}
+                      </span>
+                      <span className="text-xs text-gray-400">（申购价按分区统一定价）</span>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 

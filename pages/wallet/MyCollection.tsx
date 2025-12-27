@@ -506,7 +506,7 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onBack, onItemSelect, initi
 
   const { showToast, showDialog } = useNotification();
 
-  const handleConfirmAction = async () => {
+  const handleConfirmActionByType = async (targetType: 'delivery' | 'consignment') => {
     if (!selectedItem || actionLoading) return;
 
     const token = localStorage.getItem(AUTH_TOKEN_KEY);
@@ -526,7 +526,7 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onBack, onItemSelect, initi
       return;
     }
 
-    if (actionTab === 'delivery') {
+    if (targetType === 'delivery') {
       if (isConsigning(selectedItem)) {
         showToast('warning', '提示', '该藏品正在寄售中，无法提货');
         return;
@@ -871,299 +871,239 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onBack, onItemSelect, initi
           )}
         </div>
 
-        {/* 操作弹窗 */}
+        {/* 操作弹窗 - 资产处置控制台 */}
         {showActionModal && selectedItem && (
           <div
-            className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4"
+            className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4 backdrop-blur-sm"
             onClick={() => setShowActionModal(false)}
           >
             <div
-              className="bg-white rounded-xl p-6 max-w-sm w-full relative"
+              className="bg-[#F9F9F9] rounded-xl overflow-hidden max-w-sm w-full relative shadow-2xl animate-in zoom-in-95 duration-200"
               onClick={(e) => e.stopPropagation()}
             >
-              <button
-                type="button"
-                className="absolute top-4 right-4 p-1 text-gray-400 hover:text-gray-600"
-                onClick={() => setShowActionModal(false)}
-              >
-                <X size={20} />
-              </button>
-
-              <div className="flex gap-3 mb-4">
-                <div className="w-16 h-16 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
-                  <img
-                    src={normalizeAssetUrl(selectedItem.item_image || selectedItem.image || '')}
-                    alt={selectedItem.item_title || selectedItem.title}
-                    className="w-full h-full object-cover"
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).src = 'https://via.placeholder.com/150';
-                    }}
-                  />
-                </div>
-                <div className="flex-1">
-                  <div className="text-sm font-medium text-gray-800 mb-1">{selectedItem.item_title || selectedItem.title}</div>
-                  {selectedItem.order_no && (
-                    <div className="text-xs text-gray-400 mb-1">订单号: {selectedItem.order_no}</div>
-                  )}
-                  <div className="text-xs text-gray-500">购买时间: {selectedItem.pay_time_text || selectedItem.buy_time_text}</div>
-                  <div className="text-sm font-bold text-gray-900 mt-1">¥ {selectedItem.price}</div>
-                </div>
+              {/* 1. 弹窗标题 */}
+              <div className="bg-white px-5 py-4 flex justify-between items-center border-b border-gray-100">
+                <div className="text-base font-bold text-gray-900">资产挂牌委托</div>
+                <button
+                  type="button"
+                  className="p-1 text-gray-400 hover:text-gray-600 active:scale-95 transition-transform"
+                  onClick={() => setShowActionModal(false)}
+                >
+                  <X size={20} />
+                </button>
               </div>
 
-              {/* 订单详情 */}
-              {selectedItem.order_no && (
-                <div className="bg-gray-50 rounded-lg p-3 mb-4 border border-gray-100">
-                  <div className="text-xs font-semibold text-gray-700 mb-2 flex items-center gap-2">
-                    <FileText size={14} />
-                    订单详情
-                  </div>
-                  <div className="space-y-1.5">
-                    <div className="flex justify-between text-xs">
-                      <span className="text-gray-500">订单号：</span>
-                      <span className="text-gray-800 font-mono">{selectedItem.order_no}</span>
+              <div className="p-5 space-y-5">
+                {/* 2. 资产卡片化 (Asset Card) */}
+                <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+                  <div className="flex gap-3 mb-4">
+                    <div className="w-14 h-14 bg-gray-50 rounded-lg overflow-hidden flex-shrink-0 border border-gray-100">
+                      <img
+                        src={normalizeAssetUrl(selectedItem.item_image || selectedItem.image || '')}
+                        alt={selectedItem.item_title || selectedItem.title}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = 'https://via.placeholder.com/150';
+                        }}
+                      />
                     </div>
-                    {selectedItem.order_status_text && (
-                      <div className="flex justify-between text-xs">
-                        <span className="text-gray-500">订单状态：</span>
-                        <span className="text-gray-800">{selectedItem.order_status_text}</span>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-bold text-gray-900 mb-1 truncate leading-tight">
+                        {selectedItem.item_title || selectedItem.title}
                       </div>
-                    )}
-                    {selectedItem.original_record?.pay_type_text && (
-                      <div className="flex justify-between text-xs">
-                        <span className="text-gray-500">支付方式：</span>
-                        <span className="text-gray-800">{selectedItem.original_record.pay_type_text}</span>
+                      <div className="text-xs text-gray-500 font-mono truncate bg-gray-50 inline-block px-1.5 py-0.5 rounded">
+                        确权编号：{selectedItem.asset_code || selectedItem.order_no || 'Pending...'}
                       </div>
-                    )}
-                    {selectedItem.original_record?.quantity && (
-                      <div className="flex justify-between text-xs">
-                        <span className="text-gray-500">购买数量：</span>
-                        <span className="text-gray-800">{selectedItem.original_record.quantity}</span>
-                      </div>
-                    )}
+                    </div>
                   </div>
+
+                  {/* 核心数据网格 */}
+                  {(() => {
+                    const price = parseFloat(selectedItem.price || '0');
+                    const expectedProfit = price * 0.055;
+                    const expectedTotal = price * 1.055;
+
+                    return (
+                      <div className="grid grid-cols-3 gap-2 pt-3 border-t border-dashed border-gray-100">
+                        <div className="flex flex-col">
+                          <span className="text-[10px] text-gray-400 mb-0.5">当前估值</span>
+                          <span className="text-sm font-bold text-gray-900 font-[DINAlternate-Bold]">
+                            ¥{price.toFixed(2)}
+                          </span>
+                        </div>
+                        <div className="flex flex-col items-center border-l border-r border-gray-50">
+                          <span className="text-[10px] text-gray-400 mb-0.5">预期收益 (5.5%)</span>
+                          <span className="text-sm font-bold text-red-500 font-[DINAlternate-Bold]">
+                            +{expectedProfit.toFixed(2)}
+                          </span>
+                        </div>
+                        <div className="flex flex-col items-end">
+                          <span className="text-[10px] text-gray-400 mb-0.5">预估回款</span>
+                          <span className="text-sm font-bold text-gray-900 font-[DINAlternate-Bold]">
+                            ¥{expectedTotal.toFixed(2)}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })()}
                 </div>
-              )}
 
-              {(() => {
-                if (isConsigning(selectedItem) ||
-                  hasConsignedSuccessfully(selectedItem) ||
-                  isDelivered(selectedItem) ||
-                  hasConsignedBefore(selectedItem)) {
-                  return null;
-                }
+                {/* 3. 状态栏 */}
+                {(() => {
+                  const checkData = consignmentCheckData || {};
+                  let isLocked = false;
+                  let lockMsg = '';
+                  let remainingSecs = 0;
 
-                return (
-                  <div className="flex bg-gray-100 p-1 rounded-lg mb-4">
-                    <button
-                      onClick={() => setActionTab('delivery')}
-                      className={`flex-1 py-2 text-xs rounded-md transition-colors ${actionTab === 'delivery'
-                        ? 'bg-white text-blue-600 font-medium shadow-sm'
-                        : 'text-gray-600'
-                        }`}
-                    >
-                      权益分割
-                    </button>
-                    <button
-                      onClick={() => setActionTab('consignment')}
-                      className={`flex-1 py-2 text-xs rounded-md transition-colors ${actionTab === 'consignment'
-                        ? 'bg-white text-orange-600 font-medium shadow-sm'
-                        : 'text-gray-600'
-                        }`}
-                    >
-                      寄售
-                    </button>
+                  // 优先使用后端返回的状态
+                  if (typeof checkData.unlocked === 'boolean' && !checkData.unlocked) {
+                    isLocked = true;
+                    remainingSecs = Number(checkData.remaining_seconds || 0);
+                  } else if (typeof checkData.remaining_seconds === 'number' && Number(checkData.remaining_seconds) > 0) {
+                    isLocked = true;
+                    remainingSecs = Number(checkData.remaining_seconds);
+                  } else {
+                    // 后端没数据时回退到本地计算
+                    const timeCheck = check48Hours(selectedItem.pay_time || selectedItem.buy_time || 0);
+                    if (!timeCheck.passed) {
+                      isLocked = true;
+                      // 估算剩余秒数
+                      remainingSecs = timeCheck.hoursLeft * 3600;
+                    }
+                  }
+
+                  if (isLocked) {
+                    return (
+                      <div className="flex items-center justify-center gap-2 bg-orange-50 text-orange-600 py-2.5 rounded-lg border border-orange-100 px-3">
+                        <div className="w-2 h-2 rounded-full bg-orange-500 animate-pulse" />
+                        <span className="text-xs font-medium">
+                          🔒 锁定期剩余 {formatSeconds(remainingSecs)}
+                        </span>
+                      </div>
+                    );
+                  }
+
+                  // 状态正常
+                  return (
+                    <div className="flex items-center justify-center gap-2 bg-green-50 text-green-700 py-2.5 rounded-lg border border-green-100">
+                      <CheckCircle size={14} className="text-green-600" />
+                      <span className="text-xs font-medium">T+1 解锁期已满，当前可流转</span>
+                    </div>
+                  );
+                })()}
+
+                {/* 4. 挂牌成本清单 */}
+                <div>
+                  <div className="flex items-center gap-2 mb-2 px-1">
+                    <div className="w-0.5 h-3 bg-gray-300 rounded-full"></div>
+                    <span className="text-xs font-bold text-gray-500">挂牌成本核算</span>
+                    <div className="flex-1 h-px bg-gray-200"></div>
                   </div>
-                );
-              })()}
 
-              <div className="space-y-3 mb-4">
-                {actionTab === 'delivery' ? (
-                  <>
-                    {isConsigning(selectedItem) && (
-                      <div className="flex items-center gap-2 text-xs text-red-600 bg-red-50 px-3 py-2 rounded-lg">
-                        <AlertCircle size={16} />
-                        <span>该藏品正在寄售中，无法提货</span>
-                      </div>
-                    )}
+                  <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 space-y-4">
+                    {(() => {
+                      const price = parseFloat(selectedItem.price || '0');
+                      const serviceFee = price * 0.03;
+                      const balance = parseFloat(userInfo?.service_fee_balance || '0');
+                      const isBalanceEnough = balance >= serviceFee;
 
-                    {!isConsigning(selectedItem) && hasConsignedSuccessfully(selectedItem) && (
-                      <div className="flex items-center gap-2 text-xs text-red-600 bg-red-50 px-3 py-2 rounded-lg">
-                        <AlertCircle size={16} />
-                        <span>该藏品已经寄售成功（已售出），无法提货</span>
-                      </div>
-                    )}
-
-                    {!isConsigning(selectedItem) && !hasConsignedSuccessfully(selectedItem) && isDelivered(selectedItem) && (
-                      <div className="flex items-center gap-2 text-xs text-red-600 bg-red-50 px-3 py-2 rounded-lg">
-                        <AlertCircle size={16} />
-                        <span>该藏品已经提货，无法再次提货</span>
-                      </div>
-                    )}
-
-                    {!isConsigning(selectedItem) && !hasConsignedSuccessfully(selectedItem) && !isDelivered(selectedItem) && (() => {
-                      const timeCheck = check48Hours(selectedItem.pay_time || selectedItem.buy_time || 0);
-                      return consignmentCheckData ? (
-                        consignmentCheckData.remaining_text ? (
-                          <div className="flex items-center gap-2 text-xs text-orange-600 bg-orange-50 px-3 py-2 rounded-lg">
-                            <AlertCircle size={16} />
-                            <span>{consignmentCheckData.remaining_text}</span>
-                          </div>
-                        ) : typeof consignmentRemaining === 'number' && consignmentRemaining >= 0 ? (
-                          <div className="flex items-center gap-2 text-xs text-orange-600 bg-orange-50 px-3 py-2 rounded-lg">
-                            <AlertCircle size={16} />
-                            <span>{actionTab === 'delivery' ? '距离权益分割时间还有：' : '距离可寄售时间还有：'}{formatSeconds(consignmentRemaining)}</span>
-                          </div>
-                        ) : consignmentCheckData.remaining_seconds ? (
-                          <div className="flex items-center gap-2 text-xs text-orange-600 bg-orange-50 px-3 py-2 rounded-lg">
-                            <AlertCircle size={16} />
-                            <span>{actionTab === 'delivery' ? '距离权益分割时间还有：' : '距离可寄售时间还有：'}{formatSeconds(Number(consignmentCheckData.remaining_seconds))}</span>
-                          </div>
-                        ) : (
-                          timeCheck.passed ? (
-                            <div className="flex items-center gap-2 text-xs text-green-600 bg-green-50 px-3 py-2 rounded-lg">
-                              <CheckCircle size={16} />
-                              <span>已满足48小时提货条件</span>
+                      return (
+                        <div className="flex justify-between items-center">
+                          <div>
+                            <div className="text-sm font-medium text-gray-700">确权技术服务费 (3%)</div>
+                            <div className={`text-xs mt-0.5 ${isBalanceEnough ? 'text-gray-400' : 'text-red-500'}`}>
+                              当前确权金: ¥{balance.toFixed(2)} {!isBalanceEnough && '(不足)'}
                             </div>
-                          ) : (
-                            <div className="flex items-center gap-2 text-xs text-orange-600 bg-orange-50 px-3 py-2 rounded-lg">
-                              <AlertCircle size={16} />
-                              <span>还需等待 {timeCheck.hoursLeft} 小时才能提货</span>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-sm font-bold text-gray-900 font-[DINAlternate-Bold]">
+                              ¥{serviceFee.toFixed(2)}
                             </div>
-                          )
-                        )
-                      ) : (
-                        timeCheck.passed ? (
-                          <div className="flex items-center gap-2 text-xs text-green-600 bg-green-50 px-3 py-2 rounded-lg">
-                            <CheckCircle size={16} />
-                            <span>已满足48小时提货条件</span>
-                          </div>
-                        ) : (
-                          <div className="flex items-center gap-2 text-xs text-orange-600 bg-orange-50 px-3 py-2 rounded-lg">
-                            <AlertCircle size={16} />
-                            <span>还需等待 {timeCheck.hoursLeft} 小时才能提货</span>
-                          </div>
-                        )
-                      );
-                    })()}
-
-                    {!isConsigning(selectedItem) && !hasConsignedSuccessfully(selectedItem) && !isDelivered(selectedItem) && hasConsignedBefore(selectedItem) && (
-                      <div className="flex items-center gap-2 text-xs text-red-600 bg-red-50 px-3 py-2 rounded-lg">
-                        <AlertCircle size={16} />
-                        <span>该藏品曾经寄售过，将执行强制提货</span>
-                      </div>
-                    )}
-                  </>
-                ) : (
-                  <>
-                    {isConsigning(selectedItem) && (
-                      <div className="flex items-center gap-2 text-xs text-red-600 bg-red-50 px-3 py-2 rounded-lg">
-                        <AlertCircle size={16} />
-                        <span>该藏品正在寄售中，无法再次寄售</span>
-                      </div>
-                    )}
-
-                    {!isConsigning(selectedItem) && hasConsignedSuccessfully(selectedItem) && (
-                      <div className="flex items-center gap-2 text-xs text-red-600 bg-red-50 px-3 py-2 rounded-lg">
-                        <AlertCircle size={16} />
-                        <span>该藏品已经寄售成功（已售出），无法再次寄售</span>
-                      </div>
-                    )}
-
-                    {!isConsigning(selectedItem) && !hasConsignedSuccessfully(selectedItem) && (() => {
-                      const timeCheck = check48Hours(selectedItem.pay_time || selectedItem.buy_time || 0);
-                      if (timeCheck.passed) {
-                        return (
-                          <div className="flex items-center gap-2 text-xs text-green-600 bg-green-50 px-3 py-2 rounded-lg">
-                            <CheckCircle size={16} />
-                            <span>已满足48小时寄售条件</span>
-                          </div>
-                        );
-                      } else {
-                        return (
-                          <div className="bg-orange-50 px-3 py-2 rounded-lg">
-                            <div className="flex items-center gap-2 text-xs text-orange-600 mb-1">
-                              <AlertCircle size={16} />
-                              <span>距离可寄售时间还有：</span>
-                            </div>
-                            {consignmentCheckData ? (
-                              consignmentCheckData.remaining_text ? (
-                                <div className="text-sm font-bold text-orange-700 text-center">
-                                  {consignmentCheckData.remaining_text}
-                                </div>
-                              ) : consignmentCheckData.remaining_seconds ? (
-                                <div className="text-sm font-bold text-orange-700 text-center">
-                                  {formatSeconds(Number(consignmentCheckData.remaining_seconds))}
-                                </div>
-                              ) : (
-                                <div className="text-sm font-bold text-orange-700 text-center">
-                                  {consignmentCheckData.message || JSON.stringify(consignmentCheckData)}
-                                </div>
-                              )
-                            ) : countdown ? (
-                              <div className="text-sm font-bold text-orange-700 text-center">
-                                {String(countdown.hours).padStart(2, '0')}:
-                                {String(countdown.minutes).padStart(2, '0')}:
-                                {String(countdown.seconds).padStart(2, '0')}
-                              </div>
-                            ) : (
-                              <div className="text-xs text-orange-600 text-center">
-                                计算中...
-                              </div>
-                            )}
-                          </div>
-                        );
-                      }
-                    })()}
-
-                    {!isConsigning(selectedItem) && !hasConsignedSuccessfully(selectedItem) && (
-                      <div className="bg-blue-50/50 border border-blue-100 px-4 py-3 rounded-xl">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2 text-sm text-blue-700 font-medium">
-                            <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">
-                              <ShoppingBag size={16} />
-                            </div>
-                            <span>可用寄售券</span>
-                          </div>
-                          <div className="text-base font-bold text-blue-700">
-                            {checkingCoupons ? (
-                              <span className="text-xs text-blue-400">查询中...</span>
-                            ) : (
-                              <span>{availableCouponCount} <span className="text-xs font-normal text-blue-500">张</span></span>
+                            {!isBalanceEnough && (
+                              <button
+                                className="text-[10px] text-orange-600 bg-orange-50 px-1.5 py-0.5 rounded mt-1"
+                                onClick={() => {
+                                  // 这里可以跳转去充值，暂时先提示
+                                  showToast('info', '余额不足', '请前往【我的-服务费】进行充值');
+                                }}
+                              >
+                                去充值
+                              </button>
                             )}
                           </div>
                         </div>
-                        {availableCouponCount === 0 && !checkingCoupons && (
-                          <div className="flex items-center gap-1.5 mt-2 text-xs text-red-500 bg-red-50 px-2 py-1.5 rounded-lg border border-red-100">
-                            <AlertCircle size={12} />
-                            <span>您没有该场次可用的寄售券</span>
+                      );
+                    })()}
+
+                    <div className="w-full h-px bg-gray-50" />
+
+                    {(() => {
+                      const hasVoucher = availableCouponCount > 0;
+                      return (
+                        <div className="flex justify-between items-center">
+                          <div>
+                            <div className="text-sm font-medium text-gray-700">资产流转券</div>
+                            <div className={`text-xs mt-0.5 ${hasVoucher ? 'text-gray-400' : 'text-red-500'}`}>
+                              持有数量: {availableCouponCount} 张
+                            </div>
                           </div>
-                        )}
-                      </div>
-                    )}
-                  </>
+                          <div className="text-right">
+                            <div className={`text-sm font-bold font-[DINAlternate-Bold] ${hasVoucher ? 'text-gray-900' : 'text-red-500'}`}>
+                              1 张
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })()}
+                  </div>
+                </div>
+
+                {/* 错误提示 */}
+                {actionError && (
+                  <div className="text-xs text-red-600 text-center bg-red-50 py-2 rounded-lg">
+                    {actionError}
+                  </div>
                 )}
+
+                {/* 5. 底部双按钮 */}
+                <div className="flex gap-3 pt-2">
+                  <button
+                    onClick={() => {
+                      // 权益分割（转分红）逻辑
+                      // 设置 Tab 状态仅仅为了复用之前的逻辑如果需要，但最好直接调用
+                      setActionTab('delivery');
+                      // 稍微延迟一下确保 state 更新? 其实可以直接把逻辑抽离出来，但为了险稳妥，我们直接复用 handleConfirmAction
+                      // 但 handleConfirmAction 依赖 actionTab state，这在 React 异步中会有问题。
+                      // 因此必须重构 handleConfirmAction 接收参数。
+                      // 由于不能改所有的代码，这里我用一个 hack: 手动调用内部逻辑。
+                      handleConfirmActionByType('delivery');
+                    }}
+                    disabled={actionLoading || isConsigning(selectedItem) || hasConsignedSuccessfully(selectedItem) || isDelivered(selectedItem)}
+                    className="flex-[3] flex flex-col items-center justify-center py-3 rounded-xl bg-white border border-gray-200 text-gray-600 active:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm"
+                  >
+                    <span className="text-sm font-bold">权益交割</span>
+                    <span className="text-[10px] text-gray-400 font-normal scale-90">转为每日分红</span>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setActionTab('consignment');
+                      handleConfirmActionByType('consignment');
+                    }}
+                    disabled={actionLoading || !canPerformAction() || isConsigning(selectedItem)}
+                    className="flex-[7] flex flex-col items-center justify-center py-3 rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-lg shadow-orange-200 active:scale-[0.98] disabled:opacity-50 disabled:shadow-none disabled:cursor-not-allowed transition-all"
+                  >
+                    {actionLoading ? (
+                      <span className="text-sm font-bold">提交中...</span>
+                    ) : (
+                      <>
+                        <span className="text-sm font-bold">确认挂牌上架</span>
+                        <span className="text-[10px] text-white/80 font-normal scale-90">立即发布到撮合池</span>
+                      </>
+                    )}
+                  </button>
+                </div>
               </div>
-
-              {actionError && (
-                <div className="text-xs text-red-600 mb-2">{actionError}</div>
-              )}
-
-              <button
-                onClick={handleConfirmAction}
-                disabled={actionLoading || !canPerformAction()}
-                className={`w-full py-3 rounded-lg text-sm font-medium transition-colors ${!actionLoading && canPerformAction()
-                  ? actionTab === 'delivery'
-                    ? 'bg-blue-600 text-white active:bg-blue-700'
-                    : 'bg-orange-600 text-white active:bg-orange-700'
-                  : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                  }`}
-              >
-                {actionLoading
-                  ? '提交中...'
-                  : actionTab === 'delivery'
-                    ? '权益分割'
-                    : '确认寄售'}
-              </button>
             </div>
           </div>
         )}
@@ -1173,4 +1113,3 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onBack, onItemSelect, initi
 };
 
 export default MyCollection;
-

@@ -13,6 +13,17 @@ import {
     CollectionItem,
 } from '../../services/api';
 
+/**
+ * 从价格分区字符串中提取价格数字
+ * @param priceZone - 价格分区字符串，如 "1000元区"
+ * @returns 提取的价格数字，如果提取失败返回 0
+ */
+const extractPriceFromZone = (priceZone?: string): number => {
+    if (!priceZone) return 0;
+    const match = priceZone.match(/(\d+)/);
+    return match ? Number(match[1]) : 0;
+};
+
 interface TradingZoneProps {
     onBack: () => void;
     onProductSelect?: (product: Product) => void;
@@ -195,10 +206,17 @@ const TradingZone: React.FC<TradingZoneProps> = ({ onBack, onProductSelect, onNa
                         determined_as_consignment: isConsignment
                     });
 
+                    // 优先使用价格分区的价格，如果没有则使用实际价格
+                    const zonePriceValue = extractPriceFromZone(item.price_zone);
+                    const actualPrice = Number(isConsignment ? (item.consignment_price || item.price) : item.price);
+                    const displayPrice = zonePriceValue > 0 ? zonePriceValue : actualPrice;
+                    
                     return {
                         ...item,
-                        // 根据商品类型使用不同的价格字段
-                        price: Number(isConsignment ? (item.consignment_price || item.price) : item.price),
+                        // 使用分区价格作为显示价格（申购价）
+                        price: displayPrice,
+                        // 保留实际价格用于其他用途
+                        actual_price: actualPrice,
                         displayKey: isConsignment ? `cons-${item.consignment_id || item.id}` : `col-${item.id}`,
                         source: (isConsignment ? 'consignment' : 'collection') as const,
                         consignment_id: isConsignment ? (item.consignment_id || (String(item.id) === "7" || Number(item.id) === 7 ? 19 : item.id)) : undefined,

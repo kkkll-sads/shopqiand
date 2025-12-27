@@ -1,6 +1,10 @@
-// 省略 hardcoded import
+/**
+ * 地区选择器组件
+ * 使用 element-china-area-data npm 包提供完整的中国省市区数据
+ */
 import React, { useState, useEffect, useMemo } from 'react';
 import { X, Check } from 'lucide-react';
+import { pcaTextArr } from 'element-china-area-data';
 
 interface RegionPickerProps {
     /** 是否显示 */
@@ -26,8 +30,40 @@ interface ProvinceData {
     districts?: DistrictData;
 }
 
-// 缓存数据，避免重复请求
-let cachedRegionData: Record<string, ProvinceData> | null = null;
+/**
+ * 将 element-china-area-data 的级联格式转换为组件期望的扁平格式
+ * 从 { label, value, children: [...] } 转换为 { [省]: { cities: [...], districts: { [市]: [...] } } }
+ */
+const convertToFlatFormat = (): Record<string, ProvinceData> => {
+    const result: Record<string, ProvinceData> = {};
+
+    for (const province of pcaTextArr) {
+        const provinceName = province.label;
+        const cities: string[] = [];
+        const districts: DistrictData = {};
+
+        if (province.children) {
+            for (const city of province.children) {
+                const cityName = city.label;
+                cities.push(cityName);
+
+                if (city.children) {
+                    districts[cityName] = city.children.map((district: { label: string }) => district.label);
+                }
+            }
+        }
+
+        result[provinceName] = {
+            cities,
+            districts: Object.keys(districts).length > 0 ? districts : undefined,
+        };
+    }
+
+    return result;
+};
+
+// 缓存转换后的数据
+const cachedRegionData: Record<string, ProvinceData> = convertToFlatFormat();
 
 const RegionPicker: React.FC<RegionPickerProps> = ({
     visible,
@@ -41,41 +77,13 @@ const RegionPicker: React.FC<RegionPickerProps> = ({
     const [animating, setAnimating] = useState(false);
     const [render, setRender] = useState(false);
 
-    // 数据加载状态
-    const [loading, setLoading] = useState(false);
-    const [regionData, setRegionData] = useState<Record<string, ProvinceData>>({});
+    // 直接使用缓存数据，无需异步加载
+    const regionData = cachedRegionData;
 
     // 选择状态
     const [selectedProvince, setSelectedProvince] = useState<string>('');
     const [selectedCity, setSelectedCity] = useState<string>('');
     const [selectedDistrict, setSelectedDistrict] = useState<string>('');
-
-    // 加载数据
-    useEffect(() => {
-        const loadData = async () => {
-            if (cachedRegionData) {
-                setRegionData(cachedRegionData);
-                return;
-            }
-
-            setLoading(true);
-            try {
-                // 加载本地 JSON 数据
-                const response = await fetch('/data/pca-code.json');
-                if (!response.ok) throw new Error('Failed to load region data');
-                const data = await response.json();
-                cachedRegionData = data;
-                setRegionData(data);
-            } catch (error) {
-                console.error('Error loading region data:', error);
-                // 可以在这里添加 fallback 数据或错误提示
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        loadData();
-    }, []);
 
     // 计算衍生数据
     const provinces = useMemo(() => Object.keys(regionData), [regionData]);

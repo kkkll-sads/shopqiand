@@ -183,7 +183,7 @@ const MyCollectionDetail: React.FC<MyCollectionDetailProps> = ({ item, onBack, o
                             </div>
                             {/* Black box buttons */}
                             <div className="bg-gray-800 rounded-b p-2 flex gap-2 border-t border-gray-700">
-                                <button 
+                                <button
                                     onClick={() => {
                                         const md5Hash = item.fingerprint || item.md5 || item.tx_hash || '0x7d9a8b1c4e2f3a6b9c8d7e6f5a4b3c2d1e0f9a8b7c6d5e4f3a2b1c0d9e8f7a6';
                                         navigator.clipboard.writeText(md5Hash).then(() => {
@@ -197,10 +197,15 @@ const MyCollectionDetail: React.FC<MyCollectionDetailProps> = ({ item, onBack, o
                                     <Copy size={10} />
                                     复制Hash
                                 </button>
-                                <button 
+                                <button
                                     onClick={() => {
-                                        const assetCode = `37-DATA-****-${String(item.id || 8821).padStart(4, '0')}`;
-                                        onNavigate({ name: 'search', code: assetCode });
+                                        // 使用MD5指纹进行查证，不使用脱敏的确权编号，避免查询错误
+                                        const md5Fingerprint = item.fingerprint || item.md5 || item.tx_hash || '';
+                                        if (!md5Fingerprint) {
+                                            showToast('error', '无法获取MD5指纹');
+                                            return;
+                                        }
+                                        onNavigate({ name: 'search', code: md5Fingerprint });
                                     }}
                                     className="flex-1 bg-gray-700 hover:bg-gray-600 text-white text-[10px] py-1.5 rounded flex items-center justify-center gap-1 transition-colors"
                                 >
