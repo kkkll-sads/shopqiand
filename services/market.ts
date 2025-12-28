@@ -64,6 +64,7 @@ export {
     fetchCollectionItemDetail,
     fetchCollectionItemsBySession,
     fetchCollectionItemOriginalDetail,
+    fetchMyCollectionDetail,
     getMyCollection,
     fetchMyCollectionList,
     fetchMatchingPool,

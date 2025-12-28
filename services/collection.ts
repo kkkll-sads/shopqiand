@@ -115,26 +115,26 @@ export async function fetchCollectionItems(params: FetchCollectionItemsParams = 
     });
 }
 
-/**
- * 获取藏品商品详情
- * API: GET /api/collectionItem/detail
- * 
- * @param id - 商品ID
- * @returns 返回商品详细信息，包括：
- *          - id: 商品ID
- *          - title: 商品标题
- *          - image: 商品主图完整URL
- *          - images: 商品详情图片列表
- *          - price: 价格
- *          - description: 商品描述
- *          - artist: 艺术家/创作者
- *          - stock: 库存数量
- *          - sales: 销量
- */
-export async function fetchCollectionItemDetail(id: number): Promise<ApiResponse<CollectionItemDetailData>> {
+export async function fetchCollectionItemDetail(id: number | string): Promise<ApiResponse<CollectionItemDetailData>> {
     return authedFetch<CollectionItemDetailData>(`${API_ENDPOINTS.collectionItem.detail}?id=${id}`, {
         method: 'GET',
     });
+}
+
+/**
+ * 获取我的藏品确权详情
+ * API: GET /api/collectionItem/detail
+ * 
+ * @param id - user_collection_id
+ * @returns 返回藏品确权详情
+ */
+export async function fetchMyCollectionDetail(id: number | string): Promise<ApiResponse<any>> {
+    const search = new URLSearchParams();
+    search.set('id', String(id));
+    search.set('type', 'my');
+
+    const path = `${API_ENDPOINTS.collectionItem.detail}?${search.toString()}`;
+    return authedFetch<any>(path, { method: 'GET' });
 }
 
 /**
@@ -502,27 +502,18 @@ export async function bidBuy(params: BidBuyParams): Promise<ApiResponse<BidBuyRe
 // ============================================================================
 
 export interface MyCollectionItem {
-    id: number;
-    item_id: number;
-    title?: string;
-    item_title?: string;
-    image?: string;
-    item_image?: string;
-    price: string;
-    buy_time?: number;
-    pay_time?: number;
-    buy_time_text?: string;
-    pay_time_text?: string;
-    delivery_status: number;
-    delivery_status_text: string;
-    consignment_status: number;
-    consignment_status_text: string;
-    user_collection_id?: number | string;
-    original_record?: any;
-    /** 确权编号（防伪溯源） */
-    asset_code?: string;
-    /** MD5存证指纹（唯一性验证） */
-    fingerprint?: string;
+    id: number;                   // 订单 ID
+    user_collection_id: number;   // 核心 ID: 用户藏品记录 ID (详情接口使用)
+    item_id: number;              // 原始商品 ID
+    item_title: string;           // 藏品标题
+    item_image: string;           // 藏品预览图 URL
+    asset_code?: string;           // 确权编号
+    fingerprint?: string;          // MD5 存证指纹
+    buy_time?: number;             // 购买时间戳
+    buy_time_text?: string;        // 格式化购买时间
+    status_text: string;          // 持有状态描述
+    delivery_status: number;      // 提货状态 (0=未提货, 1=已提货)
+    consignment_status: number;   // 寄售状态 (0=未寄售, 1=寄售中, 2=已售出)
     [key: string]: any;
 }
 
@@ -575,7 +566,7 @@ export async function getMyCollection(params: { page?: number; limit?: number; t
     const search = new URLSearchParams();
     if (params.page) search.set('page', String(params.page));
     if (params.limit) search.set('limit', String(params.limit));
-    if (params.type) search.set('type', params.type);
+    // 后端接口 /api/collectionItem/purchaseRecords 不支持 type 参数，前端进行过滤
 
     const path = `${API_ENDPOINTS.collectionItem.purchaseRecords}?${search.toString()}`;
     return authedFetch<{ list: MyCollectionItem[], total: number, has_more?: boolean, consignment_coupon?: number }>(path, {

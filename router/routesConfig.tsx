@@ -89,7 +89,7 @@ export const routeComponents: Partial<Record<Route['name'], RouteRenderer>> = {
     return (
       <ArtistDetail
         artistId={detailRoute.id}
-        onBack={() => helpers.navigateRoute(null)}
+        onBack={() => helpers.goBack()}
         onProductSelect={(product) => {
           helpers.setProductDetailOrigin('artist');
           helpers.handleProductSelect(product, 'artist');
@@ -101,77 +101,92 @@ export const routeComponents: Partial<Record<Route['name'], RouteRenderer>> = {
     <OrderListPage
       category={(route as Extract<Route, { name: 'order-list' }>).kind}
       initialTab={(route as Extract<Route, { name: 'order-list' }>).status}
-      onBack={() => helpers.navigateRoute(null)}
+      onBack={() => helpers.goBack()}
       onNavigate={(nextRoute) => helpers.navigateRoute(nextRoute)}
     />
   ),
   'order-detail': (route, helpers) => (
     <OrderDetail
       orderId={(route as Extract<Route, { name: 'order-detail' }>).orderId}
-      onBack={() => helpers.navigateRoute((route as Extract<Route, { name: 'order-detail' }>).back ?? { name: 'order-list', kind: 'points', status: 0 })}
+      onBack={() => helpers.goBack()}
       onNavigate={(nextRoute) => helpers.navigateRoute(nextRoute)}
     />
   ),
   cashier: (route, helpers) => (
     <Cashier
       orderId={(route as Extract<Route, { name: 'cashier' }>).orderId}
-      onBack={() => helpers.navigateRoute((route as Extract<Route, { name: 'cashier' }>).back ?? null)}
+      onBack={() => helpers.goBack()}
       onNavigate={(nextRoute) => helpers.navigateRoute(nextRoute)}
     />
   ),
   'claim-detail': (route, helpers) => (
     <ClaimDetail
       id={(route as Extract<Route, { name: 'claim-detail' }>).id}
-      onBack={() => helpers.navigateRoute({ name: 'claim-history' } as Route)}
+      onBack={() => helpers.goBack()}
     />
   ),
   settings: (_route, helpers) => (
     <Settings
-      onBack={() => helpers.navigateRoute(null)}
+      onBack={() => helpers.goBack()}
       onLogout={helpers.handleLogout}
       onNavigate={(nextRoute) => helpers.navigateRoute(nextRoute)}
     />
   ),
   'reset-login-password': (route, helpers) => (
     <ResetLoginPassword
-      onBack={() => helpers.navigateRoute((route as any).from ? { name: 'settings' } : null)}
+      onBack={() => helpers.goBack()}
       onNavigateForgotPassword={() => helpers.navigateRoute({ name: 'forgot-password' })}
     />
   ),
   'reset-pay-password': (route, helpers) => (
     <ResetPayPassword
-      onBack={() => helpers.navigateRoute((route as any).from ? { name: 'settings' } : null)}
+      onBack={() => helpers.goBack()}
       onNavigateForgotPassword={() => helpers.navigateRoute({ name: 'forgot-password' })}
     />
   ),
   'forgot-password': (_route, helpers) => (
-    <ForgotPassword onBack={() => helpers.navigateRoute({ name: 'settings' })} />
+    <ForgotPassword onBack={() => helpers.goBack()} />
   ),
   'notification-settings': (_route, helpers) => (
-    <NotificationSettings onBack={() => helpers.navigateRoute({ name: 'settings' })} />
+    <NotificationSettings onBack={() => helpers.goBack()} />
   ),
   'account-deletion': (_route, helpers) => (
-    <AccountDeletion onBack={() => helpers.navigateRoute({ name: 'settings' })} />
+    <AccountDeletion onBack={() => helpers.goBack()} />
   ),
   'edit-profile': (_route, helpers) => (
-    <EditProfile onBack={() => helpers.navigateRoute({ name: 'settings' })} onLogout={helpers.handleLogout} />
+    <EditProfile onBack={() => helpers.goBack()} onLogout={helpers.handleLogout} />
   ),
-  'card-management': (_route, helpers) => <CardManagement onBack={() => helpers.navigateRoute(null)} />,
+  'card-management': (_route, helpers) => <CardManagement onBack={() => helpers.goBack()} />,
   'trading-zone': (_route, helpers) => (
     <TradingZone
-      onBack={() => helpers.navigateRoute(null)}
+      onBack={() => helpers.goBack()}
       onProductSelect={(product) => helpers.handleProductSelect(product, 'trading-zone')}
+      onNavigate={(nextRoute) => helpers.navigateRoute(nextRoute)}
     />
   ),
+  'trading-zone-items': (route, helpers) => {
+    const payload = route as Extract<Route, { name: 'trading-zone-items' }>;
+    return (
+      <TradingZone
+        onBack={() => helpers.goBack()}
+        onProductSelect={(product) => helpers.handleProductSelect(product, 'trading-zone')}
+        onNavigate={(nextRoute) => helpers.navigateRoute(nextRoute)}
+        initialSessionId={payload.sessionId}
+        initialSessionTitle={payload.sessionTitle}
+        initialSessionStartTime={payload.sessionStartTime}
+        initialSessionEndTime={payload.sessionEndTime}
+      />
+    );
+  },
   'artist-showcase': (_route, helpers) => (
     <ArtistShowcase
-      onBack={() => helpers.navigateRoute(null)}
+      onBack={() => helpers.goBack()}
       onArtistSelect={(id) => helpers.navigateRoute({ name: 'artist-detail', id })}
     />
   ),
   'masterpiece-showcase': (_route, helpers) => (
     <ArtistWorksShowcase
-      onBack={() => helpers.navigateRoute(null)}
+      onBack={() => helpers.goBack()}
       onNavigateToArtist={(artistId) => helpers.navigateRoute({ name: 'artist-detail', id: artistId })}
     />
   ),
@@ -187,13 +202,13 @@ export const routeComponents: Partial<Record<Route['name'], RouteRenderer>> = {
         helpers.navigateRoute({ name: 'news-detail', id });
       }}
       onMarkAllRead={() => helpers.markAllNewsRead()}
-      onBack={() => helpers.navigateRoute(null)}
+      onBack={() => helpers.goBack()}
     />
   ),
-  'invite-friends': (_route, helpers) => <InviteFriends onBack={() => helpers.navigateRoute({ name: 'my-friends' })} />,
+  'invite-friends': (_route, helpers) => <InviteFriends onBack={() => helpers.goBack()} />,
   'my-collection': (_route, helpers) => (
     <MyCollection
-      onBack={() => helpers.navigateRoute(null)}
+      onBack={() => helpers.goBack()}
       onItemSelect={(item) => {
         helpers.setSelectedCollectionItem(item);
         helpers.navigateRoute({ name: 'my-collection-detail', id: String(item.id) });
@@ -208,7 +223,7 @@ export const routeComponents: Partial<Record<Route['name'], RouteRenderer>> = {
     return (
       <MyCollectionDetail
         item={helpers.selectedCollectionItem}
-        onBack={() => helpers.navigateRoute({ name: 'my-collection' })}
+        onBack={() => helpers.goBack()}
         onNavigate={(nextRoute) => helpers.navigateRoute(nextRoute)}
       />
     );
@@ -217,7 +232,7 @@ export const routeComponents: Partial<Record<Route['name'], RouteRenderer>> = {
     const payload = route as Extract<Route, { name: 'my-collection-consignment' }>;
     return (
       <MyCollection
-        onBack={() => helpers.navigateRoute(null)}
+        onBack={() => helpers.goBack()}
         onItemSelect={(item) => {
           helpers.setSelectedCollectionItem(item);
           helpers.navigateRoute({ name: 'my-collection-detail', id: String(item.id) });
@@ -226,37 +241,37 @@ export const routeComponents: Partial<Record<Route['name'], RouteRenderer>> = {
       />
     );
   },
-  'address-list': (_route, helpers) => <AddressList onBack={() => helpers.navigateRoute(null)} />,
-  'real-name-auth': (_route, helpers) => <RealNameAuth onBack={() => helpers.navigateRoute(null)} />,
+  'address-list': (_route, helpers) => <AddressList onBack={() => helpers.goBack()} />,
+  'real-name-auth': (_route, helpers) => <RealNameAuth onBack={() => helpers.goBack()} />,
   'my-friends': (_route, helpers) => (
-    <MyFriends onBack={() => helpers.navigateRoute(null)} onNavigate={(nextRoute) => helpers.navigateRoute(nextRoute)} />
+    <MyFriends onBack={() => helpers.goBack()} onNavigate={(nextRoute) => helpers.navigateRoute(nextRoute)} />
   ),
-  'agent-auth': (_route, helpers) => <AgentAuth onBack={() => helpers.navigateRoute(null)} />,
-  'help-center': (_route, helpers) => <HelpCenter onBack={() => helpers.navigateRoute(null)} />,
+  'agent-auth': (_route, helpers) => <AgentAuth onBack={() => helpers.goBack()} />,
+  'help-center': (_route, helpers) => <HelpCenter onBack={() => helpers.goBack()} />,
   'user-agreement': (_route, helpers) => {
     return <UserAgreement onBack={() => helpers.goBack()} />;
   },
-  'user-survey': (_route, helpers) => <UserSurvey onBack={() => helpers.navigateRoute(null)} />,
-  'online-service': (_route, helpers) => <OnlineService onBack={() => helpers.navigateRoute(null)} />,
+  'user-survey': (_route, helpers) => <UserSurvey onBack={() => helpers.goBack()} />,
+  'online-service': (_route, helpers) => <OnlineService onBack={() => helpers.goBack()} />,
   'search': (route, helpers) => {
     const payload = route as Extract<Route, { name: 'search' }>;
-    return <SearchPage onBack={() => helpers.navigateRoute(null)} onNavigate={(nextRoute) => helpers.navigateRoute(nextRoute)} initialCode={payload.code} />;
+    return <SearchPage onBack={() => helpers.goBack()} onNavigate={(nextRoute) => helpers.navigateRoute(nextRoute)} initialCode={payload.code} />;
   },
   'about-us': (route, helpers) => (
-    <AboutUs onBack={() => helpers.navigateRoute((route as any).from === 'home' ? null : { name: 'settings' })} />
+    <AboutUs onBack={() => helpers.goBack()} />
   ),
   'privacy-policy': (route, helpers) => (
-    <PrivacyPolicy onBack={() => helpers.navigateRoute((route as any).from ? { name: 'settings' } : null)} />
+    <PrivacyPolicy onBack={() => helpers.goBack()} />
   ),
   'asset-view': (route, helpers) => (
     <AssetView
       initialTab={(route as Extract<Route, { name: 'asset-view' }>).tab ?? 0}
-      onBack={() => helpers.navigateRoute(null)}
+      onBack={() => helpers.goBack()}
       onNavigate={(nextRoute) => helpers.navigateRoute(nextRoute)}
       onProductSelect={(product) => helpers.handleProductSelect(product, 'market')}
     />
   ),
-  'asset-history': (_route, helpers) => <AssetHistory onBack={() => helpers.navigateRoute({ name: 'asset-view' } as Route)} />,
+  'asset-history': (_route, helpers) => <AssetHistory onBack={() => helpers.goBack()} />,
   'balance-recharge': (route, helpers) => {
     const payload = route as Extract<Route, { name: 'balance-recharge' }>;
     const back: Route | null =
@@ -265,19 +280,19 @@ export const routeComponents: Partial<Record<Route['name'], RouteRenderer>> = {
         : payload.source === 'profile'
           ? null
           : { name: 'asset-view' };
-    return <BalanceRecharge onBack={() => helpers.navigateRoute(back)} initialAmount={payload.amount} />;
+    return <BalanceRecharge onBack={() => helpers.goBack()} initialAmount={payload.amount} />;
   },
   'balance-withdraw': (route, helpers) => {
     const payload = route as Extract<Route, { name: 'balance-withdraw' }>;
     const back: Route | null = payload.source === 'profile' ? null : { name: 'asset-view' };
-    return <BalanceWithdraw onBack={() => helpers.navigateRoute(back)} onNavigate={(nextRoute) => helpers.navigateRoute(nextRoute)} />;
+    return <BalanceWithdraw onBack={() => helpers.goBack()} onNavigate={(nextRoute) => helpers.navigateRoute(nextRoute)} />;
   },
   'service-recharge': (route, helpers) => {
     const payload = route as Extract<Route, { name: 'service-recharge' }>;
     const back: Route | null = payload.source === 'profile' ? null : { name: 'asset-view' };
-    return <ServiceRecharge onBack={() => helpers.navigateRoute(back)} />;
+    return <ServiceRecharge onBack={() => helpers.goBack()} />;
   },
-  'extension-withdraw': (_route, helpers) => <ExtensionWithdraw onBack={() => helpers.navigateRoute({ name: 'asset-view' } as Route)} />,
+  'extension-withdraw': (_route, helpers) => <ExtensionWithdraw onBack={() => helpers.goBack()} />,
   'hashrate-exchange': (route, helpers) => {
     const payload = route as Extract<Route, { name: 'hashrate-exchange' }>;
     const back: Route | null =
@@ -286,20 +301,20 @@ export const routeComponents: Partial<Record<Route['name'], RouteRenderer>> = {
         : payload.source === 'profile'
           ? null
           : { name: 'asset-view' };
-    return <HashrateExchange onBack={() => helpers.navigateRoute(back)} onNavigate={(nextRoute) => helpers.navigateRoute(nextRoute)} />;
+    return <HashrateExchange onBack={() => helpers.goBack()} onNavigate={(nextRoute) => helpers.navigateRoute(nextRoute)} />;
   },
-  'consignment-voucher': (_route, helpers) => <ConsignmentVoucher onBack={() => helpers.navigateRoute(null)} />,
-  'cumulative-rights': (_route, helpers) => <CumulativeRights onBack={() => helpers.navigateRoute(null)} />,
+  'consignment-voucher': (_route, helpers) => <ConsignmentVoucher onBack={() => helpers.goBack()} />,
+  'cumulative-rights': (_route, helpers) => <CumulativeRights onBack={() => helpers.goBack()} />,
   'claim-history': (_route, helpers) => (
     <ClaimHistory
-      onBack={() => helpers.navigateRoute(null)}
+      onBack={() => helpers.goBack()}
       onNavigate={(nextRoute) => helpers.navigateRoute(nextRoute)}
     />
   ),
-  'sign-in': (_route, helpers) => <SignIn onBack={() => helpers.navigateRoute(null)} onNavigate={(nextRoute) => helpers.navigateRoute(nextRoute)} />,
+  'sign-in': (_route, helpers) => <SignIn onBack={() => helpers.goBack()} onNavigate={(nextRoute) => helpers.navigateRoute(nextRoute)} />,
   'message-center': (_route, helpers) => (
     <MessageCenter
-      onBack={() => helpers.navigateRoute(null)}
+      onBack={() => helpers.goBack()}
       onNavigate={(nextRoute) => helpers.navigateRoute(nextRoute)}
     />
   ),

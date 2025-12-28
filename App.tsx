@@ -514,7 +514,7 @@ const AppContent: React.FC = () => {
         <PointsProductDetail
           product={selectedProduct}
           onBack={() => {
-            navigateRoute(null);
+            goBack();
             setSelectedProduct(null);
           }}
           onNavigate={(route) => navigateRoute(route)}
@@ -545,13 +545,7 @@ const AppContent: React.FC = () => {
         <ProductDetail
           product={selectedProduct}
           onBack={() => {
-            if (productDetailOrigin === 'trading-zone') {
-              navigateRoute({ name: 'trading-zone' });
-            } else if (productDetailOrigin === 'reservation-record') {
-              navigateRoute({ name: 'reservation-record' });
-            } else {
-              navigateRoute(null);
-            }
+            goBack();
             setSelectedProduct(null);
             setProductDetailOrigin('market'); // Reset to default
           }}
@@ -564,7 +558,7 @@ const AppContent: React.FC = () => {
       return (
         <ReservationPage
           product={selectedProduct}
-          onBack={() => navigateRoute({ name: 'product-detail' })}
+          onBack={() => goBack()}
           onNavigate={(route) => navigateRoute(route)} // 兼容旧字符串
         />
       );
@@ -573,7 +567,7 @@ const AppContent: React.FC = () => {
     if (currentRoute?.name === 'reservation-record') {
       return (
         <ReservationRecordPage
-          onBack={() => navigateRoute(null)} // Or back to wherever appropriate
+          onBack={() => goBack()} // Or back to wherever appropriate
           onNavigate={(route) => navigateRoute(route)} // 兼容旧字符串
           onProductSelect={(product) => handleProductSelect(product, 'reservation-record')}
         />
@@ -616,7 +610,7 @@ const AppContent: React.FC = () => {
         <FriendDetail
           id={currentRoute.id}
           friend={currentRoute.friend}
-          onBack={() => navigateRoute(null)}
+          onBack={() => goBack()}
         />
       );
     }
@@ -627,7 +621,7 @@ const AppContent: React.FC = () => {
       return (
         <ArtistDetail
           artistId={artistId}
-          onBack={() => navigateRoute(null)}
+          onBack={() => goBack()}
           onProductSelect={(product) => handleProductSelect(product, 'artist')}
         />
       );
@@ -639,7 +633,7 @@ const AppContent: React.FC = () => {
         <OrderListPage
           category={currentRoute.kind}
           initialTab={currentRoute.status}
-          onBack={() => navigateRoute(null)}
+          onBack={() => goBack()}
           onNavigate={(route) => navigateRoute(route)} // 兼容旧字符串
         />
       );

@@ -14,6 +14,7 @@ import {
   USER_INFO_KEY,
   normalizeAssetUrl,
   fetchConsignmentCoupons,
+  getMyConsignmentList,
 } from '../../services/api';
 
 import { UserInfo } from '../../types';
@@ -130,47 +131,64 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onBack, onItemSelect, initi
     setError(null);
 
     try {
-      // Pass 'type' to API based on activeTab
-      const res = await getMyCollection({ page, token, type: activeTab });
-      if (res.code === 1 && res.data) {
-        const list = res.data.list || [];
-        // 如果后端不支持 type 过滤，我们在前端进行二次过滤
-        const filteredList = list.filter(item => {
-          // 兼容处理：后端返回的 status 可能是空字符串，转为数字 0 处理
-          const rawCStatus = (item.consignment_status as any);
-          const rawDStatus = (item.delivery_status as any);
-          const cStatus = rawCStatus === '' || rawCStatus === null || rawCStatus === undefined ? 0 : Number(rawCStatus);
-          const dStatus = rawDStatus === '' || rawDStatus === null || rawDStatus === undefined ? 0 : Number(rawDStatus);
+      if (activeTab === 'hold' || activeTab === 'dividend') {
+        const res = await getMyCollection({ page, token });
+        if (res.code === 1 && res.data) {
+          const list = res.data.list || [];
+          const filteredList = list.filter(item => {
+            const dStatus = Number(item.delivery_status) || 0;
+            if (activeTab === 'hold') {
+              return dStatus === 0;
+            } else {
+              return dStatus === 1;
+            }
+          });
 
-          if (activeTab === 'hold') {
-            // 待售：未寄售且未提货(权益分割)
-            return (cStatus === 0 || cStatus === 1 || cStatus === 3) && dStatus === 0;
-          } else if (activeTab === 'consign') {
-            // 挂单：寄售中
-            return cStatus === 2;
-          } else if (activeTab === 'sold') {
-            // 已卖出：寄售成功
-            return cStatus === 4;
-          } else if (activeTab === 'dividend') {
-            // 已转分红：已提货/权益分割
-            return dStatus === 1;
+          if (page === 1) {
+            setMyCollections(filteredList);
+          } else {
+            setMyCollections(prev => [...prev, ...filteredList]);
           }
-          return true;
-        });
-
-        if (page === 1) {
-          setMyCollections(filteredList);
+          setHasMore(list.length >= 10 && res.data.has_more !== false);
+          if (typeof (res.data as any).consignment_coupon === 'number') {
+            setConsignmentTicketCount((res.data as any).consignment_coupon);
+          }
         } else {
-          setMyCollections(prev => [...prev, ...filteredList]);
-        }
-        // 注意：前端过滤会导致分页混乱（hasMore 为 true 但下一页可能也被过滤空），
-        // 但这是在后端 API 不支持 type 过滤时的临时修补。
-        setHasMore((list.length || 0) >= 10 && res.data.has_more !== false);
-        if (typeof (res.data as any).consignment_coupon === 'number') {
-          setConsignmentTicketCount((res.data as any).consignment_coupon);
+          setError(res.msg || '获取我的藏品失败');
         }
       } else {
-        setError(res.msg || '获取我的藏品失败');
+        // consign or sold tab
+        const statusMap = { 'consign': 1, 'sold': 2 };
+        const res = await getMyConsignmentList({
+          page,
+          token,
+          status: statusMap[activeTab as 'consign' | 'sold']
+        });
+
+        if (res.code === 1 && res.data) {
+          const list = res.data.list || [];
+          // Map MyConsignmentItem to MyCollectionItem structure for UI compatibility
+          const mappedList: MyCollectionItem[] = list.map(item => ({
+            id: item.id,
+            item_id: (item as any).item_id || 0,
+            user_collection_id: (item as any).user_collection_id || 0,
+            item_title: item.item_title,
+            item_image: (item as any).image || (item as any).item_image || '',
+            price: String(item.consignment_price),
+            status_text: item.status_text,
+            consignment_status: activeTab === 'consign' ? 2 : 4,
+            delivery_status: 0,
+          } as any)) as MyCollectionItem[];
+
+          if (page === 1) {
+            setMyCollections(mappedList);
+          } else {
+            setMyCollections(prev => [...prev, ...mappedList]);
+          }
+          setHasMore(list.length >= 10 && res.data.has_more !== false);
+        } else {
+          setError(res.msg || '获取寄售列表失败');
+        }
       }
     } catch (e: any) {
       setError(e?.message || '加载数据失败');
@@ -689,7 +707,8 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onBack, onItemSelect, initi
             showToast('success', '提交成功', res.msg || '寄售申请已提交');
             setShowActionModal(false);
             setSelectedItem(null);
-            runLoad();
+            // Switch to consign tab to show the new status
+            handleTabChange('consign');
           } else {
             showToast('error', '提交失败', res.msg || '寄售申请失败');
             // 如果是因为未开启场次等业务错误，是否要关闭弹窗？

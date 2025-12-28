@@ -144,16 +144,30 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, onNaviga
 
   const mainImage = isShopProduct ? (shopDetail?.thumbnail || product.image) : (collectionDetail?.images?.[0] || collectionDetail?.image || product.image);
   const displayTitle = isShopProduct ? (shopDetail?.name || product.title) : (collectionDetail?.title || product.title);
-  
+
   // 价格计算：优先使用价格分区，否则使用实际价格
-  let displayPrice: number;
+  // 价格计算：优先使用价格分区，否则使用实际价格
+  let displayPriceNum: number;
+  let displayPriceStr: string;
+
   if (isShopProduct) {
-    displayPrice = Number(shopDetail?.price ?? product.price);
+    displayPriceNum = Number(shopDetail?.price ?? product.price);
+    displayPriceStr = `¥${displayPriceNum.toLocaleString()}`;
   } else {
     const actualPrice = Number(collectionDetail?.price ?? product.price);
-    const priceZone = collectionDetail?.price_zone || (collectionDetail as any)?.priceZone;
-    const zonePriceValue = extractPriceFromZone(priceZone);
-    displayPrice = zonePriceValue > 0 ? zonePriceValue : actualPrice;
+    const pZone = collectionDetail?.price_zone || (collectionDetail as any)?.priceZone;
+
+    if (pZone) {
+      // 从价格分区（如 "500元区"）中提取数字
+      displayPriceNum = extractPriceFromZone(pZone);
+      // 如果提取失败，回退到实际价格
+      if (displayPriceNum <= 0) displayPriceNum = actualPrice;
+      // 统一格式化为标准金额格式
+      displayPriceStr = `¥${displayPriceNum.toLocaleString()}`;
+    } else {
+      displayPriceNum = actualPrice;
+      displayPriceStr = `¥${displayPriceNum.toLocaleString()}`;
+    }
   }
 
   // Specific fields for Collection
@@ -471,7 +485,7 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, onNaviga
         {!isShopProduct && (
           <div className="flex justify-end mb-2">
             <span className="text-[10px] text-gray-900 bg-white px-1 py-0.5">
-              本次申购需冻结：¥{displayPrice.toFixed(2)} | 消耗算力：1.0 GH/s
+              本次申购需冻结：¥{displayPriceNum.toFixed(2)} | 消耗算力：1.0 GH/s
             </span>
           </div>
         )}
@@ -480,9 +494,7 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, onNaviga
           <div className="text-left">
             <div className="flex flex-col">
               <div className="text-xl font-bold text-gray-900 font-mono flex items-baseline leading-none">
-                <span className="text-sm mr-0.5">¥</span>
-                {displayPrice.toLocaleString()}
-                {!isShopProduct && <span className="text-xs text-gray-400 font-bold ml-1">(起购价)</span>}
+                {displayPriceStr}
               </div>
               {/* Expected Appreciation Label - Only for Collection */}
               {!isShopProduct && (

@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { CreditCard, Trash2, Edit2 } from 'lucide-react';
-import PageContainer from '../../components/layout/PageContainer';
+import { CreditCard, Trash2, Edit2, ChevronRight, Plus } from 'lucide-react';
+import SubPageLayout from '../../components/SubPageLayout';
 import { LoadingSpinner, EmptyState, BankPicker } from '../../components/common';
 import {
   AUTH_TOKEN_KEY,
@@ -290,25 +290,10 @@ const CardManagement: React.FC<CardManagementProps> = ({ onBack }) => {
   };
 
   const renderForm = () => (
-    <form className="bg-white rounded-2xl p-6 shadow-xl shadow-orange-100/50 mb-6 space-y-4 border border-orange-50" onSubmit={handleSubmit}>
-      <div className="flex items-center justify-between mb-2">
-        <h2 className="text-base font-bold text-gray-900">
-          {mode === 'edit' ? '编辑账户' : '新增账户'}
-        </h2>
-        <button
-          type="button"
-          className="text-sm text-gray-500 hover:text-gray-700 active:opacity-70 transition-colors px-3 py-1 rounded-lg hover:bg-gray-100"
-          onClick={() => {
-            resetForm();
-            setMode('list');
-          }}
-        >
-          取消
-        </button>
-      </div>
-      <div className="text-sm text-gray-700 flex flex-col gap-2">
-        <span className="font-medium">账户类型</span>
-        <div className="grid grid-cols-2 gap-3">
+    <form className="bg-white mt-2 px-4" onSubmit={handleSubmit}>
+      <div className="py-4 border-b border-gray-100">
+        <span className="block text-sm text-gray-500 mb-2">账户类型 <span className="text-red-500">*</span></span>
+        <div className="flex flex-wrap gap-3">
           {[
             { value: 'bank_card', label: '银行卡' },
             { value: 'alipay', label: '支付宝' },
@@ -320,10 +305,10 @@ const CardManagement: React.FC<CardManagementProps> = ({ onBack }) => {
               <button
                 key={opt.value}
                 type="button"
-                className={`py-3 px-4 rounded-xl text-sm font-medium border-2 transition-all ${active
-                  ? 'bg-gradient-to-r from-orange-50 to-orange-100/50 text-orange-600 border-orange-300 shadow-sm shadow-orange-100'
-                  : 'bg-white text-gray-600 border-gray-200 hover:border-orange-200'
-                  } active:scale-[0.98]`}
+                className={`py-2 px-4 rounded-lg text-sm font-medium transition-all ${active
+                  ? 'bg-orange-50 text-orange-600 border-orange-200 border'
+                  : 'bg-gray-50 text-gray-600 border border-transparent'
+                  }`}
                 onClick={() => handleFormInputChange('type', opt.value)}
               >
                 {opt.label}
@@ -334,94 +319,95 @@ const CardManagement: React.FC<CardManagementProps> = ({ onBack }) => {
       </div>
 
       {formValues.type === 'bank_card' && (
-        <label className="text-sm text-gray-700 flex flex-col gap-2">
-          <span className="font-medium">银行名称 <span className="text-red-500">*</span></span>
-          <div
-            className="border-2 border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-800 flex items-center justify-between hover:border-orange-300 active:bg-orange-50/30 transition-all cursor-pointer bg-gray-50/50 focus-within:ring-2 focus-within:ring-orange-500/20 focus-within:border-orange-500"
-            onClick={() => setShowBankPicker(true)}
-          >
-            <span className={formValues.bank_name ? 'text-gray-900 font-medium' : 'text-gray-400'}>
+        <div
+          className="py-4 border-b border-gray-100 flex flex-col gap-1 cursor-pointer"
+          onClick={() => setShowBankPicker(true)}
+        >
+          <span className="block text-sm text-gray-500 mb-1">银行名称 <span className="text-red-500">*</span></span>
+          <div className="flex items-center justify-between">
+            <span className={`text-base font-medium ${formValues.bank_name ? 'text-gray-900' : 'text-gray-300'}`}>
               {formValues.bank_name || '点击选择银行'}
             </span>
-            <div className="text-orange-500">
-              <Edit2 size={16} />
-            </div>
+            <ChevronRight size={18} className="text-gray-400" />
           </div>
-        </label>
+        </div>
       )}
 
-      <label className="text-sm text-gray-700 flex flex-col gap-2">
-        <span className="font-medium">账户名称 / 持卡人 <span className="text-red-500">*</span></span>
+      <div className="py-4 border-b border-gray-100">
+        <span className="block text-sm text-gray-500 mb-1">账户名称 / 持卡人 <span className="text-red-500">*</span></span>
         <input
-          className="border-2 border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-800 focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 focus:outline-none transition-all placeholder:text-gray-400"
+          className="w-full text-base text-gray-900 outline-none placeholder:text-gray-300 bg-transparent font-medium"
           type="text"
           placeholder="请输入账户名或持卡人姓名"
           value={formValues.account_name}
           onChange={(e) => handleFormInputChange('account_name', e.target.value)}
         />
-      </label>
+      </div>
 
-      <label className="text-sm text-gray-700 flex flex-col gap-2">
-        <span className="font-medium">账号 / 卡号 / 收款账号 <span className="text-red-500">*</span></span>
+      <div className="py-4 border-b border-gray-100">
+        <span className="block text-sm text-gray-500 mb-1">账号 / 卡号 / 收款账号 <span className="text-red-500">*</span></span>
         <input
-          className="border-2 border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-800 focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 focus:outline-none transition-all placeholder:text-gray-400"
+          className="w-full text-base text-gray-900 outline-none placeholder:text-gray-300 bg-transparent font-medium"
           type="text"
           placeholder="请输入账号/卡号"
           value={formValues.account_number}
           onChange={(e) => handleFormInputChange('account_number', e.target.value)}
         />
-      </label>
+      </div>
 
       {(formValues.type === 'bank_card' || formValues.type === 'usdt') && (
-        <label className="text-sm text-gray-700 flex flex-col gap-2">
-          <span className="font-medium">{renderRequirements()}</span>
+        <div className="py-4 border-b border-gray-100">
+          <span className="block text-sm text-gray-500 mb-1">{renderRequirements()}</span>
           <input
-            className="border-2 border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-800 focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 focus:outline-none transition-all placeholder:text-gray-400"
+            className="w-full text-base text-gray-900 outline-none placeholder:text-gray-300 bg-transparent font-medium"
             type="text"
             placeholder={formValues.type === 'usdt' ? 'TRC20 / ERC20 等' : '如：招商银行上海徐家汇支行'}
             value={formValues.bank_branch}
             onChange={(e) => handleFormInputChange('bank_branch', e.target.value)}
           />
-        </label>
+        </div>
       )}
 
       {formValues.type === 'wechat' && (
-        <label className="text-xs text-gray-600 flex flex-col gap-1">
-          <span>收款二维码（选填）</span>
+        <div className="py-4 border-b border-gray-100">
+          <span className="block text-sm text-gray-500 mb-1">收款二维码（选填）</span>
           <input
             type="file"
             accept="image/*"
             onChange={(e) => handleFormInputChange('screenshot', e.target.files?.[0] || null)}
-            className="text-xs text-gray-500"
+            className="text-xs text-gray-500 mt-1"
           />
           {formValues.screenshot && (
-            <span className="text-[11px] text-gray-400">{formValues.screenshot.name}</span>
+            <span className="block text-[11px] text-gray-400 mt-1">{formValues.screenshot.name}</span>
           )}
-        </label>
-      )}
-
-      {formError && (
-        <div className="bg-red-50 text-red-600 text-xs px-3 py-2 rounded-md">
-          {formError}
         </div>
       )}
 
       {mode === 'edit' && (
-        <label className="flex items-center justify-between text-xs text-gray-600 mt-1">
-          <span className="mr-3">设为默认账户</span>
-          <input
-            type="checkbox"
-            className="w-4 h-4 accent-orange-500"
-            checked={formValues.is_default}
-            onChange={(e) => handleFormInputChange('is_default', e.target.checked)}
-          />
+        <label className="flex items-center justify-between py-4">
+          <span className="text-base text-gray-800">设为默认账户</span>
+          <div className="relative inline-flex items-center cursor-pointer">
+            <input
+              type="checkbox"
+              className="sr-only peer"
+              checked={formValues.is_default}
+              onChange={(e) => handleFormInputChange('is_default', e.target.checked)}
+            />
+            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-orange-500"></div>
+          </div>
         </label>
+      )}
+
+      {formError && (
+        <div className="bg-red-50 text-red-600 text-xs px-3 py-2 rounded-md mt-2 mb-2">
+          {formError}
+        </div>
       )}
 
       <button
         type="submit"
         disabled={formLoading}
-        className="w-full bg-gradient-to-r from-[#FF6B35] to-[#FF9F2E] text-white text-base font-bold py-3.5 rounded-xl shadow-lg shadow-orange-200 active:scale-[0.98] transition-transform disabled:opacity-60 disabled:cursor-not-allowed mt-2"
+        className="w-full bg-gradient-to-r from-[#FF6B35] to-[#FF9F2E] text-white text-base font-bold py-3.5 rounded-full shadow-lg shadow-orange-200 active:scale-[0.98] transition-transform disabled:opacity-60 disabled:cursor-not-allowed mt-8 mb-8"
       >
         {formLoading ? '提交中...' : '提交保存'}
       </button>
@@ -429,7 +415,7 @@ const CardManagement: React.FC<CardManagementProps> = ({ onBack }) => {
   );
 
   return (
-    <PageContainer
+    <SubPageLayout
       title={mode === 'add' ? '新增账户' : mode === 'edit' ? '编辑账户' : '银行卡'}
       onBack={() => {
         if (mode === 'add' || mode === 'edit') {
@@ -442,67 +428,65 @@ const CardManagement: React.FC<CardManagementProps> = ({ onBack }) => {
         }
       }}
     >
-      <main className="flex-1 px-4 py-3 overflow-y-auto">
-        {notice && (
-          <div className="bg-green-50 text-green-600 text-xs px-3 py-2 rounded-md mb-3">
-            {notice}
-          </div>
-        )}
+      {notice && mode === 'list' && (
+        <div className="bg-green-50 text-green-600 text-xs px-3 py-2 m-4 rounded-lg">
+          {notice}
+        </div>
+      )}
 
-        {/* Bank Picker Configured outside the form for z-index reasons */}
-        <BankPicker
-          visible={showBankPicker}
-          onClose={() => setShowBankPicker(false)}
-          onConfirm={(bank) => {
-            handleFormInputChange('bank_name', bank);
-            setShowBankPicker(false);
-          }}
-          initialBank={formValues.bank_name}
-        />
+      {/* Bank Picker Configured outside the form for z-index reasons */}
+      <BankPicker
+        visible={showBankPicker}
+        onClose={() => setShowBankPicker(false)}
+        onConfirm={(bank) => {
+          handleFormInputChange('bank_name', bank);
+          setShowBankPicker(false);
+        }}
+        initialBank={formValues.bank_name}
+      />
 
-        {(mode === 'add' || mode === 'edit') && renderForm()}
+      {(mode === 'add' || mode === 'edit') && renderForm()}
 
-        {loading && <LoadingSpinner text="加载中..." />}
+      {mode === 'list' && (
+        <div className="p-4 space-y-3 pb-24">
+          {loading && <LoadingSpinner text="加载中..." />}
 
-        {!loading && error && (
-          <div className="bg-red-50 text-red-600 text-xs px-3 py-2 rounded-md mb-3">
-            {error}
-          </div>
-        )}
-
-        {mode === 'list' && !loading && !error && accounts.length === 0 && (
-          <div className="mt-12 flex flex-col items-center text-gray-400 text-sm">
-            <div className="w-14 h-14 rounded-full bg-gray-100 flex items-center justify-center mb-3">
-              <CreditCard size={26} className="text-gray-300" />
+          {!loading && error && (
+            <div className="bg-red-50 text-red-600 text-xs px-3 py-2 rounded-md">
+              {error}
             </div>
-            <div>没有任何账户</div>
+          )}
 
-          </div>
-        )}
+          {!loading && !error && accounts.length === 0 && (
+            <div className="mt-12 flex flex-col items-center text-gray-400 text-sm">
+              <div className="w-14 h-14 rounded-full bg-gray-100 flex items-center justify-center mb-3">
+                <CreditCard size={26} className="text-gray-300" />
+              </div>
+              <div>没有任何账户</div>
+            </div>
+          )}
 
-        {mode === 'list' && !loading && !error && accounts.length > 0 && (
-          <div className="space-y-3 mt-2 pb-2">
-            {accounts.map(renderItem)}
-          </div>
-        )}
-      </main>
+          {!loading && !error && accounts.length > 0 && accounts.map(renderItem)}
+        </div>
+      )}
 
       {/* Bottom Add Button */}
       {mode === 'list' && (
-        <footer className="px-4 pb-5 pt-2 bg-gray-100">
+        <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-gray-100 pb-safe max-w-md mx-auto">
           <button
             type="button"
-            className="w-full py-3 rounded-md text-sm font-semibold text-white bg-gradient-to-r from-orange-400 to-orange-600 shadow-md active:opacity-80"
+            className="w-full bg-gradient-to-r from-[#FF6B35] to-[#FF9F2E] text-white font-bold py-3.5 rounded-xl flex items-center justify-center gap-2 active:scale-[0.98] transition-transform shadow-lg shadow-orange-200"
             onClick={() => {
               setMode('add');
               setNotice(null);
             }}
           >
+            <Plus size={20} />
             新增账户
           </button>
-        </footer>
+        </div>
       )}
-    </PageContainer>
+    </SubPageLayout>
   );
 };
 

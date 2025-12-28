@@ -28,6 +28,11 @@ interface TradingZoneProps {
     onBack: () => void;
     onProductSelect?: (product: Product) => void;
     onNavigate?: (route: Route) => void;
+    // 用于从路由恢复状态
+    initialSessionId?: string;
+    initialSessionTitle?: string;
+    initialSessionStartTime?: string;
+    initialSessionEndTime?: string;
 }
 
 interface TradingSession {
@@ -40,10 +45,23 @@ interface TradingSession {
 }
 
 type TradingDisplayItem = CollectionItem & {
-    source?: 'collection' | 'consignment';
+    source?: 'collection' | 'consignment' | 'mixed'; // mixed 表示包含官方+寄售
     consignment_id?: number;
     displayKey: string;
     hasStockInfo?: boolean;
+    // 新 API 字段
+    package_name?: string;
+    official_stock?: number;      // 官方库存
+    consignment_count?: number;   // 寄售数量
+    total_available?: number;     // 总可用
+    min_price?: number;
+    max_price?: number;
+    price_range?: string;
+    consignment_list?: Array<{
+        consignment_id: number;
+        price: number;
+        seller_id: number;
+    }>;
 };
 
 // 视觉主题预设（结合 /api/collectionSession/index 返回的专场标题与时间）
@@ -121,7 +139,15 @@ const buildPoolConfig = (session?: TradingSession | null) => {
     };
 };
 
-const TradingZone: React.FC<TradingZoneProps> = ({ onBack, onProductSelect, onNavigate }) => {
+const TradingZone: React.FC<TradingZoneProps> = ({
+    onBack,
+    onProductSelect,
+    onNavigate,
+    initialSessionId,
+    initialSessionTitle,
+    initialSessionStartTime,
+    initialSessionEndTime
+}) => {
     const [now, setNow] = useState(new Date());
     const [selectedSession, setSelectedSession] = useState<TradingSession | null>(null);
     const [sessions, setSessions] = useState<TradingSession[]>([]);
@@ -149,6 +175,25 @@ const TradingZone: React.FC<TradingZoneProps> = ({ onBack, onProductSelect, onNa
                         isActive: !!(item as any)?.is_active,
                     }));
                     setSessions(sessionList);
+
+                    // 如果有初始 sessionId，自动选中该场次
+                    if (initialSessionId) {
+                        const matchedSession = sessionList.find(s => s.id === initialSessionId);
+                        if (matchedSession) {
+                            // 自动加载该场次的商品
+                            loadSessionItems(matchedSession);
+                        } else if (initialSessionTitle) {
+                            // 如果没找到匹配的场次但有标题信息，创建一个临时 session 对象
+                            const tempSession: TradingSession = {
+                                id: initialSessionId,
+                                title: initialSessionTitle,
+                                image: '',
+                                startTime: initialSessionStartTime || '',
+                                endTime: initialSessionEndTime || '',
+                            };
+                            loadSessionItems(tempSession);
+                        }
+                    }
                 } else {
                     setError(response.msg || '获取数据资产池失败');
                 }
@@ -160,7 +205,7 @@ const TradingZone: React.FC<TradingZoneProps> = ({ onBack, onProductSelect, onNa
             }
         };
         loadSessions();
-    }, []);
+    }, [initialSessionId]);
 
     useEffect(() => {
         const timer = setInterval(() => setNow(new Date()), 1000);
@@ -169,20 +214,26 @@ const TradingZone: React.FC<TradingZoneProps> = ({ onBack, onProductSelect, onNa
 
     const handleBack = () => {
         if (selectedSession) {
-            setSelectedSession(null);
-            setTradingItems([]);
-            setItemsError(null);
+            // 如果是从路由参数进入的，返回到 trading-zone
+            if (initialSessionId) {
+                onBack();
+            } else {
+                setSelectedSession(null);
+                setTradingItems([]);
+                setItemsError(null);
+            }
         } else {
             onBack();
         }
     };
 
-    const handleSessionSelect = async (session: TradingSession) => {
+    // 内部函数：加载场次商品（不触发导航）
+    const loadSessionItems = async (session: TradingSession) => {
         try {
             setItemsLoading(true);
             setItemsError(null);
 
-            // 获取包含寄售商品的商品列表
+            // 获取商品列表（新 API：官方+寄售按 package_name + zone_id 统一归类）
             const response = await fetchCollectionItemsBySession(session.id, { page: 1, limit: 10 });
 
             console.log('API Response:', response);
@@ -190,45 +241,58 @@ const TradingZone: React.FC<TradingZoneProps> = ({ onBack, onProductSelect, onNa
 
             if (response.code === 1 && response.data?.list) {
                 const allItems = response.data.list.map((item: any) => {
-                    // 更灵活地判断是否为寄售商品
-                    const isConsignment = item.is_consignment === 1 ||
-                        item.is_consignment === true ||
-                        item.is_consignment === "1" ||
-                        !!item.consignment_id ||
-                        !!item.consignment_price ||
-                        String(item.id) === "7" || // 临时：ID=7是寄售商品，支持数字和字符串
-                        Number(item.id) === 7;
+                    // 新 API 结构：每条记录代表一个 package_name + zone_id 的归类
+                    // 包含 official_stock（官方库存）和 consignment_count（寄售数量）
+                    const hasConsignment = item.consignment_count > 0 || (item.consignment_list && item.consignment_list.length > 0);
+                    const hasOfficial = item.official_stock > 0 || item.stock > 0;
 
-                    console.log('Processing item:', item.id, {
-                        is_consignment: item.is_consignment,
-                        consignment_id: item.consignment_id,
-                        consignment_price: item.consignment_price,
-                        determined_as_consignment: isConsignment
+                    // 确定来源类型
+                    let source: 'collection' | 'consignment' | 'mixed' = 'collection';
+                    if (hasConsignment && hasOfficial) {
+                        source = 'mixed';
+                    } else if (hasConsignment) {
+                        source = 'consignment';
+                    }
+
+                    // 价格计算：优先使用 price_zone 分区价格
+                    const zonePriceValue = extractPriceFromZone(item.price_zone);
+                    const displayPrice = zonePriceValue > 0 ? zonePriceValue : Number(item.min_price || item.price || 0);
+
+                    // 总可用数量
+                    const totalAvailable = item.total_available ?? ((item.official_stock || 0) + (item.consignment_count || 0));
+
+                    console.log('Processing item:', item.id || item.package_name, {
+                        official_stock: item.official_stock,
+                        consignment_count: item.consignment_count,
+                        total_available: totalAvailable,
+                        price_range: item.price_range,
+                        source
                     });
 
-                    // 优先使用价格分区的价格，如果没有则使用实际价格
-                    const zonePriceValue = extractPriceFromZone(item.price_zone);
-                    const actualPrice = Number(isConsignment ? (item.consignment_price || item.price) : item.price);
-                    const displayPrice = zonePriceValue > 0 ? zonePriceValue : actualPrice;
-                    
                     return {
                         ...item,
-                        // 使用分区价格作为显示价格（申购价）
+                        // 使用分区价格作为显示价格
                         price: displayPrice,
-                        // 保留实际价格用于其他用途
-                        actual_price: actualPrice,
-                        displayKey: isConsignment ? `cons-${item.consignment_id || item.id}` : `col-${item.id}`,
-                        source: (isConsignment ? 'consignment' : 'collection') as const,
-                        consignment_id: isConsignment ? (item.consignment_id || (String(item.id) === "7" || Number(item.id) === 7 ? 19 : item.id)) : undefined,
-                        hasStockInfo: !isConsignment // 寄售商品通常只有一件，不显示库存信息
+                        // 兼容新旧 API
+                        stock: totalAvailable,
+                        official_stock: item.official_stock || item.stock || 0,
+                        consignment_count: item.consignment_count || 0,
+                        total_available: totalAvailable,
+                        package_name: item.package_name || item.title,
+                        // 唯一标识
+                        displayKey: `pkg-${item.zone_id || item.id}-${item.package_name || item.id}`,
+                        source,
+                        // 有总库存信息时显示
+                        hasStockInfo: totalAvailable > 0
                     } as TradingDisplayItem;
                 });
 
                 console.log('Processed items:', allItems.map(item => ({
                     id: item.id,
+                    package_name: item.package_name,
                     source: item.source,
-                    consignment_id: item.consignment_id,
-                    is_consignment: allItems.find(i => i.id === item.id)?.is_consignment
+                    official_stock: item.official_stock,
+                    consignment_count: item.consignment_count
                 })));
 
                 if (allItems.length > 0) {
@@ -247,6 +311,23 @@ const TradingZone: React.FC<TradingZoneProps> = ({ onBack, onProductSelect, onNa
             setSelectedSession(session);
         } finally {
             setItemsLoading(false);
+        }
+    };
+
+    // 外部点击场次时的处理：导航到 trading-zone-items 路由
+    const handleSessionSelect = (session: TradingSession) => {
+        if (onNavigate) {
+            // 通过路由导航，保持状态
+            onNavigate({
+                name: 'trading-zone-items',
+                sessionId: session.id,
+                sessionTitle: session.title,
+                sessionStartTime: session.startTime,
+                sessionEndTime: session.endTime,
+            });
+        } else {
+            // 回退：直接加载（旧行为）
+            loadSessionItems(session);
         }
     };
 
@@ -442,12 +523,8 @@ const TradingZone: React.FC<TradingZoneProps> = ({ onBack, onProductSelect, onNa
                                         <div className="p-4">
                                             <h3 className="text-gray-900 text-sm font-bold line-clamp-1 mb-1">{item.title}</h3>
                                             <div className="text-[10px] text-gray-400 font-mono mb-2">
-                                                确权编号: 37-DATA-2025-{String(item.id).padStart(4, '0')}
-                                                {/* 临时调试信息 */}
-                                                {item.source === 'consignment' && (
-                                                    <div className="text-red-500 text-[8px] mt-1">
-                                                        寄售商品 ID:{item.consignment_id}
-                                                    </div>
+                                                {item.price_zone && (
+                                                    <span className="inline-block px-1.5 py-0.5 bg-orange-50 text-orange-600 rounded">{item.price_zone}</span>
                                                 )}
                                             </div>
                                             <div className="flex justify-between items-center">

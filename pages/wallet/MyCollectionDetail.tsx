@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { ChevronLeft, Share2, Copy, Shield, Fingerprint, Award, ExternalLink, ArrowRightLeft, Store } from 'lucide-react';
-import { MyCollectionItem, fetchProfile, fetchRealNameStatus, AUTH_TOKEN_KEY } from '../../services/api';
+import { MyCollectionItem, fetchProfile, fetchRealNameStatus, AUTH_TOKEN_KEY, fetchMyCollectionDetail } from '../../services/api';
 import { UserInfo } from '../../types';
 import { useNotification } from '../../context/NotificationContext';
 import { Route } from '../../router/routes';
+import { LoadingSpinner } from '../../components/common';
 
 interface MyCollectionDetailProps {
     item: MyCollectionItem;
@@ -11,49 +12,70 @@ interface MyCollectionDetailProps {
     onNavigate: (route: Route) => void;
 }
 
-const MyCollectionDetail: React.FC<MyCollectionDetailProps> = ({ item, onBack, onNavigate }) => {
+const MyCollectionDetail: React.FC<MyCollectionDetailProps> = ({ item: initialItem, onBack, onNavigate }) => {
     const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
+    const [item, setItem] = useState<any>(initialItem);
+    const [loading, setLoading] = useState<boolean>(true);
     const { showToast } = useNotification();
 
     useEffect(() => {
         const loadData = async () => {
             const token = localStorage.getItem(AUTH_TOKEN_KEY);
-            if (token) {
-                try {
-                    // Try fetching profile first
-                    const profileRes = await fetchProfile(token);
-                    let currentInfo = profileRes.code === 1 && profileRes.data ? profileRes.data.userInfo : null;
+            if (!token) {
+                setLoading(false);
+                return;
+            }
 
-                    // Then fetch real name status specifically
-                    const realNameRes = await fetchRealNameStatus(token);
-                    if (realNameRes.code === 1 && realNameRes.data) {
-                        if (currentInfo) {
-                            currentInfo = {
-                                ...currentInfo,
-                                real_name: realNameRes.data.real_name || currentInfo.real_name,
-                                real_name_status: realNameRes.data.real_name_status
-                            };
-                        } else {
-                            // Minimal info if profile failed
-                            currentInfo = {
-                                real_name: realNameRes.data.real_name,
-                                real_name_status: realNameRes.data.real_name_status
-                            } as any;
-                        }
-                    }
-
-                    if (currentInfo) {
-                        setUserInfo(currentInfo);
-                    }
-                } catch (e) {
-                    console.error(e);
+            try {
+                // Fetch detail from API
+                const userCollectionId = initialItem.user_collection_id || initialItem.id;
+                const detailRes = await fetchMyCollectionDetail(userCollectionId);
+                if (detailRes.code === 1 && detailRes.data) {
+                    setItem(detailRes.data);
                 }
+
+                // Fetch profile
+                const profileRes = await fetchProfile(token);
+                let currentInfo = profileRes.code === 1 && profileRes.data ? profileRes.data.userInfo : null;
+
+                // Then fetch real name status specifically
+                const realNameRes = await fetchRealNameStatus(token);
+                if (realNameRes.code === 1 && realNameRes.data) {
+                    if (currentInfo) {
+                        currentInfo = {
+                            ...currentInfo,
+                            real_name: realNameRes.data.real_name || currentInfo.real_name,
+                            real_name_status: realNameRes.data.real_name_status
+                        };
+                    } else {
+                        currentInfo = {
+                            real_name: realNameRes.data.real_name,
+                            real_name_status: realNameRes.data.real_name_status
+                        } as any;
+                    }
+                }
+
+                if (currentInfo) {
+                    setUserInfo(currentInfo);
+                }
+            } catch (e) {
+                console.error(e);
+            } finally {
+                setLoading(false);
             }
         };
         loadData();
-    }, []);
+    }, [initialItem]);
 
-    const title = item.item_title || item.title || '未命名藏品';
+    if (loading) {
+        return (
+            <div className="min-h-screen bg-[#FDFBF7] flex items-center justify-center">
+                <LoadingSpinner />
+            </div>
+        );
+    }
+
+    const title = item.name || item.item_title || item.title || '未命名藏品';
     // Use item.price for now, mock appreciation
     const price = parseFloat(item.price || '0');
     const currentValuation = (price * 1.055).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -102,9 +124,20 @@ const MyCollectionDetail: React.FC<MyCollectionDetailProps> = ({ item, onBack, o
                                 }}>
                             </div>
 
-                            {/* Line 1: Confirmation Number */}
-                            <div className="text-sm text-gray-600 font-[courier,monospace] font-bold tracking-widest mb-3 relative z-10 drop-shadow-sm">
-                                确权编号：37-DATA-****-{String(item.id || 8821).padStart(4, '0')}
+                            {/* Line 1: Confirmation Number - 可点击复制 */}
+                            <div
+                                className="text-sm text-gray-600 font-[courier,monospace] font-bold tracking-widest mb-3 relative z-10 drop-shadow-sm cursor-pointer hover:text-amber-600 transition-colors flex items-center justify-center gap-2"
+                                onClick={() => {
+                                    const assetCode = item.asset_code || `37-DATA-****-${String(item.id || 8821).padStart(4, '0')}`;
+                                    navigator.clipboard.writeText(assetCode).then(() => {
+                                        showToast('success', '确权编号已复制');
+                                    }).catch(() => {
+                                        showToast('error', '复制失败');
+                                    });
+                                }}
+                            >
+                                <span>确权编号：{item.asset_code || `37-DATA-****-${String(item.id || 8821).padStart(4, '0')}`}</span>
+                                <Copy size={12} className="text-gray-400" />
                             </div>
 
                             {/* Line 2 */}
@@ -161,8 +194,11 @@ const MyCollectionDetail: React.FC<MyCollectionDetailProps> = ({ item, onBack, o
                                 <div>
                                     <label className="block text-xs font-bold text-gray-400 uppercase mb-0.5">Asset Anchor / 资产锚定</label>
                                     <div className="text-sm font-medium text-gray-600">
-                                        涉及农户/合作社：238户 (数据已脱敏)
+                                        涉及农户/合作社：{item.farmer_info || '暂无数据'}
                                         <span className="inline-block ml-1 text-[10px] text-amber-600 border border-amber-200 px-1 rounded bg-white">隐私保护</span>
+                                    </div>
+                                    <div className="text-xs font-medium text-gray-600 mt-1">
+                                        核心企业：{item.core_enterprise || '暂无数据'}
                                     </div>
                                     <div className="text-[10px] text-gray-400 mt-1 leading-tight">
                                         * 根据《数据安全法》及商业保密协议，底层隐私信息已做Hash脱敏处理，仅持有人可申请解密查看。

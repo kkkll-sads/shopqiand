@@ -44,6 +44,7 @@ export type RoutePayload =
   | { name: 'reservation'; from?: RoutePayload | null }
   | { name: 'reservation-record' }
   | { name: 'trading-zone' }
+  | { name: 'trading-zone-items'; sessionId: string; sessionTitle?: string; sessionStartTime?: string; sessionEndTime?: string }
   | { name: 'artist-showcase' }
   | { name: 'artist-detail'; id: string }
   | { name: 'artist-works-showcase'; artistId: string }

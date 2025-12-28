@@ -231,19 +231,13 @@ export async function getTradeList(params: FetchTradeListParams = {}): Promise<A
  * 我的寄售列表项接口
  */
 export interface MyConsignmentItem {
-    consignment_id: number;           // 寄售ID
-    user_collection_id: number;       // 用户藏品记录ID
-    title: string;                    // 藏品标题
-    image: string;                    // 藏品图片
-    original_price: number | string;  // 原价
-    consignment_price: number | string; // 寄售价格
-    service_fee?: number | string;    // 服务费（从确权金扣除）🆕
-    total_cost?: number | string;     // 实际成本（寄售价格+服务费）🆕
-    consignment_status: number;       // 寄售状态: 0=全部, 1=寄售中, 2=已售出, 3=已取消
-    consignment_status_text: string;  // 寄售状态文本
-    create_time: number;              // 创建时间
-    create_time_text: string;         // 创建时间文本
-    [key: string]: any;               // 其他额外字段
+    id: number;                       // 寄售记录 ID
+    consignment_price: number | string; // 挂牌寄售价格
+    service_fee?: number | string;    // 确权技术服务费 (3%)
+    total_cost?: number | string;     // 用户总回款成本参考
+    status_text: string;              // 寄售状态文字
+    item_title: string;               // 藏品名称
+    [key: string]: any;
 }
 
 /**
@@ -289,7 +283,9 @@ export async function getMyConsignmentList(params: FetchMyConsignmentListParams 
     const search = new URLSearchParams();
     if (params.page) search.set('page', String(params.page));
     if (params.limit) search.set('limit', String(params.limit));
-    if (params.status !== undefined) search.set('status', String(params.status));
+    if (params.status !== undefined && params.status !== 0) {
+        search.set('status', String(params.status));
+    }
 
     const path = `${API_ENDPOINTS.collectionItem.myConsignmentList}?${search.toString()}`;
     return authedFetch<MyConsignmentListData>(path, { method: 'GET', token: params.token });
