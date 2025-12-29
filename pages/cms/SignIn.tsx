@@ -17,6 +17,8 @@ import { getStoredToken } from '../../services/client';
 import { Route } from '../../router/routes';
 import { useNotification } from '../../context/NotificationContext';
 import { AUTH_TOKEN_KEY } from '../../constants/storageKeys';
+// ✅ 引入统一 API 处理工具
+import { isSuccess, extractData, extractError } from '../../utils/apiHelpers';
 
 interface SignInProps {
     onBack: () => void;
@@ -57,8 +59,9 @@ const SignIn: React.FC<SignInProps> = ({ onBack, onNavigate }) => {
             try {
                 // Load activity rules (no token required)
                 const rulesRes = await fetchSignInRules();
-                if ((rulesRes.code === 0 || rulesRes.code === 1) && rulesRes.data) {
-                    setActivityInfo(rulesRes.data);
+                // ✅ 使用统一判断（此接口 code=0 也表示成功）
+                if ((isSuccess(rulesRes) || rulesRes.code === 0) && extractData(rulesRes)) {
+                    setActivityInfo(extractData(rulesRes)!);
                 }
 
                 // Load sign-in info (requires token)
@@ -69,8 +72,10 @@ const SignIn: React.FC<SignInProps> = ({ onBack, onNavigate }) => {
                         fetchPromotionCard(token).catch(() => ({ code: -1, data: null })) // 如果失败不影响其他数据加载
                     ]);
 
-                    if ((infoRes.code === 0 || infoRes.code === 1) && infoRes.data) {
-                        const data = infoRes.data;
+                    // ✅ 使用统一判断（此接口 code=0 也表示成功）
+                    const infoData = extractData(infoRes);
+                    if ((isSuccess(infoRes) || infoRes.code === 0) && infoData) {
+                        const data = infoData;
                         setBalance(data.total_reward || 0);
                         setHasSignedIn(data.today_signed || false);
 
@@ -90,23 +95,27 @@ const SignIn: React.FC<SignInProps> = ({ onBack, onNavigate }) => {
                         setSignedInDates(dates);
                     }
 
-                    if ((progressRes.code === 0 || progressRes.code === 1) && progressRes.data) {
-                        console.log('进度数据:', progressRes.data);
-                        setProgressInfo(progressRes.data);
+                    // ✅ extractData 已支持 code=0
+                    const progressData = extractData(progressRes);
+                    if (progressData) {
+                        console.log('进度数据:', progressData);
+                        setProgressInfo(progressData);
                         // 使用 withdrawable_money 作为当前累计奖励（可提现金额）
-                        if (progressRes.data.withdrawable_money !== undefined) {
-                            setBalance(progressRes.data.withdrawable_money);
-                        } else if (progressRes.data.total_money !== undefined) {
+                        if (progressData.withdrawable_money !== undefined) {
+                            setBalance(progressData.withdrawable_money);
+                        } else if (progressData.total_money !== undefined) {
                             // 如果没有 withdrawable_money，使用 total_money 作为后备
-                            setBalance(progressRes.data.total_money);
+                            setBalance(progressData.total_money);
                         }
                     } else {
                         console.warn('进度接口返回异常:', progressRes);
                     }
 
                     // Load invite count from promotion card
-                    if ((promotionRes.code === 0 || promotionRes.code === 1) && promotionRes.data) {
-                        setInviteCount(promotionRes.data.team_count || 0);
+                    // ✅ extractData 已支持 code=0
+                    const promotionData = extractData(promotionRes);
+                    if (promotionData) {
+                        setInviteCount(promotionData.team_count || 0);
                     }
                 }
             } catch (error: any) {
@@ -134,8 +143,9 @@ const SignIn: React.FC<SignInProps> = ({ onBack, onNavigate }) => {
 
         try {
             const res = await doSignIn(token);
-            if ((res.code === 0 || res.code === 1) && res.data) {
-                const data = res.data;
+            // ✅ extractData 已支持 code=0
+            const data = extractData(res);
+            if (data) {
                 const rewardAmount = data.daily_reward || 0;
 
                 setRedPacketAmount(rewardAmount);
@@ -162,13 +172,15 @@ const SignIn: React.FC<SignInProps> = ({ onBack, onNavigate }) => {
                 if (token) {
                     try {
                         const progressRes = await fetchSignInProgress(token);
-                        if ((progressRes.code === 0 || progressRes.code === 1) && progressRes.data) {
-                            setProgressInfo(progressRes.data);
+                        // ✅ extractData 已支持 code=0
+                        const refreshedProgressData = extractData(progressRes);
+                        if (refreshedProgressData) {
+                            setProgressInfo(refreshedProgressData);
                             // 使用 withdrawable_money 作为当前累计奖励（可提现金额）
-                            if (progressRes.data.withdrawable_money !== undefined) {
-                                setBalance(progressRes.data.withdrawable_money);
-                            } else if (progressRes.data.total_money !== undefined) {
-                                setBalance(progressRes.data.total_money);
+                            if (refreshedProgressData.withdrawable_money !== undefined) {
+                                setBalance(refreshedProgressData.withdrawable_money);
+                            } else if (refreshedProgressData.total_money !== undefined) {
+                                setBalance(refreshedProgressData.total_money);
                             }
                         }
                     } catch (error) {
@@ -176,7 +188,7 @@ const SignIn: React.FC<SignInProps> = ({ onBack, onNavigate }) => {
                     }
                 }
             } else {
-                showToast('error', '签到失败', res.msg || '请重试');
+                showToast('error', '签到失败', extractError(res, '请重试'));
             }
         } catch (error: any) {
             console.error('签到失败:', error);
@@ -201,16 +213,18 @@ const SignIn: React.FC<SignInProps> = ({ onBack, onNavigate }) => {
         setWithdrawError(null);
         try {
             const res = await fetchPaymentAccountList(token);
-            if (res.code === 1 && res.data?.list) {
-                setAccounts(res.data.list || []);
+            // ✅ 使用统一判断
+            const data = extractData(res);
+            if (data && data.list) {
+                setAccounts(data.list || []);
                 // Default select the first account if available
-                if (res.data.list.length > 0) {
+                if (data.list.length > 0) {
                     // Try to find default account
-                    const defaultAccount = res.data.list.find((acc: any) => Number(acc.is_default) === 1);
-                    setSelectedAccount(defaultAccount || res.data.list[0]);
+                    const defaultAccount = data.list.find((acc: any) => Number(acc.is_default) === 1);
+                    setSelectedAccount(defaultAccount || data.list[0]);
                 }
             } else {
-                setWithdrawError(res.msg || '获取收款账户信息失败');
+                setWithdrawError(extractError(res, '获取收款账户信息失败'));
             }
         } catch (e: any) {
             setWithdrawError(e?.msg || '获取收款账户信息失败');
@@ -256,7 +270,8 @@ const SignIn: React.FC<SignInProps> = ({ onBack, onNavigate }) => {
                 remark: '签到活动提现'
             });
 
-            if (res.code === 1 || res.code === 0) {
+            // ✅ 使用统一判断（此接口 code=0 也表示成功）
+            if (isSuccess(res) || res.code === 0) {
                 showToast('success', '提交成功', '提现申请已提交，请等待审核');
                 setShowAccountModal(false);
                 setPayPassword('');
@@ -269,17 +284,21 @@ const SignIn: React.FC<SignInProps> = ({ onBack, onNavigate }) => {
                             fetchSignInProgress(token)
                         ]);
 
-                        if ((infoRes.code === 0 || infoRes.code === 1) && infoRes.data) {
-                            setBalance(infoRes.data.total_reward || 0);
+                        // ✅ 使用统一判断（此接口 code=0 也表示成功）
+                        const refreshedInfoData = extractData(infoRes);
+                        if ((isSuccess(infoRes) || infoRes.code === 0) && refreshedInfoData) {
+                            setBalance(refreshedInfoData.total_reward || 0);
                         }
 
-                        if ((progressRes.code === 0 || progressRes.code === 1) && progressRes.data) {
-                            setProgressInfo(progressRes.data);
+                        // ✅ 使用统一判断（此接口 code=0 也表示成功）
+                        const refreshedProgressData = extractData(progressRes);
+                        if ((isSuccess(progressRes) || progressRes.code === 0) && refreshedProgressData) {
+                            setProgressInfo(refreshedProgressData);
                             // 使用 withdrawable_money 作为当前累计奖励（可提现金额）
-                            if (progressRes.data.withdrawable_money !== undefined) {
-                                setBalance(progressRes.data.withdrawable_money);
-                            } else if (progressRes.data.total_money !== undefined) {
-                                setBalance(progressRes.data.total_money);
+                            if (refreshedProgressData.withdrawable_money !== undefined) {
+                                setBalance(refreshedProgressData.withdrawable_money);
+                            } else if (refreshedProgressData.total_money !== undefined) {
+                                setBalance(refreshedProgressData.total_money);
                             }
                         }
                     } catch (error) {
@@ -287,7 +306,7 @@ const SignIn: React.FC<SignInProps> = ({ onBack, onNavigate }) => {
                     }
                 }
             } else {
-                setWithdrawError(res.msg || '提交失败，请重试');
+                setWithdrawError(extractError(res, '提交失败，请重试'));
             }
         } catch (e: any) {
             setWithdrawError(e?.msg || e?.message || '提交失败，请重试');

@@ -6,6 +6,8 @@ import { LoadingSpinner } from '../../components/common';
 import { Coins, CreditCard, ChevronLeft } from 'lucide-react';
 import { AUTH_TOKEN_KEY } from '../../constants/storageKeys';
 import { Route } from '../../router/routes';
+// ✅ 引入统一 API 处理工具
+import { isSuccess, extractData, extractError } from '../../utils/apiHelpers';
 
 interface CashierProps {
     orderId: string;
@@ -36,19 +38,22 @@ const Cashier: React.FC<CashierProps> = ({ orderId, onBack, onNavigate }) => {
                 fetchProfile(token)
             ]);
 
-            if (orderRes.code === 1 && orderRes.data) {
-                setOrder(orderRes.data);
-                if (orderRes.data.pay_type) {
-                    setPayType(orderRes.data.pay_type as 'money' | 'score');
+            // ✅ 使用统一判断
+            const orderData = extractData(orderRes);
+            if (orderData) {
+                setOrder(orderData);
+                if (orderData.pay_type) {
+                    setPayType(orderData.pay_type as 'money' | 'score');
                 }
             } else {
-                showToast('error', '获取订单失败', orderRes.msg || '无法加载订单信息');
+                showToast('error', '获取订单失败', extractError(orderRes, '无法加载订单信息'));
             }
 
-            if (profileRes.code === 1 && profileRes.data?.userInfo) {
+            const profileData = extractData(profileRes);
+            if (profileData?.userInfo) {
                 setUserBalance({
-                    score: profileRes.data.userInfo.score,
-                    money: profileRes.data.userInfo.money
+                    score: profileData.userInfo.score,
+                    money: profileData.userInfo.money
                 });
             }
         } catch (e) {
@@ -65,8 +70,9 @@ const Cashier: React.FC<CashierProps> = ({ orderId, onBack, onNavigate }) => {
             setPaying(true);
             const token = localStorage.getItem(AUTH_TOKEN_KEY);
             const res = await payOrder({ id: orderId, token: token || '' });
-            if (res.code === 1) {
-                showToast('success', res.msg || '支付成功');
+            // ✅ 使用统一判断
+            if (isSuccess(res)) {
+                showToast('success', extractError(res, '支付成功'));
                 onNavigate({
                     name: 'order-list',
                     kind: payType === 'score' ? 'points' : 'product',
@@ -74,7 +80,7 @@ const Cashier: React.FC<CashierProps> = ({ orderId, onBack, onNavigate }) => {
                     back: { name: 'cashier', orderId: String(orderId) },
                 });
             } else {
-                showToast('error', '支付失败', res.msg || '操作失败');
+                showToast('error', '支付失败', extractError(res, '操作失败'));
             }
         } catch (e: any) {
             console.error('Pay failed', e);

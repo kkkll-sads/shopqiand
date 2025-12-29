@@ -1,16 +1,17 @@
 /**
  * usePagination - 分页 Hook
- * 
+ *
  * 功能说明：
  * - 封装列表分页加载的通用逻辑
  * - 支持下拉刷新和上拉加载更多
  * - 自动管理分页状态和数据合并
- * 
+ *
  * @author 树交所前端团队
  * @version 1.0.0
  */
 
 import { useState, useCallback, useRef, useEffect } from 'react';
+import { isSuccess } from '../utils/apiHelpers';
 
 /**
  * 分页响应数据结构
@@ -146,7 +147,7 @@ function usePagination<T>(
             // 组件已卸载则不更新状态
             if (unmountedRef.current) return;
 
-            if (response.code === 1 && response.data) {
+            if (isSuccess(response) && response.data) {
                 const { list: newList = [], total: newTotal = 0, has_more, last_page } = response.data;
 
                 // 判断是否还有更多数据

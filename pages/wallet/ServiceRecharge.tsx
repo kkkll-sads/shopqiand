@@ -3,6 +3,7 @@ import { Loader2, ChevronLeft, CreditCard, Wallet, AlertCircle, ShieldCheck } fr
 import { rechargeServiceFee, fetchProfile, AUTH_TOKEN_KEY, USER_INFO_KEY } from '../../services/api';
 import { UserInfo } from '../../types';
 import { formatAmount } from '../../utils/format';
+import { isSuccess, extractError } from '../../utils/apiHelpers';
 
 interface ServiceRechargeProps {
   onBack: () => void;
@@ -26,7 +27,7 @@ const ServiceRecharge: React.FC<ServiceRechargeProps> = ({ onBack }) => {
     if (!token) return;
     try {
       const response = await fetchProfile(token);
-      if (response.code === 1 && response.data?.userInfo) {
+      if (isSuccess(response) && response.data?.userInfo) {
         setUserInfo(response.data.userInfo);
         localStorage.setItem(USER_INFO_KEY, JSON.stringify(response.data.userInfo));
       }
@@ -46,7 +47,7 @@ const ServiceRecharge: React.FC<ServiceRechargeProps> = ({ onBack }) => {
         token,
       });
 
-      if (response.code === 1) {
+      if (isSuccess(response)) {
         setSuccess('划转成功');
         setAmount('');
         setShowConfirmModal(false);
@@ -56,11 +57,11 @@ const ServiceRecharge: React.FC<ServiceRechargeProps> = ({ onBack }) => {
           onBack();
         }, 1000);
       } else {
-        setError(response.msg || '划转失败');
+        setError(extractError(response, '划转失败'));
         setShowConfirmModal(false);
       }
     } catch (err: any) {
-      setError(err?.msg || '划转失败');
+      setError(err?.message || '划转失败');
       setShowConfirmModal(false);
     } finally {
       setLoading(false);

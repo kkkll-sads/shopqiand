@@ -26,6 +26,8 @@ import {
 } from '../../services/api';
 import { useNotification } from '../../context/NotificationContext';
 import { Route } from '../../router/routes';
+// ✅ 引入统一 API 处理工具
+import { isSuccess, extractData, extractError } from '../../utils/apiHelpers';
 import OrderTabs from './components/orders/OrderTabs';
 import TransactionOrderList from './components/orders/TransactionOrderList';
 import ProductOrderList from './components/orders/ProductOrderList';
@@ -120,8 +122,10 @@ const OrderListPage: React.FC<OrderListPageProps> = ({ category, initialTab, onB
               response = { code: 1, data: { list: [], total: 0, page: 1, limit: 10 } };
           }
 
-          if (response.code === 1 && response.data) {
-            const newOrders = response.data.list || [];
+          // ✅ 使用统一判断
+          const data = extractData(response);
+          if (data) {
+            const newOrders = data.list || [];
             setOrders(newOrders);
             setHasMore(newOrders.length >= 10);
             setPage(1);
@@ -164,8 +168,10 @@ const OrderListPage: React.FC<OrderListPageProps> = ({ category, initialTab, onB
 
           const response = await getDeliveryList({ page: 1, limit: 10, status, token });
 
-          if (response.code === 1 && response.data) {
-            const newOrders = response.data.list || [];
+          // ✅ 使用统一判断
+          const data = extractData(response);
+          if (data) {
+            const newOrders = data.list || [];
             setOrders(newOrders);
             setHasMore(newOrders.length >= 10);
             setPage(1);
@@ -208,10 +214,12 @@ const OrderListPage: React.FC<OrderListPageProps> = ({ category, initialTab, onB
 
           const response = await getMyConsignmentList({ page: 1, limit: 10, status, token });
 
-          if (response.code === 1 && response.data) {
-            const newOrders = response.data.list || [];
+          // ✅ 使用统一判断
+          const data = extractData(response);
+          if (data) {
+            const newOrders = data.list || [];
             setConsignmentOrders(newOrders);
-            setHasMore(response.data.has_more || false);
+            setHasMore(data.has_more || false);
             setPage(1);
           }
         } catch (error) {
@@ -239,20 +247,24 @@ const OrderListPage: React.FC<OrderListPageProps> = ({ category, initialTab, onB
             // 买入订单 - 使用购买记录接口
             const response = await getPurchaseRecords({ page: 1, limit: 10, token });
 
-            if (response.code === 1 && response.data) {
-              const newRecords = response.data.list || [];
+            // ✅ 使用统一判断
+            const data = extractData(response);
+            if (data) {
+              const newRecords = data.list || [];
               setPurchaseRecords(newRecords);
-              setHasMore(response.data.has_more || false);
+              setHasMore(data.has_more || false);
               setPage(1);
             }
           } else if (activeTab === 1) {
             // 卖出订单 - 使用我的寄售列表（状态为已售出）
             const response = await getMyConsignmentList({ page: 1, limit: 10, status: 2, token });
 
-            if (response.code === 1 && response.data) {
-              const newConsignments = response.data.list || [];
+            // ✅ 使用统一判断
+            const data = extractData(response);
+            if (data) {
+              const newConsignments = data.list || [];
               setConsignmentOrders(newConsignments);
-              setHasMore(response.data.has_more || false);
+              setHasMore(data.has_more || false);
               setPage(1);
             } else {
               setConsignmentOrders([]);
@@ -283,7 +295,8 @@ const OrderListPage: React.FC<OrderListPageProps> = ({ category, initialTab, onB
       const token = localStorage.getItem(AUTH_TOKEN_KEY) || '';
       const response = await confirmOrder({ id: orderId, token });
 
-      if (response.code === 1) {
+      // ✅ 使用统一判断
+      if (isSuccess(response)) {
         // Refresh orders after confirmation
         setPage(1);
         setOrders([]);
@@ -325,8 +338,10 @@ const OrderListPage: React.FC<OrderListPageProps> = ({ category, initialTab, onB
             }
           }
 
-          if (reloadResponse.code === 1 && reloadResponse.data) {
-            setOrders(reloadResponse.data.list || []);
+          // ✅ 使用统一判断
+          const reloadData = extractData(reloadResponse);
+          if (reloadData) {
+            setOrders(reloadData.list || []);
           }
         } catch (error) {
           console.error('重新加载订单失败:', error);
@@ -334,7 +349,7 @@ const OrderListPage: React.FC<OrderListPageProps> = ({ category, initialTab, onB
           setLoading(false);
         }
       } else {
-        showToast('error', '操作失败', response.msg || '确认收货失败');
+        showToast('error', '操作失败', extractError(response, '确认收货失败'));
       }
     } catch (error: any) {
       console.error('确认收货失败:', error);
@@ -457,7 +472,8 @@ const OrderListPage: React.FC<OrderListPageProps> = ({ category, initialTab, onB
           const token = localStorage.getItem(AUTH_TOKEN_KEY) || '';
           const response = await payOrder({ id: orderId, token });
 
-          if (response.code === 1) {
+          // ✅ 使用统一判断
+          if (isSuccess(response)) {
             // Refresh orders after payment
             setPage(1);
             setOrders([]);
@@ -499,17 +515,19 @@ const OrderListPage: React.FC<OrderListPageProps> = ({ category, initialTab, onB
                 }
               }
 
-              if (reloadResponse.code === 1 && reloadResponse.data) {
-                setOrders(reloadResponse.data.list || []);
+              // ✅ 使用统一判断
+              const reloadData = extractData(reloadResponse);
+              if (reloadData) {
+                setOrders(reloadData.list || []);
               }
-              showToast('success', response.msg || '支付成功');
+              showToast('success', extractError(response, '支付成功'));
             } catch (error) {
               console.error('重新加载订单失败:', error);
             } finally {
               setLoading(false);
             }
           } else {
-            showToast('error', '支付失败', response.msg || '支付失败');
+            showToast('error', '支付失败', extractError(response, '支付失败'));
           }
         } catch (error: any) {
           console.error('支付订单失败:', error);
@@ -531,7 +549,8 @@ const OrderListPage: React.FC<OrderListPageProps> = ({ category, initialTab, onB
           const token = localStorage.getItem(AUTH_TOKEN_KEY) || '';
           const response = await deleteOrder({ id: orderId, token });
 
-          if (response.code === 1) {
+          // ✅ 使用统一判断
+          if (isSuccess(response)) {
             // Refresh orders after deletion
             setPage(1);
             setOrders([]);
@@ -573,17 +592,19 @@ const OrderListPage: React.FC<OrderListPageProps> = ({ category, initialTab, onB
                 }
               }
 
-              if (reloadResponse.code === 1 && reloadResponse.data) {
-                setOrders(reloadResponse.data.list || []);
+              // ✅ 使用统一判断
+              const reloadData = extractData(reloadResponse);
+              if (reloadData) {
+                setOrders(reloadData.list || []);
               }
-              showToast('success', response.msg || '删除成功');
+              showToast('success', extractError(response, '删除成功'));
             } catch (error) {
               console.error('重新加载订单失败:', error);
             } finally {
               setLoading(false);
             }
           } else {
-            showToast('error', '删除失败', response.msg || '删除失败');
+            showToast('error', '删除失败', extractError(response, '删除失败'));
           }
         } catch (error: any) {
           console.error('删除订单失败:', error);
@@ -601,11 +622,13 @@ const OrderListPage: React.FC<OrderListPageProps> = ({ category, initialTab, onB
       const token = localStorage.getItem(AUTH_TOKEN_KEY) || '';
       const response = await getConsignmentDetail({ consignment_id: consignmentId, token });
 
-      if (response.code === 1 && response.data) {
-        setSelectedConsignmentDetail(response.data);
+      // ✅ 使用统一判断
+      const data = extractData(response);
+      if (data) {
+        setSelectedConsignmentDetail(data);
         setShowConsignmentDetailModal(true);
       } else {
-        showToast('error', '获取失败', response.msg || '获取寄售详情失败');
+        showToast('error', '获取失败', extractError(response, '获取寄售详情失败'));
       }
     } catch (error: any) {
       console.error('获取寄售详情失败:', error);
@@ -626,7 +649,8 @@ const OrderListPage: React.FC<OrderListPageProps> = ({ category, initialTab, onB
           const token = localStorage.getItem(AUTH_TOKEN_KEY) || '';
           const response = await cancelConsignment({ consignment_id: consignmentId, token });
 
-          if (response.code === 1) {
+          // ✅ 使用统一判断
+          if (isSuccess(response)) {
             // Refresh consignment orders after cancellation
             setPage(1);
             setConsignmentOrders([]);
@@ -650,17 +674,19 @@ const OrderListPage: React.FC<OrderListPageProps> = ({ category, initialTab, onB
               }
               const reloadResponse = await getMyConsignmentList({ page: 1, limit: 10, status, token });
 
-              if (reloadResponse.code === 1 && reloadResponse.data) {
-                setConsignmentOrders(reloadResponse.data.list || []);
+              // ✅ 使用统一判断
+              const reloadData = extractData(reloadResponse);
+              if (reloadData) {
+                setConsignmentOrders(reloadData.list || []);
               }
-              showToast('success', response.msg || '取消成功');
+              showToast('success', extractError(response, '取消成功'));
             } catch (error) {
               console.error('重新加载寄售订单失败:', error);
             } finally {
               setLoading(false);
             }
           } else {
-            showToast('error', '取消失败', response.msg || '取消寄售失败');
+            showToast('error', '取消失败', extractError(response, '取消寄售失败'));
           }
         } catch (error: any) {
           console.error('取消寄售失败:', error);

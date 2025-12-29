@@ -17,6 +17,7 @@ import { fetchRealNameStatus, RealNameStatusData } from '../services/api';
 import { STORAGE_KEYS } from '../constants/storageKeys';
 import { readJSON, readStorage, removeStorage, writeJSON, writeStorage } from '../utils/storageAccess';
 import { debugLog, warnLog, errorLog } from '../utils/logger';
+import { isSuccess } from '../utils/apiHelpers';
 
 const {
     AUTH_KEY,
@@ -64,18 +65,18 @@ interface UseAuthResult {
  * @example
  * // 在组件中使用
  * const { isLoggedIn, user, login, logout } = useAuth();
- * 
+ *
  * // 登录
  * const handleLogin = async (phone, password) => {
  *   const response = await loginApi({ mobile: phone, password });
- *   if (response.code === 1) {
+ *   if (isSuccess(response)) {
  *     login({
  *       token: response.data.userInfo.token,
  *       userInfo: response.data.userInfo,
  *     });
  *   }
  * };
- * 
+ *
  * // 登出
  * const handleLogout = () => {
  *   logout();
@@ -136,7 +137,7 @@ function useAuth(): UseAuthResult {
             // 获取实名认证状态
             try {
                 const response = await fetchRealNameStatus(payload.token);
-                if (response.code === 1 && response.data) {
+                if (isSuccess(response) && response.data) {
                     const status = response.data.real_name_status;
                     const name = response.data.real_name;
 
@@ -233,7 +234,7 @@ function useAuth(): UseAuthResult {
 
         try {
             const response = await fetchRealNameStatus(currentToken);
-            if (response.code === 1 && response.data) {
+            if (isSuccess(response) && response.data) {
                 const status = response.data.real_name_status;
                 const name = response.data.real_name;
 

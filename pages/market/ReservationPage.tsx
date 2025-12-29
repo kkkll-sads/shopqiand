@@ -5,6 +5,7 @@ import { fetchProfile, bidBuy, fetchCollectionItemDetail } from '../../services/
 import { useNotification } from '../../context/NotificationContext';
 import { getStoredToken } from '../../services/client';
 import { Route } from '../../router/routes';
+import { isSuccess } from '../../utils/apiHelpers';
 
 interface ReservationPageProps {
     product: Product;
@@ -112,7 +113,7 @@ const ReservationPage: React.FC<ReservationPageProps> = ({ product, onBack, onNa
 
             try {
                 const response = await fetchProfile(token);
-                if (response.code === 1) {
+                if (isSuccess(response)) {
                     // 设置真实的算力和余额
                     setAvailableHashrate(Number(response.data.userInfo.green_power) || 0);
                     setAccountBalance(Number(response.data.userInfo.balance_available) || 0);

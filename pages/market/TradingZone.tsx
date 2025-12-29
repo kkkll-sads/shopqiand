@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Clock, Globe, Database, Zap, Cpu, Activity, Lock, ArrowRight, ArrowLeft, Layers, Gem, Crown, Coins, TrendingUp, ClipboardList } from 'lucide-react';
 import PageContainer from '../../components/layout/PageContainer';
 import { LoadingSpinner, LazyImage } from '../../components/common';
@@ -12,6 +12,7 @@ import {
     CollectionSessionItem,
     CollectionItem,
 } from '../../services/api';
+import { isSuccess, extractError } from '../../utils/apiHelpers';
 
 /**
  * 从价格分区字符串中提取价格数字
@@ -159,77 +160,19 @@ const TradingZone: React.FC<TradingZoneProps> = ({
     const [itemsError, setItemsError] = useState<string | null>(null);
     const [activePriceZone, setActivePriceZone] = useState<string>('all');
 
-    useEffect(() => {
-        const loadSessions = async () => {
-            try {
-                setLoading(true);
-                setError(null);
-                const response = await fetchCollectionSessions();
-                if (response.code === 1 && response.data?.list) {
-                    const sessionList: TradingSession[] = response.data.list.map((item: CollectionSessionItem) => ({
-                        id: String(item.id),
-                        title: item.title,
-                        image: item.image,
-                        startTime: item.start_time,
-                        endTime: item.end_time,
-                        isActive: !!(item as any)?.is_active,
-                    }));
-                    setSessions(sessionList);
-
-                    // 如果有初始 sessionId，自动选中该场次
-                    if (initialSessionId) {
-                        const matchedSession = sessionList.find(s => s.id === initialSessionId);
-                        if (matchedSession) {
-                            // 自动加载该场次的商品
-                            loadSessionItems(matchedSession);
-                        } else if (initialSessionTitle) {
-                            // 如果没找到匹配的场次但有标题信息，创建一个临时 session 对象
-                            const tempSession: TradingSession = {
-                                id: initialSessionId,
-                                title: initialSessionTitle,
-                                image: '',
-                                startTime: initialSessionStartTime || '',
-                                endTime: initialSessionEndTime || '',
-                            };
-                            loadSessionItems(tempSession);
-                        }
-                    }
-                } else {
-                    setError(response.msg || '获取数据资产池失败');
-                }
-            } catch (err: any) {
-                console.error('加载专场列表失败:', err);
-                setError(err?.msg || '网络连接异常');
-            } finally {
-                setLoading(false);
-            }
-        };
-        loadSessions();
-    }, [initialSessionId]);
-
-    useEffect(() => {
-        const timer = setInterval(() => setNow(new Date()), 1000);
-        return () => clearInterval(timer);
-    }, []);
-
-    const handleBack = () => {
-        if (selectedSession) {
-            // 如果是从路由参数进入的，返回到 trading-zone
-            if (initialSessionId) {
-                onBack();
-            } else {
-                setSelectedSession(null);
-                setTradingItems([]);
-                setItemsError(null);
-            }
-        } else {
-            onBack();
-        }
-    };
+    // 使用ref追踪加载状态，防止重复调用
+    const loadingSessionRef = useRef<string | null>(null);
 
     // 内部函数：加载场次商品（不触发导航）
-    const loadSessionItems = async (session: TradingSession) => {
+    const loadSessionItems = useCallback(async (session: TradingSession) => {
+        // 防止重复加载同一个session
+        if (loadingSessionRef.current === session.id) {
+            console.log('Session already loading, skipping:', session.id);
+            return;
+        }
+
         try {
+            loadingSessionRef.current = session.id;
             setItemsLoading(true);
             setItemsError(null);
 
@@ -239,10 +182,9 @@ const TradingZone: React.FC<TradingZoneProps> = ({
             console.log('API Response:', response);
             console.log('Items list:', response.data?.list);
 
-            if (response.code === 1 && response.data?.list) {
+            if (isSuccess(response) && response.data?.list) {
                 const allItems = response.data.list.map((item: any) => {
                     // 新 API 结构：每条记录代表一个 package_name + zone_id 的归类
-                    // 包含 official_stock（官方库存）和 consignment_count（寄售数量）
                     const hasConsignment = item.consignment_count > 0 || (item.consignment_list && item.consignment_list.length > 0);
                     const hasOfficial = item.official_stock > 0 || item.stock > 0;
 
@@ -310,7 +252,77 @@ const TradingZone: React.FC<TradingZoneProps> = ({
             setItemsError('数据同步延迟，请重试');
             setSelectedSession(session);
         } finally {
+            loadingSessionRef.current = null;
             setItemsLoading(false);
+        }
+    }, []); // 空依赖数组，函数不依赖外部变量
+
+    useEffect(() => {
+        console.log('TradingZone mounted/updated with sessionId:', initialSessionId);
+        const loadSessions = async () => {
+            try {
+                setLoading(true);
+                setError(null);
+                const response = await fetchCollectionSessions();
+                if (isSuccess(response) && response.data?.list) {
+                    const sessionList: TradingSession[] = response.data.list.map((item: CollectionSessionItem) => ({
+                        id: String(item.id),
+                        title: item.title,
+                        image: item.image,
+                        startTime: item.start_time,
+                        endTime: item.end_time,
+                        isActive: !!(item as any)?.is_active,
+                    }));
+                    setSessions(sessionList);
+
+                    // 如果有初始 sessionId，自动选中该场次
+                    if (initialSessionId) {
+                        const matchedSession = sessionList.find(s => s.id === initialSessionId);
+                        if (matchedSession) {
+                            // 自动加载该场次的商品
+                            loadSessionItems(matchedSession);
+                        } else if (initialSessionTitle) {
+                            // 如果没找到匹配的场次但有标题信息，创建一个临时 session 对象
+                            const tempSession: TradingSession = {
+                                id: initialSessionId,
+                                title: initialSessionTitle,
+                                image: '',
+                                startTime: initialSessionStartTime || '',
+                                endTime: initialSessionEndTime || '',
+                            };
+                            loadSessionItems(tempSession);
+                        }
+                    }
+                } else {
+                    setError(response.msg || '获取数据资产池失败');
+                }
+            } catch (err: any) {
+                console.error('加载专场列表失败:', err);
+                setError(err?.msg || '网络连接异常');
+            } finally {
+                setLoading(false);
+            }
+        };
+        loadSessions();
+    }, [initialSessionId, initialSessionTitle, initialSessionStartTime, initialSessionEndTime, loadSessionItems]);
+
+    useEffect(() => {
+        const timer = setInterval(() => setNow(new Date()), 1000);
+        return () => clearInterval(timer);
+    }, []);
+
+    const handleBack = () => {
+        if (selectedSession) {
+            // 如果是从路由参数进入的，返回到 trading-zone
+            if (initialSessionId) {
+                onBack();
+            } else {
+                setSelectedSession(null);
+                setTradingItems([]);
+                setItemsError(null);
+            }
+        } else {
+            onBack();
         }
     };
 
@@ -378,7 +390,7 @@ const TradingZone: React.FC<TradingZoneProps> = ({
                 <div className="relative z-10 p-5">
                     {/* 顶部导航 */}
                     <div className="flex justify-between items-center mb-6">
-                        <button onClick={handleBack} className="p-2 bg-white/60 backdrop-blur rounded-full shadow-sm hover:bg-white transition-all text-gray-700">
+                        <button type="button" onClick={handleBack} className="p-2 bg-white/60 backdrop-blur rounded-full shadow-sm hover:bg-white transition-all text-gray-700">
                             <ArrowLeft size={20} />
                         </button>
                         <div className="text-xs font-bold text-gray-500/50 font-serif tracking-widest uppercase"></div>
@@ -426,6 +438,7 @@ const TradingZone: React.FC<TradingZoneProps> = ({
                         <div className="flex items-center gap-2">
                             {onNavigate && (
                                 <button
+                                    type="button"
                                     onClick={() => onNavigate({ name: 'reservation-record' })}
                                     className="flex items-center gap-1.5 bg-orange-50 text-orange-600 px-3 py-1.5 rounded-full text-xs font-bold border border-orange-100 active:scale-95 transition-transform"
                                 >
@@ -454,6 +467,7 @@ const TradingZone: React.FC<TradingZoneProps> = ({
 
                             return priceZones.map((zone) => (
                                 <button
+                                    type="button"
                                     key={zone}
                                     onClick={() => setActivePriceZone(zone)}
                                     className={`px-4 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all ${activePriceZone === zone
@@ -532,7 +546,7 @@ const TradingZone: React.FC<TradingZoneProps> = ({
                                                     <span className="text-xs">¥</span>
                                                     <span>{item.price.toLocaleString()}</span>
                                                 </div>
-                                                <button className="bg-gradient-to-r from-orange-500 to-red-500 text-white text-xs font-bold px-4 py-1.5 rounded-full shadow-md shadow-orange-200 active:scale-95 transition-transform">
+                                                <button type="button" className="bg-gradient-to-r from-orange-500 to-red-500 text-white text-xs font-bold px-4 py-1.5 rounded-full shadow-md shadow-orange-200 active:scale-95 transition-transform">
                                                     申购
                                                 </button>
                                             </div>
@@ -555,7 +569,7 @@ const TradingZone: React.FC<TradingZoneProps> = ({
             {/* 顶部导航区 */}
             <div className="relative z-10 px-5 pt-4 pb-2 flex justify-between items-center">
                 <div className="flex items-center gap-3">
-                    <button onClick={handleBack} className="p-2 -ml-2 text-gray-700 active:bg-black/5 rounded-full transition-colors">
+                    <button type="button" onClick={handleBack} className="p-2 -ml-2 text-gray-700 active:bg-black/5 rounded-full transition-colors">
                         <ArrowLeft size={24} />
                     </button>
                     <h1 className="font-bold text-xl text-gray-900 tracking-tight">资产交易</h1>
@@ -643,6 +657,7 @@ const TradingZone: React.FC<TradingZoneProps> = ({
                             {/* 3. 底部区域：全宽强按钮 */}
                             <div className="relative z-10">
                                 <button
+                                    type="button"
                                     onClick={() => status === 'active' && handleSessionSelect(session)}
                                     disabled={status !== 'active'}
                                     className={`w-full h-12 rounded-xl text-sm font-bold flex items-center justify-center gap-2 shadow-lg transition-all active:scale-[0.98]

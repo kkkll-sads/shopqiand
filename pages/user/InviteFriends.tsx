@@ -14,6 +14,7 @@ import PageContainer from '../../components/layout/PageContainer';
 import { LoadingSpinner } from '../../components/common';
 import { fetchPromotionCard, AUTH_TOKEN_KEY } from '../../services/api';
 import { useNotification } from '../../context/NotificationContext';
+import { isSuccess, extractError } from '../../utils/apiHelpers';
 
 /**
  * InviteFriends 组件属性接口
@@ -52,10 +53,10 @@ const InviteFriends: React.FC<InviteFriendsProps> = ({ onBack }) => {
                     return;
                 }
                 const response = await fetchPromotionCard(token);
-                if ((response.code === 0 || response.code === 1) && response.data) {
+                if ((isSuccess(response) || response.code === 0) && response.data) {
                     setInviteCode(response.data.invite_code);
                 } else {
-                    setError(response.msg || '获取推广卡信息失败');
+                    setError(extractError(response, '获取推广卡信息失败'));
                 }
             } catch (err: any) {
                 console.error('加载推广卡信息失败:', err);

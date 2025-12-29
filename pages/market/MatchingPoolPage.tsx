@@ -9,6 +9,7 @@ import {
     normalizeAssetUrl,
 } from '../../services/api';
 import { useNotification } from '../../context/NotificationContext';
+import { isSuccess, extractError } from '../../utils/apiHelpers';
 
 interface MatchingPoolPageProps {
     itemId?: number;     // 如果传入 itemId，则只显示该藏品的撮合记录
@@ -70,7 +71,7 @@ const MatchingPoolPage: React.FC<MatchingPoolPageProps> = ({ itemId, sessionId, 
                 limit: 20,
             });
 
-            if (response.code === 1 && response.data) {
+            if (isSuccess(response) && response.data) {
                 const newList = response.data.list || [];
                 if (pageNum === 1) {
                     setMatchingList(newList);
@@ -80,7 +81,7 @@ const MatchingPoolPage: React.FC<MatchingPoolPageProps> = ({ itemId, sessionId, 
                 setTotal(response.data.total || 0);
                 setHasMore(newList.length === 20);
             } else {
-                setError(response.msg || '加载失败');
+                setError(extractError(response, '加载失败'));
             }
         } catch (err: any) {
             console.error('加载撮合池列表失败:', err);
@@ -110,12 +111,12 @@ const MatchingPoolPage: React.FC<MatchingPoolPageProps> = ({ itemId, sessionId, 
 
             const response = await cancelBid({ matching_pool_id: matchingPoolId });
 
-            if (response.code === 1) {
+            if (isSuccess(response)) {
                 showToast(`取消成功，返还算力 ${response.data?.power_returned || 0}`, 'success');
                 // 重新加载列表
                 loadMatchingPool(1, activeTab === 'all' ? undefined : activeTab);
             } else {
-                showToast(response.msg || '取消失败', 'error');
+                showToast(extractError(response, '取消失败'), 'error');
             }
         } catch (err: any) {
             console.error('取消竞价失败:', err);

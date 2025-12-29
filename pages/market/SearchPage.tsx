@@ -6,6 +6,7 @@ import { LoadingSpinner } from '../../components/common';
 import ProductDetail from './ProductDetail';
 import { Route } from '../../router/routes';
 import { Product } from '../../types';
+import { isSuccess, extractError } from '../../utils/apiHelpers';
 
 const SEARCH_HISTORY_KEY = 'search_history';
 const MAX_HISTORY_COUNT = 10;
@@ -86,12 +87,12 @@ const SearchPage: React.FC<SearchPageProps> = ({ onBack, onNavigate, initialCode
         setSearching(true);
         try {
             const response = await queryCollectionByCode({ code: searchValue });
-            if (response.code === 1 && response.data) {
+            if (isSuccess(response) && response.data) {
                 setSearchResult(response.data);
                 setShowResult(true);
                 saveSearchHistory(searchValue);
             } else {
-                showToast('error', '查询失败', response.msg || '未找到匹配的藏品');
+                showToast('error', '查询失败', extractError(response, '未找到匹配的藏品'));
             }
         } catch (error: any) {
             console.error('搜索失败:', error);

@@ -13,6 +13,7 @@ import {
   saveAddress,
 } from '../../services/api';
 import { useNotification } from '../../context/NotificationContext';
+import { isSuccess, extractError } from '../../utils/apiHelpers';
 
 interface AddressListProps {
   onBack: () => void;
@@ -64,15 +65,14 @@ const AddressList: React.FC<AddressListProps> = ({ onBack }) => {
     setLoading(true);
     try {
       const res = await fetchAddressList(token);
-      if (res.code === 1 && res.data?.list) {
+      if (isSuccess(res) && res.data?.list) {
         setAddresses(res.data.list);
         setError(null);
       } else {
-        setError(res.msg || '获取地址列表失败');
+        setError(extractError(res, '获取地址列表失败'));
       }
     } catch (e: any) {
-      // 优先使用接口返回的错误消息
-      setError(e?.msg || e?.response?.msg || e?.message || '获取地址列表失败');
+      setError(e?.message || '获取地址列表失败');
     } finally {
       setLoading(false);
     }
@@ -121,13 +121,13 @@ const AddressList: React.FC<AddressListProps> = ({ onBack }) => {
         is_default: 1,
       });
 
-      if (res.code === 1) {
+      if (isSuccess(res)) {
         await loadAddresses();
       } else {
-        setError(res.msg || '设置默认地址失败');
+        setError(extractError(res, '设置默认地址失败'));
       }
     } catch (e: any) {
-      setError(e?.msg || e?.response?.msg || e?.message || '设置默认地址失败');
+      setError(e?.message || '设置默认地址失败');
     } finally {
       setLoading(false);
     }
@@ -181,18 +181,17 @@ const AddressList: React.FC<AddressListProps> = ({ onBack }) => {
         is_default: is_default ? 1 : 0,
       });
 
-      if (res.code === 1) {
+      if (isSuccess(res)) {
         setNotice(mode === 'edit' ? '地址已更新' : '新增地址成功');
         resetForm();
         setMode('list');
         setEditingId(null);
         await loadAddresses();
       } else {
-        setFormError(res.msg || '保存地址失败，请检查填写信息');
+        setFormError(extractError(res, '保存地址失败，请检查填写信息'));
       }
     } catch (e: any) {
-      // 优先使用接口返回的错误消息
-      setFormError(e?.msg || e?.response?.msg || e?.message || '保存地址失败，请稍后重试');
+      setFormError(e?.message || '保存地址失败，请稍后重试');
     } finally {
       setFormLoading(false);
     }

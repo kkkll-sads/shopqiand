@@ -25,6 +25,7 @@ import {
     fetchAboutUsPage,
     PageContent,
 } from '../../services/api';
+import { isSuccess, extractError } from '../../utils/apiHelpers';
 
 /**
  * 页面类型枚举
@@ -120,10 +121,10 @@ const StaticContentPage: React.FC<StaticContentPageProps> = ({
                 // 组件已卸载则不更新状态
                 if (cancelled) return;
 
-                if (response.code === 1 && response.data) {
+                if (isSuccess(response) && response.data) {
                     setPage(response.data);
                 } else {
-                    setError(response.msg || '加载失败，请稍后重试');
+                    setError(extractError(response, '加载失败，请稍后重试'));
                 }
             } catch (e: any) {
                 if (cancelled) return;

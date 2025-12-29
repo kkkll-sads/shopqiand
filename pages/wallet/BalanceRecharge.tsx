@@ -6,6 +6,7 @@ import { LoadingSpinner } from '../../components/common';
 import { fetchCompanyAccountList, CompanyAccountItem, submitRechargeOrder } from '../../services/api';
 import { useNotification } from '../../context/NotificationContext';
 import { Route } from '../../router/routes';
+import { isSuccess, extractError } from '../../utils/apiHelpers';
 
 interface BalanceRechargeProps {
   onBack: () => void;
@@ -46,7 +47,7 @@ const BalanceRecharge: React.FC<BalanceRechargeProps> = ({ onBack, onNavigate, i
     setLoading(true);
     try {
       const res = await fetchCompanyAccountList({ usage: 'recharge' });
-      if (res.code === 1) {
+      if (isSuccess(res)) {
         setAllAccounts(res.data.list || []);
       }
     } catch (err) {
@@ -139,7 +140,7 @@ const BalanceRecharge: React.FC<BalanceRechargeProps> = ({ onBack, onNavigate, i
         payment_type: selectedMethod || undefined,
       });
 
-      if (response.code === 1) {
+      if (isSuccess(response)) {
         showToast('success', '提交成功', `订单号: ${response.data?.order_no || response.data?.order_id || '已生成'}`);
 
         // Reset form completely & go back
@@ -151,7 +152,7 @@ const BalanceRecharge: React.FC<BalanceRechargeProps> = ({ onBack, onNavigate, i
         setViewState('input');
         onBack();
       } else {
-        showToast('error', '提交失败', response.msg || '请重试');
+        showToast('error', '提交失败', extractError(response, '请重试'));
       }
     } catch (error: any) {
       console.error('Submit recharge order error:', error);

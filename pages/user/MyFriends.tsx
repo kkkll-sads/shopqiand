@@ -16,6 +16,7 @@ import { fetchTeamMembers, normalizeAssetUrl } from '../../services/api';
 import { Route } from '../../router/routes';
 import { TeamMember } from '../../types';
 import { formatTime } from '../../utils/format';
+import { isSuccess, extractError } from '../../utils/apiHelpers';
 
 const PAGE_SIZE = 10;
 
@@ -51,7 +52,7 @@ const MyFriends: React.FC<MyFriendsProps> = ({ onBack, onNavigate }) => {
       setError(null);
 
       const response = await fetchTeamMembers({ page: pageNum, page_size: PAGE_SIZE });
-      if ((response.code === 0 || response.code === 1) && response.data) {
+      if ((isSuccess(response) || response.code === 0) && response.data) {
         const newList = response.data.list || [];
         const totalCount = response.data.total || 0;
 
@@ -64,7 +65,7 @@ const MyFriends: React.FC<MyFriendsProps> = ({ onBack, onNavigate }) => {
         setPage(pageNum);
         setHasMore(pageNum * PAGE_SIZE < totalCount);
       } else {
-        setError(response.msg || '获取好友列表失败');
+        setError(extractError(response, '获取好友列表失败'));
       }
     } catch (err: any) {
       console.error('加载好友列表失败:', err);

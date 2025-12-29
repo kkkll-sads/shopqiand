@@ -11,6 +11,8 @@ import {
   editPaymentAccount,
   setDefaultPaymentAccount,
 } from '../../services/api';
+// ✅ 引入统一 API 处理工具
+import { isSuccess, extractData, extractError } from '../../utils/apiHelpers';
 
 interface CardManagementProps {
   onBack: () => void;
@@ -73,10 +75,12 @@ const CardManagement: React.FC<CardManagementProps> = ({ onBack }) => {
         ),
       ]);
 
-      if (res.code === 1 && res.data) {
-        setAccounts(res.data.list || []);
+      // ✅ 使用统一判断
+      const data = extractData(res);
+      if (data) {
+        setAccounts(data.list || []);
       } else {
-        setError(res.msg || '获取卡号列表失败');
+        setError(extractError(res, '获取卡号列表失败'));
       }
     } catch (e: any) {
       // 优先使用接口返回的错误消息
@@ -172,11 +176,12 @@ const CardManagement: React.FC<CardManagementProps> = ({ onBack }) => {
               }
               try {
                 const res = await deletePaymentAccount({ id });
-                if (res.code === 1) {
-                  setNotice(res.msg || '删除成功');
+                // ✅ 使用统一判断
+                if (isSuccess(res)) {
+                  setNotice(extractError(res, '删除成功'));
                   await loadAccounts();
                 } else {
-                  setNotice(res.msg || '删除失败，请稍后重试');
+                  setNotice(extractError(res, '删除失败，请稍后重试'));
                 }
               } catch (e: any) {
                 // 优先使用接口返回的错误消息
@@ -238,8 +243,9 @@ const CardManagement: React.FC<CardManagementProps> = ({ onBack }) => {
           screenshot: screenshot ?? undefined,
         });
 
-        if (res.code === 1) {
-          // 如有勾选“设为默认账户”，并且之前不是默认，则额外调用设置默认接口
+        // ✅ 使用统一判断
+        if (isSuccess(res)) {
+          // 如有勾选"设为默认账户"，并且之前不是默认，则额外调用设置默认接口
           if (is_default && !editingWasDefault) {
             await setDefaultPaymentAccount({ id: editingId });
           }
@@ -250,7 +256,7 @@ const CardManagement: React.FC<CardManagementProps> = ({ onBack }) => {
           setEditingWasDefault(false);
           await loadAccounts();
         } else {
-          setFormError(res.msg || '保存失败，请检查填写信息');
+          setFormError(extractError(res, '保存失败，请检查填写信息'));
         }
       } else {
         const res = await addPaymentAccount({
@@ -264,14 +270,15 @@ const CardManagement: React.FC<CardManagementProps> = ({ onBack }) => {
           screenshot: screenshot ?? undefined,
         });
 
-        if (res.code === 1) {
-          setNotice(res.msg || '新增账户成功');
+        // ✅ 使用统一判断
+        if (isSuccess(res)) {
+          setNotice(extractError(res, '新增账户成功'));
           resetForm();
           setMode('list');
           await loadAccounts();
         } else {
           // 显示后端返回的业务错误信息
-          setFormError(res.msg || '新增账户失败，请检查填写信息');
+          setFormError(extractError(res, '新增账户失败，请检查填写信息'));
         }
       }
     } catch (e: any) {

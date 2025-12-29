@@ -3,6 +3,7 @@ import { ChevronLeft, Clock, CheckCircle2, AlertCircle, FileText, ImageIcon, Cop
 import { useNotification } from '../../context/NotificationContext';
 import { getRightsDeclarationDetail, RightsDeclarationDetail } from '../../services/rightsDeclaration';
 import { AUTH_TOKEN_KEY } from '../../constants/storageKeys';
+import { isSuccess, extractError } from '../../utils/apiHelpers';
 
 interface ClaimDetailProps {
     id: string;
@@ -28,10 +29,10 @@ const ClaimDetail: React.FC<ClaimDetailProps> = ({ id, onBack }) => {
             }
 
             const response = await getRightsDeclarationDetail(parseInt(id), token);
-            if (response.code === 1 && response.data) {
+            if (isSuccess(response) && response.data) {
                 setRecord(response.data.detail);
             } else {
-                showToast('error', '加载失败', response.msg || '获取详情失败');
+                showToast('error', '加载失败', extractError(response, '获取详情失败'));
             }
         } catch (error: any) {
             console.error('加载详情失败:', error);

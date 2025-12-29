@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Building2, Newspaper, Palette, Trophy, ChevronRight, UserCheck, TreeDeciduous, Search, Wallet, Vault, Zap, FileBadge, ClipboardList, Clock, CheckCircle2, AlertCircle } from 'lucide-react';
 import { Banner, Artist, NewsItem } from '../../types';
-import { fetchBanners, fetchArtists, normalizeAssetUrl, ArtistApiItem, fetchMatchingPool, MatchingPoolItem, MatchingPoolStatus } from '../../services/api';
+import { fetchBanners, fetchArtists, normalizeAssetUrl, ArtistApiItem, fetchReservations, ReservationItem, ReservationStatus } from '../../services/api';
 import { Route } from '../../router/routes';
+import { isSuccess } from '../../utils/apiHelpers';
 
 interface HomeProps {
   onNavigate: (route: Route) => void;
@@ -15,7 +16,7 @@ const Home: React.FC<HomeProps> = ({ onNavigate, onSwitchTab, announcements = []
   const [noticeIndex, setNoticeIndex] = useState(0);
   const [banners, setBanners] = useState<Banner[]>([]);
   const [artists, setArtists] = useState<Artist[]>([]);
-  const [reservationRecords, setReservationRecords] = useState<MatchingPoolItem[]>([]);
+  const [reservationRecords, setReservationRecords] = useState<ReservationItem[]>([]);
   const [loadingRecords, setLoadingRecords] = useState(true);
   const touchStartRef = useRef(0);
   const touchEndRef = useRef(0);
@@ -77,7 +78,7 @@ const Home: React.FC<HomeProps> = ({ onNavigate, onSwitchTab, announcements = []
         ]);
 
         // 轮播图
-        if (bannerRes.code === 1 && bannerRes.data?.list?.length) {
+        if (isSuccess(bannerRes) && bannerRes.data?.list?.length) {
           const mappedBanners: Banner[] = bannerRes.data.list.map((item) => ({
             id: String(item.id),
             image: normalizeAssetUrl(item.image),
@@ -117,13 +118,13 @@ const Home: React.FC<HomeProps> = ({ onNavigate, onSwitchTab, announcements = []
     const loadReservationRecords = async () => {
       try {
         setLoadingRecords(true);
-        const response = await fetchMatchingPool({
+        const response = await fetchReservations({
           // status: -1, // 全部 (Default is all if omitted)
           page: 1,
           limit: 3, // 首页只显示最新3条
         });
 
-        if (Number(response.code) === 1 && response.data?.list) {
+        if (isSuccess(response) && response.data?.list) {
           setReservationRecords(response.data.list);
         } else {
           setReservationRecords([]);
@@ -360,21 +361,21 @@ const Home: React.FC<HomeProps> = ({ onNavigate, onSwitchTab, announcements = []
             </div>
           ) : (
             reservationRecords.map((record) => {
-              const getStatusBadge = (item: MatchingPoolItem) => {
+              const getStatusBadge = (item: ReservationItem) => {
                 switch (item.status) {
-                  case 'pending':
+                  case 0: // 待撮合
                     return (
                       <span className="text-[10px] font-bold px-1.5 py-0.5 rounded border flex items-center gap-1 whitespace-nowrap text-orange-600 bg-orange-100 border-orange-200">
                         <Clock size={10} className="text-orange-500" /> 待撮合
                       </span>
                     );
-                  case 'matched':
+                  case 1: // 已中签
                     return (
                       <span className="text-[10px] font-bold px-1.5 py-0.5 rounded border flex items-center gap-1 whitespace-nowrap text-green-600 bg-green-100 border-green-200">
                         <CheckCircle2 size={10} className="text-green-500" /> 已中签
                       </span>
                     );
-                  case 'cancelled':
+                  case 2: // 未中签/已退款
                     return (
                       <span className="text-[10px] font-bold px-1.5 py-0.5 rounded border flex items-center gap-1 whitespace-nowrap text-gray-400 bg-gray-100 border-gray-200">
                         <AlertCircle size={10} className="text-gray-400" /> 未中签

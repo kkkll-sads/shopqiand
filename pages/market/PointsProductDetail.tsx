@@ -6,6 +6,7 @@ import { useNotification } from '../../context/NotificationContext';
 import { AUTH_TOKEN_KEY } from '../../constants/storageKeys';
 import { Route } from '../../router/routes';
 import { Share2, Copy, X, Check } from 'lucide-react';
+import { isSuccess, extractError } from '../../utils/apiHelpers';
 
 interface PointsProductDetailProps {
     product: Product;
@@ -45,10 +46,10 @@ const PointsProductDetail: React.FC<PointsProductDetailProps> = ({ product, onBa
             setLoading(true);
             setError(null);
             const response = await fetchShopProductDetail(product.id);
-            if (response.code === 1 && response.data) {
+            if (isSuccess(response) && response.data) {
                 setDetailData(response.data);
             } else {
-                setError(response.msg || '获取商品详情失败');
+                setError(extractError(response, '获取商品详情失败'));
             }
         } catch (err) {
             setError('网络请求失败，请稍后重试');
@@ -63,7 +64,7 @@ const PointsProductDetail: React.FC<PointsProductDetailProps> = ({ product, onBa
             if (!token) return;
 
             const response = await fetchAddressList(token);
-            if (response.code === 1 && response.data?.list) {
+            if (isSuccess(response) && response.data?.list) {
                 setAddresses(response.data.list);
                 const defaultAddr = response.data.list.find(a => Number(a.is_default) === 1) || response.data.list[0];
                 if (defaultAddr) setSelectedAddress(defaultAddr);
@@ -77,11 +78,11 @@ const PointsProductDetail: React.FC<PointsProductDetailProps> = ({ product, onBa
         try {
             setLoadingShare(true);
             const response = await fetchShopProductShare(product.id);
-            if (response.code === 1 && response.data) {
+            if (isSuccess(response) && response.data) {
                 setShareData(response.data);
                 setShowShareModal(true);
             } else {
-                showToast('error', response.msg || '获取分享信息失败');
+                showToast('error', extractError(response, '获取分享信息失败'));
             }
         } catch (e) {
             showToast('error', '网络请求失败');
@@ -151,14 +152,14 @@ const PointsProductDetail: React.FC<PointsProductDetailProps> = ({ product, onBa
                 address_id: selectedAddress.id
             });
 
-            if (response.code === 1) {
+            if (isSuccess(response)) {
                 setShowConfirmModal(false);
                 showToast('success', '购买成功');
                 setTimeout(() => {
                     onNavigate({ name: 'order-list', kind: 'points', status: 0, back: { name: 'points-product-detail' } });
                 }, 1500);
             } else {
-                showToast('error', '购买失败', response.msg || '操作失败');
+                showToast('error', '购买失败', extractError(response, '操作失败'));
             }
         } catch (err: any) {
             console.error('Create order failed', err);

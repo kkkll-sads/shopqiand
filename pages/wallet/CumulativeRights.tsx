@@ -15,6 +15,7 @@ import { LoadingSpinner } from '../../components/common';
 import { AUTH_TOKEN_KEY, fetchProfile } from '../../services/api';
 import { UserInfo } from '../../types';
 import { formatAmount } from '../../utils/format';
+import { isSuccess, extractError } from '../../utils/apiHelpers';
 
 /**
  * CumulativeRights 组件属性接口
@@ -46,13 +47,13 @@ const CumulativeRights: React.FC<CumulativeRightsProps> = ({ onBack }) => {
 
       try {
         const response = await fetchProfile(token);
-        if (response.code === 1 && response.data?.userInfo) {
+        if (isSuccess(response) && response.data?.userInfo) {
           setUserInfo(response.data.userInfo);
         } else {
-          setError(response.msg || '获取权益信息失败');
+          setError(extractError(response, '获取权益信息失败'));
         }
       } catch (err: any) {
-        setError(err?.msg || err?.message || '获取权益信息失败');
+        setError(err?.message || '获取权益信息失败');
       } finally {
         setLoading(false);
       }

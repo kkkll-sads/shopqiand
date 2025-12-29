@@ -28,6 +28,7 @@ import { sendSmsCode } from '../../services/common';
 import { useNotification } from '../../context/NotificationContext';
 import { clearAuthStorage } from '../../utils/storageAccess';
 import { readJSON } from '../../utils/storageAccess';
+import { isSuccess, extractError } from '../../utils/apiHelpers';
 import { STORAGE_KEYS } from '../../constants/storageKeys';
 import { handleApiError, getApiErrorMessage, isApiSuccess } from '../../utils/apiErrorHandler';
 
@@ -336,8 +337,8 @@ const PasswordForm: React.FC<PasswordFormProps> = ({
                     new_password: trimmedNewPassword,
                 });
 
-                // 检查返回码：code === 1 才是成功
-                if (response.code === 1) {
+                // 检查返回码
+                if (isSuccess(response)) {
                     // 清理本地登录态，强制重新登录
                     clearAuthStorage();
 
@@ -345,8 +346,7 @@ const PasswordForm: React.FC<PasswordFormProps> = ({
                     onSuccess?.();
                     onBack();
                 } else {
-                    // code !== 1 表示失败
-                    const errorMsg = response.msg || '修改密码失败';
+                    const errorMsg = extractError(response, '修改密码失败');
                     setError(errorMsg);
                     showToast('error', '修改失败', errorMsg);
                 }
@@ -357,14 +357,13 @@ const PasswordForm: React.FC<PasswordFormProps> = ({
                     new_pay_password: trimmedNewPassword,
                 });
 
-                // 检查返回码：code === 1 才是成功
-                if (response.code === 1) {
+                // 检查返回码
+                if (isSuccess(response)) {
                     showToast('success', '修改成功', '支付密码修改成功');
                     onSuccess?.();
                     onBack();
                 } else {
-                    // code !== 1 表示失败
-                    const errorMsg = response.msg || '修改支付密码失败';
+                    const errorMsg = extractError(response, '修改支付密码失败');
                     setError(errorMsg);
                     showToast('error', '修改失败', errorMsg);
                 }
@@ -375,12 +374,12 @@ const PasswordForm: React.FC<PasswordFormProps> = ({
                     new_pay_password: trimmedNewPassword,
                 });
 
-                if (response.code === 1) {
+                if (isSuccess(response)) {
                     showToast('success', '重置成功', '支付密码重置成功');
                     onSuccess?.();
                     onBack();
                 } else {
-                    const errorMsg = response.msg || '重置支付密码失败';
+                    const errorMsg = extractError(response, '重置支付密码失败');
                     setError(errorMsg);
                     showToast('error', '重置失败', errorMsg);
                 }

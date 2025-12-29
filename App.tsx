@@ -5,6 +5,7 @@ import { fetchAnnouncements, AnnouncementItem, fetchProfile, fetchRealNameStatus
 import PopupAnnouncementModal from './components/common/PopupAnnouncementModal';
 import { STORAGE_KEYS } from './constants/storageKeys';
 import useAuth from './hooks/useAuth';
+import { isSuccess } from './utils/apiHelpers';
 // 路由统一编码/解码工具，逐步替换散落的字符串 subPage
 import { encodeRoute, decodeRoute, type Route } from './router/routes';
 import { useNavigationStack } from './router/navigation';
@@ -199,7 +200,7 @@ const AppContent: React.FC = () => {
         try {
           // 尝试获取用户信息来验证token是否有效
           const response = await fetchProfile(token);
-          if (response.code === 1 && response.data?.userInfo) {
+          if (isSuccess(response) && response.data?.userInfo) {
             // Token有效，更新用户信息
             writeJSON(STORAGE_KEYS.USER_INFO_KEY, response.data.userInfo);
             loginFromHook({ token, userInfo: response.data.userInfo });

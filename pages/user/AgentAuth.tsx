@@ -21,6 +21,7 @@ import {
   normalizeAssetUrl,
 } from '../../services/api';
 import { useNotification } from '../../context/NotificationContext';
+import { isSuccess, extractError } from '../../utils/apiHelpers';
 
 /**
  * AgentAuth 组件属性接口
@@ -61,7 +62,7 @@ const AgentAuth: React.FC<AgentAuthProps> = ({ onBack }) => {
 
       try {
         const res = await fetchAgentReviewStatus(token);
-        if (res.code === 1 || typeof res.code === 'undefined') {
+        if (isSuccess(res)) {
           const data = res.data as AgentReviewStatusData;
           setStatus(data);
 
@@ -74,11 +75,11 @@ const AgentAuth: React.FC<AgentAuthProps> = ({ onBack }) => {
             setLicensePreview(normalizeAssetUrl(data.license_image || ''));
           }
         } else {
-          setError(res.msg || '获取代理商状态失败');
+          setError(extractError(res, '获取代理商状态失败'));
         }
       } catch (e: any) {
         console.error('获取代理商状态异常:', e);
-        setError(e?.msg || e?.response?.msg || e?.message || '获取代理商状态失败，请稍后重试');
+        setError(e?.message || '获取代理商状态失败，请稍后重试');
       } finally {
         setLoading(false);
       }
@@ -148,7 +149,7 @@ const AgentAuth: React.FC<AgentAuthProps> = ({ onBack }) => {
       // 刷新状态
       try {
         const res = await fetchAgentReviewStatus(token);
-        if (res.code === 1 || typeof res.code === 'undefined') {
+        if (isSuccess(res)) {
           setStatus(res.data as AgentReviewStatusData);
         }
       } catch (e) {
@@ -156,7 +157,7 @@ const AgentAuth: React.FC<AgentAuthProps> = ({ onBack }) => {
       }
     } catch (e: any) {
       console.error('提交代理商申请失败:', e);
-      const errorMsg = e?.msg || e?.response?.msg || e?.message || '提交代理商申请失败，请稍后重试';
+      const errorMsg = e?.message || '提交代理商申请失败，请稍后重试';
       showToast('error', '提交失败', errorMsg);
     } finally {
       setSubmitting(false);

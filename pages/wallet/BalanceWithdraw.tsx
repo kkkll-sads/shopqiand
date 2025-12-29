@@ -10,6 +10,7 @@ import { getStoredToken } from '../../services/client';
 import { Route } from '../../router/routes';
 
 import { useNotification } from '../../context/NotificationContext';
+import { isSuccess, extractError } from '../../utils/apiHelpers';
 
 interface BalanceWithdrawProps {
   onBack: () => void;
@@ -48,7 +49,7 @@ const BalanceWithdraw: React.FC<BalanceWithdrawProps> = ({ onBack, onNavigate })
     setLoading(true);
     try {
       const res = await fetchPaymentAccountList(token);
-      if (res.code === 1 && res.data?.list) {
+      if (isSuccess(res) && res.data?.list) {
         setAccounts(res.data.list || []);
         const defaultAcc = res.data.list.find((acc: PaymentAccountItem) => Number(acc.is_default) === 1);
         if (defaultAcc) setSelectedAccount(defaultAcc);
@@ -66,7 +67,7 @@ const BalanceWithdraw: React.FC<BalanceWithdrawProps> = ({ onBack, onNavigate })
     setLoadingBalance(true);
     try {
       const response = await fetchProfile(token);
-      if (response.code === 1 && response.data?.userInfo) {
+      if (isSuccess(response) && response.data?.userInfo) {
         const userInfo = response.data.userInfo;
         setBalance(parseFloat(userInfo.withdrawable_money || '0').toFixed(2));
       }
@@ -112,7 +113,7 @@ const BalanceWithdraw: React.FC<BalanceWithdrawProps> = ({ onBack, onNavigate })
         pay_password: payPassword,
         remark: remark
       });
-      if (res.code === 1) {
+      if (isSuccess(res)) {
         showToast('success', '提交成功', res.msg || '提现申请提交成功');
         setAmount('');
         setPayPassword('');
@@ -120,10 +121,10 @@ const BalanceWithdraw: React.FC<BalanceWithdrawProps> = ({ onBack, onNavigate })
         setShowPasswordModal(false);
         loadBalance();
       } else {
-        setSubmitError(res.msg || '提交失败');
+        setSubmitError(extractError(res, '提交失败'));
       }
     } catch (e: any) {
-      setSubmitError(e?.msg || '提交失败');
+      setSubmitError(e?.message || '提交失败');
     } finally {
       setSubmitting(false);
     }

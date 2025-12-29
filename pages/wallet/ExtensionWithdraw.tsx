@@ -14,6 +14,7 @@ import { UserInfo } from '../../types';
 import { formatAmount } from '../../utils/format';
 import { useNotification } from '../../context/NotificationContext';
 import { USER_INFO_KEY, AUTH_TOKEN_KEY } from '../../constants/storageKeys';
+import { isSuccess, extractError } from '../../utils/apiHelpers';
 
 interface ExtensionWithdrawProps {
   onBack: () => void;
@@ -55,7 +56,7 @@ const ExtensionWithdraw: React.FC<ExtensionWithdrawProps> = ({ onBack, onNavigat
 
       try {
         const response = await fetchProfile(token);
-        if (response.code === 1 && response.data?.userInfo) {
+        if (isSuccess(response) && response.data?.userInfo) {
           setUserInfo(response.data.userInfo);
           localStorage.setItem('cat_user_info', JSON.stringify(response.data.userInfo));
         }
@@ -77,7 +78,7 @@ const ExtensionWithdraw: React.FC<ExtensionWithdrawProps> = ({ onBack, onNavigat
       setError(null);
       try {
         const res = await fetchPaymentAccountList(token);
-        if (res.code === 1 && res.data?.list) {
+        if (isSuccess(res) && res.data?.list) {
           setAccounts(res.data.list || []);
           // 默认选择第一个账户或默认账户
           if (res.data.list.length > 0) {
@@ -85,10 +86,10 @@ const ExtensionWithdraw: React.FC<ExtensionWithdrawProps> = ({ onBack, onNavigat
             setSelectedAccount(defaultAccount || res.data.list[0]);
           }
         } else {
-          setError(res.msg || '获取收款账户信息失败');
+          setError(extractError(res, '获取收款账户信息失败'));
         }
       } catch (e: any) {
-        setError(e?.msg || e?.message || '获取收款账户信息失败');
+        setError(e?.message || '获取收款账户信息失败');
       } finally {
         setLoadingAccounts(false);
       }
@@ -156,7 +157,7 @@ const ExtensionWithdraw: React.FC<ExtensionWithdrawProps> = ({ onBack, onNavigat
         token,
       });
 
-      if (response.code === 1) {
+      if (isSuccess(response)) {
         showToast('success', '提交成功', response.msg || '提现申请已提交，请等待审核');
         setAmount('');
         setPayPassword('');
@@ -165,16 +166,16 @@ const ExtensionWithdraw: React.FC<ExtensionWithdrawProps> = ({ onBack, onNavigat
 
         // 更新用户信息
         const updatedResponse = await fetchProfile(token);
-        if (updatedResponse.code === 1 && updatedResponse.data?.userInfo) {
+        if (isSuccess(updatedResponse) && updatedResponse.data?.userInfo) {
           setUserInfo(updatedResponse.data.userInfo);
           localStorage.setItem(USER_INFO_KEY, JSON.stringify(updatedResponse.data.userInfo));
         }
       } else {
-        setSubmitError(response.msg || '提交提现申请失败');
+        setSubmitError(extractError(response, '提交提现申请失败'));
       }
     } catch (err: any) {
       console.error('提交提现申请失败:', err);
-      setSubmitError(err?.msg || err?.message || '提交提现申请失败，请稍后重试');
+      setSubmitError(err?.message || '提交提现申请失败，请稍后重试');
     } finally {
       setSubmitting(false);
     }

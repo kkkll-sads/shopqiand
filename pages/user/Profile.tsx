@@ -5,6 +5,7 @@ import { formatAmount } from '../../utils/format';
 import { AUTH_TOKEN_KEY, USER_INFO_KEY, fetchProfile, normalizeAssetUrl } from '../../services/api';
 import { UserInfo } from '../../types';
 import useAuth from '../../hooks/useAuth';
+import { isSuccess, extractError } from '../../utils/apiHelpers';
 
 // Helper for custom coin icon
 const CoinsIcon = ({ size, className }: { size: number, className: string }) => (
@@ -59,12 +60,12 @@ const Profile: React.FC<ProfileProps> = ({ onNavigate, unreadCount = 0 }) => {
         const response = await fetchProfile(token);
         if (!isMounted) return;
 
-        if (response.code === 1 && response.data?.userInfo) {
+        if (isSuccess(response) && response.data?.userInfo) {
           setUserInfo(response.data.userInfo);
           localStorage.setItem(USER_INFO_KEY, JSON.stringify(response.data.userInfo));
           setError(null);
         } else {
-          setError(response.msg || '获取用户信息失败');
+          setError(extractError(response, '获取用户信息失败'));
         }
       } catch (err: any) {
         if (!isMounted) return;

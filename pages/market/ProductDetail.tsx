@@ -16,6 +16,8 @@ import {
 import { useNotification } from '../../context/NotificationContext';
 import { Route } from '../../router/routes';
 import { bizLog, debugLog } from '../../utils/logger';
+// ✅ 引入统一 API 处理工具
+import { isSuccess, extractData, extractError } from '../../utils/apiHelpers';
 
 /**
  * 从价格分区字符串中提取价格数字
@@ -65,10 +67,12 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, onNaviga
           }
         }
 
-        if (response.code === 1 && response.data) {
-          setDetailData(response.data);
+        // ✅ 使用统一判断
+        const data = extractData(response);
+        if (data) {
+          setDetailData(data);
         } else {
-          setError(response.msg || '获取证书详情失败');
+          setError(extractError(response, '获取证书详情失败'));
         }
       } catch (err: any) {
         setError('数据同步延迟，请重试');
@@ -109,12 +113,13 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, onNaviga
           debugLog('productDetail.buy', 'buyShopOrder 响应', response);
           bizLog('order.buy.shop.ui', { code: response.code, productId: product.id });
 
-          if (response.code === 1) {
+          // ✅ 使用统一判断
+          if (isSuccess(response)) {
             showToast('success', '购买成功', '订单已创建并支付成功');
             // Navigate to order list or success page
             onNavigate({ name: 'order-list', kind: isShopProduct ? 'points' : 'product', status: 0, back: { name: 'product-detail' } });
           } else {
-            showToast('error', '购买失败', response.msg || '购买失败');
+            showToast('error', '购买失败', extractError(response, '购买失败'));
           }
         } catch (err: any) {
           console.error('Purchase failed', err);

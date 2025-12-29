@@ -15,6 +15,7 @@ import { LoginSuccessPayload } from '../../types';
 import { isValidPhone } from '../../utils/validation';
 import { useNotification } from '../../context/NotificationContext';
 import { bizLog, debugLog, errorLog } from '../../utils/logger';
+import { isSuccess, extractError } from '../../utils/apiHelpers';
 
 // localStorage 存储键名
 const STORAGE_KEY_PHONE = 'login_remembered_phone';
@@ -175,7 +176,8 @@ const Login: React.FC<LoginProps> = ({
       debugLog('auth.login.page', '登录接口响应', response);
       bizLog('auth.login.page', { code: response.code });
 
-      if (response.code === 1) {
+      // ✅ 使用统一API响应处理
+      if (isSuccess(response)) {
         const token = response.data?.userInfo?.token;
         if (!token) {
           showToast('error', '登录异常', '登录成功，但未获取到 token，无法继续');
@@ -195,7 +197,7 @@ const Login: React.FC<LoginProps> = ({
           userInfo: response.data?.userInfo || null,
         });
       } else {
-        const errorMsg = response.msg || response.message || '登录失败，请稍后重试';
+        const errorMsg = extractError(response, '登录失败，请稍后重试');
         debugLog('auth.login.page', '登录失败', errorMsg);
         showToast('error', '登录失败', errorMsg);
       }

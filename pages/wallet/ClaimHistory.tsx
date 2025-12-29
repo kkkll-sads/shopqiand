@@ -4,6 +4,7 @@ import { getRightsDeclarationList, RightsDeclarationRecord } from '../../service
 import { AUTH_TOKEN_KEY } from '../../constants/storageKeys';
 import { useNotification } from '../../context/NotificationContext';
 import { Route } from '../../router/routes';
+import { isSuccess, extractError } from '../../utils/apiHelpers';
 
 interface ClaimHistoryProps {
     onBack: () => void;
@@ -29,10 +30,10 @@ const ClaimHistory: React.FC<ClaimHistoryProps> = ({ onBack, onNavigate }) => {
             }
 
             const response = await getRightsDeclarationList({}, token);
-            if (response.code === 1 && response.data) {
+            if (isSuccess(response) && response.data) {
                 setHistory(response.data.list);
             } else {
-                showToast('error', '加载失败', response.msg || '获取历史记录失败');
+                showToast('error', '加载失败', extractError(response, '获取历史记录失败'));
             }
         } catch (error: any) {
             console.error('加载历史记录失败:', error);

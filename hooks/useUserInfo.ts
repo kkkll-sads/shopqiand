@@ -13,6 +13,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { UserInfo } from '../types';
 import { fetchProfile, AUTH_TOKEN_KEY, USER_INFO_KEY } from '../services/api';
+import { isSuccess } from '../utils/apiHelpers';
 
 /**
  * useUserInfo Hook 返回值接口
@@ -86,7 +87,7 @@ function useUserInfo(autoFetch: boolean = true): UseUserInfoResult {
             // 调用获取用户信息接口
             const response = await fetchProfile(token);
 
-            if (response.code === 1 && response.data?.userInfo) {
+            if (isSuccess(response) && response.data?.userInfo) {
                 const newUserInfo = response.data.userInfo;
 
                 // 更新状态

@@ -15,6 +15,7 @@ import { LoadingSpinner, EmptyState } from '../../components/common';
 import { AUTH_TOKEN_KEY } from '../../services/api';
 import { fetchConsignmentCoupons, ConsignmentCouponItem } from '../../services/consignment';
 import { formatTime } from '../../utils/format';
+import { isSuccess, extractError } from '../../utils/apiHelpers';
 
 /**
  * ConsignmentVoucher 组件属性接口
@@ -54,15 +55,15 @@ const ConsignmentVoucher: React.FC<ConsignmentVoucherProps> = ({ onBack }) => {
           token
         });
 
-        if (response.code === 1 && response.data) {
+        if (isSuccess(response) && response.data) {
           setCoupons(response.data.list || []);
           setTotal(response.data.total || 0);
         } else {
-          setError(response.msg || '获取寄售券信息失败');
+          setError(extractError(response, '获取寄售券信息失败'));
         }
       } catch (err: any) {
         console.error('Failed to load consignment coupons:', err);
-        setError(err?.msg || err?.message || '获取寄售券信息失败');
+        setError(err?.message || '获取寄售券信息失败');
       } finally {
         setLoading(false);
       }

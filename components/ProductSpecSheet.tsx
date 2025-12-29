@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { X, Minus, Plus, CheckCircle, CreditCard } from 'lucide-react';
 import { Product } from '../types';
 import { createOrder, buyShopOrder, payOrder, bidBuy, AUTH_TOKEN_KEY, ShopOrderItem } from '../services/api';
+import { isSuccess, extractError } from '../utils/apiHelpers';
 
 interface ProductSpecSheetProps {
   isOpen: boolean;
@@ -88,7 +89,7 @@ const ProductSpecSheet: React.FC<ProductSpecSheetProps> = ({ isOpen, onClose, pr
       }
 
       // 检查响应
-      if (response.code === 1 || response.code === 200 || response.code === 0) {
+      if (isSuccess(response) || response.code === 200 || response.code === 0) {
         // 成功
         if (isShopProduct) {
           // 消费金商城商品：创建订单成功，显示支付弹窗
@@ -180,7 +181,7 @@ const ProductSpecSheet: React.FC<ProductSpecSheetProps> = ({ isOpen, onClose, pr
         token,
       });
 
-      if (response.code === 1) {
+      if (isSuccess(response)) {
         // 支付成功
         if (onSuccess) {
           onSuccess();
@@ -189,7 +190,7 @@ const ProductSpecSheet: React.FC<ProductSpecSheetProps> = ({ isOpen, onClose, pr
         onClose();
         alert(response.msg || '支付成功！');
       } else {
-        setError(response.msg || '支付失败，请稍后重试');
+        setError(extractError(response, '支付失败，请稍后重试'));
       }
     } catch (err: any) {
       console.error('支付失败:', err);

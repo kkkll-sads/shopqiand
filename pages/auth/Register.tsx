@@ -14,6 +14,7 @@ import { register, RegisterParams } from '../../services/api';
 import { sendSmsCode } from '../../services/common';
 import { isValidPhone } from '../../utils/validation';
 import { useNotification } from '../../context/NotificationContext';
+import { isSuccess, extractError } from '../../utils/apiHelpers';
 
 /**
  * Register 组件属性接口
@@ -138,7 +139,8 @@ const Register: React.FC<RegisterProps> = ({
       console.log('注册接口响应:', response);
       console.log('response.data:', response.data);
 
-      if (response.code === 1) {
+      // ✅ 使用统一API响应处理
+      if (isSuccess(response)) {
         // 提取用户信息和token
         const userInfo = response.data?.userInfo || null;
         const token = userInfo?.token || '';
@@ -165,7 +167,7 @@ const Register: React.FC<RegisterProps> = ({
         // 传递登录信息给父组件
         onRegisterSuccess(loginPayload);
       } else {
-        const errorMsg = response.msg || response.message || '注册失败，请稍后重试';
+        const errorMsg = extractError(response, '注册失败，请稍后重试');
         showToast('error', '注册失败', errorMsg);
       }
     } catch (error: any) {
