@@ -8,6 +8,7 @@ import { AUTH_TOKEN_KEY } from '../../constants/storageKeys';
 import { Route } from '../../router/routes';
 import { ShopOrderPayStatus, ShopOrderShippingStatus } from '../../constants/statusEnums';
 import { isSuccess, extractError } from '../../utils/apiHelpers';
+import { useErrorHandler } from '../../hooks/useErrorHandler';
 
 interface OrderDetailProps {
     orderId: string;
@@ -17,9 +18,20 @@ interface OrderDetailProps {
 
 const OrderDetail: React.FC<OrderDetailProps> = ({ orderId, onBack, onNavigate }) => {
     const { showToast, showDialog } = useNotification();
+
+    // ✅ 使用统一错误处理Hook（加载错误 - 持久化显示）
+    const {
+        errorMessage,
+        hasError,
+        handleError,
+        clearError
+    } = useErrorHandler();
+
+    // ✅ 使用统一错误处理Hook（确认收货错误 - Toast模式）
+    const { handleError: handleConfirmError } = useErrorHandler({ showToast: true, persist: false });
+
     const [order, setOrder] = useState<ShopOrderItemDetail | null>(null);
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
         loadOrder();
@@ -35,10 +47,22 @@ const OrderDetail: React.FC<OrderDetailProps> = ({ orderId, onBack, onNavigate }
             if (isSuccess(response) && response.data) {
                 setOrder(response.data);
             } else {
-                setError(extractError(response, '获取订单详情失败'));
+                // ✅ 使用统一错误处理
+                handleError(response, {
+                    persist: true,
+                    showToast: false,
+                    customMessage: '获取订单详情失败',
+                    context: { orderId }
+                });
             }
         } catch (err) {
-            setError('网络请求失败');
+            // ✅ 使用统一错误处理
+            handleError(err, {
+                persist: true,
+                showToast: false,
+                customMessage: '网络请求失败',
+                context: { orderId }
+            });
         } finally {
             setLoading(false);
         }
@@ -63,10 +87,20 @@ const OrderDetail: React.FC<OrderDetailProps> = ({ orderId, onBack, onNavigate }
                         showToast('success', response.msg || '收货成功');
                         loadOrder(); // Reload to update status
                     } else {
-                        showToast('error', extractError(response, '操作失败'));
+                        // ✅ 使用统一错误处理
+                        handleConfirmError(response, {
+                            toastTitle: '操作失败',
+                            customMessage: '确认收货失败',
+                            context: { orderId: id }
+                        });
                     }
                 } catch (error) {
-                    showToast('error', '网络请求失败');
+                    // ✅ 使用统一错误处理
+                    handleConfirmError(error, {
+                        toastTitle: '操作失败',
+                        customMessage: '网络请求失败',
+                        context: { orderId: id }
+                    });
                 }
             }
         });
@@ -82,7 +116,7 @@ const OrderDetail: React.FC<OrderDetailProps> = ({ orderId, onBack, onNavigate }
     };
 
     if (loading) return <div className="min-h-screen flex items-center justify-center bg-gray-50"><LoadingSpinner /></div>;
-    if (error || !order) return <div className="min-h-screen flex items-center justify-center bg-gray-50 text-gray-500">{error || '订单不存在'}</div>;
+    if (hasError || !order) return <div className="min-h-screen flex items-center justify-center bg-gray-50 text-gray-500">{errorMessage || '订单不存在'}</div>;
 
     const getOrderStatus = (order: ShopOrderItemDetail) => {
         if (order.status_text) return order.status_text;
