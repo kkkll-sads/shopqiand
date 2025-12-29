@@ -6,6 +6,7 @@ import { AUTH_TOKEN_KEY, USER_INFO_KEY, fetchProfile, normalizeAssetUrl } from '
 import { UserInfo } from '../../types';
 import useAuth from '../../hooks/useAuth';
 import { isSuccess, extractError } from '../../utils/apiHelpers';
+import { useErrorHandler } from '../../hooks/useErrorHandler';
 
 // Helper for custom coin icon
 const CoinsIcon = ({ size, className }: { size: number, className: string }) => (
@@ -34,6 +35,14 @@ interface ProfileProps {
 }
 
 const Profile: React.FC<ProfileProps> = ({ onNavigate, unreadCount = 0 }) => {
+  // ✅ 使用统一错误处理Hook（持久化显示）
+  const {
+    errorMessage,
+    hasError,
+    handleError,
+    clearError
+  } = useErrorHandler();
+
   const [userInfo, setUserInfo] = useState<UserInfo | null>(() => {
     try {
       const cached = localStorage.getItem(USER_INFO_KEY);
@@ -44,12 +53,15 @@ const Profile: React.FC<ProfileProps> = ({ onNavigate, unreadCount = 0 }) => {
     }
   });
   const [loading, setLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const token = localStorage.getItem(AUTH_TOKEN_KEY);
     if (!token) {
-      setError('未检测到登录信息，请重新登录');
+      // ✅ 使用统一错误处理
+      handleError('未检测到登录信息，请重新登录', {
+        persist: true,
+        showToast: false
+      });
       return;
     }
 
@@ -63,14 +75,23 @@ const Profile: React.FC<ProfileProps> = ({ onNavigate, unreadCount = 0 }) => {
         if (isSuccess(response) && response.data?.userInfo) {
           setUserInfo(response.data.userInfo);
           localStorage.setItem(USER_INFO_KEY, JSON.stringify(response.data.userInfo));
-          setError(null);
+          clearError(); // ✅ 使用统一错误清除
         } else {
-          setError(extractError(response, '获取用户信息失败'));
+          // ✅ 使用统一错误处理
+          handleError(response, {
+            persist: true,
+            showToast: false,
+            customMessage: '获取用户信息失败'
+          });
         }
       } catch (err: any) {
         if (!isMounted) return;
-        // 优先使用接口返回的错误消息
-        setError(err?.msg || err?.response?.msg || err?.message || '获取个人信息失败');
+        // ✅ 使用统一错误处理
+        handleError(err, {
+          persist: true,
+          showToast: false,
+          customMessage: '获取个人信息失败'
+        });
       } finally {
         if (isMounted) {
           setLoading(false);
@@ -277,9 +298,9 @@ const Profile: React.FC<ProfileProps> = ({ onNavigate, unreadCount = 0 }) => {
       </div>
 
       {
-        error && !userInfo && !error.includes('登录态过期') && (
+        hasError && !userInfo && !errorMessage.includes('登录态过期') && (
           <div className="mx-4 mt-4 bg-red-50 text-red-600 text-sm px-4 py-2 rounded-lg shadow-sm">
-            {error}
+            {errorMessage}
           </div>
         )
       }
