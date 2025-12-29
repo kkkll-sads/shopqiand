@@ -1,6 +1,7 @@
 import React from 'react';
 import { Package } from 'lucide-react';
 import { MyConsignmentItem, normalizeAssetUrl } from '@/services/api';
+import { ConsignmentStatus } from '@/constants/statusEnums';
 
 interface TransactionOrderListProps {
   orders: MyConsignmentItem[];
@@ -90,7 +91,7 @@ const TransactionOrderList: React.FC<TransactionOrderListProps> = ({
                   寄售价 ¥{formatOrderPrice(order.consignment_price)}
                 </div>
                 <div className="flex gap-2">
-                  {activeTab === 1 && order.consignment_status === 1 && (
+                  {activeTab === 1 && order.consignment_status === ConsignmentStatus.PENDING && (
                     <button
                       onClick={() => onCancelConsignment(order.consignment_id)}
                       className="px-3 py-1 rounded-full border border-red-300 text-red-600 text-xs active:bg-red-50"

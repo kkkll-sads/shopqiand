@@ -6,6 +6,8 @@ import { getOrderDetail, ShopOrderItemDetail, confirmOrder, normalizeAssetUrl } 
 import { useNotification } from '../../context/NotificationContext';
 import { AUTH_TOKEN_KEY } from '../../constants/storageKeys';
 import { Route } from '../../router/routes';
+import { ShopOrderPayStatus, ShopOrderShippingStatus } from '../../constants/statusEnums';
+import { isSuccess, extractError } from '../../utils/apiHelpers';
 
 interface OrderDetailProps {
     orderId: string;
@@ -30,10 +32,10 @@ const OrderDetail: React.FC<OrderDetailProps> = ({ orderId, onBack, onNavigate }
             if (!token) return;
 
             const response = await getOrderDetail({ id: orderId, token });
-            if (response.code === 1 && response.data) {
+            if (isSuccess(response) && response.data) {
                 setOrder(response.data);
             } else {
-                setError(response.msg || '获取订单详情失败');
+                setError(extractError(response, '获取订单详情失败'));
             }
         } catch (err) {
             setError('网络请求失败');
@@ -57,11 +59,11 @@ const OrderDetail: React.FC<OrderDetailProps> = ({ orderId, onBack, onNavigate }
                 try {
                     const token = localStorage.getItem(AUTH_TOKEN_KEY) || '';
                     const response = await confirmOrder({ id, token });
-                    if (response.code === 1) {
+                    if (isSuccess(response)) {
                         showToast('success', response.msg || '收货成功');
                         loadOrder(); // Reload to update status
                     } else {
-                        showToast('error', response.msg || '操作失败');
+                        showToast('error', extractError(response, '操作失败'));
                     }
                 } catch (error) {
                     showToast('error', '网络请求失败');
@@ -85,10 +87,10 @@ const OrderDetail: React.FC<OrderDetailProps> = ({ orderId, onBack, onNavigate }
     const getOrderStatus = (order: ShopOrderItemDetail) => {
         if (order.status_text) return order.status_text;
         const statusMap: Record<number, string> = {
-            0: '待付款',
-            1: '待发货',
-            2: '待收货',
-            3: '已完成',
+            [ShopOrderPayStatus.UNPAID]: '待付款',
+            [ShopOrderShippingStatus.NOT_SHIPPED]: '待发货',
+            [ShopOrderShippingStatus.SHIPPED]: '待收货',
+            [ShopOrderShippingStatus.RECEIVED]: '已完成',
             4: '已关闭',
             '-1': '已取消'
         };
@@ -142,10 +144,10 @@ const OrderDetail: React.FC<OrderDetailProps> = ({ orderId, onBack, onNavigate }
                 <div className={`rounded - xl p - 6 text - white shadow - lg ${isScoreOrder ? 'bg-gradient-to-r from-orange-400 to-red-500' : 'bg-gradient-to-r from-blue-500 to-blue-600'} `}>
                     <div className="text-xl font-bold mb-1">{getOrderStatus(order)}</div>
                     <div className="text-white/80 text-sm">
-                        {order.status === 0 ? '请尽快完成支付' :
-                            order.status === 1 ? '商家正在备货中' :
-                                order.status === 2 ? '商品运输中，请留意查收' :
-                                    order.status === 3 ? '订单已完成，感谢您的购买' : ''}
+                        {order.status === ShopOrderPayStatus.UNPAID ? '请尽快完成支付' :
+                            order.status === ShopOrderShippingStatus.NOT_SHIPPED ? '商家正在备货中' :
+                                order.status === ShopOrderShippingStatus.SHIPPED ? '商品运输中，请留意查收' :
+                                    order.status === ShopOrderShippingStatus.RECEIVED ? '订单已完成，感谢您的购买' : ''}
                     </div>
                 </div>
 
@@ -277,7 +279,7 @@ const OrderDetail: React.FC<OrderDetailProps> = ({ orderId, onBack, onNavigate }
                 {console.log('Order status:', order.status, 'Type:', typeof order.status, 'String:', String(order.status))}
 
                 {/* Pending Pay - status: 0 or 'pending' */}
-                {(order.status === 0 || order.status === 'pending' || String(order.status) === '0') && (
+                {(order.status === ShopOrderPayStatus.UNPAID || order.status === 'pending' || String(order.status) === '0') && (
                     <div className="flex items-center justify-between">
                         <div className="text-sm text-gray-600">
                             <div className="font-medium text-gray-800">待支付</div>
@@ -293,7 +295,7 @@ const OrderDetail: React.FC<OrderDetailProps> = ({ orderId, onBack, onNavigate }
                 )}
 
                 {/* Paid - Pending Ship - status: 1 or 'paid' */}
-                {(order.status === 1 || order.status === 'paid' || String(order.status) === '1') && (
+                {(order.status === ShopOrderShippingStatus.NOT_SHIPPED || order.status === 'paid' || String(order.status) === '1') && (
                     <div className="text-center">
                         <div className="font-medium text-gray-800 mb-1">等待商家发货</div>
                         <div className="text-xs text-gray-500">商家正在备货中，请耐心等待</div>
@@ -301,7 +303,7 @@ const OrderDetail: React.FC<OrderDetailProps> = ({ orderId, onBack, onNavigate }
                 )}
 
                 {/* Shipped -> Pending Receipt - status: 2 or 'shipped' */}
-                {(order.status === 2 || order.status === 'shipped' || String(order.status) === '2') && (
+                {(order.status === ShopOrderShippingStatus.SHIPPED || order.status === 'shipped' || String(order.status) === '2') && (
                     <div className="flex items-center justify-between">
                         <div className="text-sm text-gray-600">
                             <div className="font-medium text-gray-800">待收货</div>
@@ -317,7 +319,7 @@ const OrderDetail: React.FC<OrderDetailProps> = ({ orderId, onBack, onNavigate }
                 )}
 
                 {/* Completed - status: 3 or 'completed' */}
-                {(order.status === 3 || order.status === 'completed' || String(order.status) === '3') && (
+                {(order.status === ShopOrderShippingStatus.RECEIVED || order.status === 'completed' || String(order.status) === '3') && (
                     <div className="text-center">
                         <div className="font-medium text-gray-800 mb-1">订单已完成</div>
                         <div className="text-xs text-gray-500">感谢您的购买</div>
@@ -333,7 +335,7 @@ const OrderDetail: React.FC<OrderDetailProps> = ({ orderId, onBack, onNavigate }
                 )}
 
                 {/* Fallback - always show something if no condition matched */}
-                {!([0, 1, 2, 3, 4, -1, '0', '1', '2', '3', '4', '-1', 'pending', 'paid', 'shipped', 'completed', 'closed', 'cancelled'].includes(order.status as any)) && (
+                {!([ShopOrderPayStatus.UNPAID, ShopOrderShippingStatus.NOT_SHIPPED, ShopOrderShippingStatus.SHIPPED, ShopOrderShippingStatus.RECEIVED, 4, -1, '0', '1', '2', '3', '4', '-1', 'pending', 'paid', 'shipped', 'completed', 'closed', 'cancelled'].includes(order.status as any)) && (
                     <div className="text-center text-gray-500 text-sm">
                         状态未知: {order.status} ({order.status_text || '无状态文本'})
                     </div>

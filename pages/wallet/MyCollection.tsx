@@ -19,6 +19,8 @@ import {
 
 import { UserInfo } from '../../types';
 import { useNotification } from '../../context/NotificationContext';
+import { ConsignmentStatus, DeliveryStatus } from '../../constants/statusEnums';
+import { isSuccess, extractError } from '../../utils/apiHelpers';
 
 interface MyCollectionProps {
   onBack: () => void;
@@ -72,7 +74,7 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onBack, onItemSelect, initi
         }
 
         const response = await fetchProfile(token);
-        if (response.code === 1 && response.data?.userInfo) {
+        if (isSuccess(response) && response.data?.userInfo) {
           setUserInfo(response.data.userInfo);
           localStorage.setItem(USER_INFO_KEY, JSON.stringify(response.data.userInfo));
         }
@@ -138,9 +140,9 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onBack, onItemSelect, initi
           const filteredList = list.filter(item => {
             const dStatus = Number(item.delivery_status) || 0;
             if (activeTab === 'hold') {
-              return dStatus === 0;
+              return dStatus === DeliveryStatus.NOT_DELIVERED;
             } else {
-              return dStatus === 1;
+              return dStatus === DeliveryStatus.DELIVERED;
             }
           });
 
@@ -176,8 +178,8 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onBack, onItemSelect, initi
             item_image: (item as any).image || (item as any).item_image || '',
             price: String(item.consignment_price),
             status_text: item.status_text,
-            consignment_status: activeTab === 'consign' ? 2 : 4,
-            delivery_status: 0,
+            consignment_status: activeTab === 'consign' ? ConsignmentStatus.CONSIGNING : ConsignmentStatus.SOLD,
+            delivery_status: DeliveryStatus.NOT_DELIVERED,
           } as any)) as MyCollectionItem[];
 
           if (page === 1) {
@@ -406,22 +408,22 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onBack, onItemSelect, initi
     // 只有 consignment_status 明确不为 0 时，才认为曾经寄售过
     // 0 = 未寄售，1 = 待审核，2 = 寄售中，3 = 寄售失败，4 = 已售出
     const status = item.consignment_status;
-    return typeof status === 'number' && status !== 0;
+    return typeof status === 'number' && status !== ConsignmentStatus.NOT_CONSIGNED;
   };
 
   // 检查是否已经寄售成功（已售出）
   const hasConsignedSuccessfully = (item: MyCollectionItem): boolean => {
-    return item.consignment_status === 4;
+    return item.consignment_status === ConsignmentStatus.SOLD;
   };
 
   // 检查是否正在寄售中
   const isConsigning = (item: MyCollectionItem): boolean => {
-    return item.consignment_status === 2;
+    return item.consignment_status === ConsignmentStatus.CONSIGNING;
   };
 
   // 检查是否已提货
   const isDelivered = (item: MyCollectionItem): boolean => {
-    return item.delivery_status === 1;
+    return item.delivery_status === DeliveryStatus.DELIVERED;
   };
 
   const resolveCollectionId = (item: MyCollectionItem): number | string | undefined => {
@@ -444,9 +446,9 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onBack, onItemSelect, initi
     setSelectedItem(item);
     if (isConsigning(item) || hasConsignedSuccessfully(item) || hasConsignedBefore(item)) {
       setActionTab('delivery');
-    } else if (item.delivery_status === 0) {
+    } else if (item.delivery_status === DeliveryStatus.NOT_DELIVERED) {
       setActionTab('delivery');
-    } else if (item.consignment_status === 0) {
+    } else if (item.consignment_status === ConsignmentStatus.NOT_CONSIGNED) {
       setActionTab('consignment');
     } else {
       setActionTab('delivery');
@@ -784,15 +786,15 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onBack, onItemSelect, initi
                 </div>
               ) : (
                 /* 回退到原有的逻辑（如果没有 status_text 字段） */
-                item.consignment_status === 4 ? (
+                item.consignment_status === ConsignmentStatus.SOLD ? (
                   <div className="text-xs px-2 py-1 rounded-full bg-green-50 text-green-600 border border-green-200">
                     已售出
                   </div>
-                ) : item.consignment_status === 2 ? (
+                ) : item.consignment_status === ConsignmentStatus.CONSIGNING ? (
                   <div className="text-xs px-2 py-1 rounded-full bg-blue-50 text-blue-600 border border-blue-200">
                     寄售中
                   </div>
-                ) : item.delivery_status === 1 ? (
+                ) : item.delivery_status === DeliveryStatus.DELIVERED ? (
                   // 已提货：显示提货订单状态（待发货/待收货/已签收）
                   <div className={`text-xs px-2 py-1 rounded-full ${item.delivery_status_text === '待发货'
                     ? 'bg-blue-50 text-blue-600 border border-blue-200'
@@ -810,11 +812,11 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onBack, onItemSelect, initi
                     <div className="text-xs px-2 py-1 rounded-full bg-orange-50 text-orange-600 border border-orange-200">
                       待提货
                     </div>
-                    <div className={`text-xs px-2 py-1 rounded-full ${item.consignment_status === 0
+                    <div className={`text-xs px-2 py-1 rounded-full ${item.consignment_status === ConsignmentStatus.NOT_CONSIGNED
                       ? 'bg-gray-50 text-gray-600 border border-gray-200'
-                      : item.consignment_status === 1
+                      : item.consignment_status === ConsignmentStatus.PENDING
                         ? 'bg-yellow-50 text-yellow-600 border border-yellow-200'
-                        : item.consignment_status === 3
+                        : item.consignment_status === ConsignmentStatus.REJECTED
                           ? 'bg-red-50 text-red-600 border border-red-200'
                           : 'bg-green-50 text-green-600 border border-green-200'
                       }`}>
@@ -827,11 +829,11 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onBack, onItemSelect, initi
                     <div className="text-xs px-2 py-1 rounded-full bg-orange-50 text-orange-600 border border-orange-200">
                       ○ 未提货
                     </div>
-                    <div className={`text-xs px-2 py-1 rounded-full ${item.consignment_status === 0
+                    <div className={`text-xs px-2 py-1 rounded-full ${item.consignment_status === ConsignmentStatus.NOT_CONSIGNED
                       ? 'bg-gray-50 text-gray-600 border border-gray-200'
-                      : item.consignment_status === 1
+                      : item.consignment_status === ConsignmentStatus.PENDING
                         ? 'bg-yellow-50 text-yellow-600 border border-yellow-200'
-                        : item.consignment_status === 3
+                        : item.consignment_status === ConsignmentStatus.REJECTED
                           ? 'bg-red-50 text-red-600 border border-red-200'
                           : 'bg-green-50 text-green-600 border border-green-200'
                       }`}>

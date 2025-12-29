@@ -17,6 +17,10 @@ import {
 } from '../../services/api';
 import { AUTH_TOKEN_KEY, STORAGE_KEYS } from '../../constants/storageKeys';
 import { Route } from '../../router/routes';
+// ✅ 引入统一 API 处理工具
+import { extractData } from '../../utils/apiHelpers';
+// ✅ 引入枚举常量替换魔法数字
+import { RechargeOrderStatus, WithdrawOrderStatus } from '../../constants/statusEnums';
 
 interface MessageCenterProps {
   onBack: () => void;
@@ -90,8 +94,10 @@ const MessageCenter: React.FC<MessageCenterProps> = ({ onBack, onNavigate }) => 
           const newsReadIds: string[] = storedNewsReadIds ? JSON.parse(storedNewsReadIds) : [];
 
           // 处理平台公告
-          if (announcementRes.code === 1 && announcementRes.data?.list) {
-            announcementRes.data.list.forEach((item: AnnouncementItem) => {
+          // ✅ 使用统一判断
+          const announcementData = extractData(announcementRes);
+          if (announcementData?.list) {
+            announcementData.list.forEach((item: AnnouncementItem) => {
               const id = `announcement-${item.id}`;
               const timestamp = item.createtime ? new Date(item.createtime).getTime() : Date.now();
               // 优先使用全局的新闻已读状态判断
@@ -114,8 +120,10 @@ const MessageCenter: React.FC<MessageCenterProps> = ({ onBack, onNavigate }) => 
           }
 
           // 处理平台动态
-          if (dynamicRes.code === 1 && dynamicRes.data?.list) {
-            dynamicRes.data.list.forEach((item: AnnouncementItem) => {
+          // ✅ 使用统一判断
+          const dynamicData = extractData(dynamicRes);
+          if (dynamicData?.list) {
+            dynamicData.list.forEach((item: AnnouncementItem) => {
               const id = `dynamic-${item.id}`;
               const timestamp = item.createtime ? new Date(item.createtime).getTime() : Date.now();
               // 优先使用全局的新闻已读状态判断
@@ -143,19 +151,21 @@ const MessageCenter: React.FC<MessageCenterProps> = ({ onBack, onNavigate }) => 
         // 2. 加载充值订单（最近的状态变更）
         try {
           const rechargeRes = await getMyOrderList({ page: 1, limit: 5, token });
-          if (rechargeRes.code === 1 && rechargeRes.data?.list) {
-            rechargeRes.data.list.forEach((item: RechargeOrderItem) => {
+          // ✅ 使用统一判断
+          const rechargeData = extractData(rechargeRes);
+          if (rechargeData?.list) {
+            rechargeData.list.forEach((item: RechargeOrderItem) => {
               const id = `recharge-${item.id}`;
               const timestamp = item.create_time ? item.create_time * 1000 : Date.now();
 
               // 只显示需要用户关注的状态（待审核、已通过、已拒绝）
-              if (item.status === 0 || item.status === 1 || item.status === 2) {
+              if (item.status === RechargeOrderStatus.PENDING || item.status === RechargeOrderStatus.APPROVED || item.status === RechargeOrderStatus.REJECTED) {
                 let content = '';
-                if (item.status === 0) {
+                if (item.status === RechargeOrderStatus.PENDING) {
                   content = `您的充值订单 ${item.order_no} 待审核，金额：¥${item.amount}`;
-                } else if (item.status === 1) {
+                } else if (item.status === RechargeOrderStatus.APPROVED) {
                   content = `您的充值订单 ${item.order_no} 审核通过，金额：¥${item.amount}`;
-                } else if (item.status === 2) {
+                } else if (item.status === RechargeOrderStatus.REJECTED) {
                   content = `您的充值订单 ${item.order_no} 审核未通过`;
                 }
 
@@ -182,19 +192,21 @@ const MessageCenter: React.FC<MessageCenterProps> = ({ onBack, onNavigate }) => 
         // 3. 加载提现记录（最近的状态变更）
         try {
           const withdrawRes = await getMyWithdrawList({ page: 1, limit: 5, token });
-          if (withdrawRes.code === 1 && withdrawRes.data?.list) {
-            withdrawRes.data.list.forEach((item: WithdrawOrderItem) => {
+          // ✅ 使用统一判断
+          const withdrawData = extractData(withdrawRes);
+          if (withdrawData?.list) {
+            withdrawData.list.forEach((item: WithdrawOrderItem) => {
               const id = `withdraw-${item.id}`;
               const timestamp = item.create_time ? item.create_time * 1000 : Date.now();
 
               // 只显示需要用户关注的状态
-              if (item.status === 0 || item.status === 1 || item.status === 2) {
+              if (item.status === WithdrawOrderStatus.PENDING || item.status === WithdrawOrderStatus.APPROVED || item.status === WithdrawOrderStatus.REJECTED) {
                 let content = '';
-                if (item.status === 0) {
+                if (item.status === WithdrawOrderStatus.PENDING) {
                   content = `您的提现申请待审核，金额：¥${item.amount}`;
-                } else if (item.status === 1) {
+                } else if (item.status === WithdrawOrderStatus.APPROVED) {
                   content = `您的提现申请已通过，金额：¥${item.amount}，已到账：¥${item.actual_amount}`;
-                } else if (item.status === 2) {
+                } else if (item.status === WithdrawOrderStatus.REJECTED) {
                   content = `您的提现申请未通过${item.audit_reason ? `：${item.audit_reason}` : ''}`;
                 }
 
@@ -227,8 +239,10 @@ const MessageCenter: React.FC<MessageCenterProps> = ({ onBack, onNavigate }) => 
           ]);
 
           // 待付款订单
-          if (pendingPayRes.code === 1 && pendingPayRes.data?.list) {
-            pendingPayRes.data.list.forEach((item: ShopOrderItem) => {
+          // ✅ 使用统一判断
+          const pendingPayData = extractData(pendingPayRes);
+          if (pendingPayData?.list) {
+            pendingPayData.list.forEach((item: ShopOrderItem) => {
               const id = `shop-order-pay-${item.id}`;
               const timestamp = item.create_time ? (typeof item.create_time === 'string' ? parseInt(item.create_time) * 1000 : item.create_time * 1000) : Date.now();
               allMessages.push({
@@ -248,8 +262,10 @@ const MessageCenter: React.FC<MessageCenterProps> = ({ onBack, onNavigate }) => 
           }
 
           // 待发货订单
-          if (pendingShipRes.code === 1 && pendingShipRes.data?.list) {
-            pendingShipRes.data.list.forEach((item: ShopOrderItem) => {
+          // ✅ 使用统一判断
+          const pendingShipData = extractData(pendingShipRes);
+          if (pendingShipData?.list) {
+            pendingShipData.list.forEach((item: ShopOrderItem) => {
               const id = `shop-order-ship-${item.id}`;
               const timestamp = item.pay_time ? (typeof item.pay_time === 'string' ? parseInt(item.pay_time) * 1000 : item.pay_time * 1000) : Date.now();
               allMessages.push({
@@ -269,8 +285,10 @@ const MessageCenter: React.FC<MessageCenterProps> = ({ onBack, onNavigate }) => 
           }
 
           // 待确认收货订单
-          if (pendingConfirmRes.code === 1 && pendingConfirmRes.data?.list) {
-            pendingConfirmRes.data.list.forEach((item: ShopOrderItem) => {
+          // ✅ 使用统一判断
+          const pendingConfirmData = extractData(pendingConfirmRes);
+          if (pendingConfirmData?.list) {
+            pendingConfirmData.list.forEach((item: ShopOrderItem) => {
               const id = `shop-order-confirm-${item.id}`;
               const timestamp = item.ship_time ? (typeof item.ship_time === 'string' ? parseInt(item.ship_time) * 1000 : item.ship_time * 1000) : Date.now();
               allMessages.push({

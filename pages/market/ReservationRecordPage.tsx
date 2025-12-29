@@ -3,11 +3,12 @@ import { ChevronLeft, CheckCircle2, Clock, Wallet, Zap, AlertCircle, ArrowRight,
 import {
     fetchReservations,
     ReservationItem,
-    ReservationStatus,
+    ReservationStatus as ReservationStatusType,
 } from '../../services/api';
 import { Product } from '../../types';
 import { Route } from '../../router/routes';
 import { getStoredToken } from '../../services/client';
+import { ReservationStatus } from '../../constants/statusEnums';
 
 interface ReservationRecordPageProps {
     onBack: () => void;
@@ -18,7 +19,7 @@ interface ReservationRecordPageProps {
 const PAGE_SIZE = 10;
 
 const ReservationRecordPage: React.FC<ReservationRecordPageProps> = ({ onBack, onNavigate, onProductSelect }) => {
-    const [statusFilter, setStatusFilter] = useState<ReservationStatus | undefined>(-1);
+    const [statusFilter, setStatusFilter] = useState<ReservationStatusType | undefined>(-1);
     const [records, setRecords] = useState<ReservationItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [loadingMore, setLoadingMore] = useState(false);
@@ -94,19 +95,19 @@ const ReservationRecordPage: React.FC<ReservationRecordPageProps> = ({ onBack, o
 
     const getStatusBadge = (item: ReservationItem) => {
         switch (item.status) {
-            case 0:
+            case ReservationStatus.PENDING:
                 return (
                     <span className="text-xs font-bold px-2 py-0.5 rounded border flex items-center gap-1 bg-orange-50 text-orange-600 border-orange-200">
                         <Clock size={10} className="text-orange-500" /> 待撮合
                     </span>
                 );
-            case 1:
+            case ReservationStatus.APPROVED:
                 return (
                     <span className="text-xs font-bold px-2 py-0.5 rounded border flex items-center gap-1 bg-green-50 text-green-600 border-green-200">
                         <CheckCircle2 size={10} className="text-green-500" /> 已撮合
                     </span>
                 );
-            case 2:
+            case ReservationStatus.REJECTED:
                 return (
                     <span className="text-xs font-bold px-2 py-0.5 rounded border flex items-center gap-1 bg-gray-100 text-gray-500 border-gray-200">
                         <AlertCircle size={10} className="text-gray-400" /> 已退款
@@ -195,10 +196,10 @@ const ReservationRecordPage: React.FC<ReservationRecordPageProps> = ({ onBack, o
             <div className="sticky top-[53px] z-10 bg-white border-b border-gray-100 shadow-sm">
                 <div className="flex px-4">
                     {[
-                        { key: -1 as ReservationStatus, label: '全部' },
-                        { key: 0 as ReservationStatus, label: '待撮合' },
-                        { key: 1 as ReservationStatus, label: '已撮合' },
-                        { key: 2 as ReservationStatus, label: '已退款' }
+                        { key: -1 as ReservationStatusType, label: '全部' },
+                        { key: ReservationStatus.PENDING as ReservationStatusType, label: '待撮合' },
+                        { key: ReservationStatus.APPROVED as ReservationStatusType, label: '已撮合' },
+                        { key: ReservationStatus.REJECTED as ReservationStatusType, label: '已退款' }
                     ].map(status => (
                         <button
                             key={status.key}
@@ -286,13 +287,13 @@ const ReservationRecordPage: React.FC<ReservationRecordPageProps> = ({ onBack, o
                                     <span className="text-[10px] text-gray-500 flex items-center gap-1"><Wallet size={10} /> 冻结金额</span>
                                     <span className="text-xs font-bold text-red-600 font-mono">¥{Number(record.freeze_amount || 0).toLocaleString()}</span>
                                 </div>
-                                {record.status === 1 && record.item_price && (
+                                {record.status === ReservationStatus.APPROVED && record.item_price && (
                                     <div className="flex justify-between items-center">
                                         <span className="text-[10px] text-gray-500 flex items-center gap-1">实际金额</span>
                                         <span className="text-xs font-bold text-green-600 font-mono">¥{Number(record.item_price || 0).toLocaleString()}</span>
                                     </div>
                                 )}
-                                {record.status !== 1 && (
+                                {record.status !== ReservationStatus.APPROVED && (
                                     <div className="flex justify-between items-center">
                                         <span className="text-[10px] text-gray-500 flex items-center gap-1"><Zap size={10} /> 权重</span>
                                         <span className="text-xs font-bold text-gray-900 font-mono">{record.weight || 0}</span>
@@ -307,7 +308,7 @@ const ReservationRecordPage: React.FC<ReservationRecordPageProps> = ({ onBack, o
                             </div>
                             
                             {/* 退款差价提示（仅已中签且有差价时显示） */}
-                            {record.status === 1 && record.item_price && Number(record.freeze_amount) > Number(record.item_price) && (
+                            {record.status === ReservationStatus.APPROVED && record.item_price && Number(record.freeze_amount) > Number(record.item_price) && (
                                 <div className="mb-3 p-2 bg-green-50 rounded-lg border border-green-100">
                                     <div className="flex items-center gap-2 text-xs text-green-700">
                                         <CheckCircle2 size={12} className="flex-shrink-0" />
@@ -319,12 +320,12 @@ const ReservationRecordPage: React.FC<ReservationRecordPageProps> = ({ onBack, o
                             {/* Footer Status/Action */}
                             <div className="flex justify-between items-center text-xs">
                                 <div className="text-gray-400">
-                                    {record.status === 0 && record.session_end_time && `预计 ${record.session_end_time} 结束撮合`}
-                                    {record.status === 1 && record.match_time && `撮合时间: ${record.match_time}`}
-                                    {record.status === 2 && '未中签，冻结金额已退回'}
+                                    {record.status === ReservationStatus.PENDING && record.session_end_time && `预计 ${record.session_end_time} 结束撮合`}
+                                    {record.status === ReservationStatus.APPROVED && record.match_time && `撮合时间: ${record.match_time}`}
+                                    {record.status === ReservationStatus.REJECTED && '未中签，冻结金额已退回'}
                                 </div>
 
-                                {record.status === 1 && (
+                                {record.status === ReservationStatus.APPROVED && (
                                     <button
                                         onClick={(e) => {
                                             e.stopPropagation();
