@@ -22,6 +22,7 @@ import {
 } from '../../services/api';
 import { useNotification } from '../../context/NotificationContext';
 import { isSuccess, extractError } from '../../utils/apiHelpers';
+import { useErrorHandler } from '../../hooks/useErrorHandler';
 
 /**
  * AgentAuth 组件属性接口
@@ -35,6 +36,15 @@ interface AgentAuthProps {
  */
 const AgentAuth: React.FC<AgentAuthProps> = ({ onBack }) => {
   const { showToast } = useNotification();
+
+  // ✅ 使用统一错误处理Hook（加载错误 - 持久化显示）
+  const {
+    errorMessage,
+    hasError,
+    handleError,
+    clearError
+  } = useErrorHandler();
+
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [uploadingLicense, setUploadingLicense] = useState(false);
@@ -48,14 +58,16 @@ const AgentAuth: React.FC<AgentAuthProps> = ({ onBack }) => {
   const [licensePreview, setLicensePreview] = useState<string>('');
   const [licenseImagePath, setLicenseImagePath] = useState<string>('');
 
-  const [error, setError] = useState<string | null>(null);
-
   // 加载代理商状态
   useEffect(() => {
     const init = async () => {
       const token = localStorage.getItem(AUTH_TOKEN_KEY) || '';
       if (!token) {
-        setError('未找到登录信息，请先登录');
+        // ✅ 使用统一错误处理
+        handleError('未找到登录信息，请先登录', {
+          persist: true,
+          showToast: false
+        });
         setLoading(false);
         return;
       }
@@ -75,11 +87,20 @@ const AgentAuth: React.FC<AgentAuthProps> = ({ onBack }) => {
             setLicensePreview(normalizeAssetUrl(data.license_image || ''));
           }
         } else {
-          setError(extractError(res, '获取代理商状态失败'));
+          // ✅ 使用统一错误处理
+          handleError(res, {
+            persist: true,
+            showToast: false,
+            customMessage: '获取代理商状态失败'
+          });
         }
       } catch (e: any) {
-        console.error('获取代理商状态异常:', e);
-        setError(e?.message || '获取代理商状态失败，请稍后重试');
+        // ✅ 使用统一错误处理
+        handleError(e, {
+          persist: true,
+          showToast: false,
+          customMessage: '获取代理商状态失败，请稍后重试'
+        });
       } finally {
         setLoading(false);
       }
@@ -129,7 +150,7 @@ const AgentAuth: React.FC<AgentAuthProps> = ({ onBack }) => {
 
     try {
       setSubmitting(true);
-      setError(null);
+      clearError(); // ✅ 使用统一错误清除
 
       const token = localStorage.getItem(AUTH_TOKEN_KEY) || '';
       const res = await submitAgentReview({
@@ -170,14 +191,14 @@ const AgentAuth: React.FC<AgentAuthProps> = ({ onBack }) => {
       {loading && <LoadingSpinner text="正在加载代理商状态..." />}
 
       {/* 错误提示 */}
-      {!loading && error && (
+      {!loading && hasError && (
         <div className="bg-red-50 border border-red-100 text-red-500 text-xs rounded-lg px-3 py-2 mb-4">
-          {error}
+          {errorMessage}
         </div>
       )}
 
       {/* 当前状态 */}
-      {status && !loading && !error && (
+      {status && !loading && !hasError && (
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden mb-4">
           <div className="px-4 py-3 border-b border-gray-50 text-sm">
             <span className="text-gray-500 mr-2">当前状态:</span>
