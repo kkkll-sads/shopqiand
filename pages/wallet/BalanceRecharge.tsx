@@ -7,6 +7,7 @@ import { fetchCompanyAccountList, CompanyAccountItem, submitRechargeOrder } from
 import { useNotification } from '../../context/NotificationContext';
 import { Route } from '../../router/routes';
 import { isSuccess, extractError } from '../../utils/apiHelpers';
+import { useErrorHandler } from '../../hooks/useErrorHandler';
 
 interface BalanceRechargeProps {
   onBack: () => void;
@@ -30,6 +31,9 @@ const BalanceRecharge: React.FC<BalanceRechargeProps> = ({ onBack, onNavigate, i
 
   const { showToast } = useNotification();
 
+  // ✅ 使用统一错误处理Hook（纯Toast模式，自动日志记录）
+  const { handleError } = useErrorHandler({ showToast: true, persist: false });
+
   // View State: 'input' | 'matching' | 'matched'
   const [viewState, setViewState] = useState<'input' | 'matching' | 'matched'>('input');
 
@@ -49,9 +53,21 @@ const BalanceRecharge: React.FC<BalanceRechargeProps> = ({ onBack, onNavigate, i
       const res = await fetchCompanyAccountList({ usage: 'recharge' });
       if (isSuccess(res)) {
         setAllAccounts(res.data.list || []);
+      } else {
+        // ✅ 使用统一错误处理
+        handleError(res, {
+          toastTitle: '加载失败',
+          customMessage: '获取收款账户失败',
+          context: { usage: 'recharge' }
+        });
       }
     } catch (err) {
-      console.error(err);
+      // ✅ 使用统一错误处理
+      handleError(err, {
+        toastTitle: '加载失败',
+        customMessage: '获取收款账户失败',
+        context: { usage: 'recharge' }
+      });
     } finally {
       setLoading(false);
     }
@@ -152,11 +168,20 @@ const BalanceRecharge: React.FC<BalanceRechargeProps> = ({ onBack, onNavigate, i
         setViewState('input');
         onBack();
       } else {
-        showToast('error', '提交失败', extractError(response, '请重试'));
+        // ✅ 使用统一错误处理
+        handleError(response, {
+          toastTitle: '提交失败',
+          customMessage: '充值订单提交失败，请重试',
+          context: { amount, companyAccountId: matchedAccount?.id }
+        });
       }
     } catch (error: any) {
-      console.error('Submit recharge order error:', error);
-      showToast('error', '提交失败', error.message || '网络错误，请重试');
+      // ✅ 使用统一错误处理
+      handleError(error, {
+        toastTitle: '提交失败',
+        customMessage: '网络错误，请重试',
+        context: { amount, companyAccountId: matchedAccount?.id }
+      });
     } finally {
       setSubmitting(false);
     }

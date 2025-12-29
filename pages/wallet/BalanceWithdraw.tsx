@@ -11,6 +11,7 @@ import { Route } from '../../router/routes';
 
 import { useNotification } from '../../context/NotificationContext';
 import { isSuccess, extractError } from '../../utils/apiHelpers';
+import { useErrorHandler } from '../../hooks/useErrorHandler';
 
 interface BalanceWithdrawProps {
   onBack: () => void;
@@ -19,9 +20,20 @@ interface BalanceWithdrawProps {
 
 const BalanceWithdraw: React.FC<BalanceWithdrawProps> = ({ onBack, onNavigate }) => {
   const { showToast } = useNotification();
+
+  // ✅ 使用统一错误处理Hook（加载错误 - Toast模式）
+  const { handleError: handleLoadError } = useErrorHandler({ showToast: true, persist: false });
+
+  // ✅ 使用统一错误处理Hook（表单验证错误 - 持久化显示）
+  const {
+    errorMessage: submitErrorMessage,
+    hasError: hasSubmitError,
+    handleError: handleSubmitError,
+    clearError: clearSubmitError
+  } = useErrorHandler();
+
   const [accounts, setAccounts] = useState<PaymentAccountItem[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
   const [selectedAccount, setSelectedAccount] = useState<PaymentAccountItem | null>(null);
   const [showAccountModal, setShowAccountModal] = useState<boolean>(false);
   const [showPasswordModal, setShowPasswordModal] = useState<boolean>(false);
@@ -29,7 +41,6 @@ const BalanceWithdraw: React.FC<BalanceWithdrawProps> = ({ onBack, onNavigate })
   const [payPassword, setPayPassword] = useState<string>('');
   const [remark, setRemark] = useState<string>('');
   const [submitting, setSubmitting] = useState<boolean>(false);
-  const [submitError, setSubmitError] = useState<string | null>(null);
   const [balance, setBalance] = useState<string>('0.00');
 
   const [loadingBalance, setLoadingBalance] = useState<boolean>(false);
@@ -53,9 +64,21 @@ const BalanceWithdraw: React.FC<BalanceWithdrawProps> = ({ onBack, onNavigate })
         setAccounts(res.data.list || []);
         const defaultAcc = res.data.list.find((acc: PaymentAccountItem) => Number(acc.is_default) === 1);
         if (defaultAcc) setSelectedAccount(defaultAcc);
+      } else {
+        // ✅ 使用统一错误处理
+        handleLoadError(res, {
+          toastTitle: '加载失败',
+          customMessage: '获取提现账户失败',
+          context: { page: 'BalanceWithdraw' }
+        });
       }
     } catch (e) {
-      console.error(e);
+      // ✅ 使用统一错误处理
+      handleLoadError(e, {
+        toastTitle: '加载失败',
+        customMessage: '获取提现账户失败',
+        context: { page: 'BalanceWithdraw' }
+      });
     } finally {
       setLoading(false);
     }
@@ -70,42 +93,51 @@ const BalanceWithdraw: React.FC<BalanceWithdrawProps> = ({ onBack, onNavigate })
       if (isSuccess(response) && response.data?.userInfo) {
         const userInfo = response.data.userInfo;
         setBalance(parseFloat(userInfo.withdrawable_money || '0').toFixed(2));
+      } else {
+        // ✅ 使用统一错误处理
+        handleLoadError(response, {
+          toastTitle: '加载失败',
+          customMessage: '获取余额失败',
+          context: { page: 'BalanceWithdraw' }
+        });
       }
     } catch (err) {
-      console.error(err);
+      // ✅ 使用统一错误处理
+      handleLoadError(err, {
+        toastTitle: '加载失败',
+        customMessage: '获取余额失败',
+        context: { page: 'BalanceWithdraw' }
+      });
     } finally {
       setLoadingBalance(false);
     }
   };
 
   const handleWithdrawClick = () => {
+    // ✅ 验证错误使用persist显示
     if (!amount || parseFloat(amount) <= 0) {
-      setSubmitError('请输入有效的提现金额');
-      return;
+      return handleSubmitError('请输入有效的提现金额', { persist: true, showToast: false });
     }
     if (parseFloat(amount) > parseFloat(balance)) {
-      setSubmitError('提现金额不能超过可提现余额');
-      return;
+      return handleSubmitError('提现金额不能超过可提现余额', { persist: true, showToast: false });
     }
     if (!selectedAccount) {
-      setSubmitError('请选择提现账户');
-      return;
+      return handleSubmitError('请选择提现账户', { persist: true, showToast: false });
     }
-    setSubmitError(null);
+    clearSubmitError(); // ✅ 验证通过，清除错误
     setShowPasswordModal(true);
   };
 
   const handleConfirmWithdraw = async () => {
+    // ✅ 验证错误使用persist显示
     if (!payPassword) {
-      setSubmitError('请输入支付密码');
-      return;
+      return handleSubmitError('请输入支付密码', { persist: true, showToast: false });
     }
     if (!/^\d{6}$/.test(payPassword)) {
-      setSubmitError('支付密码必须为6位数字');
-      return;
+      return handleSubmitError('支付密码必须为6位数字', { persist: true, showToast: false });
     }
     setSubmitting(true);
-    setSubmitError(null);
+    clearSubmitError(); // ✅ 提交前清除错误
     try {
       const res = await submitWithdraw({
         amount: parseFloat(amount),
@@ -121,10 +153,22 @@ const BalanceWithdraw: React.FC<BalanceWithdrawProps> = ({ onBack, onNavigate })
         setShowPasswordModal(false);
         loadBalance();
       } else {
-        setSubmitError(extractError(res, '提交失败'));
+        // ✅ 使用统一错误处理
+        handleSubmitError(res, {
+          persist: true,
+          showToast: false,
+          customMessage: '提现申请提交失败',
+          context: { amount, accountId: selectedAccount?.id }
+        });
       }
     } catch (e: any) {
-      setSubmitError(e?.message || '提交失败');
+      // ✅ 使用统一错误处理
+      handleSubmitError(e, {
+        persist: true,
+        showToast: false,
+        customMessage: '提现申请提交失败',
+        context: { amount, accountId: selectedAccount?.id }
+      });
     } finally {
       setSubmitting(false);
     }
@@ -233,10 +277,11 @@ const BalanceWithdraw: React.FC<BalanceWithdrawProps> = ({ onBack, onNavigate })
           />
         </div>
 
-        {submitError && (
+        {/* ✅ 使用统一错误状态 */}
+        {hasSubmitError && (
           <div className="bg-red-50 p-3 rounded-xl flex items-start gap-2">
             <AlertCircle size={16} className="text-red-500 shrink-0 mt-0.5" />
-            <span className="text-xs text-red-600 font-medium">{submitError}</span>
+            <span className="text-xs text-red-600 font-medium">{submitErrorMessage}</span>
           </div>
         )}
       </div>
@@ -327,8 +372,9 @@ const BalanceWithdraw: React.FC<BalanceWithdrawProps> = ({ onBack, onNavigate })
               maxLength={6}
             />
 
-            {submitError && (
-              <div className="text-xs text-center text-red-500 mb-4">{submitError}</div>
+            {/* ✅ 使用统一错误状态 */}
+            {hasSubmitError && (
+              <div className="text-xs text-center text-red-500 mb-4">{submitErrorMessage}</div>
             )}
 
             <div className="flex gap-3">
