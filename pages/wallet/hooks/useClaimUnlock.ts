@@ -6,6 +6,7 @@ import {
 } from '../../../services/user';
 import { getStoredToken } from '../../../services/client';
 import { UserInfo } from '../../../types';
+import { isSuccess, extractData, extractError } from '../../../utils/apiHelpers';
 
 export type UnlockStatusState = {
   hasSelfTrade: boolean;
@@ -49,8 +50,9 @@ export const useClaimUnlock = ({ showToast, userInfo, setUserInfo }: UseClaimUnl
     setUnlockStatus((prev) => ({ ...prev, isLoading: true }));
     try {
       const res = await checkOldAssetsUnlockStatus(finalToken);
-      if (res.code === 1 && res.data) {
-        const conditions = res.data.unlock_conditions;
+      const data = extractData(res);
+      if (data) {
+        const conditions = data.unlock_conditions;
         setUnlockStatus({
           hasSelfTrade: conditions.has_transaction,
           activeReferrals: conditions.qualified_referrals,
@@ -58,10 +60,10 @@ export const useClaimUnlock = ({ showToast, userInfo, setUserInfo }: UseClaimUnl
           canUnlock: conditions.is_qualified,
           isLoading: false,
           unlockConditions: conditions,
-          requiredGold: res.data.required_gold,
-          currentGold: res.data.current_gold,
-          canUnlockDirect: res.data.can_unlock,
-          alreadyUnlocked: res.data.unlock_status === 1,
+          requiredGold: data.required_gold,
+          currentGold: data.current_gold,
+          canUnlockDirect: data.can_unlock,
+          alreadyUnlocked: data.unlock_status === 1,
         });
       } else {
         setUnlockStatus((prev) => ({
@@ -97,24 +99,25 @@ export const useClaimUnlock = ({ showToast, userInfo, setUserInfo }: UseClaimUnl
     setUnlockLoading(true);
     try {
       const res = await unlockOldAssets(token);
-      if (res.code === 1 && res.data) {
-        if (res.data.unlock_status === 1) {
+      const data = extractData(res);
+      if (data) {
+        if (data.unlock_status === 1) {
           showToast(
             'success',
             '解锁成功',
-            `权益资产包 ¥${res.data.reward_equity_package} 与 ${res.data.reward_consignment_coupon} 张寄售券已发放`,
+            `权益资产包 ¥${data.reward_equity_package} 与 ${data.reward_consignment_coupon} 张寄售券已发放`,
           );
 
-          if (userInfo && res.data.consumed_gold) {
+          if (userInfo && data.consumed_gold) {
             setUserInfo({
               ...userInfo,
-              confirm_rights_gold: Number(userInfo.confirm_rights_gold) - res.data.consumed_gold,
+              confirm_rights_gold: Number(userInfo.confirm_rights_gold) - data.consumed_gold,
             });
           }
 
           await loadUnlockStatus(token);
         } else {
-          const messages = res.data.unlock_conditions?.messages || [];
+          const messages = data.unlock_conditions?.messages || [];
           if (messages.length > 0) {
             showToast('warning', '解锁失败', messages.join('; '));
           } else {
@@ -122,7 +125,7 @@ export const useClaimUnlock = ({ showToast, userInfo, setUserInfo }: UseClaimUnl
           }
         }
       } else {
-        showToast('error', '解锁失败', res.msg || '解锁失败，请重试');
+        showToast('error', '解锁失败', extractError(res, '解锁失败，请重试'));
       }
     } catch (error: any) {
       console.error('解锁旧资产失败:', error);

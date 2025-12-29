@@ -7,6 +7,7 @@ import {
   type RightsDeclarationRecord,
 } from '../../../services/rightsDeclaration';
 import { UserInfo } from '../../../types';
+import { isSuccess, extractData } from '../../../utils/apiHelpers';
 
 /**
  * useClaimData - 管理确权页的用户信息、历史记录、审核统计
@@ -51,8 +52,9 @@ export function useClaimData(showToast: (type: string, title: string, message?: 
 
     try {
       const res = await fetchProfile(token);
-      if (res.code === 1 && res.data) {
-        setUserInfo(res.data.userInfo);
+      const data = extractData(res);
+      if (data?.userInfo) {
+        setUserInfo(data.userInfo);
       }
     } catch (error) {
       console.error('获取用户信息失败:', error);
@@ -74,8 +76,9 @@ export function useClaimData(showToast: (type: string, title: string, message?: 
       setHistoryLoading(true);
       try {
         const res = await getRightsDeclarationList({ limit: 10 }, finalToken);
-        if (res.code === 1 && res.data) {
-          setHistory(res.data.list);
+        const data = extractData(res);
+        if (data?.list) {
+          setHistory(data.list);
         }
       } catch (error) {
         console.error('获取申报历史失败:', error);
@@ -97,10 +100,11 @@ export function useClaimData(showToast: (type: string, title: string, message?: 
 
       try {
         const res = await getRightsDeclarationReviewStatus({}, finalToken);
-        if (res.code === 1 && res.data) {
+        const data = extractData(res);
+        if (data) {
           setReviewStats({
-            pending_count: res.data.pending_count,
-            approved_count: res.data.approved_count,
+            pending_count: data.pending_count,
+            approved_count: data.approved_count,
             isLoading: false,
           });
         }

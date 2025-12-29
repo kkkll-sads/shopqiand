@@ -135,7 +135,7 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onBack, onItemSelect, initi
     try {
       if (activeTab === 'hold' || activeTab === 'dividend') {
         const res = await getMyCollection({ page, token });
-        if (res.code === 1 && res.data) {
+        if (isSuccess(res) && res.data) {
           const list = res.data.list || [];
           const filteredList = list.filter(item => {
             const dStatus = Number(item.delivery_status) || 0;
@@ -156,7 +156,7 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onBack, onItemSelect, initi
             setConsignmentTicketCount((res.data as any).consignment_coupon);
           }
         } else {
-          setError(res.msg || '获取我的藏品失败');
+          setError(extractError(res, '获取我的藏品失败'));
         }
       } else {
         // consign or sold tab
@@ -167,7 +167,7 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onBack, onItemSelect, initi
           status: statusMap[activeTab as 'consign' | 'sold']
         });
 
-        if (res.code === 1 && res.data) {
+        if (isSuccess(res) && res.data) {
           const list = res.data.list || [];
           // Map MyConsignmentItem to MyCollectionItem structure for UI compatibility
           const mappedList: MyCollectionItem[] = list.map(item => ({
@@ -189,7 +189,7 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onBack, onItemSelect, initi
           }
           setHasMore(list.length >= 10 && res.data.has_more !== false);
         } else {
-          setError(res.msg || '获取寄售列表失败');
+          setError(extractError(res, '获取寄售列表失败'));
         }
       }
     } catch (e: any) {
@@ -572,17 +572,17 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onBack, onItemSelect, initi
           token,
         })
           .then((res) => {
-            if (res.code === 0 || res.code === 1 || res.data?.code === 0 || res.data?.code === 1) {
-              showToast('success', '操作成功', res.msg || res.data?.message || res.message || '权益分割已提交');
+            if (isSuccess(res)) {
+              showToast('success', '操作成功', extractError(res, '权益分割已提交'));
               setShowActionModal(false);
               setSelectedItem(null);
               runLoad();
             } else {
-              showToast('error', '操作失败', res.msg || res.data?.message || res.message || '权益分割失败');
+              showToast('error', '操作失败', extractError(res, '权益分割失败'));
             }
           })
           .catch((err: any) => {
-            showToast('error', '提交失败', err?.msg || err?.message || '权益分割失败');
+            showToast('error', '提交失败', extractError(err, '权益分割失败'));
           })
           .finally(() => setActionLoading(false));
       };
@@ -705,22 +705,21 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onBack, onItemSelect, initi
         token,
       })
         .then((res) => {
-          if (res.code === 1) {
-            showToast('success', '提交成功', res.msg || '寄售申请已提交');
+          if (isSuccess(res)) {
+            showToast('success', '提交成功', extractError(res, '寄售申请已提交'));
             setShowActionModal(false);
             setSelectedItem(null);
             // Switch to consign tab to show the new status
             handleTabChange('consign');
           } else {
-            showToast('error', '提交失败', res.msg || '寄售申请失败');
+            showToast('error', '提交失败', extractError(res, '寄售申请失败'));
             // 如果是因为未开启场次等业务错误，是否要关闭弹窗？
             // 暂时不关闭，方便用户查看原因，或者根据 message 决定
             // 但用户体验上，明确失败不需要关闭选单
           }
         })
         .catch((err: any) => {
-          const msg = err?.msg || err?.message || '寄售申请失败';
-          setActionError(msg);
+          setActionError(extractError(err, '寄售申请失败'));
         })
         .finally(() => setActionLoading(false));
     }

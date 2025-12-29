@@ -5,6 +5,7 @@ import { UserInfo } from '../../types';
 import { useNotification } from '../../context/NotificationContext';
 import { Route } from '../../router/routes';
 import { LoadingSpinner } from '../../components/common';
+import { isSuccess, extractData } from '../../utils/apiHelpers';
 
 interface MyCollectionDetailProps {
     item: MyCollectionItem;
@@ -30,27 +31,30 @@ const MyCollectionDetail: React.FC<MyCollectionDetailProps> = ({ item: initialIt
                 // Fetch detail from API
                 const userCollectionId = initialItem.user_collection_id || initialItem.id;
                 const detailRes = await fetchMyCollectionDetail(userCollectionId);
-                if (detailRes.code === 1 && detailRes.data) {
-                    setItem(detailRes.data);
+                const detailData = extractData(detailRes);
+                if (detailData) {
+                    setItem(detailData);
                 }
 
                 // Fetch profile
                 const profileRes = await fetchProfile(token);
-                let currentInfo = profileRes.code === 1 && profileRes.data ? profileRes.data.userInfo : null;
+                const profileData = extractData(profileRes);
+                let currentInfo = profileData?.userInfo || null;
 
                 // Then fetch real name status specifically
                 const realNameRes = await fetchRealNameStatus(token);
-                if (realNameRes.code === 1 && realNameRes.data) {
+                const realNameData = extractData(realNameRes);
+                if (realNameData) {
                     if (currentInfo) {
                         currentInfo = {
                             ...currentInfo,
-                            real_name: realNameRes.data.real_name || currentInfo.real_name,
-                            real_name_status: realNameRes.data.real_name_status
+                            real_name: realNameData.real_name || currentInfo.real_name,
+                            real_name_status: realNameData.real_name_status
                         };
                     } else {
                         currentInfo = {
-                            real_name: realNameRes.data.real_name,
-                            real_name_status: realNameRes.data.real_name_status
+                            real_name: realNameData.real_name,
+                            real_name_status: realNameData.real_name_status
                         } as any;
                     }
                 }
