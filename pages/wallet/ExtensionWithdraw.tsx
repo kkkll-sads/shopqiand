@@ -15,6 +15,7 @@ import { formatAmount } from '../../utils/format';
 import { useNotification } from '../../context/NotificationContext';
 import { USER_INFO_KEY, AUTH_TOKEN_KEY } from '../../constants/storageKeys';
 import { isSuccess, extractError } from '../../utils/apiHelpers';
+import { useErrorHandler } from '../../hooks/useErrorHandler';
 
 interface ExtensionWithdrawProps {
   onBack: () => void;
@@ -23,6 +24,18 @@ interface ExtensionWithdrawProps {
 
 const ExtensionWithdraw: React.FC<ExtensionWithdrawProps> = ({ onBack, onNavigate }) => {
   const { showToast } = useNotification();
+
+  // ✅ 使用统一错误处理Hook（加载错误 - Toast模式）
+  const { handleError: handleLoadError } = useErrorHandler({ showToast: true, persist: false });
+
+  // ✅ 使用统一错误处理Hook（表单验证错误 - 持久化显示）
+  const {
+    errorMessage: submitErrorMessageMessage,
+    hasError: hasSubmitError,
+    handleError: handleSubmitError,
+    clearError: clearSubmitError
+  } = useErrorHandler();
+
   const [userInfo, setUserInfo] = useState<UserInfo | null>(() => {
     try {
       const cached = localStorage.getItem(USER_INFO_KEY);
@@ -41,9 +54,7 @@ const ExtensionWithdraw: React.FC<ExtensionWithdrawProps> = ({ onBack, onNavigat
   const [payPassword, setPayPassword] = useState<string>('');
   const [remark, setRemark] = useState<string>('');
   const [loadingAccounts, setLoadingAccounts] = useState<boolean>(false);
-  const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
 
   // 可提现余额
   const balance = userInfo?.static_income || '0';
@@ -75,7 +86,6 @@ const ExtensionWithdraw: React.FC<ExtensionWithdrawProps> = ({ onBack, onNavigat
       if (!token) return;
 
       setLoadingAccounts(true);
-      setError(null);
       try {
         const res = await fetchPaymentAccountList(token);
         if (isSuccess(res) && res.data?.list) {
@@ -86,10 +96,18 @@ const ExtensionWithdraw: React.FC<ExtensionWithdrawProps> = ({ onBack, onNavigat
             setSelectedAccount(defaultAccount || res.data.list[0]);
           }
         } else {
-          setError(extractError(res, '获取收款账户信息失败'));
+          // ✅ 使用统一错误处理
+          handleLoadError(res, {
+            toastTitle: '加载失败',
+            customMessage: '获取收款账户信息失败'
+          });
         }
       } catch (e: any) {
-        setError(e?.message || '获取收款账户信息失败');
+        // ✅ 使用统一错误处理
+        handleLoadError(e, {
+          toastTitle: '加载失败',
+          customMessage: '获取收款账户信息失败'
+        });
       } finally {
         setLoadingAccounts(false);
       }
@@ -102,48 +120,45 @@ const ExtensionWithdraw: React.FC<ExtensionWithdrawProps> = ({ onBack, onNavigat
     const staticIncome = parseFloat(balance);
     if (staticIncome > 0) {
       setAmount(staticIncome.toFixed(2));
-      setSubmitError(null);
+      clearSubmitError(); // ✅ 使用统一错误清除
     }
   };
 
   const handleWithdrawClick = () => {
     const withdrawAmount = Number(amount);
+    // ✅ 验证错误使用persist显示
     if (!amount || withdrawAmount <= 0) {
-      setSubmitError('请输入有效的提现金额');
-      return;
+      return handleSubmitError('请输入有效的提现金额', { persist: true, showToast: false });
     }
 
     const staticIncome = Number(balance);
     if (withdrawAmount > staticIncome) {
-      setSubmitError('提现金额不能超过可提现拓展服务费');
-      return;
+      return handleSubmitError('提现金额不能超过可提现拓展服务费', { persist: true, showToast: false });
     }
 
     if (!selectedAccount || !selectedAccount.id) {
-      setSubmitError('请选择收款账户');
-      return;
+      return handleSubmitError('请选择收款账户', { persist: true, showToast: false });
     }
 
-    setSubmitError(null);
+    clearSubmitError(); // ✅ 验证通过，清除错误
     setShowPasswordModal(true);
   };
 
   const handleConfirmWithdraw = async () => {
+    // ✅ 验证错误使用persist显示
     if (!payPassword) {
-      setSubmitError('请输入支付密码');
-      return;
+      return handleSubmitError('请输入支付密码', { persist: true, showToast: false });
     }
     if (!/^\d{6}$/.test(payPassword)) {
-      setSubmitError('支付密码必须为6位数字');
-      return;
+      return handleSubmitError('支付密码必须为6位数字', { persist: true, showToast: false });
     }
 
     setSubmitting(true);
-    setSubmitError(null);
+    clearSubmitError(); // ✅ 提交前清除错误
 
     const token = localStorage.getItem(AUTH_TOKEN_KEY);
     if (!token) {
-      setSubmitError('未找到用户登录信息，请先登录');
+      handleSubmitError('未找到用户登录信息，请先登录', { persist: true, showToast: false });
       setSubmitting(false);
       return;
     }
@@ -171,11 +186,22 @@ const ExtensionWithdraw: React.FC<ExtensionWithdrawProps> = ({ onBack, onNavigat
           localStorage.setItem(USER_INFO_KEY, JSON.stringify(updatedResponse.data.userInfo));
         }
       } else {
-        setSubmitError(extractError(response, '提交提现申请失败'));
+        // ✅ 使用统一错误处理
+        handleSubmitError(response, {
+          persist: true,
+          showToast: false,
+          customMessage: '提交提现申请失败',
+          context: { amount, accountId: selectedAccount?.id }
+        });
       }
     } catch (err: any) {
-      console.error('提交提现申请失败:', err);
-      setSubmitError(err?.message || '提交提现申请失败，请稍后重试');
+      // ✅ 使用统一错误处理
+      handleSubmitError(err, {
+        persist: true,
+        showToast: false,
+        customMessage: '提交提现申请失败，请稍后重试',
+        context: { amount, accountId: selectedAccount?.id }
+      });
     } finally {
       setSubmitting(false);
     }
@@ -243,9 +269,9 @@ const ExtensionWithdraw: React.FC<ExtensionWithdrawProps> = ({ onBack, onNavigat
           </div>
         </div>
 
-        {submitError && (
+        {hasSubmitError && (
           <div className="text-xs text-red-500 bg-red-50 px-3 py-2 rounded">
-            {submitError}
+            {submitErrorMessage}
           </div>
         )}
 
@@ -285,13 +311,9 @@ const ExtensionWithdraw: React.FC<ExtensionWithdrawProps> = ({ onBack, onNavigat
               <div className="text-center py-8 text-gray-500 text-sm">加载中...</div>
             )}
 
-            {error && (
-              <div className="text-xs text-red-500 bg-red-50 px-4 py-2 m-4 rounded">
-                {error}
-              </div>
-            )}
+            {/* ✅ 加载错误使用Toast模式，不需要显示持久化错误 */}
 
-            {!loadingAccounts && !error && accounts.length === 0 && (
+            {!loadingAccounts && accounts.length === 0 && (
               <div className="text-center py-8 space-y-3">
                 <div className="text-gray-400 text-sm">暂无绑定的收款账户</div>
                 {onNavigate && (
@@ -308,7 +330,7 @@ const ExtensionWithdraw: React.FC<ExtensionWithdrawProps> = ({ onBack, onNavigat
               </div>
             )}
 
-            {!loadingAccounts && !error && accounts.length > 0 && (
+            {!loadingAccounts && accounts.length > 0 && (
               <div className="p-4 space-y-3">
                 {accounts.map((item) => {
                   const isSelected = selectedAccount?.id === item.id;
@@ -403,9 +425,9 @@ const ExtensionWithdraw: React.FC<ExtensionWithdrawProps> = ({ onBack, onNavigat
               autoFocus
             />
 
-            {submitError && (
+            {hasSubmitError && (
               <div className="text-xs text-red-500 bg-red-50 px-3 py-2 rounded mb-4">
-                {submitError}
+                {submitErrorMessage}
               </div>
             )}
 

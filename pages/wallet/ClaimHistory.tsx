@@ -5,6 +5,7 @@ import { AUTH_TOKEN_KEY } from '../../constants/storageKeys';
 import { useNotification } from '../../context/NotificationContext';
 import { Route } from '../../router/routes';
 import { isSuccess, extractError } from '../../utils/apiHelpers';
+import { useErrorHandler } from '../../hooks/useErrorHandler';
 
 interface ClaimHistoryProps {
     onBack: () => void;
@@ -13,6 +14,10 @@ interface ClaimHistoryProps {
 
 const ClaimHistory: React.FC<ClaimHistoryProps> = ({ onBack, onNavigate }) => {
     const { showToast } = useNotification();
+
+    // ✅ 使用统一错误处理Hook（Toast模式）
+    const { handleError } = useErrorHandler({ showToast: true, persist: false });
+
     const [history, setHistory] = useState<RightsDeclarationRecord[]>([]);
     const [loading, setLoading] = useState(true);
 
@@ -33,11 +38,20 @@ const ClaimHistory: React.FC<ClaimHistoryProps> = ({ onBack, onNavigate }) => {
             if (isSuccess(response) && response.data) {
                 setHistory(response.data.list);
             } else {
-                showToast('error', '加载失败', extractError(response, '获取历史记录失败'));
+                // ✅ 使用统一错误处理
+                handleError(response, {
+                    toastTitle: '加载失败',
+                    customMessage: '获取历史记录失败',
+                    context: { page: 'ClaimHistory' }
+                });
             }
         } catch (error: any) {
-            console.error('加载历史记录失败:', error);
-            showToast('error', '加载失败', '网络错误，请重试');
+            // ✅ 使用统一错误处理
+            handleError(error, {
+                toastTitle: '加载失败',
+                customMessage: '网络错误，请重试',
+                context: { page: 'ClaimHistory' }
+            });
         } finally {
             setLoading(false);
         }
