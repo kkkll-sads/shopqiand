@@ -13,6 +13,7 @@ import {
     CollectionItem,
 } from '../../services/api';
 import { isSuccess, extractError } from '../../utils/apiHelpers';
+import { useErrorHandler } from '../../hooks/useErrorHandler';
 
 /**
  * 从价格分区字符串中提取价格数字
@@ -149,15 +150,29 @@ const TradingZone: React.FC<TradingZoneProps> = ({
     initialSessionStartTime,
     initialSessionEndTime
 }) => {
+    // ✅ 使用统一错误处理Hook（会话加载错误）
+    const {
+        errorMessage: sessionErrorMessage,
+        hasError: hasSessionError,
+        handleError: handleSessionError,
+        clearError: clearSessionError
+    } = useErrorHandler();
+
+    // ✅ 使用统一错误处理Hook（商品加载错误）
+    const {
+        errorMessage: itemsErrorMessage,
+        hasError: hasItemsError,
+        handleError: handleItemsError,
+        clearError: clearItemsError
+    } = useErrorHandler();
+
     const [now, setNow] = useState(new Date());
     const [selectedSession, setSelectedSession] = useState<TradingSession | null>(null);
     const [sessions, setSessions] = useState<TradingSession[]>([]);
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
     const [status, setStatus] = useState<'preview' | 'active' | 'closed'>('preview');
     const [tradingItems, setTradingItems] = useState<TradingDisplayItem[]>([]);
     const [itemsLoading, setItemsLoading] = useState(false);
-    const [itemsError, setItemsError] = useState<string | null>(null);
     const [activePriceZone, setActivePriceZone] = useState<string>('all');
 
     // 使用ref追踪加载状态，防止重复调用
@@ -174,7 +189,7 @@ const TradingZone: React.FC<TradingZoneProps> = ({
         try {
             loadingSessionRef.current = session.id;
             setItemsLoading(true);
-            setItemsError(null);
+            clearItemsError();
 
             // 获取商品列表（新 API：官方+寄售按 package_name + zone_id 统一归类）
             const response = await fetchCollectionItemsBySession(session.id, { page: 1, limit: 10 });
@@ -240,16 +255,21 @@ const TradingZone: React.FC<TradingZoneProps> = ({
                 if (allItems.length > 0) {
                     setTradingItems(allItems);
                 } else {
-                    setItemsError('暂无上链资产');
+                    handleItemsError('暂无上链资产', { persist: true, showToast: false });
                 }
             } else {
-                setItemsError('暂无上链资产');
+                handleItemsError('暂无上链资产', { persist: true, showToast: false });
             }
 
             setSelectedSession(session);
         } catch (err: any) {
-            console.error('获取资产数据失败:', err);
-            setItemsError('数据同步延迟，请重试');
+            // ✅ 使用统一错误处理
+            handleItemsError(err, {
+                persist: true,
+                showToast: false,
+                customMessage: '数据同步延迟，请重试',
+                context: { sessionId: session.id }
+            });
             setSelectedSession(session);
         } finally {
             loadingSessionRef.current = null;
@@ -262,7 +282,7 @@ const TradingZone: React.FC<TradingZoneProps> = ({
         const loadSessions = async () => {
             try {
                 setLoading(true);
-                setError(null);
+                clearSessionError();
                 const response = await fetchCollectionSessions();
                 if (isSuccess(response) && response.data?.list) {
                     const sessionList: TradingSession[] = response.data.list.map((item: CollectionSessionItem) => ({
@@ -294,11 +314,20 @@ const TradingZone: React.FC<TradingZoneProps> = ({
                         }
                     }
                 } else {
-                    setError(response.msg || '获取数据资产池失败');
+                    // ✅ 使用统一错误处理
+                    handleSessionError(response, {
+                        persist: true,
+                        showToast: false,
+                        customMessage: '获取数据资产池失败'
+                    });
                 }
             } catch (err: any) {
-                console.error('加载专场列表失败:', err);
-                setError(err?.msg || '网络连接异常');
+                // ✅ 使用统一错误处理
+                handleSessionError(err, {
+                    persist: true,
+                    showToast: false,
+                    customMessage: '网络连接异常'
+                });
             } finally {
                 setLoading(false);
             }
@@ -319,7 +348,7 @@ const TradingZone: React.FC<TradingZoneProps> = ({
             } else {
                 setSelectedSession(null);
                 setTradingItems([]);
-                setItemsError(null);
+                clearItemsError();
             }
         } else {
             onBack();
@@ -484,8 +513,8 @@ const TradingZone: React.FC<TradingZoneProps> = ({
                     {/* 列表内容 */}
                     {itemsLoading ? (
                         <div className="py-20 flex justify-center"><LoadingSpinner /></div>
-                    ) : itemsError ? (
-                        <div className="py-12 text-center text-gray-400 text-sm">{itemsError}</div>
+                    ) : hasItemsError ? (
+                        <div className="py-12 text-center text-gray-400 text-sm">{itemsErrorMessage}</div>
                     ) : tradingItems.length === 0 ? (
                         <div className="py-12 text-center text-gray-400 text-sm">暂无资产</div>
                     ) : (
@@ -584,8 +613,8 @@ const TradingZone: React.FC<TradingZoneProps> = ({
             <div className="relative z-10 p-5 space-y-6"> {/* 增加间距 space-y-6 */}
                 {loading ? (
                     <div className="mt-20"><LoadingSpinner /></div>
-                ) : error ? (
-                    <div className="mt-20 text-center text-red-500 text-sm">{error}</div>
+                ) : hasSessionError ? (
+                    <div className="mt-20 text-center text-red-500 text-sm">{sessionErrorMessage}</div>
                 ) : sessions.map(session => {
                     const config = buildPoolConfig(session);
                     const { status, target } = getSessionStatus(session);
