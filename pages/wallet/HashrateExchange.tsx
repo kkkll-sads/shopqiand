@@ -6,6 +6,7 @@ import { fetchProfile, exchangeScoreToGreenPower, USER_INFO_KEY, AUTH_TOKEN_KEY 
 import { UserInfo } from '../../types';
 import { useNotification } from '../../context/NotificationContext';
 import { Route } from '../../router/routes';
+import { isSuccess, extractData, extractError } from '../../utils/apiHelpers';
 
 interface HashrateExchangeProps {
     onBack: () => void;
@@ -33,9 +34,10 @@ const HashrateExchange: React.FC<HashrateExchangeProps> = ({ onBack, onNavigate 
         if (!token) return;
         try {
             const res = await fetchProfile(token);
-            if (res.code === 1) {
-                setUserInfo(res.data.userInfo);
-                localStorage.setItem(USER_INFO_KEY, JSON.stringify(res.data.userInfo));
+            const data = extractData(res);
+            if (data?.userInfo) {
+                setUserInfo(data.userInfo);
+                localStorage.setItem(USER_INFO_KEY, JSON.stringify(data.userInfo));
             }
         } catch (err) {
             console.error(err);
@@ -63,21 +65,22 @@ const HashrateExchange: React.FC<HashrateExchangeProps> = ({ onBack, onNavigate 
         try {
             setConfirming(true);
             const res = await exchangeScoreToGreenPower({ score: cost });
+            const data = extractData(res);
 
-            if (res.code === 1 && res.data) {
-                showToast('success', '兑换成功', `消耗 ${res.data.score_consumed} 消费金，获得 ${res.data.green_power_gained} 绿色算力`);
+            if (data) {
+                showToast('success', '兑换成功', `消耗 ${data.score_consumed} 消费金，获得 ${data.green_power_gained} 绿色算力`);
 
                 // Update local state with latest data from API
                 if (userInfo) {
                     setUserInfo({
                         ...userInfo,
-                        score: res.data.after_score,
-                        green_power: res.data.after_green_power // Assuming green_power maps to green_power
+                        score: data.after_score,
+                        green_power: data.after_green_power // Assuming green_power maps to green_power
                     });
                 }
                 setAmount('');
             } else {
-                showToast('error', '兑换失败', res.msg || '未知错误');
+                showToast('error', '兑换失败', extractError(res, '未知错误'));
             }
         } catch (error: any) {
             showToast('error', '兑换异常', error.message || '网络请求失败');

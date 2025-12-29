@@ -5,7 +5,7 @@ import { fetchProfile, bidBuy, fetchCollectionItemDetail } from '../../services/
 import { useNotification } from '../../context/NotificationContext';
 import { getStoredToken } from '../../services/client';
 import { Route } from '../../router/routes';
-import { isSuccess } from '../../utils/apiHelpers';
+import { isSuccess, extractData } from '../../utils/apiHelpers';
 
 interface ReservationPageProps {
     product: Product;
@@ -59,8 +59,8 @@ const ReservationPage: React.FC<ReservationPageProps> = ({ product, onBack, onNa
         if (!product?.id) return { sessionId, zoneId };
         try {
             const res = await fetchCollectionItemDetail(Number(product.id));
-            if (res.code === 1 && res.data) {
-                const data: any = res.data;
+            const data = extractData(res);
+            if (data) {
                 const detailSessionId =
                     data.session_id ??
                     data.sessionId ??

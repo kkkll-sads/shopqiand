@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import PageContainer from '../../components/layout/PageContainer';
 import { LoadingSpinner, EmptyState } from '../../components/common';
 import { fetchHelpCategories, fetchHelpQuestions, HelpCategoryItem, HelpQuestionItem } from '../../services/api';
+import { isSuccess, extractData } from '../../utils/apiHelpers';
 
 /**
  * HelpCenter - 帮助中心页面
@@ -47,8 +48,9 @@ const HelpCenter: React.FC<HelpCenterProps> = ({ onBack }) => {
       try {
         setLoadingCategories(true);
         const res = await fetchHelpCategories();
-        if (res?.code === 1 && res.data?.list) {
-          const list = (res.data.list as HelpCategoryItem[]).map((item) => ({
+        const data = extractData(res);
+        if (data?.list) {
+          const list = (data.list as HelpCategoryItem[]).map((item) => ({
             id: item.id,
             name: item.name,
             code: item.code,
@@ -87,8 +89,9 @@ const HelpCenter: React.FC<HelpCenterProps> = ({ onBack }) => {
           category_id: cat.id,
           category_code: cat.code,
         });
-        if (res?.code === 1 && res.data?.list) {
-          const list = (res.data.list as HelpQuestionItem[]).map((item) => ({
+        const data = extractData(res);
+        if (data?.list) {
+          const list = (data.list as HelpQuestionItem[]).map((item) => ({
             id: item.id,
             categoryId: item.category_id,
             title: item.title,

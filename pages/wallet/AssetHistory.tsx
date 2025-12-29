@@ -6,6 +6,7 @@ import {
   AllLogItem,
   AUTH_TOKEN_KEY,
 } from '../../services/api';
+import { isSuccess, extractData } from '../../utils/apiHelpers';
 
 interface AssetHistoryProps {
   onBack: () => void;
@@ -59,19 +60,20 @@ const AssetHistory: React.FC<AssetHistoryProps> = ({ onBack }) => {
       const res = await getAllLog({ page, limit: 10, type, token });
       console.log(`[AssetHistory] API响应:`, res);
 
-      if (res.code === 1 && res.data) {
-        console.log(`[AssetHistory] 返回${res.data.list?.length || 0}条记录`);
+      const data = extractData(res);
+      if (data) {
+        console.log(`[AssetHistory] 返回${data.list?.length || 0}条记录`);
         // 打印前3条记录的type字段
-        res.data.list?.slice(0, 3).forEach((item, idx) => {
+        data.list?.slice(0, 3).forEach((item, idx) => {
           console.log(`[AssetHistory] 记录${idx + 1} - type: "${item.type}", amount: ${item.amount}, remark: ${item.remark || item.memo}`);
         });
 
         if (page === 1) {
-          setAllLogs(res.data.list || []);
+          setAllLogs(data.list || []);
         } else {
-          setAllLogs(prev => [...prev, ...(res.data?.list || [])]);
+          setAllLogs(prev => [...prev, ...(data.list || [])]);
         }
-        setHasMore((res.data.list?.length || 0) >= 10 && (res.data.current_page || 1) * 10 < (res.data.total || 0));
+        setHasMore((data.list?.length || 0) >= 10 && (data.current_page || 1) * 10 < (data.total || 0));
       } else {
         setError(res.msg || '获取明细失败');
       }

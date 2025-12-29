@@ -5,6 +5,7 @@ import { formatAmount } from '../../../../utils/format';
 import { Route } from '../../../../router/routes';
 import { fetchAnnouncements, AnnouncementItem } from '../../../../services/cms';
 import BalanceHelpModal from './BalanceHelpModal';
+import { extractData } from '../../../../utils/apiHelpers';
 
 interface AssetHeaderCardProps {
   userInfo: UserInfo | null;
@@ -41,8 +42,9 @@ const AssetHeaderCard: React.FC<AssetHeaderCardProps> = ({ userInfo, onNavigate 
 
     try {
       const res = await fetchAnnouncements({ title, limit: 1 });
-      if (res.code === 1 && res.data?.list?.length > 0) {
-        const announcement = res.data.list[0];
+      const data = extractData(res);
+      if (data?.list?.length > 0) {
+        const announcement = data.list[0];
         setHelpModal((prev) => ({
           ...prev,
           content: announcement.content,

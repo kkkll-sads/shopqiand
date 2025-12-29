@@ -2,6 +2,7 @@ import { useCallback, useState } from 'react';
 import { submitRightsDeclaration } from '../../../services/rightsDeclaration';
 import { getStoredToken } from '../../../services/client';
 import { ClaimFormState, ClaimFormValidation } from './useClaimForm';
+import { isSuccess, extractError } from '../../../utils/apiHelpers';
 
 type ReviewStats = {
   pending_count: number;
@@ -71,13 +72,13 @@ export const useClaimSubmit = ({
         token,
       );
 
-      if (res.code === 1) {
+      if (isSuccess(res)) {
         showToast('success', '提交成功', '确权申报提交成功，请等待管理员审核');
         resetForm();
         resetUploads();
         await Promise.all([loadHistory(token), loadReviewStats(token)]);
       } else {
-        showToast('error', '提交失败', res.msg || '提交失败，请重试');
+        showToast('error', '提交失败', extractError(res, '提交失败，请重试'));
       }
     } catch (error: any) {
       console.error('提交申报失败:', error);

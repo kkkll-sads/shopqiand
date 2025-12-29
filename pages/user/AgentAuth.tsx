@@ -141,7 +141,7 @@ const AgentAuth: React.FC<AgentAuthProps> = ({ onBack }) => {
         token,
       });
       if (res?.msg) {
-        showToast(res.code === 1 ? 'success' : 'info', '提示', res.msg);
+        showToast(isSuccess(res) ? 'success' : 'info', '提示', res.msg);
       } else {
         showToast('success', '提交成功');
       }

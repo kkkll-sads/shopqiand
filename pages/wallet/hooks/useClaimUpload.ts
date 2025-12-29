@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { uploadImage } from '../../../services/common';
 import { AUTH_TOKEN_KEY } from '../../../services/api';
+import { extractData, extractError } from '../../../utils/apiHelpers';
 
 export type ImageUploadState = {
   file: File;
@@ -71,15 +72,16 @@ export const useClaimUpload = ({
       const uploadPromises = newStates.map(async (state) => {
         try {
           const res = await uploadImage(state.file, token);
-          if (res.code === 1 && res.data) {
+          const data = extractData(res);
+          if (data?.url) {
             setImageUploadStates((prev) =>
               prev.map((s) =>
-                s.file === state.file ? { ...s, uploading: false, uploaded: true, url: res.data.url } : s,
+                s.file === state.file ? { ...s, uploading: false, uploaded: true, url: data.url } : s,
               ),
             );
-            onImagesChange((prev) => [...prev, res.data.url]);
+            onImagesChange((prev) => [...prev, data.url]);
           } else {
-            throw new Error(res.msg || '上传失败');
+            throw new Error(extractError(res, '上传失败'));
           }
         } catch (error: any) {
           console.error('图片上传失败:', error);
