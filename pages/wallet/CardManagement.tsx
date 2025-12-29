@@ -13,6 +13,8 @@ import {
 } from '../../services/api';
 // ✅ 引入统一 API 处理工具
 import { isSuccess, extractData, extractError } from '../../utils/apiHelpers';
+import { useErrorHandler } from '../../hooks/useErrorHandler';
+import { useNotification } from '../../context/NotificationContext';
 
 interface CardManagementProps {
   onBack: () => void;
@@ -40,14 +42,30 @@ const createInitialFormValues = (): PaymentAccountFormValues => ({
 });
 
 const CardManagement: React.FC<CardManagementProps> = ({ onBack }) => {
+  const { showToast } = useNotification();
+
+  // ✅ 使用统一错误处理Hook（列表错误）
+  const {
+    errorMessage: listErrorMessage,
+    hasError: hasListError,
+    handleError: handleListError,
+    clearError: clearListError
+  } = useErrorHandler();
+
+  // ✅ 使用统一错误处理Hook（表单错误）
+  const {
+    errorMessage: formErrorMessage,
+    hasError: hasFormError,
+    handleError: handleFormError,
+    clearError: clearFormError
+  } = useErrorHandler();
+
   const [loading, setLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
   const [accounts, setAccounts] = useState<PaymentAccountItem[]>([]);
   const [mode, setMode] = useState<'list' | 'add' | 'edit'>('list');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingWasDefault, setEditingWasDefault] = useState<boolean>(false);
   const [formValues, setFormValues] = useState<PaymentAccountFormValues>(() => createInitialFormValues());
-  const [formError, setFormError] = useState<string | null>(null);
   const [formLoading, setFormLoading] = useState<boolean>(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [showBankPicker, setShowBankPicker] = useState(false);
@@ -55,13 +73,16 @@ const CardManagement: React.FC<CardManagementProps> = ({ onBack }) => {
   const loadAccounts = useCallback(async () => {
     const token = localStorage.getItem(AUTH_TOKEN_KEY) || '';
     if (!token) {
-      setError('未检测到登录信息，请重新登录后重试');
+      // ✅ 使用统一错误处理
+      handleListError('未检测到登录信息，请重新登录后重试', {
+        persist: true,
+        showToast: false
+      });
       setAccounts([]);
       return;
     }
 
     setLoading(true);
-    setError(null);
     try {
       // 为避免网络问题导致长时间无响应，这里增加超时保护
       const timeoutMs = 10000;
@@ -79,16 +100,26 @@ const CardManagement: React.FC<CardManagementProps> = ({ onBack }) => {
       const data = extractData(res);
       if (data) {
         setAccounts(data.list || []);
+        clearListError(); // ✅ 成功时清除错误
       } else {
-        setError(extractError(res, '获取卡号列表失败'));
+        // ✅ 使用统一错误处理
+        handleListError(res, {
+          persist: true,
+          showToast: false,
+          customMessage: '获取卡号列表失败'
+        });
       }
     } catch (e: any) {
-      // 优先使用接口返回的错误消息
-      setError(e?.msg || e?.response?.msg || e?.message || '获取卡号列表失败');
+      // ✅ 使用统一错误处理
+      handleListError(e, {
+        persist: true,
+        showToast: false,
+        customMessage: '获取卡号列表失败'
+      });
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [handleListError, clearListError]);
 
   useEffect(() => {
     loadAccounts();
@@ -142,7 +173,7 @@ const CardManagement: React.FC<CardManagementProps> = ({ onBack }) => {
             className="p-1.5 rounded-full text-gray-400 hover:text-orange-500 hover:bg-orange-50 active:opacity-80"
             onClick={() => {
               if (!id) {
-                setNotice('该账户缺少 ID，无法编辑');
+                showToast('error', '操作失败', '该账户缺少 ID，无法编辑');
                 return;
               }
               setEditingId(id);
@@ -156,7 +187,7 @@ const CardManagement: React.FC<CardManagementProps> = ({ onBack }) => {
                 screenshot: null,
                 is_default: isDefault,
               });
-              setFormError(null);
+              clearFormError(); // ✅ 使用统一错误清除
               setNotice(null);
               setMode('edit');
             }}
@@ -168,7 +199,7 @@ const CardManagement: React.FC<CardManagementProps> = ({ onBack }) => {
             className="p-1.5 rounded-full text-gray-400 hover:text-red-500 hover:bg-red-50 active:opacity-80"
             onClick={async () => {
               if (!id) {
-                setNotice('该账户缺少 ID，无法删除');
+                showToast('error', '操作失败', '该账户缺少 ID，无法删除');
                 return;
               }
               if (!window.confirm('确定要删除该账户吗？')) {
@@ -178,15 +209,23 @@ const CardManagement: React.FC<CardManagementProps> = ({ onBack }) => {
                 const res = await deletePaymentAccount({ id });
                 // ✅ 使用统一判断
                 if (isSuccess(res)) {
-                  setNotice(extractError(res, '删除成功'));
+                  showToast('success', '删除成功', res?.msg || '账户已删除');
                   await loadAccounts();
                 } else {
-                  setNotice(extractError(res, '删除失败，请稍后重试'));
+                  // ✅ 使用统一错误处理（自动显示Toast）
+                  handleListError(res, {
+                    toastTitle: '删除失败',
+                    customMessage: '删除账户失败，请稍后重试',
+                    context: { accountId: id }
+                  });
                 }
               } catch (e: any) {
-                // 优先使用接口返回的错误消息
-                const errorMsg = e?.msg || e?.response?.msg || e?.message || '删除失败，请稍后重试';
-                setNotice(errorMsg);
+                // ✅ 使用统一错误处理
+                handleListError(e, {
+                  toastTitle: '删除失败',
+                  customMessage: '删除账户失败，请稍后重试',
+                  context: { accountId: id }
+                });
               }
             }}
           >
@@ -209,27 +248,28 @@ const CardManagement: React.FC<CardManagementProps> = ({ onBack }) => {
 
   const resetForm = () => {
     setFormValues(createInitialFormValues());
-    setFormError(null);
+    clearFormError(); // ✅ 使用统一错误清除
   };
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
-    setFormError(null);
+    clearFormError(); // ✅ 提交前清除错误
     setNotice(null);
 
     const { type, bank_name, account_name, account_number, bank_branch, screenshot, is_default } = formValues;
 
-    if (!type) return setFormError('请选择账户类型');
-    if (!account_name.trim()) return setFormError('请输入账户名称');
-    if (!account_number.trim()) return setFormError('请输入账号/卡号');
-    if (type === 'bank_card' && !bank_name.trim()) return setFormError('请选择或输入银行名称');
-    if (type === 'usdt' && !bank_branch.trim()) return setFormError('请输入 USDT 网络类型');
+    // ✅ 验证错误使用persist显示
+    if (!type) return handleFormError('请选择账户类型', { persist: true, showToast: false });
+    if (!account_name.trim()) return handleFormError('请输入账户名称', { persist: true, showToast: false });
+    if (!account_number.trim()) return handleFormError('请输入账号/卡号', { persist: true, showToast: false });
+    if (type === 'bank_card' && !bank_name.trim()) return handleFormError('请选择或输入银行名称', { persist: true, showToast: false });
+    if (type === 'usdt' && !bank_branch.trim()) return handleFormError('请输入 USDT 网络类型', { persist: true, showToast: false });
 
     setFormLoading(true);
     try {
       if (mode === 'edit') {
         if (!editingId) {
-          setFormError('缺少要编辑的账户 ID');
+          handleFormError('缺少要编辑的账户 ID', { persist: true, showToast: false });
           setFormLoading(false);
           return;
         }
@@ -256,7 +296,12 @@ const CardManagement: React.FC<CardManagementProps> = ({ onBack }) => {
           setEditingWasDefault(false);
           await loadAccounts();
         } else {
-          setFormError(extractError(res, '保存失败，请检查填写信息'));
+          // ✅ 使用统一错误处理
+          handleFormError(res, {
+            persist: true,
+            showToast: false,
+            customMessage: '保存失败，请检查填写信息'
+          });
         }
       } else {
         const res = await addPaymentAccount({
@@ -272,18 +317,26 @@ const CardManagement: React.FC<CardManagementProps> = ({ onBack }) => {
 
         // ✅ 使用统一判断
         if (isSuccess(res)) {
-          setNotice(extractError(res, '新增账户成功'));
+          setNotice(res?.msg || '新增账户成功');
           resetForm();
           setMode('list');
           await loadAccounts();
         } else {
-          // 显示后端返回的业务错误信息
-          setFormError(extractError(res, '新增账户失败，请检查填写信息'));
+          // ✅ 使用统一错误处理
+          handleFormError(res, {
+            persist: true,
+            showToast: false,
+            customMessage: '新增账户失败，请检查填写信息'
+          });
         }
       }
     } catch (e: any) {
-      // 优先使用接口返回的错误消息
-      setFormError(e?.msg || e?.response?.msg || e?.message || '提交失败，请稍后重试');
+      // ✅ 使用统一错误处理
+      handleFormError(e, {
+        persist: true,
+        showToast: false,
+        customMessage: '提交失败，请稍后重试'
+      });
     } finally {
       setFormLoading(false);
     }
@@ -405,9 +458,10 @@ const CardManagement: React.FC<CardManagementProps> = ({ onBack }) => {
         </label>
       )}
 
-      {formError && (
+      {/* ✅ 使用统一错误状态 */}
+      {hasFormError && (
         <div className="bg-red-50 text-red-600 text-xs px-3 py-2 rounded-md mt-2 mb-2">
-          {formError}
+          {formErrorMessage}
         </div>
       )}
 
@@ -458,13 +512,15 @@ const CardManagement: React.FC<CardManagementProps> = ({ onBack }) => {
         <div className="p-4 space-y-3 pb-24">
           {loading && <LoadingSpinner text="加载中..." />}
 
-          {!loading && error && (
+          {/* ✅ 使用统一错误状态 */}
+          {!loading && hasListError && (
             <div className="bg-red-50 text-red-600 text-xs px-3 py-2 rounded-md">
-              {error}
+              {listErrorMessage}
             </div>
           )}
 
-          {!loading && !error && accounts.length === 0 && (
+          {/* ✅ 使用统一错误状态 */}
+          {!loading && !hasListError && accounts.length === 0 && (
             <div className="mt-12 flex flex-col items-center text-gray-400 text-sm">
               <div className="w-14 h-14 rounded-full bg-gray-100 flex items-center justify-center mb-3">
                 <CreditCard size={26} className="text-gray-300" />
@@ -473,7 +529,8 @@ const CardManagement: React.FC<CardManagementProps> = ({ onBack }) => {
             </div>
           )}
 
-          {!loading && !error && accounts.length > 0 && accounts.map(renderItem)}
+          {/* ✅ 使用统一错误状态 */}
+          {!loading && !hasListError && accounts.length > 0 && accounts.map(renderItem)}
         </div>
       )}
 

@@ -16,6 +16,7 @@ import { isValidPhone } from '../../utils/validation';
 import { useNotification } from '../../context/NotificationContext';
 import { bizLog, debugLog, errorLog } from '../../utils/logger';
 import { isSuccess, extractError } from '../../utils/apiHelpers';
+import { useErrorHandler } from '../../hooks/useErrorHandler';
 
 // localStorage 存储键名
 const STORAGE_KEY_PHONE = 'login_remembered_phone';
@@ -44,6 +45,10 @@ const Login: React.FC<LoginProps> = ({
   onNavigateForgotPassword,
 }) => {
   const { showToast } = useNotification();
+
+  // ✅ 使用统一错误处理Hook（提供日志记录和错误分类）
+  const { handleError } = useErrorHandler({ showToast: true, persist: false });
+
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [agreed, setAgreed] = useState(false);
@@ -197,19 +202,20 @@ const Login: React.FC<LoginProps> = ({
           userInfo: response.data?.userInfo || null,
         });
       } else {
-        const errorMsg = extractError(response, '登录失败，请稍后重试');
-        debugLog('auth.login.page', '登录失败', errorMsg);
-        showToast('error', '登录失败', errorMsg);
+        // ✅ 使用统一错误处理（自动记录日志、分类错误、显示Toast）
+        handleError(response, {
+          toastTitle: '登录失败',
+          customMessage: '登录失败，请稍后重试',
+          context: { phone, loginType }
+        });
       }
     } catch (error: any) {
-      errorLog('auth.login.page', '登录失败', error);
-      if (error.isCorsError) {
-        showToast('error', '网络错误', error.message);
-      } else if (error.message) {
-        showToast('error', '登录失败', error.message);
-      } else {
-        showToast('error', '登录失败', '请检查网络连接后重试');
-      }
+      // ✅ 使用统一错误处理
+      handleError(error, {
+        toastTitle: error.isCorsError ? '网络错误' : '登录失败',
+        customMessage: error.isCorsError ? error.message : '请检查网络连接后重试',
+        context: { phone, loginType }
+      });
     } finally {
       if (loginType !== 'code') {
         setLoading(false);

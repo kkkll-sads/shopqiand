@@ -14,6 +14,7 @@ import {
 } from '../../services/api';
 import { useNotification } from '../../context/NotificationContext';
 import { isSuccess, extractError } from '../../utils/apiHelpers';
+import { useErrorHandler } from '../../hooks/useErrorHandler';
 
 interface AddressListProps {
   onBack: () => void;
@@ -42,15 +43,31 @@ const createInitialFormValues = (): AddressFormValues => ({
 
 const AddressList: React.FC<AddressListProps> = ({ onBack }) => {
   const { showToast, showDialog } = useNotification();
+
+  // ✅ 使用统一错误处理Hook（列表错误）
+  const {
+    error: listError,
+    errorMessage: listErrorMessage,
+    hasError: hasListError,
+    handleError: handleListError,
+    clearError: clearListError
+  } = useErrorHandler();
+
+  // ✅ 使用统一错误处理Hook（表单错误）
+  const {
+    errorMessage: formErrorMessage,
+    hasError: hasFormError,
+    handleError: handleFormError,
+    clearError: clearFormError
+  } = useErrorHandler();
+
   const [addresses, setAddresses] = useState<AddressItem[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
   const [mode, setMode] = useState<'list' | 'add' | 'edit'>('list');
   const [editingId, setEditingId] = useState<string | number | null>(null);
   const [formValues, setFormValues] = useState<AddressFormValues>(() =>
     createInitialFormValues(),
   );
-  const [formError, setFormError] = useState<string | null>(null);
   const [formLoading, setFormLoading] = useState<boolean>(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [showRegionPicker, setShowRegionPicker] = useState(false);
@@ -58,7 +75,11 @@ const AddressList: React.FC<AddressListProps> = ({ onBack }) => {
   const loadAddresses = async () => {
     const token = localStorage.getItem(AUTH_TOKEN_KEY) || '';
     if (!token) {
-      setError('未检测到登录信息，请重新登录后再查看地址列表');
+      // ✅ 使用统一错误处理
+      handleListError('未检测到登录信息，请重新登录后再查看地址列表', {
+        persist: true,
+        showToast: false // 列表错误直接显示，不需要Toast
+      });
       return;
     }
 
@@ -67,12 +88,18 @@ const AddressList: React.FC<AddressListProps> = ({ onBack }) => {
       const res = await fetchAddressList(token);
       if (isSuccess(res) && res.data?.list) {
         setAddresses(res.data.list);
-        setError(null);
+        clearListError(); // ✅ 成功时清除错误
       } else {
-        setError(extractError(res, '获取地址列表失败'));
+        // ✅ 使用统一错误处理
+        handleListError(res, { persist: true, showToast: false });
       }
-    } catch (e: any) {
-      setError(e?.message || '获取地址列表失败');
+    } catch (e) {
+      // ✅ 使用统一错误处理
+      handleListError(e, {
+        persist: true,
+        showToast: false,
+        customMessage: '获取地址列表失败'
+      });
     } finally {
       setLoading(false);
     }
@@ -96,10 +123,13 @@ const AddressList: React.FC<AddressListProps> = ({ onBack }) => {
           showToast('success', res?.msg || '删除成功');
           // 删除成功后刷新列表
           loadAddresses();
-        } catch (e: any) {
-          // 优先使用接口返回的错误消息
-          const errorMsg = e?.msg || e?.response?.msg || e?.message || '删除收货地址失败';
-          showToast('error', '删除失败', errorMsg);
+        } catch (e) {
+          // ✅ 使用统一错误处理（自动显示Toast + 记录日志）
+          handleListError(e, {
+            toastTitle: '删除失败',
+            customMessage: '删除收货地址失败',
+            context: { addressId: id }
+          });
         }
       }
     });
@@ -124,10 +154,18 @@ const AddressList: React.FC<AddressListProps> = ({ onBack }) => {
       if (isSuccess(res)) {
         await loadAddresses();
       } else {
-        setError(extractError(res, '设置默认地址失败'));
+        // ✅ 使用统一错误处理
+        handleListError(res, {
+          persist: true,
+          customMessage: '设置默认地址失败'
+        });
       }
-    } catch (e: any) {
-      setError(e?.message || '设置默认地址失败');
+    } catch (e) {
+      // ✅ 使用统一错误处理
+      handleListError(e, {
+        persist: true,
+        customMessage: '设置默认地址失败'
+      });
     } finally {
       setLoading(false);
     }
@@ -145,23 +183,30 @@ const AddressList: React.FC<AddressListProps> = ({ onBack }) => {
 
   const resetForm = () => {
     setFormValues(createInitialFormValues());
-    setFormError(null);
+    clearFormError(); // ✅ 使用统一错误清除
   };
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
-    setFormError(null);
+    clearFormError(); // ✅ 提交前清除错误
     setNotice(null);
 
     const { name, phone, province, city, district, address, is_default } =
       formValues;
 
-    if (!name.trim()) return setFormError('请输入收货人姓名');
-    if (!phone.trim()) return setFormError('请输入手机号');
-    if (!province.trim() || !city.trim()) {
-      return setFormError('请输入完整的省市信息');
+    // ✅ 验证错误使用persist显示
+    if (!name.trim()) {
+      return handleFormError('请输入收货人姓名', { persist: true, showToast: false });
     }
-    if (!address.trim()) return setFormError('请输入详细地址');
+    if (!phone.trim()) {
+      return handleFormError('请输入手机号', { persist: true, showToast: false });
+    }
+    if (!province.trim() || !city.trim()) {
+      return handleFormError('请输入完整的省市信息', { persist: true, showToast: false });
+    }
+    if (!address.trim()) {
+      return handleFormError('请输入详细地址', { persist: true, showToast: false });
+    }
 
     setFormLoading(true);
     try {
@@ -188,10 +233,20 @@ const AddressList: React.FC<AddressListProps> = ({ onBack }) => {
         setEditingId(null);
         await loadAddresses();
       } else {
-        setFormError(extractError(res, '保存地址失败，请检查填写信息'));
+        // ✅ 使用统一错误处理
+        handleFormError(res, {
+          persist: true,
+          showToast: false,
+          customMessage: '保存地址失败，请检查填写信息'
+        });
       }
-    } catch (e: any) {
-      setFormError(e?.message || '保存地址失败，请稍后重试');
+    } catch (e) {
+      // ✅ 使用统一错误处理
+      handleFormError(e, {
+        persist: true,
+        showToast: false,
+        customMessage: '保存地址失败，请稍后重试'
+      });
     } finally {
       setFormLoading(false);
     }
@@ -308,9 +363,10 @@ const AddressList: React.FC<AddressListProps> = ({ onBack }) => {
               </div>
             </label>
 
-            {formError && (
+            {/* ✅ 使用统一错误状态 */}
+            {hasFormError && (
               <div className="bg-red-50 text-red-600 text-xs px-3 py-2 rounded-md mb-4">
-                {formError}
+                {formErrorMessage}
               </div>
             )}
 
@@ -326,9 +382,10 @@ const AddressList: React.FC<AddressListProps> = ({ onBack }) => {
 
         {mode === 'list' && (
           <>
-            {error && (
+            {/* ✅ 使用统一错误状态 */}
+            {hasListError && (
               <div className="bg-red-50 text-red-600 text-xs px-3 py-2 rounded-lg">
-                {error}
+                {listErrorMessage}
               </div>
             )}
 
@@ -338,7 +395,8 @@ const AddressList: React.FC<AddressListProps> = ({ onBack }) => {
               </div>
             )}
 
-            {!loading && !addresses.length && !error && (
+            {/* ✅ 使用统一错误状态 */}
+            {!loading && !addresses.length && !hasListError && (
               <div className="text-center text-xs text-gray-400 py-8">
                 暂无收货地址，请点击下方按钮新增
               </div>
@@ -367,7 +425,7 @@ const AddressList: React.FC<AddressListProps> = ({ onBack }) => {
                         address: addr.address || '',
                         is_default: isDefault(addr),
                       });
-                      setFormError(null);
+                      clearFormError(); // ✅ 使用统一错误清除
                       setNotice(null);
                       setMode('edit');
                     }}
