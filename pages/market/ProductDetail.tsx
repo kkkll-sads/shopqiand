@@ -18,6 +18,7 @@ import { Route } from '../../router/routes';
 import { bizLog, debugLog } from '../../utils/logger';
 // ✅ 引入统一 API 处理工具
 import { isSuccess, extractData, extractError } from '../../utils/apiHelpers';
+import { useErrorHandler } from '../../hooks/useErrorHandler';
 
 /**
  * 从价格分区字符串中提取价格数字
@@ -38,10 +39,20 @@ interface ProductDetailProps {
 
 const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, onNavigate }) => {
   const { showToast, showDialog } = useNotification();
+
+  // ✅ 使用统一错误处理Hook（加载错误 - 持久化显示）
+  const {
+    errorMessage,
+    hasError,
+    handleError,
+    clearError
+  } = useErrorHandler();
+
+  // ✅ 使用统一错误处理Hook（购买错误 - Toast模式）
+  const { handleError: handleBuyError } = useErrorHandler({ showToast: true, persist: false });
+
   const [detailData, setDetailData] = useState<CollectionItemDetailData | ShopProductDetailData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
   const [buying, setBuying] = useState(false);
   const [collectionBuying, setCollectionBuying] = useState(false);
 
@@ -51,7 +62,7 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, onNaviga
     const loadDetail = async () => {
       try {
         setLoading(true);
-        setError(null);
+        clearError();
 
         let response;
         if (isShopProduct) {
@@ -72,10 +83,21 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, onNaviga
         if (data) {
           setDetailData(data);
         } else {
-          setError(extractError(response, '获取证书详情失败'));
+          // ✅ 使用统一错误处理
+          handleError(response, {
+            persist: true,
+            showToast: false,
+            customMessage: '获取证书详情失败'
+          });
         }
       } catch (err: any) {
-        setError('数据同步延迟，请重试');
+        // ✅ 使用统一错误处理
+        handleError(err, {
+          persist: true,
+          showToast: false,
+          customMessage: '数据同步延迟，请重试',
+          context: { productId: product.id }
+        });
       } finally {
         setLoading(false);
       }
@@ -119,11 +141,20 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, onNaviga
             // Navigate to order list or success page
             onNavigate({ name: 'order-list', kind: isShopProduct ? 'points' : 'product', status: 0, back: { name: 'product-detail' } });
           } else {
-            showToast('error', '购买失败', extractError(response, '购买失败'));
+            // ✅ 使用统一错误处理
+            handleBuyError(response, {
+              toastTitle: '购买失败',
+              customMessage: '购买失败',
+              context: { productId: product.id }
+            });
           }
         } catch (err: any) {
-          console.error('Purchase failed', err);
-          showToast('error', '购买失败', err.message || '系统错误');
+          // ✅ 使用统一错误处理
+          handleBuyError(err, {
+            toastTitle: '购买失败',
+            customMessage: '系统错误',
+            context: { productId: product.id }
+          });
         } finally {
           setBuying(false);
         }
@@ -142,7 +173,7 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, onNaviga
   };
 
   if (loading) return <div className="min-h-screen flex items-center justify-center bg-[#FDFBF7]"><LoadingSpinner /></div>;
-  if (error) return <div className="min-h-screen flex items-center justify-center bg-[#FDFBF7] text-gray-500">{error}</div>;
+  if (hasError) return <div className="min-h-screen flex items-center justify-center bg-[#FDFBF7] text-gray-500">{errorMessage}</div>;
 
   const collectionDetail = !isShopProduct ? (detailData as CollectionItemDetailData) : null;
   const shopDetail = isShopProduct ? (detailData as ShopProductDetailData) : null;
