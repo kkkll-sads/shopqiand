@@ -137,10 +137,40 @@ const MessageCenter: React.FC<MessageCenterProps> = ({ onBack, onNavigate }) => 
   useEffect(() => {
     const loadData = async () => {
       // 先检查缓存
+      // 先检查缓存
       const cachedMessages = getCachedMessages();
       if (cachedMessages) {
         console.log('[MessageCenter] 使用缓存数据');
-        setMessages(cachedMessages);
+
+        // 即使使用缓存，也要同步最新的已读状态
+        const readMsgIds = getReadMessageIds();
+
+        // 读取全局的新闻已读状态
+        let newsReadIds: string[] = [];
+        try {
+          const storedNewsReadIds = localStorage.getItem(STORAGE_KEYS.READ_NEWS_IDS_KEY);
+          newsReadIds = storedNewsReadIds ? JSON.parse(storedNewsReadIds) : [];
+        } catch { }
+
+        const syncedMessages = cachedMessages.map(msg => {
+          let isRead = msg.isRead;
+
+          // 检查普通消息已读
+          if (readMsgIds.includes(msg.id)) {
+            isRead = true;
+          }
+
+          // 检查新闻/公告已读
+          if ((msg.type === 'notice' || msg.type === 'activity') && msg.sourceId) {
+            if (newsReadIds.includes(String(msg.sourceId))) {
+              isRead = true;
+            }
+          }
+
+          return { ...msg, isRead };
+        });
+
+        setMessages(syncedMessages);
         setLoading(false);
         return;
       }

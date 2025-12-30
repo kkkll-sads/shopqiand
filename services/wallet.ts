@@ -457,13 +457,16 @@ export async function getMyWithdrawList(params: { page?: number; limit?: number;
     if (params.status !== undefined) search.set('status', String(params.status));
 
     const path = `${API_ENDPOINTS.recharge.getMyWithdrawList}?${search.toString()}`;
-    return authedFetch<{
+
+    interface WithdrawListResponse {
         data: WithdrawRecordItem[];
         total: number;
         per_page: number;
         current_page: number;
         last_page: number;
-    }>(path, {
+    }
+
+    return authedFetch<WithdrawListResponse>(path, {
         method: 'GET',
         token: params.token,
     });
