@@ -7,6 +7,7 @@ import { UserInfo } from '../../types';
 import useAuth from '../../hooks/useAuth';
 import { isSuccess, extractError } from '../../utils/apiHelpers';
 import { useErrorHandler } from '../../hooks/useErrorHandler';
+import { Route } from '../../router/routes';
 
 // Helper for custom coin icon
 const CoinsIcon = ({ size, className }: { size: number, className: string }) => (
@@ -30,7 +31,7 @@ const CoinsIcon = ({ size, className }: { size: number, className: string }) => 
 );
 
 interface ProfileProps {
-  onNavigate: (path: string) => void;
+  onNavigate: (route: Route) => void;
   unreadCount?: number;
 }
 
@@ -315,12 +316,12 @@ const Profile: React.FC<ProfileProps> = ({ onNavigate, unreadCount = 0 }) => {
           </div>
           <div className="grid grid-cols-4 gap-4">
             {[
-              { label: '专项金充值', icon: Wallet, color: 'text-orange-600', bg: 'bg-orange-50', action: () => onNavigate('asset:balance-recharge:profile') },
-              { label: '每日签到', icon: CalendarCheck, color: 'text-red-500', bg: 'bg-red-50', action: () => onNavigate('sign-in') },
-              { label: '收益提现', icon: Receipt, color: 'text-orange-500', bg: 'bg-orange-50', action: () => onNavigate('asset:balance-withdraw:profile') },
-              { label: '商品寄售', icon: Receipt, color: 'text-blue-500', bg: 'bg-blue-50', action: () => onNavigate('order-list:transaction:0') },
-              { label: '消费金兑换', icon: CoinsIcon, color: 'text-yellow-600', bg: 'bg-yellow-50', action: () => onNavigate('switch-to-market') },
-              { label: '消费金订单', icon: ClipboardList, color: 'text-emerald-500', bg: 'bg-emerald-50', action: () => onNavigate('order-list:points:0') },
+              { label: '专项金充值', icon: Wallet, color: 'text-orange-600', bg: 'bg-orange-50', action: () => onNavigate({ name: 'balance-recharge', source: 'asset-view' }) },
+              { label: '每日签到', icon: CalendarCheck, color: 'text-red-500', bg: 'bg-red-50', action: () => onNavigate({ name: 'sign-in' }) },
+              { label: '收益提现', icon: Receipt, color: 'text-orange-500', bg: 'bg-orange-50', action: () => onNavigate({ name: 'balance-withdraw', source: 'asset-view' }) },
+              { label: '商品寄售', icon: Receipt, color: 'text-blue-500', bg: 'bg-blue-50', action: () => onNavigate({ name: 'order-list', orderType: 'transaction', tabIndex: 0 }) },
+              { label: '消费金兑换', icon: CoinsIcon, color: 'text-yellow-600', bg: 'bg-yellow-50', action: () => onNavigate({ name: 'switch-to-market' }) },
+              { label: '消费金订单', icon: ClipboardList, color: 'text-emerald-500', bg: 'bg-emerald-50', action: () => onNavigate({ name: 'order-list', orderType: 'points', tabIndex: 0 }) },
             ].map((item, idx) => (
               <div key={idx} className="flex flex-col items-center cursor-pointer active:opacity-60 group" onClick={item.action}>
                 <div className={`w-11 h-11 rounded-2xl ${item.bg} flex items-center justify-center mb-2 transition-transform group-active:scale-95`}>
@@ -340,10 +341,10 @@ const Profile: React.FC<ProfileProps> = ({ onNavigate, unreadCount = 0 }) => {
           </div>
           <div className="grid grid-cols-4 gap-4">
             {[
-              { label: '资产明细', icon: FileText, color: 'text-purple-600', bg: 'bg-purple-50', action: () => onNavigate('asset-view') },
-              { label: '累计权益', icon: ShieldCheck, color: 'text-green-600', bg: 'bg-green-50', action: () => onNavigate('cumulative-rights') },
-              { label: '寄售券', icon: Receipt, color: 'text-pink-600', bg: 'bg-pink-50', action: () => onNavigate('consignment-voucher') },
-              { label: '我的藏品', icon: Box, color: 'text-indigo-600', bg: 'bg-indigo-50', action: () => onNavigate('my-collection') },
+              { label: '资产明细', icon: FileText, color: 'text-purple-600', bg: 'bg-purple-50', action: () => onNavigate({ name: 'asset-view' }) },
+              { label: '累计权益', icon: ShieldCheck, color: 'text-green-600', bg: 'bg-green-50', action: () => onNavigate({ name: 'cumulative-rights' }) },
+              { label: '寄售券', icon: Receipt, color: 'text-pink-600', bg: 'bg-pink-50', action: () => onNavigate({ name: 'consignment-voucher' }) },
+              { label: '我的藏品', icon: Box, color: 'text-indigo-600', bg: 'bg-indigo-50', action: () => onNavigate({ name: 'my-collection' }) },
             ].map((item, idx) => (
               <div key={idx} className="flex flex-col items-center cursor-pointer active:opacity-60 group" onClick={item.action}>
                 <div className={`w-11 h-11 rounded-2xl ${item.bg} flex items-center justify-center mb-2 transition-transform group-active:scale-95`}>
@@ -363,16 +364,16 @@ const Profile: React.FC<ProfileProps> = ({ onNavigate, unreadCount = 0 }) => {
           </div>
           <div className="grid grid-cols-4 gap-y-6 gap-x-4">
             {[
-              { label: '实名认证', icon: UserCheck, action: () => onNavigate('real-name-auth') },
-              { label: '卡号管理', icon: CreditCard, action: () => onNavigate('card-management') },
-              { label: '收货地址', icon: MapPin, action: () => onNavigate('address-list') },
-              { label: '我的好友', icon: Users, action: () => onNavigate('my-friends') },
-              { label: '代理认证', icon: UserCheck, action: () => onNavigate('agent-auth') },
-              { label: '帮助中心', icon: HelpCircle, action: () => onNavigate('help-center') },
-              { label: '规则协议', icon: FileText, action: () => onNavigate('profile:user-agreement') },
-              { label: '用户问卷', icon: FileText, action: () => onNavigate('user-survey') },
-              { label: '在线客服', icon: HeadphonesIcon, action: () => onNavigate('online-service') },
-              { label: '平台资讯', icon: Newspaper, action: () => onNavigate('news-center') },
+              { label: '实名认证', icon: UserCheck, action: () => onNavigate({ name: 'real-name-auth' }) },
+              { label: '卡号管理', icon: CreditCard, action: () => onNavigate({ name: 'card-management' }) },
+              { label: '收货地址', icon: MapPin, action: () => onNavigate({ name: 'address-list' }) },
+              { label: '我的好友', icon: Users, action: () => onNavigate({ name: 'my-friends' }) },
+              { label: '代理认证', icon: UserCheck, action: () => onNavigate({ name: 'agent-auth' }) },
+              { label: '帮助中心', icon: HelpCircle, action: () => onNavigate({ name: 'help-center' }) },
+              { label: '规则协议', icon: FileText, action: () => onNavigate({ name: 'user-agreement' }) },
+              { label: '用户问卷', icon: FileText, action: () => onNavigate({ name: 'user-survey' }) },
+              { label: '在线客服', icon: HeadphonesIcon, action: () => onNavigate({ name: 'online-service' }) },
+              { label: '平台资讯', icon: Newspaper, action: () => onNavigate({ name: 'news' }) },
             ].map((item, idx) => (
               <div key={idx} className="flex flex-col items-center cursor-pointer active:opacity-60 group" onClick={item.action}>
                 <div className="w-11 h-11 rounded-2xl bg-gray-50 flex items-center justify-center mb-2 transition-transform group-active:scale-95">

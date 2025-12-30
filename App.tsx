@@ -381,9 +381,9 @@ const AppContent: React.FC = () => {
     setProductDetailOrigin(origin);
 
     if (product.productType === 'shop') {
-      navigateRoute('points-product-detail');
+      navigateRoute({ name: 'points-product-detail' });
     } else {
-      navigateRoute('product-detail');
+      navigateRoute({ name: 'product-detail' });
     }
   };
 
