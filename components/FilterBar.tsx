@@ -200,11 +200,11 @@ const dropdownCss = `
 @keyframes slidedown{from{transform:translateY(-10px);opacity:0}to{transform:translateY(0);opacity:1}}
 
 /* Components */
-.pill{flex:0 0 auto;display:flex;align-items:center;gap:8px;border:1px solid rgba(0,0,0,.08);background:#fff;border-radius:999px;padding:8px 12px;box-shadow:0 1px 2px rgba(0,0,0,.03);transition:all .2s;}
+.pill{flex:0 0 auto;display:flex;align-items:center;gap:6px;border:1px solid rgba(0,0,0,.08);background:#fff;border-radius:999px;padding:7px 12px;box-shadow:0 1px 2px rgba(0,0,0,.03);transition:all .2s;line-height:1.4;}
 .pill.active{border-color:rgba(255,122,0,.5);color:#FF6B00;background:#FFF0E0;}
-.pill-label{font-size:12px;opacity:.6}
-.pill-value{font-size:13px;font-weight:500;white-space:nowrap}
-.pill-caret{margin-left:6px;opacity:.6;transition:transform .2s;}
+.pill-label{font-size:13px;opacity:.6;font-weight:400;}
+.pill-value{font-size:13px;font-weight:500;white-space:nowrap;display:flex;align-items:center;}
+.pill-caret{margin-left:4px;opacity:.6;transition:transform .2s;font-size:12px;}
 .pill-caret.rotate{transform:rotate(180deg);}
 
 .search{padding:0 0 10px;}
