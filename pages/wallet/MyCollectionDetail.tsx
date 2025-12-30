@@ -62,14 +62,6 @@ const MyCollectionDetail: React.FC<MyCollectionDetailProps> = ({ item: initialIt
                 if (currentInfo) {
                     setUserInfo(currentInfo);
                 }
-
-                // Fetch consignment ticket count from collection API
-                const { getMyCollection } = await import('../../services/api');
-                const collectionRes = await getMyCollection({ page: 1, limit: 1, token });
-                const collectionData = extractData(collectionRes);
-                if (collectionData) {
-                    setConsignmentTicketCount((collectionData as any).consignment_coupon ?? 0);
-                }
             } catch (e) {
                 console.error(e);
             } finally {
