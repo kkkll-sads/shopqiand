@@ -25,6 +25,7 @@ import { isSuccess, extractData, extractError } from '../../utils/apiHelpers';
 import { ConsignmentStatus, DeliveryStatus } from '../../constants/statusEnums';
 import { useAssetActionModal, ActionModalState } from '../../hooks/useAssetActionModal';
 import { useAssetTabs, TabConfig } from '../../hooks/useAssetTabs';
+import { BALANCE_TYPE_OPTIONS, getBalanceTypeLabel } from '../../constants/balanceTypes';
 
 interface AssetViewProps {
   onBack: () => void;
@@ -42,12 +43,7 @@ const AssetView: React.FC<AssetViewProps> = ({ onBack, onNavigate, onProductSele
   const [filterTime, setFilterTime] = useState('7days'); // Default to 7 days as per user example preference
 
   const categoryOptions = [
-    { label: '全部', value: 'all' },
-    { label: '供应链专项金', value: 'balance_available' },
-    { label: '可调度收益', value: 'withdrawable_money' },
-    { label: '确权金', value: 'service_fee_balance' },
-    { label: '消费金', value: 'score' },
-    { label: '绿色积分', value: 'green_power' },
+    ...BALANCE_TYPE_OPTIONS,
     { label: '我的藏品', value: 'collection' }, // Added Collection option
   ];
 
@@ -216,14 +212,8 @@ const AssetView: React.FC<AssetViewProps> = ({ onBack, onNavigate, onProductSele
   const renderAllLogItem = (item: AllLogItem) => {
     const amountVal = Number(item.amount);
     const isPositive = amountVal > 0;
-    let typeText = item.type;
-    switch (item.type) {
-      case 'balance_available': typeText = '专项金'; break;
-      case 'withdrawable_money': typeText = '收益'; break;
-      case 'service_fee_balance': typeText = '确权金'; break;
-      case 'score': typeText = '消费金'; break;
-      case 'green_power': typeText = '绿色积分'; break;
-    }
+    const typeText = getBalanceTypeLabel(item.type);
+
     return (
       <div key={item.id} className="bg-white rounded-lg p-4 mb-3 shadow-sm border border-gray-100">
         <div className="flex justify-between items-start mb-2">

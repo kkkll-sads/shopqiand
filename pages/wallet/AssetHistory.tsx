@@ -8,6 +8,7 @@ import {
   AUTH_TOKEN_KEY,
 } from '../../services/api';
 import { isSuccess, extractData } from '../../utils/apiHelpers';
+import { BALANCE_TYPE_OPTIONS, getBalanceTypeLabel } from '../../constants/balanceTypes';
 
 interface AssetHistoryProps {
   onBack: () => void;
@@ -21,14 +22,7 @@ const AssetHistory: React.FC<AssetHistoryProps> = ({ onBack }) => {
     time: 'all',
   });
 
-  const categoryOptions = [
-    { label: '全部', value: 'all' },
-    { label: '供应链专项金', value: 'balance_available' },
-    { label: '可调度收益', value: 'withdrawable_money' },
-    { label: '确权金', value: 'service_fee_balance' },
-    { label: '消费金', value: 'score' },
-    { label: '绿色积分', value: 'green_power' },
-  ];
+  const categoryOptions = [...BALANCE_TYPE_OPTIONS];
 
   const setCategory = (v: string) => setFilters(prev => ({ ...prev, category: v }));
   const setFlow = (v: string) => setFilters(prev => ({ ...prev, flow: v }));
@@ -132,15 +126,9 @@ const AssetHistory: React.FC<AssetHistoryProps> = ({ onBack }) => {
   };
 
   const getTypeLabel = (type: string, fieldType?: string): string => {
-    if (fieldType === 'green_power' || type === 'green_power') return '绿色积分';
-    const labels: Record<string, string> = {
-      balance_available: '供应链专项金',
-      withdrawable_money: '可调度收益',
-      service_fee_balance: '确权金',
-      score: '消费金',
-      all: '资金'
-    };
-    return labels[type] || type;
+    // Use field_type if available for more precise identification
+    const typeToUse = fieldType || type;
+    return getBalanceTypeLabel(typeToUse);
   };
 
   const renderLogItem = (item: AllLogItem) => {
