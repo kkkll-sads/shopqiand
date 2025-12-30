@@ -233,7 +233,7 @@ const MessageCenter: React.FC<MessageCenterProps> = ({ onBack, onNavigate }) => 
           const dynamicList = dynamicData?.data || dynamicData?.list || [];
           if (dynamicList.length > 0) {
             dynamicList.forEach((item: AnnouncementItem) => {
-              const id = `dynamic-${item.id}`; c
+              const id = `dynamic-${item.id}`;
               const timestamp = item.createtime ? new Date(item.createtime).getTime() : Date.now();
               // 优先使用全局的新闻已读状态判断
               const isRead = newsReadIds.includes(String(item.id));
@@ -494,73 +494,72 @@ const MessageCenter: React.FC<MessageCenterProps> = ({ onBack, onNavigate }) => 
     : messages;
 
   const handleMarkAsRead = (id: string, message?: MessageItem) => {
-    setMessages(prev => {
-      const updated = prev.map(msg => msg.id === id ? { ...msg, isRead: true } : msg);
+    // 1. 同步更新状态和缓存
+    let updatedMessages = messages;
 
-      const targetMsg = message || prev.find(m => m.id === id);
+    // 如果消息已经在列表里，直接更新
+    if (messages.some(m => m.id === id)) {
+      updatedMessages = messages.map(msg => msg.id === id ? { ...msg, isRead: true } : msg);
+    }
 
-      // 如果是公告或动态，更新全局新闻已读状态
-      if (targetMsg && (targetMsg.type === 'notice' || targetMsg.type === 'activity') && targetMsg.sourceId) {
-        try {
-          const storedNewsReadIds = localStorage.getItem(STORAGE_KEYS.READ_NEWS_IDS_KEY);
-          const currentNewsIds: string[] = storedNewsReadIds ? JSON.parse(storedNewsReadIds) : [];
-          const newsId = String(targetMsg.sourceId);
-
-          if (!currentNewsIds.includes(newsId)) {
-            const newIds = [...currentNewsIds, newsId];
-            localStorage.setItem(STORAGE_KEYS.READ_NEWS_IDS_KEY, JSON.stringify(newIds));
-          }
-        } catch (e) {
-          console.error('保存新闻已读状态失败', e);
-        }
-      }
-
-      // 更新消息中心本地已读ID（用于其他类消息）
-      const readIds = getReadMessageIds();
-      if (!readIds.includes(id)) {
-        saveReadMessageIds([...readIds, id]);
-      }
-
-      // ✅ 重要：更新缓存以保持已读状态
-      setCachedMessages(updated);
-
-      return updated;
-    });
-  };
-
-  const handleMarkAllAsRead = () => {
-    setMessages(prev => {
-      const updated = prev.map(msg => ({ ...msg, isRead: true }));
-
-      // 1. 更新普通消息已读列表
-      const allIds = updated.map(msg => msg.id);
-      saveReadMessageIds(allIds);
-
-      // 2. 更新全局新闻已读列表
+    // 2. 更新 localStorage (新闻/公告)
+    const targetMsg = message || messages.find(m => m.id === id);
+    if (targetMsg && (targetMsg.type === 'notice' || targetMsg.type === 'activity') && targetMsg.sourceId) {
       try {
         const storedNewsReadIds = localStorage.getItem(STORAGE_KEYS.READ_NEWS_IDS_KEY);
         const currentNewsIds: string[] = storedNewsReadIds ? JSON.parse(storedNewsReadIds) : [];
+        const newsId = String(targetMsg.sourceId);
 
-        const newNewsIds = [...currentNewsIds];
-        updated.forEach(msg => {
-          if ((msg.type === 'notice' || msg.type === 'activity') && msg.sourceId) {
-            const newsId = String(msg.sourceId);
-            if (!newNewsIds.includes(newsId)) {
-              newNewsIds.push(newsId);
-            }
-          }
-        });
-
-        localStorage.setItem(STORAGE_KEYS.READ_NEWS_IDS_KEY, JSON.stringify(newNewsIds));
+        if (!currentNewsIds.includes(newsId)) {
+          const newIds = [...currentNewsIds, newsId];
+          localStorage.setItem(STORAGE_KEYS.READ_NEWS_IDS_KEY, JSON.stringify(newIds));
+        }
       } catch (e) {
-        console.error('批量保存新闻已读状态失败', e);
+        console.error('保存新闻已读状态失败', e);
       }
+    }
 
-      // ✅ 重要：更新缓存以保持已读状态
-      setCachedMessages(updated);
+    // 3. 更新 localStorage (普通消息)
+    const readIds = getReadMessageIds();
+    if (!readIds.includes(id)) {
+      saveReadMessageIds([...readIds, id]);
+    }
 
-      return updated;
-    });
+    // 4. 更新状态和缓存
+    setMessages(updatedMessages);
+    setCachedMessages(updatedMessages);
+  };
+
+  const handleMarkAllAsRead = () => {
+    const updatedMessages = messages.map(msg => ({ ...msg, isRead: true }));
+
+    // 1. 更新普通消息已读列表
+    const allIds = updatedMessages.map(msg => msg.id);
+    saveReadMessageIds(allIds);
+
+    // 2. 更新全局新闻已读列表
+    try {
+      const storedNewsReadIds = localStorage.getItem(STORAGE_KEYS.READ_NEWS_IDS_KEY);
+      const currentNewsIds: string[] = storedNewsReadIds ? JSON.parse(storedNewsReadIds) : [];
+
+      const newNewsIds = [...currentNewsIds];
+      updatedMessages.forEach(msg => {
+        if ((msg.type === 'notice' || msg.type === 'activity') && msg.sourceId) {
+          const newsId = String(msg.sourceId);
+          if (!newNewsIds.includes(newsId)) {
+            newNewsIds.push(newsId);
+          }
+        }
+      });
+
+      localStorage.setItem(STORAGE_KEYS.READ_NEWS_IDS_KEY, JSON.stringify(newNewsIds));
+    } catch (e) {
+      console.error('批量保存新闻已读状态失败', e);
+    }
+
+    // 3. 更新状态和缓存
+    setMessages(updatedMessages);
+    setCachedMessages(updatedMessages);
   };
 
   const handleMessageClick = (message: MessageItem) => {
@@ -575,7 +574,6 @@ const MessageCenter: React.FC<MessageCenterProps> = ({ onBack, onNavigate }) => 
             name: 'news-detail',
             id: String(message.sourceId),
             from: { name: 'message-center' },
-            back: { name: 'message-center' },
           });
         }
         break;
@@ -585,12 +583,11 @@ const MessageCenter: React.FC<MessageCenterProps> = ({ onBack, onNavigate }) => 
           onNavigate({
             name: 'recharge-order-detail',
             orderId: String(message.sourceId),
-            back: { name: 'message-center' }
           });
         }
         break;
       case 'withdraw':
-        onNavigate({ name: 'balance-withdraw', source: 'asset-view', back: { name: 'message-center' } });
+        onNavigate({ name: 'balance-withdraw', source: 'asset-view' });
         break;
       case 'shop_order':
         // 商城订单，跳转到订单列表（全部）
@@ -598,7 +595,6 @@ const MessageCenter: React.FC<MessageCenterProps> = ({ onBack, onNavigate }) => 
           name: 'order-list',
           kind: 'points',
           status: 0,
-          back: { name: 'message-center' },
         });
         break;
       default:

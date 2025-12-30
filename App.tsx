@@ -121,7 +121,13 @@ const AppContent: React.FC = () => {
 
   const [consignmentTicketCount, setConsignmentTicketCount] = useState<number>(0);
   // 新闻已读状态统一通过 hook 管理
-  const { newsList, initWith: initNews, markAllRead: markAllNewsRead, markReadById } = useNewsReadState([]);
+  const { newsList, initWith: initNews, markAllRead: markAllNewsRead, markReadById, refreshReadStatus } = useNewsReadState([]);
+
+  // 每次路由变化时，刷新消息已读状态（确保从消息中心返回时状态同步）
+  useEffect(() => {
+    refreshReadStatus();
+  }, [currentRoute, activeTab, refreshReadStatus]);
+
   // 弹窗公告队列状态（支持多个弹窗依次显示）
   const [popupQueue, setPopupQueue] = useState<AnnouncementItem[]>([]);
   const [showPopupAnnouncement, setShowPopupAnnouncement] = useState(false);

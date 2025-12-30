@@ -5,26 +5,15 @@ import PageContainer from '../../components/layout/PageContainer';
 import { LoadingSpinner, EmptyState, LazyImage } from '../../components/common';
 import { formatAmount } from '../../utils/format';
 import {
-  getBalanceLog,
-  getMyOrderList,
-  getMyWithdrawList,
+  getAllLog,
+  AllLogItem,
   getMyCollection,
-  deliverCollectionItem,
-  rightsDeliver,
-  consignCollectionItem,
-  getConsignmentCheck,
-  fetchProfile,
-  getServiceFeeLog,
-  BalanceLogItem,
-  RechargeOrderItem,
-  WithdrawOrderItem,
   MyCollectionItem,
-  ServiceFeeLogItem,
+  fetchProfile,
   AUTH_TOKEN_KEY,
   USER_INFO_KEY,
   normalizeAssetUrl,
 } from '../../services/api';
-import { getIntegralLog, IntegralLogItem } from '../../services/integral';
 import { Product, UserInfo } from '../../types';
 import { useNotification } from '../../context/NotificationContext';
 import { Route } from '../../router/routes';
@@ -66,11 +55,11 @@ const AssetView: React.FC<AssetViewProps> = ({ onBack, onNavigate, onProductSele
 
   // ✅ 定义标签页配置
   const tabConfigs: TabConfig[] = [
-    // Tab 0: 专项金明细
+    // Tab 0: 资金明细 (Unified)
     {
       id: 0,
-      name: '专项金明细',
-      fetchData: ({ page, limit, token }) => getBalanceLog({ page, limit, token }),
+      name: '资金明细',
+      fetchData: ({ page, limit, token }) => getAllLog({ page, limit, type: 'all', token }),
       parseData: (response) => {
         const data = extractData(response);
         return {
@@ -79,61 +68,9 @@ const AssetView: React.FC<AssetViewProps> = ({ onBack, onNavigate, onProductSele
         };
       },
     },
-    // Tab 1: 收益明细
+    // Tab 1: 我的藏品
     {
       id: 1,
-      name: '收益明细',
-      fetchData: ({ page, limit, token }) => getBalanceLog({ page, limit, token }),
-      parseData: (response) => {
-        const data = extractData(response);
-        return {
-          list: data?.list || [],
-          hasMore: (data?.list?.length || 0) >= 10,
-        };
-      },
-    },
-    // Tab 2: 津贴明细
-    {
-      id: 2,
-      name: '津贴明细',
-      fetchData: ({ page, limit, token }) => getMyWithdrawList({ page, limit, token }),
-      parseData: (response) => {
-        const data = extractData(response);
-        return {
-          list: data?.list || [],
-          hasMore: data?.has_more || false,
-        };
-      },
-    },
-    // Tab 3: 确权金明细
-    {
-      id: 3,
-      name: '确权金明细',
-      fetchData: ({ page, limit, token }) => getServiceFeeLog({ page, limit, token }),
-      parseData: (response) => {
-        const data = extractData(response);
-        return {
-          list: data?.list || [],
-          hasMore: (data?.list?.length || 0) >= 10 && (data.current_page || 1) * 10 < (data.total || 0),
-        };
-      },
-    },
-    // Tab 4: 消费金明细
-    {
-      id: 4,
-      name: '消费金明细',
-      fetchData: ({ page, limit, token }) => getIntegralLog({ limit, token }),
-      parseData: (response) => {
-        const data = extractData(response);
-        return {
-          list: data?.list || [],
-          hasMore: false, // 该API不支持分页
-        };
-      },
-    },
-    // Tab 5: 我的藏品
-    {
-      id: 5,
       name: '我的藏品',
       fetchData: ({ page, limit, token }) => getMyCollection({ page, token }),
       parseData: (response) => {
@@ -179,8 +116,6 @@ const AssetView: React.FC<AssetViewProps> = ({ onBack, onNavigate, onProductSele
     return item.delivery_status === DeliveryStatus.DELIVERED;
   };
 
-  // ✅ 操作弹窗相关逻辑已迁移到 useAssetActionModal Hook
-
   // ✅ 重写handleItemClick，使用Hook方法
   const handleItemClick = (item: MyCollectionItem) => {
     // 根据藏品状态决定打开提货还是寄售弹窗
@@ -199,10 +134,7 @@ const AssetView: React.FC<AssetViewProps> = ({ onBack, onNavigate, onProductSele
     }
   };
 
-  // ✅ canPerformAction 和 handleConfirmAction 已迁移到 useAssetActionModal Hook
-  // ✅ 标签页数据加载逻辑已迁移到 useAssetTabs Hook
-
-  const tabNames = ['专项金明细', '收益明细', '津贴明细', '确权金明细', '消费金明细', '我的藏品'];
+  const tabNames = ['资金明细', '我的藏品'];
 
   // 加载用户信息和寄售券数量
   useEffect(() => {
@@ -245,8 +177,6 @@ const AssetView: React.FC<AssetViewProps> = ({ onBack, onNavigate, onProductSele
     loadUserInfo();
   }, []);
 
-  // ✅ loadData 函数已删除，由 useAssetTabs Hook 管理
-
   const formatTime = (timestamp: number | string | null): string => {
     if (!timestamp) return '';
     const date = new Date(typeof timestamp === 'string' ? parseInt(timestamp) * 1000 : timestamp * 1000);
@@ -259,128 +189,39 @@ const AssetView: React.FC<AssetViewProps> = ({ onBack, onNavigate, onProductSele
     });
   };
 
-  const renderBalanceLogItem = (item: BalanceLogItem) => (
-    <div key={item.id} className="bg-white rounded-lg p-4 mb-3 shadow-sm">
-      <div className="flex justify-between items-start mb-2">
-        <div className="flex-1">
-          <div className="text-sm font-medium text-gray-800 mb-1">{item.remark}</div>
-          <div className="text-xs text-gray-500">{formatTime(item.create_time)}</div>
-        </div>
-        <div className={`text-lg font-bold font-[DINAlternate-Bold,Roboto,sans-serif] ${item.amount >= 0 ? 'text-[#FF6B00]' : 'text-gray-900'}`}>
-          {item.amount >= 0 ? '+' : ''}{item.amount.toFixed(2)}
-        </div>
-      </div>
-      <div className="text-xs text-gray-400">
-        余额: {item.before_balance.toFixed(2)} → {item.after_balance.toFixed(2)}
-      </div>
-    </div>
-  );
+  const renderAllLogItem = (item: AllLogItem) => {
+    // 格式化金额，根据正负加颜色
+    const amountVal = Number(item.amount);
+    const isPositive = amountVal > 0;
 
-  const renderRechargeOrderItem = (item: RechargeOrderItem) => (
-    <div key={item.id} className="bg-white rounded-lg p-4 mb-3 shadow-sm">
-      <div className="flex justify-between items-start mb-2">
-        <div className="flex-1">
-          <div className="text-sm font-medium text-gray-800 mb-1">充值订单</div>
-          <div className="text-xs text-gray-500">{item.order_no}</div>
-        </div>
-        <div className="text-right">
-          <div className="text-lg font-bold text-[#FF6B00] font-[DINAlternate-Bold,Roboto,sans-serif]">+{item.amount}</div>
-          <div className={`text-xs mt-1 ${item.status === 1 ? 'text-green-600' :
-            item.status === 2 ? 'text-red-600' :
-              'text-yellow-600'
-            }`}>
-            {item.status_text}
-          </div>
-        </div>
-      </div>
-      <div className="flex justify-between items-center mt-2 pt-2 border-t border-gray-100">
-        <div className="text-xs text-gray-500">
-          <div>支付方式: {item.payment_type_text}</div>
-          <div className="mt-1">创建时间: {item.create_time_text}</div>
-          {item.audit_time_text && (
-            <div className="mt-1">审核时间: {item.audit_time_text}</div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-
-  const renderWithdrawOrderItem = (item: WithdrawOrderItem) => (
-    <div key={item.id} className="bg-white rounded-lg p-4 mb-3 shadow-sm">
-      <div className="flex justify-between items-start mb-2">
-        <div className="flex-1">
-          <div className="text-sm font-medium text-gray-800 mb-1">提现申请</div>
-          <div className="text-xs text-gray-500">{item.account_type_text}</div>
-        </div>
-        <div className="text-right">
-          <div className="text-lg font-bold text-gray-900 font-[DINAlternate-Bold,Roboto,sans-serif]">-{item.amount}</div>
-          <div className={`text-xs mt-1 ${item.status === 1 ? 'text-green-600' :
-            item.status === 2 ? 'text-red-600' :
-              'text-yellow-600'
-            }`}>
-            {item.status_text}
-          </div>
-        </div>
-      </div>
-      <div className="flex justify-between items-center mt-2 pt-2 border-t border-gray-100">
-        <div className="text-xs text-gray-500">
-          <div>账户: {item.account_name}</div>
-          <div className="mt-1">账号: {item.account_number}</div>
-          <div className="mt-1">创建时间: {item.create_time_text}</div>
-          {item.audit_time_text && (
-            <div className="mt-1">审核时间: {item.audit_time_text}</div>
-          )}
-          {item.audit_reason && (
-            <div className="mt-1 text-red-500">审核原因: {item.audit_reason}</div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-
-  const renderServiceFeeLogItem = (item: ServiceFeeLogItem) => (
-    <div key={item.id} className="bg-white rounded-lg p-4 mb-3 shadow-sm">
-      <div className="flex justify-between items-start mb-2">
-        <div className="flex-1">
-          <div className="text-sm font-medium text-gray-800 mb-1">{item.remark}</div>
-          <div className="text-xs text-gray-500">{formatTime(item.create_time)}</div>
-        </div>
-        <div className="text-right">
-          <div className="text-lg font-bold text-[#FF6B00] font-[DINAlternate-Bold,Roboto,sans-serif]">+{item.amount.toFixed(2)}</div>
-        </div>
-      </div>
-      <div className="text-xs text-gray-400 mt-2 pt-2 border-t border-gray-100">
-        服务费余额: {item.before_service_fee.toFixed(2)} → {item.after_service_fee.toFixed(2)}
-      </div>
-    </div>
-  );
-
-  const renderIntegralLogItem = (item: IntegralLogItem) => {
-    const displayAmount = Math.abs(item.amount);
-    const displayBefore = Math.abs(item.before_value);
-    const displayAfter = Math.abs(item.after_value);
+    // 翻译/格式化 type
+    let typeText = item.type;
+    switch (item.type) {
+      case 'balance_available': typeText = '专项金'; break;
+      case 'withdrawable_money': typeText = '收益'; break;
+      case 'service_fee_balance': typeText = '确权金'; break;
+      case 'score': typeText = '消费金'; break;
+      case 'green_power': typeText = '绿色积分'; break;
+    }
 
     return (
       <div key={item.id} className="bg-white rounded-lg p-4 mb-3 shadow-sm">
         <div className="flex justify-between items-start mb-2">
           <div className="flex-1">
-            <div className="text-sm font-medium text-gray-800 mb-1">{item.remark || '消费金变动'}</div>
-            <div className="text-xs text-gray-500">{formatTime(item.create_time)}</div>
+            <div className="text-sm font-medium text-gray-800 mb-1">{item.memo || item.remark || '资金变动'}</div>
+            <div className="text-xs text-gray-500">{formatTime(item.createtime || item.create_time)}</div>
           </div>
-          <div className="text-right">
-            <div className={`text-lg font-bold font-[DINAlternate-Bold,Roboto,sans-serif] ${item.amount >= 0 ? 'text-[#FF6B00]' : 'text-gray-900'}`}>
-              {item.amount >= 0 ? '+' : ''}{displayAmount.toFixed(0)}
-            </div>
+          <div className={`text-lg font-bold font-[DINAlternate-Bold,Roboto,sans-serif] ${isPositive ? 'text-[#FF6B00]' : 'text-gray-900'}`}>
+            {isPositive ? '+' : ''}{Number(amountVal).toFixed(2)}
           </div>
         </div>
-        <div className="text-xs text-gray-400 mt-2 pt-2 border-t border-gray-100">
-          消费金余额: {displayBefore.toFixed(0)} → {displayAfter.toFixed(0)}
+        <div className="flex justify-between items-center text-xs text-gray-400 mt-2 pt-2 border-t border-gray-100">
+          <span>{typeText}</span>
+          <span>余额: {Number(item.after_value || item.after_balance).toFixed(2)}</span>
         </div>
       </div>
     );
   };
-
-  // ... (keeping other functions)
 
   const renderCollectionItem = (item: MyCollectionItem) => {
     // 兼容后端返回字段 item_title/item_image
@@ -400,7 +241,7 @@ const AssetView: React.FC<AssetViewProps> = ({ onBack, onNavigate, onProductSele
               alt={title}
               className="w-full h-full object-cover"
               onError={(e) => {
-                (e.target as HTMLImageElement).src = 'https://via.placeholder.com/150';
+                (e.target as HTMLImageElement).style.visibility = 'hidden';
               }}
             />
           </div>
@@ -416,14 +257,14 @@ const AssetView: React.FC<AssetViewProps> = ({ onBack, onNavigate, onProductSele
               {/* 优先使用 status_text 字段显示状态 */}
               {item.status_text ? (
                 <div className={`text-xs px-2 py-1 rounded-full border ${item.status_text.includes('寄售') || item.status_text.includes('出售')
-                  ? 'bg-blue-50 text-blue-600 border-blue-200'
-                  : item.status_text.includes('确权') || item.status_text.includes('成功') || item.status_text.includes('已售出')
-                    ? 'bg-green-50 text-green-600 border-green-200'
-                    : item.status_text.includes('失败') || item.status_text.includes('取消')
-                      ? 'bg-red-50 text-red-600 border-red-200'
-                      : item.status_text.includes('提货') || item.status_text.includes('待')
-                        ? 'bg-orange-50 text-orange-600 border-orange-200'
-                        : 'bg-gray-50 text-gray-600 border-gray-200'
+                    ? 'bg-blue-50 text-blue-600 border-blue-200'
+                    : item.status_text.includes('确权') || item.status_text.includes('成功') || item.status_text.includes('已售出')
+                      ? 'bg-green-50 text-green-600 border-green-200'
+                      : item.status_text.includes('失败') || item.status_text.includes('取消')
+                        ? 'bg-red-50 text-red-600 border-red-200'
+                        : item.status_text.includes('提货') || item.status_text.includes('待')
+                          ? 'bg-orange-50 text-orange-600 border-orange-200'
+                          : 'bg-gray-50 text-gray-600 border-gray-200'
                   }`}>
                   {item.status_text}
                 </div>
@@ -444,23 +285,21 @@ const AssetView: React.FC<AssetViewProps> = ({ onBack, onNavigate, onProductSele
                     ✓ 已提货
                   </div>
                 ) : hasConsignedBefore(item) ? (
-                  /* 如果曾经寄售过（需要强制提货），只显示"待提货"标签 */
                   <div className="text-xs px-2 py-1 rounded-full bg-orange-50 text-orange-600 border border-orange-200">
                     待提货
                   </div>
                 ) : (
-                  /* 未提货且未寄售过，显示提货状态和寄售状态 */
                   <>
                     <div className="text-xs px-2 py-1 rounded-full bg-orange-50 text-orange-600 border border-orange-200">
                       ○ 未提货
                     </div>
                     <div className={`text-xs px-2 py-1 rounded-full ${item.consignment_status === ConsignmentStatus.NOT_CONSIGNED
-                      ? 'bg-gray-50 text-gray-600 border border-gray-200'
-                      : item.consignment_status === ConsignmentStatus.PENDING
-                        ? 'bg-yellow-50 text-yellow-600 border border-yellow-200'
-                        : item.consignment_status === ConsignmentStatus.REJECTED
-                          ? 'bg-red-50 text-red-600 border border-red-200'
-                          : 'bg-green-50 text-green-600 border border-green-200'
+                        ? 'bg-gray-50 text-gray-600 border border-gray-200'
+                        : item.consignment_status === ConsignmentStatus.PENDING
+                          ? 'bg-yellow-50 text-yellow-600 border border-yellow-200'
+                          : item.consignment_status === ConsignmentStatus.REJECTED
+                            ? 'bg-red-50 text-red-600 border border-red-200'
+                            : 'bg-green-50 text-green-600 border border-green-200'
                       }`}>
                       {item.consignment_status_text || '未寄售'}
                     </div>
@@ -498,13 +337,13 @@ const AssetView: React.FC<AssetViewProps> = ({ onBack, onNavigate, onProductSele
       return (
         <div className="flex flex-col items-center justify-center py-12 text-gray-400">
           <div className="w-16 h-16 mb-4 border-2 border-gray-200 rounded-lg flex items-center justify-center">
-            {tabs.activeTab === 5 ? (
+            {tabs.activeTab === 1 ? (
               <ShoppingBag size={32} className="opacity-50" />
             ) : (
               <FileText size={32} className="opacity-50" />
             )}
           </div>
-          <span className="text-xs">{tabs.activeTab === 5 ? '暂无藏品' : '暂无数据'}</span>
+          <span className="text-xs">{tabs.activeTab === 1 ? '暂无藏品' : '暂无数据'}</span>
         </div>
       );
     }
@@ -512,12 +351,8 @@ const AssetView: React.FC<AssetViewProps> = ({ onBack, onNavigate, onProductSele
     // Data渲染
     return (
       <div>
-        {tabs.activeTab === 0 && tabs.data.map(renderBalanceLogItem)}
-        {tabs.activeTab === 1 && tabs.data.map(renderBalanceLogItem)}
-        {tabs.activeTab === 2 && tabs.data.map(renderWithdrawOrderItem)}
-        {tabs.activeTab === 3 && tabs.data.map(renderServiceFeeLogItem)}
-        {tabs.activeTab === 4 && tabs.data.map(renderIntegralLogItem)}
-        {tabs.activeTab === 5 && tabs.data.map(renderCollectionItem)}
+        {tabs.activeTab === 0 && tabs.data.map(renderAllLogItem)}
+        {tabs.activeTab === 1 && tabs.data.map(renderCollectionItem)}
 
         {/* 加载更多按钮 */}
         {tabs.hasMore && (
@@ -532,6 +367,7 @@ const AssetView: React.FC<AssetViewProps> = ({ onBack, onNavigate, onProductSele
       </div>
     );
   };
+
   return (
     <PageContainer
       title="数字资产总权益"
@@ -582,7 +418,7 @@ const AssetView: React.FC<AssetViewProps> = ({ onBack, onNavigate, onProductSele
                   alt={actionModal.context.selectedItem.title}
                   className="w-full h-full object-cover"
                   onError={(e) => {
-                    (e.target as HTMLImageElement).src = 'https://via.placeholder.com/150';
+                    (e.target as HTMLImageElement).style.visibility = 'hidden';
                   }}
                 />
               </div>
@@ -610,8 +446,8 @@ const AssetView: React.FC<AssetViewProps> = ({ onBack, onNavigate, onProductSele
                   <button
                     onClick={actionModal.switchToDelivery}
                     className={`flex-1 py-2 text-xs rounded-md transition-colors ${actionModal.context.actionType === 'delivery'
-                      ? 'bg-white text-orange-600 font-medium shadow-sm'
-                      : 'text-gray-600'
+                        ? 'bg-white text-orange-600 font-medium shadow-sm'
+                        : 'text-gray-600'
                       }`}
                   >
                     权益分割
@@ -619,8 +455,8 @@ const AssetView: React.FC<AssetViewProps> = ({ onBack, onNavigate, onProductSele
                   <button
                     onClick={actionModal.switchToConsignment}
                     className={`flex-1 py-2 text-xs rounded-md transition-colors ${actionModal.context.actionType === 'consignment'
-                      ? 'bg-white text-orange-600 font-medium shadow-sm'
-                      : 'text-gray-600'
+                        ? 'bg-white text-orange-600 font-medium shadow-sm'
+                        : 'text-gray-600'
                       }`}
                   >
                     寄售
@@ -784,8 +620,8 @@ const AssetView: React.FC<AssetViewProps> = ({ onBack, onNavigate, onProductSele
               onClick={actionModal.handleSubmit}
               disabled={actionModal.isSubmitting || !actionModal.canSubmit}
               className={`w-full py-3 rounded-lg text-sm font-medium transition-colors ${!actionModal.isSubmitting && actionModal.canSubmit
-                ? 'bg-orange-600 text-white active:bg-orange-700'
-                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                  ? 'bg-orange-600 text-white active:bg-orange-700'
+                  : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                 }`}
             >
               {actionModal.isSubmitting

@@ -2,7 +2,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Settings, MessageSquare, ShieldCheck, CreditCard, MapPin, Users, UserCheck, HelpCircle, FileText, HeadphonesIcon, ChevronRight, Wallet, Receipt, Box, Gem, Sprout, Award, CalendarCheck, Newspaper, Leaf, ClipboardList } from 'lucide-react';
 import { formatAmount } from '../../utils/format';
-import { AUTH_TOKEN_KEY, USER_INFO_KEY, fetchProfile, normalizeAssetUrl } from '../../services/api';
+import { AUTH_TOKEN_KEY, USER_INFO_KEY, fetchProfile, normalizeAssetUrl, fetchShopOrderStatistics, ShopOrderStatistics } from '../../services/api';
 import { UserInfo } from '../../types';
 import useAuth from '../../hooks/useAuth';
 import { isSuccess, extractError } from '../../utils/apiHelpers';
@@ -54,6 +54,7 @@ const Profile: React.FC<ProfileProps> = ({ onNavigate, unreadCount = 0 }) => {
     }
   });
   const [loading, setLoading] = useState<boolean>(false);
+  const [orderStats, setOrderStats] = useState<ShopOrderStatistics | null>(null);
 
   useEffect(() => {
     const token = localStorage.getItem(AUTH_TOKEN_KEY);
@@ -101,6 +102,18 @@ const Profile: React.FC<ProfileProps> = ({ onNavigate, unreadCount = 0 }) => {
     };
 
     loadProfile();
+
+    const loadOrderStats = async () => {
+      try {
+        const res = await fetchShopOrderStatistics(token);
+        if (isSuccess(res) && res.data) {
+          setOrderStats(res.data);
+        }
+      } catch (e) {
+        console.error('加载订单统计失败', e);
+      }
+    };
+    loadOrderStats();
 
     return () => {
       isMounted = false;
@@ -321,11 +334,16 @@ const Profile: React.FC<ProfileProps> = ({ onNavigate, unreadCount = 0 }) => {
               { label: '收益提现', icon: Receipt, color: 'text-orange-500', bg: 'bg-orange-50', action: () => onNavigate({ name: 'balance-withdraw', source: 'asset-view' }) },
               { label: '商品寄售', icon: Receipt, color: 'text-blue-500', bg: 'bg-blue-50', action: () => onNavigate({ name: 'order-list', orderType: 'transaction', tabIndex: 0 }) },
               { label: '消费金兑换', icon: CoinsIcon, color: 'text-yellow-600', bg: 'bg-yellow-50', action: () => onNavigate({ name: 'switch-to-market' }) },
-              { label: '消费金订单', icon: ClipboardList, color: 'text-emerald-500', bg: 'bg-emerald-50', action: () => onNavigate({ name: 'order-list', orderType: 'points', tabIndex: 0 }) },
+              { label: '消费金订单', icon: ClipboardList, color: 'text-emerald-500', bg: 'bg-emerald-50', action: () => onNavigate({ name: 'order-list', kind: 'points', status: 0 }), badge: (orderStats?.pending_count || 0) + (orderStats?.paid_count || 0) + (orderStats?.shipped_count || 0) },
             ].map((item, idx) => (
               <div key={idx} className="flex flex-col items-center cursor-pointer active:opacity-60 group" onClick={item.action}>
-                <div className={`w-11 h-11 rounded-2xl ${item.bg} flex items-center justify-center mb-2 transition-transform group-active:scale-95`}>
+                <div className={`w-11 h-11 rounded-2xl ${item.bg} flex items-center justify-center mb-2 transition-transform group-active:scale-95 relative`}>
                   <item.icon size={20} className={item.color} strokeWidth={2} />
+                  {item.badge && item.badge > 0 ? (
+                    <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] bg-red-500 rounded-full border-2 border-white flex items-center justify-center text-[10px] text-white px-1">
+                      {item.badge > 99 ? '99+' : item.badge}
+                    </span>
+                  ) : null}
                 </div>
                 <span className="text-xs text-gray-600 font-medium">{item.label}</span>
               </div>

@@ -173,6 +173,9 @@ export interface AllLogListData {
 
 export interface GetAllLogParams extends GetBalanceLogParams {
     type?: string;
+    start_time?: string | number;
+    end_time?: string | number;
+    flow_direction?: 'in' | 'out' | 'all';
 }
 
 export async function getAllLog(params: GetAllLogParams = {}): Promise<ApiResponse<AllLogListData>> {
@@ -180,6 +183,9 @@ export async function getAllLog(params: GetAllLogParams = {}): Promise<ApiRespon
     if (params.page) search.set('page', String(params.page));
     if (params.limit) search.set('limit', String(params.limit));
     if (params.type) search.set('type', params.type);
+    if (params.start_time) search.set('start_time', String(params.start_time));
+    if (params.end_time) search.set('end_time', String(params.end_time));
+    if (params.flow_direction) search.set('flow_direction', params.flow_direction);
 
     const path = `${API_ENDPOINTS.account.allLog}?${search.toString()}`;
     return authedFetch<AllLogListData>(path, {

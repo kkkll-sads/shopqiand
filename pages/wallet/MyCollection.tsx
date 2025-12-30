@@ -743,7 +743,8 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onBack, onItemSelect, initi
               alt={title}
               className="w-full h-full object-cover"
               onError={(e) => {
-                (e.target as HTMLImageElement).src = 'https://via.placeholder.com/150';
+                // (e.target as HTMLImageElement).src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+                (e.target as HTMLImageElement).style.visibility = 'hidden';
               }}
             />
           </div>
@@ -923,7 +924,8 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onBack, onItemSelect, initi
                         alt={selectedItem.item_title || selectedItem.title}
                         className="w-full h-full object-cover"
                         onError={(e) => {
-                          (e.target as HTMLImageElement).src = 'https://via.placeholder.com/150';
+                          // (e.target as HTMLImageElement).src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+                          (e.target as HTMLImageElement).style.visibility = 'hidden';
                         }}
                       />
                     </div>

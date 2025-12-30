@@ -235,6 +235,24 @@ export async function deleteOrder(params: { id: number | string; token?: string 
     });
 }
 
+export interface ShopOrderStatistics {
+    all_count: number;
+    pending_count: number;
+    paid_count: number;
+    shipped_count: number;
+    completed_count: number;
+    cancelled_count: number;
+    refunded_count: number;
+}
+
+export async function fetchShopOrderStatistics(token?: string): Promise<ApiResponse<ShopOrderStatistics>> {
+    const t = token ?? getStoredToken();
+    return authedFetch<ShopOrderStatistics>(API_ENDPOINTS.shopOrder.statistics, {
+        method: 'GET',
+        token: t
+    });
+}
+
 export async function getOrderDetail(params: { id: number | string; token?: string }): Promise<ApiResponse<ShopOrderItem>> {
     const token = params.token ?? getStoredToken();
     const path = `${API_ENDPOINTS.shopOrder.detail}?id=${params.id}`;
