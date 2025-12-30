@@ -419,7 +419,7 @@ const AppContent: React.FC = () => {
   useEffect(() => {
     if (currentRoute?.name === 'switch-to-market') {
       setActiveTab('market');
-      navigateRoute(null, { clearHistory: true });
+      navigateRoute(null, { replace: true });
     }
   }, [currentRoute, navigateRoute]);
 

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { FileText, ShoppingBag, ArrowRight, X, AlertCircle, CheckCircle } from 'lucide-react';
 import SubPageLayout from '../../components/SubPageLayout';
+import { formatAmount, formatTime } from '../../utils/format';
 import { LoadingSpinner, EmptyState, LazyImage } from '../../components/common';
 import {
   getMyCollection,
@@ -169,13 +170,33 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onBack, onItemSelect, initi
         } else {
           setError(extractError(res, '获取我的藏品失败'));
         }
+      } else if (activeTab === 'sold') {
+        // Use the new status=sold param on myCollection API
+        const res = await getMyCollection({ page, token, status: 'sold' });
+
+        if (isSuccess(res) && res.data) {
+          const list = res.data.list || [];
+          if (page === 1) {
+            setMyCollections(list);
+          } else {
+            setMyCollections(prev => [...prev, ...list]);
+          }
+          setHasMore(list.length >= 10 && res.data.has_more !== false);
+        } else {
+          setError(extractError(res, '获取已售出列表失败'));
+        }
       } else {
-        // consign or sold tab
-        const statusMap = { 'consign': 1, 'sold': 2 };
+        // consign tab (still uses myConsignmentList for specifically Consignment focused view, OR could strictly use myCollection? 
+        // User doc says myCollection supports 'consigned'. But existing getMyConsignmentList might have specific fields.
+        // Let's keep consign tab as is for now unless user requested change there too.
+        // Wait, user doc for myCollection says: status: consigned=寄售中. 
+        // But MyCollection.tsx uses `getMyConsignmentList` which maps to `myConsignmentList` endpoint.
+        // Let's stick to existing logic for Consign tab to minimize risk, only change Sold tab as requested.
+
         const res = await getMyConsignmentList({
           page,
           token,
-          status: statusMap[activeTab as 'consign' | 'sold']
+          status: 1 // 1=consigning
         });
 
         if (isSuccess(res) && res.data) {
@@ -189,7 +210,7 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onBack, onItemSelect, initi
             item_image: (item as any).image || (item as any).item_image || '',
             price: String(item.consignment_price),
             status_text: item.status_text,
-            consignment_status: activeTab === 'consign' ? ConsignmentStatus.CONSIGNING : ConsignmentStatus.SOLD,
+            consignment_status: ConsignmentStatus.CONSIGNING,
             delivery_status: DeliveryStatus.NOT_DELIVERED,
           } as any)) as MyCollectionItem[];
 
@@ -717,7 +738,20 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onBack, onItemSelect, initi
       })
         .then((res) => {
           if (isSuccess(res)) {
-            showToast('success', '提交成功', extractError(res, '寄售申请已提交'));
+            const data = res.data || {};
+            // Prefer message, fallback to msg
+            let successDescription = res.message || res.msg || '寄售申请已提交';
+
+            // Append audit info if available
+            if (data.coupon_used) {
+              successDescription += ` (消耗寄售券 ${data.coupon_used} 张`;
+              if (data.coupon_remaining !== undefined) {
+                successDescription += `，剩余 ${data.coupon_remaining} 张`;
+              }
+              successDescription += ')';
+            }
+
+            showToast('success', '提交成功', successDescription);
             setShowActionModal(false);
             setSelectedItem(null);
             // Switch to consign tab to show the new status
@@ -795,8 +829,46 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onBack, onItemSelect, initi
                   }`}>
                   {item.status_text}
                 </div>
+              ) : activeTab === 'sold' || item.consignment_status === 2 ? (
+                // Specially for Sold Items (from myCollection endpoint)
+                // Display sold price, time, and settlement status
+                <div className="flex flex-col w-full gap-1 mt-1">
+                  <div className="flex justify-between items-center bg-green-50 px-2 py-1.5 rounded-lg border border-green-100">
+                    <span className="text-xs font-medium text-green-700">已售出</span>
+                    <span className="text-sm font-bold text-green-700 font-[DINAlternate-Bold]">
+                      成交 ¥{formatAmount(item.sold_price || item.consignment_price || 0, { prefix: '', thousandSeparator: false })}
+                    </span>
+                  </div>
+
+                  {item.sold_time && (
+                    <div className="flex justify-between text-xs text-gray-400 px-1">
+                      <span>成交时间</span>
+                      <span>{formatTime(item.sold_time)}</span>
+                    </div>
+                  )}
+
+                  {/* Settlement Info if available */}
+                  {item.settle_status !== undefined && (
+                    <div className="flex justify-between text-xs px-1 mt-1 pt-1 border-t border-gray-100 border-dashed">
+                      <span className="text-gray-400">结算状态</span>
+                      <span className={`${item.settle_status === 1 ? 'text-blue-600' : 'text-orange-500'}`}>
+                        {item.settle_status === 1 ? '已结算' : '待结算'}
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Show Payout Snapshot if available (Profit) */}
+                  {(item.payout_profit_consume || item.payout_profit_withdrawable) ? (
+                    <div className="flex justify-between text-xs px-1">
+                      <span className="text-gray-400">利润收益</span>
+                      <span className="text-red-500 font-medium">
+                        +{formatAmount((Number(item.payout_profit_consume) + Number(item.payout_profit_withdrawable)), { prefix: '¥' })}
+                      </span>
+                    </div>
+                  ) : null}
+                </div>
               ) : (
-                /* 回退到原有的逻辑（如果没有 status_text 字段） */
+                /* 回退到原有的逻辑（如果没有 status_text 字段且不是新版已售出） */
                 item.consignment_status === ConsignmentStatus.SOLD ? (
                   <div className="text-xs px-2 py-1 rounded-full bg-green-50 text-green-600 border border-green-200">
                     已售出

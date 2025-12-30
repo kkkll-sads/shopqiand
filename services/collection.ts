@@ -514,6 +514,32 @@ export interface MyCollectionItem {
     transaction_count: number;    // 交易次数
     fail_count: number;           // 流拍次数
     consignment_status: number;   // 寄售状态: 0=未寄售, 1=寄售中, 2=已售出
+
+    // Specially for status=sold
+    consignment_id?: number;
+    consignment_status_text?: string;
+    sold_price?: number;
+    service_fee?: number;
+    service_fee_paid_at_apply?: number | boolean;
+    settle_status?: number;
+    settle_time?: number;
+    sold_time?: number;
+
+    // Settlement Snapshot
+    settle_rule?: string;
+    is_legacy_snapshot?: number;
+    legacy_unlock_price_snapshot?: number;
+
+    principal_amount?: number;
+    profit_amount?: number;
+
+    payout_principal_withdrawable?: number;
+    payout_principal_consume?: number;
+    payout_profit_withdrawable?: number;
+    payout_profit_consume?: number;
+    payout_total_withdrawable?: number;
+    payout_total_consume?: number;
+
     [key: string]: any;
 }
 
@@ -569,12 +595,10 @@ export async function getMyCollection(params: { page?: number; limit?: number; s
     if (params.status) {
         search.set('status', params.status);
     } else {
-        // Default to holding? User didn't specify default, but API doc says default=holding. 
-        // If I want 'all', explicitly set it. 
-        // Existing AssetView logic relied on "all" unless filtered.
-        // I'll default to no status parameter to let backend use its default, or pass 'all' if that's what we want.
-        // User doc: "status: all=全部, holding=持有中(默认), consigned=寄售中".
-        // AssetView usually shows everything including consigned. So I should pass 'all'.
+        // Default behavior: user doc says default is 'holding'.
+        // However, existing usage might expect 'all' (e.g. AssetView).
+        // To be safe and compliant with new API, if not specified, we pass nothing (backend defaults) or valid value.
+        // Let's pass 'all' if not specified to maintain backward compatibility with views expecting everything.
         search.set('status', 'all');
     }
 
