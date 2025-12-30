@@ -35,6 +35,7 @@ const PointsProductDetail: React.FC<PointsProductDetailProps> = ({ product, onBa
 
     // Purchase Config
     const [quantity, setQuantity] = useState(1);
+    const [remark, setRemark] = useState('');
 
     useEffect(() => {
         loadDetail();
@@ -436,8 +437,15 @@ const PointsProductDetail: React.FC<PointsProductDetailProps> = ({ product, onBa
                                 <span className="text-sm text-gray-900">快递 免邮</span>
                             </div>
                             <div className="mt-3 flex justify-between items-center">
-                                <span className="text-sm text-gray-600">订单备注</span>
-                                <span className="text-sm text-gray-400">无备注</span>
+                                <span className="text-sm text-gray-600 shrink-0 mr-3">订单备注</span>
+                                <input
+                                    type="text"
+                                    value={remark}
+                                    onChange={(e) => setRemark(e.target.value)}
+                                    placeholder="选填，请输入备注信息"
+                                    className="flex-1 text-sm text-right text-gray-900 bg-transparent outline-none placeholder:text-gray-400"
+                                    maxLength={100}
+                                />
                             </div>
                             <div className="mt-3 flex justify-end items-center gap-2">
                                 <span className="text-sm text-gray-600">共 {quantity} 件，小计：</span>
