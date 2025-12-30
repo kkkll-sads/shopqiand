@@ -452,8 +452,8 @@ const TradingZone: React.FC<TradingZoneProps> = ({
                                 </div>
                             </div>
                             <div className="pl-2">
-                                <div className="text-xs text-gray-400 mb-1 font-bold">剩余额度</div>
-                                <div className="text-xl font-bold text-gray-800">{config.quota}</div>
+                                <div className="text-xs text-gray-500 font-bold mb-1">剩余额度</div>
+                                <div className="text-lg font-extrabold text-gray-700 leading-none pt-1">{config.quota}</div>
                             </div>
                         </div>
                     </div>
