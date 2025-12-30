@@ -187,6 +187,8 @@ export const API_ENDPOINTS = {
         getMyOrderList: '/Recharge/getMyOrderList',
         /** 获取我的提现记录列表 */
         getMyWithdrawList: '/Recharge/getMyWithdrawList',
+        /** 获取充值订单详情 */
+        detail: '/Recharge/detail',
     },
     common: {
         page: '/Common/page',

@@ -5,62 +5,40 @@ import { formatTime } from '../../utils/format';
 import { useNotification } from '../../context/NotificationContext';
 import SubPageLayout from '../../components/SubPageLayout';
 
+import { getRechargeOrderDetail, RechargeOrderDetail as RechargeOrderDetailType } from '../../services/wallet';
+import { extractData, isSuccess } from '../../utils/apiHelpers';
+
 interface RechargeOrderDetailProps {
     orderId: string;
     onBack: () => void;
 }
 
-interface RechargeOrderData {
-    id: number;
-    order_no: string;
-    user_id: number;
-    amount: string;
-    payment_type: string;
-    company_account_id: number;
-    payment_screenshot: string;
-    status: number;
-    audit_admin_id: number;
-    audit_time: number;
-    audit_remark: string;
-    create_time: number;
-    update_time: number;
-    payment_type_text: string;
-    status_text: string;
-    create_time_text: string;
-    audit_time_text: string;
-}
-
 const RechargeOrderDetail: React.FC<RechargeOrderDetailProps> = ({ orderId, onBack }) => {
     const { showToast } = useNotification();
-    const [order, setOrder] = useState<RechargeOrderData | null>(null);
+    const [order, setOrder] = useState<RechargeOrderDetailType | null>(null);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        // TODO: 从API加载订单详情
-        // 这里暂时使用模拟数据
-        setTimeout(() => {
-            setOrder({
-                id: 5,
-                order_no: "RC202512300945590000756088",
-                user_id: 75,
-                amount: "100.00",
-                payment_type: "online",
-                company_account_id: 10,
-                payment_screenshot: "",
-                status: 0,
-                audit_admin_id: 0,
-                audit_time: 0,
-                audit_remark: "",
-                create_time: 1767059159,
-                update_time: 1767059159,
-                payment_type_text: "在线支付",
-                status_text: "待审核",
-                create_time_text: "2025-12-30 09:45:59",
-                audit_time_text: ""
-            });
-            setLoading(false);
-        }, 300);
-    }, [orderId]);
+        const fetchDetail = async () => {
+            try {
+                const res = await getRechargeOrderDetail(orderId);
+                if (isSuccess(res)) {
+                    setOrder(extractData(res));
+                } else {
+                    showToast('error', '获取详情失败', res.msg || '请稍后重试');
+                }
+            } catch (error) {
+                console.error('Fetch recharge detail failed:', error);
+                showToast('error', '加载失败', '网络错误，请稍后重试');
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        if (orderId) {
+            fetchDetail();
+        }
+    }, [orderId, showToast]);
 
     const copyToClipboard = (text: string) => {
         navigator.clipboard.writeText(text).then(() => {

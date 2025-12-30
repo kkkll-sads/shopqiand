@@ -468,3 +468,32 @@ export async function getMyWithdrawList(params: { page?: number; limit?: number;
         token: params.token,
     });
 }
+
+// 充值订单详情
+export interface RechargeOrderDetail {
+    id: number;
+    order_no: string;
+    amount: number;
+    payment_type: string;
+    payment_type_text?: string;
+    status: number;
+    status_text: string;
+    payment_screenshot?: string;
+    audit_remark?: string;
+    create_time: number;
+    create_time_text: string;
+    audit_time?: number;
+    audit_time_text?: string;
+    [key: string]: any;
+}
+
+export async function getRechargeOrderDetail(id: number | string, token?: string): Promise<ApiResponse<RechargeOrderDetail>> {
+    const search = new URLSearchParams();
+    search.set('id', String(id));
+
+    const path = `${API_ENDPOINTS.recharge.detail}?${search.toString()}`;
+    return authedFetch<RechargeOrderDetail>(path, {
+        method: 'GET',
+        token,
+    });
+}
