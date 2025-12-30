@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { ChevronLeft, Share2, Copy, Shield, Fingerprint, Award, ExternalLink, ArrowRightLeft, Store } from 'lucide-react';
+import { ChevronLeft, Share2, Copy, Shield, Fingerprint, Award, ExternalLink, ArrowRightLeft, Store, X, AlertCircle, CheckCircle, ShoppingBag } from 'lucide-react';
 import { MyCollectionItem, fetchProfile, fetchRealNameStatus, AUTH_TOKEN_KEY, fetchMyCollectionDetail } from '../../services/api';
 import { UserInfo } from '../../types';
 import { useNotification } from '../../context/NotificationContext';
 import { Route } from '../../router/routes';
 import { LoadingSpinner } from '../../components/common';
 import { isSuccess, extractData } from '../../utils/apiHelpers';
+import { useAssetActionModal } from '../../hooks/useAssetActionModal';
 
 interface MyCollectionDetailProps {
     item: MyCollectionItem;
@@ -18,6 +19,13 @@ const MyCollectionDetail: React.FC<MyCollectionDetailProps> = ({ item: initialIt
     const [item, setItem] = useState<any>(initialItem);
     const [loading, setLoading] = useState<boolean>(true);
     const { showToast } = useNotification();
+    const [consignmentTicketCount, setConsignmentTicketCount] = useState(0);
+
+    // Use the asset action modal hook for consignment
+    const actionModal = useAssetActionModal(consignmentTicketCount, () => {
+        // Refresh callback - reload data after action
+        onBack(); // Go back to list to see updated data
+    });
 
     useEffect(() => {
         const loadData = async () => {
@@ -61,6 +69,14 @@ const MyCollectionDetail: React.FC<MyCollectionDetailProps> = ({ item: initialIt
 
                 if (currentInfo) {
                     setUserInfo(currentInfo);
+                }
+
+                // Fetch consignment ticket count from collection API
+                const { getMyCollection } = await import('../../services/api');
+                const collectionRes = await getMyCollection({ page: 1, limit: 1, token });
+                const collectionData = extractData(collectionRes);
+                if (collectionData) {
+                    setConsignmentTicketCount((collectionData as any).consignment_coupon ?? 0);
                 }
             } catch (e) {
                 console.error(e);
@@ -277,7 +293,7 @@ const MyCollectionDetail: React.FC<MyCollectionDetailProps> = ({ item: initialIt
                     </button>
                     <button
                         onClick={() => {
-                            onNavigate({ name: 'my-collection-consignment', id: String(item.id) });
+                            actionModal.openConsignment(item);
                         }}
                         className="flex-1 bg-[#8B0000] text-amber-100 hover:bg-[#A00000] transition-colors py-3.5 rounded-lg font-bold flex items-center justify-center gap-2 shadow-lg shadow-red-900/20 active:scale-[0.98] pointer-events-auto touch-manipulation">
                         <Store size={18} />
@@ -285,6 +301,9 @@ const MyCollectionDetail: React.FC<MyCollectionDetailProps> = ({ item: initialIt
                     </button>
                 </div>
             </div>
+
+            {/* Render the asset action modal */}
+            {actionModal.renderModal()}
         </div>
     );
 };
