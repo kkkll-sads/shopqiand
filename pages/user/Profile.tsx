@@ -332,7 +332,7 @@ const Profile: React.FC<ProfileProps> = ({ onNavigate, unreadCount = 0 }) => {
               { label: '专项金充值', icon: Wallet, color: 'text-orange-600', bg: 'bg-orange-50', action: () => onNavigate({ name: 'balance-recharge', source: 'asset-view' }) },
               { label: '每日签到', icon: CalendarCheck, color: 'text-red-500', bg: 'bg-red-50', action: () => onNavigate({ name: 'sign-in' }) },
               { label: '收益提现', icon: Receipt, color: 'text-orange-500', bg: 'bg-orange-50', action: () => onNavigate({ name: 'balance-withdraw', source: 'asset-view' }) },
-              { label: '商品寄售', icon: Receipt, color: 'text-blue-500', bg: 'bg-blue-50', action: () => onNavigate({ name: 'order-list', orderType: 'transaction', tabIndex: 0 }) },
+
               { label: '消费金兑换', icon: CoinsIcon, color: 'text-yellow-600', bg: 'bg-yellow-50', action: () => onNavigate({ name: 'switch-to-market' }) },
               { label: '消费金订单', icon: ClipboardList, color: 'text-emerald-500', bg: 'bg-emerald-50', action: () => onNavigate({ name: 'order-list', kind: 'points', status: 0 }), badge: (orderStats?.pending_count || 0) + (orderStats?.paid_count || 0) + (orderStats?.shipped_count || 0) },
             ].map((item, idx) => (
