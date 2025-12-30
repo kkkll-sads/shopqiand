@@ -81,6 +81,34 @@ export function FilterBar({
 
     // Chips logic removed as per user request
 
+    // Get current options based on active dropdown
+    const currentOptions = useMemo(() => {
+        if (activeDropdown === 'category') return categoryOptions;
+        if (activeDropdown === 'flow') return flowOptions;
+        if (activeDropdown === 'range') return rangeOptions;
+        return [];
+    }, [activeDropdown, categoryOptions]);
+
+    // Filter options based on search (only for category usually, but generic here)
+    const filteredOptions = useMemo(() => {
+        if (!kw.trim()) return currentOptions;
+        return currentOptions.filter(o => o.label.toLowerCase().includes(kw.trim().toLowerCase()));
+    }, [currentOptions, kw]);
+
+    const handleSelect = (val: string) => {
+        if (activeDropdown === 'category') setCategory(val);
+        else if (activeDropdown === 'flow') setFlow(val);
+        else if (activeDropdown === 'range') setRange(val);
+        setActiveDropdown(null);
+    };
+
+    const getCurrentValue = () => {
+        if (activeDropdown === 'category') return category;
+        if (activeDropdown === 'flow') return flow;
+        if (activeDropdown === 'range') return range;
+        return '';
+    };
+
     return (
         <div className="bar-wrap">
             {/* Mask layer - Fixed to cover screen below/behind the dropdown */}

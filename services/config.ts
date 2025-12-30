@@ -261,6 +261,8 @@ export const API_ENDPOINTS = {
         cancelBid: '/collectionItem/cancelBid',
         /** 竞价购买藏品（进入撮合池） */
         bidBuy: '/collectionItem/bidBuy',
+        /** 我的藏品 (新接口) */
+        myCollection: '/collectionItem/myCollection',
         /** 获取购买记录列表 */
         purchaseRecords: '/collectionItem/purchaseRecords',
         /** 获取寄售商品列表 */
