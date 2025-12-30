@@ -446,13 +446,13 @@ const TradingZone: React.FC<TradingZoneProps> = ({
                         {/* 核心指标区域 - 移除英文标签，保留纯中文提示 */}
                         <div className={`flex items-center gap-6 p-4 rounded-2xl ${config.dataBg} border border-white/50 shadow-sm`}>
                             <div className="flex-1 border-r border-gray-200/50 pr-4">
-                                <div className="text-xs text-gray-400 mb-1 font-bold">预期收益</div>
+                                <div className="text-xs text-gray-500 font-bold mb-1">预期收益率</div>
                                 <div className={`text-3xl font-black bg-clip-text text-transparent bg-gradient-to-r ${config.gradient} tracking-tight`}>
                                     {config.roi}
                                 </div>
                             </div>
                             <div className="pl-2">
-                                <div className="text-xs text-gray-500 font-bold mb-1">剩余额度</div>
+                                <div className="text-xs text-gray-500 font-bold mb-1">本期额度</div>
                                 <div className="text-lg font-extrabold text-gray-700 leading-none pt-1">{config.quota}</div>
                             </div>
                         </div>
