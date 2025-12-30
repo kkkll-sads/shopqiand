@@ -1,6 +1,7 @@
 
-import React, { useState, useEffect, useRef } from 'react';
-import { ArrowLeft, Filter, ChevronDown, Calendar, Wallet, Check, X, FileText } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { ArrowLeft, Filter, FileText } from 'lucide-react';
+import { FilterBar } from '../../components/FilterBar';
 import {
   getAllLog,
   AllLogItem,
@@ -12,29 +13,6 @@ interface AssetHistoryProps {
   onBack: () => void;
 }
 
-// 筛选配置
-const FILTER_CATEGORIES = [
-  { label: '全部', value: 'all' },
-  { label: '供应链专项金', value: 'balance_available' },
-  { label: '可调度收益', value: 'withdrawable_money' },
-  { label: '确权金', value: 'service_fee_balance' },
-  { label: '消费金', value: 'score' },
-  { label: '绿色积分', value: 'green_power' },
-];
-
-const FILTER_FLOW = [
-  { label: '全部收支', value: 'all' },
-  { label: '收入', value: 'in' },
-  { label: '支出', value: 'out' },
-];
-
-const FILTER_TIME = [
-  { label: '全部时间', value: 'all' },
-  { label: '今天', value: 'today' },
-  { label: '近7天', value: '7days' },
-  { label: '近30天', value: '30days' },
-];
-
 const AssetHistory: React.FC<AssetHistoryProps> = ({ onBack }) => {
   // 筛选状态
   const [filters, setFilters] = useState({
@@ -43,9 +21,18 @@ const AssetHistory: React.FC<AssetHistoryProps> = ({ onBack }) => {
     time: 'all',
   });
 
-  // UI状态
-  const [activeDropdown, setActiveDropdown] = useState<string | null>(null); // 'category', 'flow', 'time'
-  const dropdownRef = useRef<HTMLDivElement>(null);
+  const categoryOptions = [
+    { label: '全部', value: 'all' },
+    { label: '供应链专项金', value: 'balance_available' },
+    { label: '可调度收益', value: 'withdrawable_money' },
+    { label: '确权金', value: 'service_fee_balance' },
+    { label: '消费金', value: 'score' },
+    { label: '绿色积分', value: 'green_power' },
+  ];
+
+  const setCategory = (v: string) => setFilters(prev => ({ ...prev, category: v }));
+  const setFlow = (v: string) => setFilters(prev => ({ ...prev, flow: v }));
+  const setRange = (v: string) => setFilters(prev => ({ ...prev, time: v }));
 
   // 数据状态
   const [loading, setLoading] = useState<boolean>(false);
@@ -53,17 +40,6 @@ const AssetHistory: React.FC<AssetHistoryProps> = ({ onBack }) => {
   const [allLogs, setAllLogs] = useState<AllLogItem[]>([]);
   const [page, setPage] = useState<number>(1);
   const [hasMore, setHasMore] = useState<boolean>(false);
-
-  // 关闭下拉菜单点击外部
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setActiveDropdown(null);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
 
   // 重置并加载数据
   useEffect(() => {
@@ -167,40 +143,6 @@ const AssetHistory: React.FC<AssetHistoryProps> = ({ onBack }) => {
     return labels[type] || type;
   };
 
-  const toggleDropdown = (name: string) => {
-    setActiveDropdown(activeDropdown === name ? null : name);
-  };
-
-  const handleFilterSelect = (key: 'category' | 'flow' | 'time', value: string) => {
-    setFilters(prev => ({ ...prev, [key]: value }));
-    setActiveDropdown(null);
-  };
-
-  // 渲染下拉菜单通用组件
-  const renderDropdownMenu = (
-    options: { label: string; value: string }[],
-    currentValue: string,
-    onSelect: (val: string) => void
-  ) => (
-    <div className="absolute top-full left-0 mt-1 w-full bg-white rounded-lg shadow-lg border border-gray-100 py-2 z-20 max-h-64 overflow-y-auto">
-      {options.map((opt) => (
-        <button
-          key={opt.value}
-          onClick={() => onSelect(opt.value)}
-          className={`w-full text-left px-4 py-3 text-sm flex items-center justify-between ${currentValue === opt.value ? 'text-orange-600 bg-orange-50' : 'text-gray-700 hover:bg-gray-50'
-            }`}
-        >
-          <span>{opt.label}</span>
-          {currentValue === opt.value && <Check size={16} />}
-        </button>
-      ))}
-    </div>
-  );
-
-  const getFilterLabel = (options: { label: string; value: string }[], value: string) => {
-    return options.find(o => o.value === value)?.label || options[0].label;
-  };
-
   const renderLogItem = (item: AllLogItem) => {
     const isGreenPower = item.field_type === 'green_power' || item.type === 'green_power';
     const isScore = item.type === 'score';
@@ -256,55 +198,23 @@ const AssetHistory: React.FC<AssetHistoryProps> = ({ onBack }) => {
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
       {/* Header */}
-      <header className="bg-white sticky top-0 z-30 border-b border-gray-100">
-        <div className="px-4 py-3 flex items-center relative">
+      <header className="bg-white sticky top-0 z-30">
+        <div className="px-4 py-3 flex items-center relative border-b border-gray-100">
           <button onClick={onBack} className="absolute left-4 p-1 z-10 text-gray-600">
             <ArrowLeft size={20} />
           </button>
           <h1 className="text-lg font-bold text-gray-800 w-full text-center">历史记录</h1>
         </div>
 
-        {/* Filter Bar */}
-        <div className="px-2 py-2 flex gap-2" ref={dropdownRef}>
-          {/* Category Filter */}
-          <div className="relative flex-1">
-            <button
-              onClick={() => toggleDropdown('category')}
-              className={`w-full flex items-center justify-center gap-1 py-2 text-xs font-medium rounded-lg transition-colors ${activeDropdown === 'category' ? 'bg-orange-50 text-orange-600' : 'bg-gray-50 text-gray-600'
-                }`}
-            >
-              <span className="truncate max-w-[4em]">{getFilterLabel(FILTER_CATEGORIES, filters.category)}</span>
-              <ChevronDown size={14} className={`transition-transform ${activeDropdown === 'category' ? 'rotate-180' : ''}`} />
-            </button>
-            {activeDropdown === 'category' && renderDropdownMenu(FILTER_CATEGORIES, filters.category, (val) => handleFilterSelect('category', val))}
-          </div>
-
-          {/* Flow Filter */}
-          <div className="relative flex-1">
-            <button
-              onClick={() => toggleDropdown('flow')}
-              className={`w-full flex items-center justify-center gap-1 py-2 text-xs font-medium rounded-lg transition-colors ${activeDropdown === 'flow' ? 'bg-orange-50 text-orange-600' : 'bg-gray-50 text-gray-600'
-                }`}
-            >
-              <span className="truncate">{getFilterLabel(FILTER_FLOW, filters.flow)}</span>
-              <ChevronDown size={14} className={`transition-transform ${activeDropdown === 'flow' ? 'rotate-180' : ''}`} />
-            </button>
-            {activeDropdown === 'flow' && renderDropdownMenu(FILTER_FLOW, filters.flow, (val) => handleFilterSelect('flow', val))}
-          </div>
-
-          {/* Time Filter */}
-          <div className="relative flex-1">
-            <button
-              onClick={() => toggleDropdown('time')}
-              className={`w-full flex items-center justify-center gap-1 py-2 text-xs font-medium rounded-lg transition-colors ${activeDropdown === 'time' ? 'bg-orange-50 text-orange-600' : 'bg-gray-50 text-gray-600'
-                }`}
-            >
-              <span className="truncate">{getFilterLabel(FILTER_TIME, filters.time)}</span>
-              <ChevronDown size={14} className={`transition-transform ${activeDropdown === 'time' ? 'rotate-180' : ''}`} />
-            </button>
-            {activeDropdown === 'time' && renderDropdownMenu(FILTER_TIME, filters.time, (val) => handleFilterSelect('time', val))}
-          </div>
-        </div>
+        <FilterBar
+          category={filters.category}
+          setCategory={setCategory}
+          flow={filters.flow}
+          setFlow={setFlow}
+          range={filters.time}
+          setRange={setRange}
+          categoryOptions={categoryOptions}
+        />
       </header>
 
       {/* Content List */}
@@ -320,7 +230,7 @@ const AssetHistory: React.FC<AssetHistoryProps> = ({ onBack }) => {
           </div>
         ) : allLogs.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-gray-400">
-            <img src="https://via.placeholder.com/100?text=NoData" alt="" className="w-24 h-24 mb-4 opacity-20 hidden" />
+
             <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-3">
               <FileText size={24} className="text-gray-300" />
             </div>
