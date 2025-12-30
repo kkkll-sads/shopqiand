@@ -88,23 +88,32 @@ const MyCollectionDetail: React.FC<MyCollectionDetailProps> = ({ item: initialIt
 
     // Fetch consignment check when modal opens
     useEffect(() => {
-        if (!showConsignmentModal || !item) return;
+        if (!showConsignmentModal) return;
 
         const loadCheck = async () => {
             const token = localStorage.getItem(AUTH_TOKEN_KEY);
             if (!token) return;
 
             try {
-                const collectionId = item.user_collection_id || item.id;
+                // Try to get collection ID from item or initialItem
+                const collectionId = item?.user_collection_id || item?.id || initialItem?.user_collection_id || initialItem?.id;
+
+                if (!collectionId) {
+                    console.error('Cannot load consignment check: missing collection ID', { item, initialItem });
+                    setActionError('无法获取藏品ID');
+                    return;
+                }
+
                 const res = await getConsignmentCheck({ user_collection_id: collectionId, token });
                 setConsignmentCheckData(res?.data ?? null);
             } catch (e) {
                 console.error('Failed to load consignment check:', e);
+                setActionError('加载寄售检查失败');
             }
         };
 
         loadCheck();
-    }, [showConsignmentModal, item]);
+    }, [showConsignmentModal, item, initialItem]);
 
     if (loading) {
         return (
@@ -466,7 +475,15 @@ const MyCollectionDetail: React.FC<MyCollectionDetailProps> = ({ item: initialIt
                                     setActionError(null);
 
                                     try {
-                                        const collectionId = item.user_collection_id || item.id;
+                                        // Try to get collection ID from item or initialItem
+                                        const collectionId = item?.user_collection_id || item?.id || initialItem?.user_collection_id || initialItem?.id;
+
+                                        if (!collectionId) {
+                                            setActionError('无法获取藏品ID，请返回重试');
+                                            setActionLoading(false);
+                                            return;
+                                        }
+
                                         const priceValue = parseFloat(item.price || '0');
 
                                         const res = await consignCollectionItem({
@@ -495,8 +512,8 @@ const MyCollectionDetail: React.FC<MyCollectionDetailProps> = ({ item: initialIt
                                 }}
                                 disabled={actionLoading}
                                 className={`w-full py-3.5 rounded-lg font-bold text-white transition-all ${actionLoading
-                                        ? 'bg-gray-400 cursor-not-allowed'
-                                        : 'bg-gradient-to-r from-[#8B0000] to-[#A00000] hover:shadow-lg active:scale-[0.98]'
+                                    ? 'bg-gray-400 cursor-not-allowed'
+                                    : 'bg-gradient-to-r from-[#8B0000] to-[#A00000] hover:shadow-lg active:scale-[0.98]'
                                     }`}
                             >
                                 {actionLoading ? '提交中...' : '确认挂牌'}
