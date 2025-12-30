@@ -334,7 +334,7 @@ const MyCollectionDetail: React.FC<MyCollectionDetailProps> = ({ item: initialIt
             {/* Consignment Modal */}
             {showConsignmentModal && (
                 <div
-                    className="fixed inset-0 z-[10000] bg-black/70 flex items-center justify-center p-4 backdrop-blur-sm"
+                    className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4 backdrop-blur-sm"
                     onClick={() => setShowConsignmentModal(false)}
                 >
                     <div
@@ -466,10 +466,7 @@ const MyCollectionDetail: React.FC<MyCollectionDetailProps> = ({ item: initialIt
                                         return;
                                     }
 
-                                    if (consignmentTicketCount === 0) {
-                                        showToast('warning', '缺少道具', '您没有寄售券，无法进行寄售');
-                                        return;
-                                    }
+                                    // 移除前端寄售券验证，让后端处理并返回错误信息
 
                                     setActionLoading(true);
                                     setActionError(null);
