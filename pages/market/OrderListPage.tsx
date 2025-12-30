@@ -107,16 +107,16 @@ const OrderListPage: React.FC<OrderListPageProps> = ({ category, initialTab, onB
 
           switch (activeTab) {
             case 0: // 待付款
-              response = await fetchPendingPayOrders({ page: 1, limit: 10, token });
+              response = await fetchPendingPayOrders({ page: 1, limit: 10, pay_type: 'score', token });
               break;
             case 1: // 待发货
-              response = await fetchPendingShipOrders({ page: 1, limit: 10, token });
+              response = await fetchPendingShipOrders({ page: 1, limit: 10, pay_type: 'score', token });
               break;
             case 2: // 待收货
-              response = await fetchPendingConfirmOrders({ page: 1, limit: 10, token });
+              response = await fetchPendingConfirmOrders({ page: 1, limit: 10, pay_type: 'score', token });
               break;
             case 3: // 已完成
-              response = await fetchCompletedOrders({ page: 1, limit: 10, token });
+              response = await fetchCompletedOrders({ page: 1, limit: 10, pay_type: 'score', token });
               break;
             default:
               response = { code: 1, data: { list: [], total: 0, page: 1, limit: 10 } };
