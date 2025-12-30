@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { ChevronLeft, Share2, Copy, Shield, Fingerprint, Award, ExternalLink, ArrowRightLeft, Store } from 'lucide-react';
-import { MyCollectionItem, fetchProfile, fetchRealNameStatus, AUTH_TOKEN_KEY, fetchMyCollectionDetail } from '../../services/api';
+import { ChevronLeft, Share2, Copy, Shield, Fingerprint, Award, ExternalLink, ArrowRightLeft, Store, X } from 'lucide-react';
+import { MyCollectionItem, fetchProfile, fetchRealNameStatus, AUTH_TOKEN_KEY, fetchMyCollectionDetail, getConsignmentCheck, consignCollectionItem, getMyCollection, normalizeAssetUrl } from '../../services/api';
 import { UserInfo } from '../../types';
 import { useNotification } from '../../context/NotificationContext';
 import { Route } from '../../router/routes';
@@ -19,6 +19,13 @@ const MyCollectionDetail: React.FC<MyCollectionDetailProps> = ({ item: initialIt
     const [item, setItem] = useState<any>(initialItem);
     const [loading, setLoading] = useState<boolean>(true);
     const { showToast } = useNotification();
+
+    // Modal state
+    const [showConsignmentModal, setShowConsignmentModal] = useState(false);
+    const [consignmentCheckData, setConsignmentCheckData] = useState<any>(null);
+    const [consignmentTicketCount, setConsignmentTicketCount] = useState(0);
+    const [actionLoading, setActionLoading] = useState(false);
+    const [actionError, setActionError] = useState<string | null>(null);
 
     useEffect(() => {
         const loadData = async () => {
@@ -63,6 +70,13 @@ const MyCollectionDetail: React.FC<MyCollectionDetailProps> = ({ item: initialIt
                 if (currentInfo) {
                     setUserInfo(currentInfo);
                 }
+
+                // Fetch consignment ticket count
+                const collectionRes = await getMyCollection({ page: 1, limit: 1, token });
+                const collectionData = extractData(collectionRes);
+                if (collectionData) {
+                    setConsignmentTicketCount((collectionData as any).consignment_coupon ?? 0);
+                }
             } catch (e) {
                 console.error(e);
             } finally {
@@ -71,6 +85,26 @@ const MyCollectionDetail: React.FC<MyCollectionDetailProps> = ({ item: initialIt
         };
         loadData();
     }, [initialItem]);
+
+    // Fetch consignment check when modal opens
+    useEffect(() => {
+        if (!showConsignmentModal || !item) return;
+
+        const loadCheck = async () => {
+            const token = localStorage.getItem(AUTH_TOKEN_KEY);
+            if (!token) return;
+
+            try {
+                const collectionId = item.user_collection_id || item.id;
+                const res = await getConsignmentCheck({ user_collection_id: collectionId, token });
+                setConsignmentCheckData(res?.data ?? null);
+            } catch (e) {
+                console.error('Failed to load consignment check:', e);
+            }
+        };
+
+        loadCheck();
+    }, [showConsignmentModal, item]);
 
     if (loading) {
         return (
@@ -278,9 +312,8 @@ const MyCollectionDetail: React.FC<MyCollectionDetailProps> = ({ item: initialIt
                     </button>
                     <button
                         onClick={() => {
-                            // Set the item via helpers and navigate to my-collection-consignment
-                            onSetSelectedItem(item);
-                            onNavigate({ name: 'my-collection-consignment', id: String(item.id) });
+                            setShowConsignmentModal(true);
+                            setActionError(null);
                         }}
                         className="flex-1 bg-[#8B0000] text-amber-100 hover:bg-[#A00000] transition-colors py-3.5 rounded-lg font-bold flex items-center justify-center gap-2 shadow-lg shadow-red-900/20 active:scale-[0.98] pointer-events-auto touch-manipulation">
                         <Store size={18} />
@@ -289,6 +322,189 @@ const MyCollectionDetail: React.FC<MyCollectionDetailProps> = ({ item: initialIt
                 </div>
             </div>
 
+            {/* Consignment Modal */}
+            {showConsignmentModal && (
+                <div
+                    className="fixed inset-0 z-[10000] bg-black/70 flex items-center justify-center p-4 backdrop-blur-sm"
+                    onClick={() => setShowConsignmentModal(false)}
+                >
+                    <div
+                        className="bg-[#F9F9F9] rounded-xl overflow-hidden max-w-sm w-full relative shadow-2xl animate-in zoom-in-95 duration-200"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        {/* Header */}
+                        <div className="bg-white px-5 py-4 flex justify-between items-center border-b border-gray-100">
+                            <div className="text-base font-bold text-gray-900">资产挂牌委托</div>
+                            <button
+                                type="button"
+                                className="p-1 text-gray-400 hover:text-gray-600 active:scale-95 transition-transform"
+                                onClick={() => setShowConsignmentModal(false)}
+                            >
+                                <X size={20} />
+                            </button>
+                        </div>
+
+                        <div className="p-5 space-y-4">
+                            {/* Asset Card */}
+                            <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+                                <div className="flex gap-3 mb-3">
+                                    <div className="w-14 h-14 bg-gray-50 rounded-lg overflow-hidden flex-shrink-0 border border-gray-100">
+                                        <img
+                                            src={normalizeAssetUrl(item.item_image || item.image || '')}
+                                            alt={item.item_title || item.title}
+                                            className="w-full h-full object-cover"
+                                            onError={(e) => {
+                                                (e.target as HTMLImageElement).style.visibility = 'hidden';
+                                            }}
+                                        />
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <div className="text-sm font-bold text-gray-900 mb-1 truncate">
+                                            {item.item_title || item.title}
+                                        </div>
+                                        <div className="text-xs text-gray-500 font-mono truncate bg-gray-50 inline-block px-1.5 py-0.5 rounded">
+                                            确权编号：{item.asset_code || item.order_no || 'Pending...'}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Price Info */}
+                                <div className="grid grid-cols-3 gap-2 pt-3 border-t border-dashed border-gray-100">
+                                    <div className="flex flex-col">
+                                        <span className="text-xs text-gray-400 mb-1">当前估值</span>
+                                        <span className="text-sm font-bold text-gray-900">¥{parseFloat(item.price || '0').toFixed(2)}</span>
+                                    </div>
+                                    <div className="flex flex-col">
+                                        <span className="text-xs text-gray-400 mb-1">预期收益</span>
+                                        <span className="text-sm font-bold text-green-600">+5.5%</span>
+                                    </div>
+                                    <div className="flex flex-col">
+                                        <span className="text-xs text-gray-400 mb-1">预期回款</span>
+                                        <span className="text-sm font-bold text-gray-900">¥{(parseFloat(item.price || '0') * 1.055).toFixed(2)}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Unlock Status */}
+                            {consignmentCheckData && (() => {
+                                const isUnlocked = consignmentCheckData.can_consign === true ||
+                                    consignmentCheckData.unlocked === true ||
+                                    (consignmentCheckData.remaining_seconds && consignmentCheckData.remaining_seconds <= 0);
+
+                                if (!isUnlocked) {
+                                    return (
+                                        <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
+                                            <div className="text-sm text-orange-700 font-medium mb-1">⏰ T+1 解锁倒计时</div>
+                                            <div className="text-xs text-orange-600">
+                                                {consignmentCheckData.remaining_text || '计算中...'}
+                                            </div>
+                                        </div>
+                                    );
+                                }
+                                return (
+                                    <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                                        <div className="text-sm text-green-700 font-medium">✓ 已解锁，可申请寄售</div>
+                                    </div>
+                                );
+                            })()}
+
+                            {/* Cost Breakdown */}
+                            <div className="bg-white rounded-lg p-4 border border-gray-100">
+                                <div className="text-sm font-bold text-gray-700 mb-3">挂牌成本核算</div>
+
+                                <div className="flex justify-between items-center mb-3">
+                                    <div>
+                                        <div className="text-sm font-medium text-gray-700">确权技术服务费 (3%)</div>
+                                        <div className="text-xs text-gray-400 mt-0.5">当前余额: ¥{userInfo?.service_fee_balance || '0'}</div>
+                                    </div>
+                                    <div className="text-sm font-bold text-gray-900">{(parseFloat(item.price || '0') * 0.03).toFixed(2)} 元</div>
+                                </div>
+
+                                <div className="w-full h-px bg-gray-50" />
+
+                                <div className="flex justify-between items-center mt-3">
+                                    <div>
+                                        <div className="text-sm font-medium text-gray-700">资产流转券</div>
+                                        <div className="text-xs text-gray-400 mt-0.5">持有数量: {consignmentTicketCount} 张</div>
+                                    </div>
+                                    <div className="text-sm font-bold text-gray-900">1 张</div>
+                                </div>
+                            </div>
+
+                            {/* Error Message */}
+                            {actionError && (
+                                <div className="text-xs text-red-600 text-center bg-red-50 py-2 rounded-lg">
+                                    {actionError}
+                                </div>
+                            )}
+
+                            {/* Submit Button */}
+                            <button
+                                onClick={async () => {
+                                    const token = localStorage.getItem(AUTH_TOKEN_KEY);
+                                    if (!token) {
+                                        showToast('warning', '请登录');
+                                        return;
+                                    }
+
+                                    // Check unlock status
+                                    const isUnlocked = consignmentCheckData?.can_consign === true ||
+                                        consignmentCheckData?.unlocked === true ||
+                                        (consignmentCheckData?.remaining_seconds && consignmentCheckData.remaining_seconds <= 0);
+
+                                    if (!isUnlocked) {
+                                        showToast('warning', '时间未到', '寄售需要满足购买后48小时');
+                                        return;
+                                    }
+
+                                    if (consignmentTicketCount === 0) {
+                                        showToast('warning', '缺少道具', '您没有寄售券，无法进行寄售');
+                                        return;
+                                    }
+
+                                    setActionLoading(true);
+                                    setActionError(null);
+
+                                    try {
+                                        const collectionId = item.user_collection_id || item.id;
+                                        const priceValue = parseFloat(item.price || '0');
+
+                                        const res = await consignCollectionItem({
+                                            user_collection_id: collectionId,
+                                            price: priceValue,
+                                            token,
+                                        });
+
+                                        if (isSuccess(res)) {
+                                            showToast('success', '提交成功', res.msg || '寄售申请已提交');
+                                            setShowConsignmentModal(false);
+                                            // Refresh or go back
+                                            setTimeout(() => onBack(), 1000);
+                                        } else {
+                                            const errorMsg = res.msg || res.message || '寄售申请失败';
+                                            setActionError(errorMsg);
+                                            showToast('error', '操作失败', errorMsg);
+                                        }
+                                    } catch (err: any) {
+                                        const errorMsg = err?.msg || err?.message || '寄售申请失败';
+                                        setActionError(errorMsg);
+                                        showToast('error', '提交失败', errorMsg);
+                                    } finally {
+                                        setActionLoading(false);
+                                    }
+                                }}
+                                disabled={actionLoading}
+                                className={`w-full py-3.5 rounded-lg font-bold text-white transition-all ${actionLoading
+                                        ? 'bg-gray-400 cursor-not-allowed'
+                                        : 'bg-gradient-to-r from-[#8B0000] to-[#A00000] hover:shadow-lg active:scale-[0.98]'
+                                    }`}
+                            >
+                                {actionLoading ? '提交中...' : '确认挂牌'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
