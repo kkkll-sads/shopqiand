@@ -571,7 +571,7 @@ const AppContent: React.FC = () => {
         <ReservationPage
           product={selectedProduct}
           onBack={() => goBack()}
-          onNavigate={(route) => navigateRoute(route)} // 兼容旧字符串
+          onNavigate={(route, options) => navigateRoute(route, options)} // 兼容旧字符串
         />
       );
     }

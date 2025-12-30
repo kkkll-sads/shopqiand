@@ -10,7 +10,7 @@ import { isSuccess, extractData } from '../../utils/apiHelpers';
 interface ReservationPageProps {
     product: Product;
     onBack: () => void;
-    onNavigate: (route: Route) => void;
+    onNavigate: (route: Route, options?: { replace?: boolean }) => void;
 }
 
 const ReservationPage: React.FC<ReservationPageProps> = ({ product, onBack, onNavigate }) => {
@@ -21,7 +21,7 @@ const ReservationPage: React.FC<ReservationPageProps> = ({ product, onBack, onNa
     // 新版预约需要后端提供的场次/分区，若入参缺失则尝试自动补全
     const [sessionId, setSessionId] = useState<number | string | undefined>(product.sessionId);
     const [zoneId, setZoneId] = useState<number | string | undefined>(product.zoneId);
-    
+
     // 分区最高价（用于计算冻结金额）
     const [zoneMaxPrice, setZoneMaxPrice] = useState<number>(product.price);
 
@@ -72,7 +72,7 @@ const ReservationPage: React.FC<ReservationPageProps> = ({ product, onBack, onNa
                     data.zoneId ??
                     data.priceZoneId ??
                     data.zone?.id;
-                
+
                 // 获取分区最高价，用于冻结金额计算
                 const detailZoneMaxPrice =
                     data.zone_max_price ??
@@ -84,7 +84,7 @@ const ReservationPage: React.FC<ReservationPageProps> = ({ product, onBack, onNa
                 if (detailSessionId) setSessionId(detailSessionId);
                 if (detailZoneId) setZoneId(detailZoneId);
                 if (detailZoneMaxPrice) setZoneMaxPrice(Number(detailZoneMaxPrice));
-                
+
                 return { sessionId: detailSessionId ?? sessionId ?? product.sessionId, zoneId: detailZoneId ?? zoneId ?? product.zoneId };
             }
         } catch (error) {
@@ -171,7 +171,7 @@ const ReservationPage: React.FC<ReservationPageProps> = ({ product, onBack, onNa
             if (Number(response.code) === 1) {
                 setShowConfirmModal(false);
                 showToast('success', '预约成功', response.msg || '预约成功');
-                onNavigate({ name: 'reservation-record' });
+                onNavigate({ name: 'reservation-record' }, { replace: true });
             } else {
                 // 失败时完全使用后端返回的 msg
                 showToast('error', '预约失败', response.msg || '预约失败');
@@ -284,7 +284,7 @@ const ReservationPage: React.FC<ReservationPageProps> = ({ product, onBack, onNa
                             ¥{accountBalance.toLocaleString()}
                         </span>
                     </div>
-                    
+
                     {/* 差价退还说明 */}
                     <div className="mt-3 p-2 bg-blue-50 rounded-lg border border-blue-100">
                         <div className="flex items-start gap-2">
@@ -294,7 +294,7 @@ const ReservationPage: React.FC<ReservationPageProps> = ({ product, onBack, onNa
                             </p>
                         </div>
                     </div>
-                    
+
                     {!isFundSufficient && (
                         <div className="text-xs text-red-500 flex items-center gap-1 mt-2">
                             <AlertCircle size={12} />
