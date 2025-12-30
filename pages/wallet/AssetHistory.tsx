@@ -187,8 +187,10 @@ const AssetHistory: React.FC<AssetHistoryProps> = ({ onBack }) => {
 
         {/* 底部：余额 */}
         <div className="mt-2 pt-2 border-t border-gray-50 flex justify-end">
-          <span className="text-xs text-gray-400">
-            余额: {Number(item.after_value || item.after_balance).toFixed(isScore ? 0 : 2)}
+          <span className="text-xs text-gray-400 flex items-center">
+            余额: {Number(item.before_value).toFixed(isScore ? 0 : 2)}
+            <span className="mx-1">→</span>
+            {Number(item.after_value || item.after_balance).toFixed(isScore ? 0 : 2)}
           </span>
         </div>
       </div>

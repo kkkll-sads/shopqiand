@@ -114,7 +114,7 @@ const AssetView: React.FC<AssetViewProps> = ({ onBack, onNavigate, onProductSele
         });
       },
       parseData: (response) => {
-        const data = extractData(response);
+        const data = extractData(response) as any;
         return {
           list: data?.list || [],
           hasMore: (data?.list?.length || 0) >= 10,
@@ -126,7 +126,7 @@ const AssetView: React.FC<AssetViewProps> = ({ onBack, onNavigate, onProductSele
       name: '我的藏品',
       fetchData: ({ page, limit, token }) => getMyCollection({ page, token }),
       parseData: (response) => {
-        const data = extractData(response);
+        const data = extractData(response) as any;
         return {
           list: data?.list || [],
           hasMore: (data?.list?.length || 0) >= 10 && data?.has_more !== false,
@@ -237,7 +237,11 @@ const AssetView: React.FC<AssetViewProps> = ({ onBack, onNavigate, onProductSele
         </div>
         <div className="flex justify-between items-center text-xs text-gray-400 mt-2 pt-2 border-t border-gray-50">
           <span>{typeText}</span>
-          <span>余额: {Number(item.after_value || item.after_balance).toFixed(2)}</span>
+          <span className="flex items-center">
+            余额: {Number(item.before_value).toFixed(2)}
+            <span className="mx-1">→</span>
+            {Number(item.after_value || item.after_balance).toFixed(2)}
+          </span>
         </div>
       </div>
     );
