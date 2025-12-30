@@ -235,9 +235,9 @@ export const routeComponents: Partial<Record<Route['name'], RouteRenderer>> = {
     return (
       <MyCollection
         onBack={() => helpers.goBack()}
-        onItemSelect={(item) => {
-          helpers.setSelectedCollectionItem(item);
-          helpers.navigateRoute({ name: 'my-collection-detail', id: String(item.id) });
+        onItemSelect={() => {
+          // Do nothing - modal should handle item interaction
+          // Navigating here causes infinite loop
         }}
         initialConsignItemId={payload.id}
       />
