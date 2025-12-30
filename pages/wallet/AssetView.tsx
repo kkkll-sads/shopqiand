@@ -244,31 +244,48 @@ const AssetView: React.FC<AssetViewProps> = ({ onBack, onNavigate, onProductSele
   };
 
   const renderCollectionItem = (item: MyCollectionItem) => {
-    const title = item.item_title || item.title || '未命名藏品';
-    const image = item.item_image || item.image || '';
+    // New API fields: title, image, price, consignment_status
+    // Helper to get image URL safely
+    const imageUrl = normalizeAssetUrl(item.image) || '';
+
+    // Status Text Logic
+    let statusBadge = null;
+    if (item.consignment_status === 2) {
+      statusBadge = <div className="text-xs px-2 py-1 rounded-full bg-green-50 text-green-600 border border-green-200">已售出</div>;
+    } else if (item.consignment_status === 1) {
+      statusBadge = <div className="text-xs px-2 py-1 rounded-full bg-orange-50 text-orange-600 border border-orange-200">寄售中</div>;
+    } else {
+      // consignment_status === 0
+      statusBadge = <div className="text-xs px-2 py-1 rounded-full bg-gray-50 text-gray-600 border border-gray-200">未寄售</div>;
+    }
+
     return (
       <div key={item.id} className="bg-white rounded-lg p-4 mb-3 shadow-sm cursor-pointer active:bg-gray-50 transition-colors border border-gray-100" onClick={() => handleItemClick(item)}>
         <div className="flex gap-3">
           <div className="w-20 h-20 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
-            <img src={normalizeAssetUrl(image) || undefined} alt={title} className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.visibility = 'hidden'; }} />
+            {imageUrl ? (
+              <img src={imageUrl} alt={item.title} className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.visibility = 'hidden'; }} />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center text-gray-300"><ShoppingBag size={24} /></div>
+            )}
           </div>
           <div className="flex-1">
             <div className="flex items-start justify-between mb-1">
-              <div className="text-sm font-medium text-gray-800 flex-1">{title}</div>
+              <div className="text-sm font-medium text-gray-800 flex-1 line-clamp-2">{item.title}</div>
               <ArrowRight size={16} className="text-gray-400 ml-2 flex-shrink-0" />
             </div>
-            <div className="text-xs text-gray-500 mb-2">购买时间: {item.pay_time_text || item.buy_time_text}</div>
-            <div className="text-sm font-bold text-gray-900 mb-2">¥ {item.price}</div>
-            <div className="flex gap-2 flex-wrap">
-              {item.status_text ? (
-                <div className={`text-xs px-2 py-1 rounded-full border ${item.status_text.includes('寄售') || item.status_text.includes('出售') ? 'bg-blue-50 text-blue-600 border-blue-200' : item.status_text.includes('确权') || item.status_text.includes('成功') || item.status_text.includes('已售出') ? 'bg-green-50 text-green-600 border-green-200' : item.status_text.includes('失败') || item.status_text.includes('取消') ? 'bg-red-50 text-red-600 border-red-200' : item.status_text.includes('提货') || item.status_text.includes('待') ? 'bg-orange-50 text-orange-600 border-orange-200' : 'bg-gray-50 text-gray-600 border-gray-200'}`}>{item.status_text}</div>
-              ) : (
-                item.consignment_status === ConsignmentStatus.SOLD ? <div className="text-xs px-2 py-1 rounded-full bg-green-50 text-green-600 border border-green-200">已售出</div> :
-                  item.consignment_status === ConsignmentStatus.CONSIGNING ? <div className="text-xs px-2 py-1 rounded-full bg-orange-50 text-orange-600 border border-orange-200">寄售中</div> :
-                    item.delivery_status === DeliveryStatus.DELIVERED ? <div className="text-xs px-2 py-1 rounded-full bg-green-50 text-green-600 border border-green-200">✓ 已提货</div> :
-                      hasConsignedBefore(item) ? <div className="text-xs px-2 py-1 rounded-full bg-orange-50 text-orange-600 border border-orange-200">待提货</div> :
-                        <><div className="text-xs px-2 py-1 rounded-full bg-orange-50 text-orange-600 border border-orange-200">○ 未提货</div><div className={`text-xs px-2 py-1 rounded-full ${item.consignment_status === ConsignmentStatus.NOT_CONSIGNED ? 'bg-gray-50 text-gray-600 border border-gray-200' : item.consignment_status === ConsignmentStatus.PENDING ? 'bg-yellow-50 text-yellow-600 border border-yellow-200' : item.consignment_status === ConsignmentStatus.REJECTED ? 'bg-red-50 text-red-600 border border-red-200' : 'bg-green-50 text-green-600 border border-green-200'}`}>{item.consignment_status_text || '未寄售'}</div></>
+            {/* New API doc does not guarantee pay_time_text. We use ID or unique_id if needed, or hide if no date */}
+            <div className="text-xs text-gray-500 mb-2">
+              UID: {item.unique_id || item.id}
+            </div>
+            <div className="flex justify-between items-center mb-2">
+              <div className="text-sm font-bold text-gray-900">¥ {Number(item.price).toFixed(2)}</div>
+              {Number(item.market_price) > 0 && (
+                <div className="text-xs text-gray-400">市场价: ¥{Number(item.market_price).toFixed(2)}</div>
               )}
+            </div>
+            <div className="flex gap-2 flex-wrap">
+              {statusBadge}
             </div>
           </div>
         </div>

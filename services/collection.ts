@@ -502,18 +502,18 @@ export async function bidBuy(params: BidBuyParams): Promise<ApiResponse<BidBuyRe
 // ============================================================================
 
 export interface MyCollectionItem {
-    id: number;                   // 订单 ID
-    user_collection_id: number;   // 核心 ID: 用户藏品记录 ID (详情接口使用)
-    item_id: number;              // 原始商品 ID
-    item_title: string;           // 藏品标题
-    item_image: string;           // 藏品预览图 URL
-    asset_code?: string;           // 确权编号
-    fingerprint?: string;          // MD5 存证指纹
-    buy_time?: number;             // 购买时间戳
-    buy_time_text?: string;        // 格式化购买时间
-    status_text: string;          // 持有状态描述
-    delivery_status: number;      // 提货状态 (0=未提货, 1=已提货)
-    consignment_status: number;   // 寄售状态 (0=未寄售, 1=寄售中, 2=已售出)
+    id: number;                   // 用户藏品ID
+    unique_id: string;            // 唯一标识ID
+    title: string;                // 藏品标题
+    image: string;                // 藏品图片
+    asset_code: string;           // 确权编号
+    md5: string;                  // MD5指纹
+    fingerprint: string;          // 指纹(同MD5)
+    price: number;                // 买入价格
+    market_price: number;         // 当前市场价
+    transaction_count: number;    // 交易次数
+    fail_count: number;           // 流拍次数
+    consignment_status: number;   // 寄售状态: 0=未寄售, 1=寄售中, 2=已售出
     [key: string]: any;
 }
 
@@ -561,14 +561,24 @@ export async function queryCollectionByCode(params: QueryByCodeParams): Promise<
     return authedFetch<CollectionItemDetail>(path, { method: 'GET' });
 }
 
-export async function getMyCollection(params: { page?: number; limit?: number; type?: string; token?: string } = {}): Promise<ApiResponse<{ list: MyCollectionItem[], total: number, has_more?: boolean, consignment_coupon?: number }>> {
+export async function getMyCollection(params: { page?: number; limit?: number; status?: string; token?: string } = {}): Promise<ApiResponse<{ list: MyCollectionItem[], total: number, has_more?: boolean, consignment_coupon?: number }>> {
     const token = params.token || localStorage.getItem(AUTH_TOKEN_KEY) || '';
     const search = new URLSearchParams();
-    if (params.page) search.set('page', String(params.page));
-    if (params.limit) search.set('limit', String(params.limit));
-    // 后端接口 /api/collectionItem/purchaseRecords 不支持 type 参数，前端进行过滤
+    search.set('page', String(params.page || 1));
+    search.set('limit', String(params.limit || 10));
+    if (params.status) {
+        search.set('status', params.status);
+    } else {
+        // Default to holding? User didn't specify default, but API doc says default=holding. 
+        // If I want 'all', explicitly set it. 
+        // Existing AssetView logic relied on "all" unless filtered.
+        // I'll default to no status parameter to let backend use its default, or pass 'all' if that's what we want.
+        // User doc: "status: all=全部, holding=持有中(默认), consigned=寄售中".
+        // AssetView usually shows everything including consigned. So I should pass 'all'.
+        search.set('status', 'all');
+    }
 
-    const path = `${API_ENDPOINTS.collectionItem.purchaseRecords}?${search.toString()}`;
+    const path = `${API_ENDPOINTS.collectionItem.myCollection}?${search.toString()}`;
     return authedFetch<{ list: MyCollectionItem[], total: number, has_more?: boolean, consignment_coupon?: number }>(path, {
         method: 'GET',
         token,
