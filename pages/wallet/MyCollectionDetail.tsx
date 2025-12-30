@@ -11,9 +11,10 @@ interface MyCollectionDetailProps {
     item: MyCollectionItem;
     onBack: () => void;
     onNavigate: (route: Route) => void;
+    onSetSelectedItem: (item: MyCollectionItem) => void;
 }
 
-const MyCollectionDetail: React.FC<MyCollectionDetailProps> = ({ item: initialItem, onBack, onNavigate }) => {
+const MyCollectionDetail: React.FC<MyCollectionDetailProps> = ({ item: initialItem, onBack, onNavigate, onSetSelectedItem }) => {
     const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
     const [item, setItem] = useState<any>(initialItem);
     const [loading, setLoading] = useState<boolean>(true);
@@ -277,8 +278,9 @@ const MyCollectionDetail: React.FC<MyCollectionDetailProps> = ({ item: initialIt
                     </button>
                     <button
                         onClick={() => {
-                            // Navigate to my-collection page which will handle the consignment
-                            onNavigate({ name: 'my-collection', back: { name: 'my-collection-detail', id: String(item.id) } });
+                            // Set the item via helpers and navigate to my-collection-consignment
+                            onSetSelectedItem(item);
+                            onNavigate({ name: 'my-collection-consignment', id: String(item.id) });
                         }}
                         className="flex-1 bg-[#8B0000] text-amber-100 hover:bg-[#A00000] transition-colors py-3.5 rounded-lg font-bold flex items-center justify-center gap-2 shadow-lg shadow-red-900/20 active:scale-[0.98] pointer-events-auto touch-manipulation">
                         <Store size={18} />

@@ -26,9 +26,10 @@ interface MyCollectionProps {
   onBack: () => void;
   onItemSelect?: (item: MyCollectionItem) => void;
   initialConsignItemId?: string | number;
+  preSelectedItem?: MyCollectionItem | null;
 }
 
-const MyCollection: React.FC<MyCollectionProps> = ({ onBack, onItemSelect, initialConsignItemId }) => {
+const MyCollection: React.FC<MyCollectionProps> = ({ onBack, onItemSelect, initialConsignItemId, preSelectedItem }) => {
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [myCollections, setMyCollections] = useState<MyCollectionItem[]>([]);
@@ -114,6 +115,16 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onBack, onItemSelect, initi
       setShowActionModal(true);
     }
   }, [initialConsignItemId, myCollections]);
+
+  // NEW: 如果通过 helpers.selectedCollectionItem 传入了预选项，立即打开寄售模态框
+  useEffect(() => {
+    if (!preSelectedItem) return;
+    // 立即打开弹窗，不需要等待数据加载
+    setSelectedItem(preSelectedItem);
+    setActionTab('consignment');
+    setActionError(null);
+    setShowActionModal(true);
+  }, [preSelectedItem]);
 
   const handleTabChange = (tab: CategoryTab) => {
     setActiveTab(tab);

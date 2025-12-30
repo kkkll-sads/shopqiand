@@ -219,14 +219,12 @@ export const routeComponents: Partial<Record<Route['name'], RouteRenderer>> = {
   ),
   'my-collection-detail': (route, helpers) => {
     const payload = route as Extract<Route, { name: 'my-collection-detail' }>;
-    if (!helpers.selectedCollectionItem || String(helpers.selectedCollectionItem.id) !== payload.id) {
-      return null;
-    }
     return (
       <MyCollectionDetail
         item={helpers.selectedCollectionItem}
         onBack={() => helpers.goBack()}
         onNavigate={(nextRoute) => helpers.navigateRoute(nextRoute)}
+        onSetSelectedItem={(item) => helpers.setSelectedCollectionItem(item)}
       />
     );
   },
@@ -240,6 +238,7 @@ export const routeComponents: Partial<Record<Route['name'], RouteRenderer>> = {
           // Navigating here causes infinite loop
         }}
         initialConsignItemId={payload.id}
+        preSelectedItem={helpers.selectedCollectionItem}
       />
     );
   },
