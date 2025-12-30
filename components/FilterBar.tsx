@@ -78,39 +78,8 @@ export function FilterBar({
         }
     };
 
-    const chips = [
-        category !== "all" ? { k: "分类", v: categoryOptions.find(o => o.value === category)?.label || category, onClear: () => setCategory("all") } : null,
-        flow !== "all" ? { k: "收支", v: flowOptions.find(o => o.value === flow)?.label || flow, onClear: () => setFlow("all") } : null,
-        range !== "all" ? { k: "时间", v: rangeOptions.find(o => o.value === range)?.label || range, onClear: () => setRange("all") } : null,
-    ].filter(Boolean) as Array<{ k: string; v: string; onClear: () => void }>;
 
-    // Get current options based on active dropdown
-    const currentOptions = useMemo(() => {
-        if (activeDropdown === 'category') return categoryOptions;
-        if (activeDropdown === 'flow') return flowOptions;
-        if (activeDropdown === 'range') return rangeOptions;
-        return [];
-    }, [activeDropdown, categoryOptions]);
-
-    // Filter options based on search (only for category usually, but generic here)
-    const filteredOptions = useMemo(() => {
-        if (!kw.trim()) return currentOptions;
-        return currentOptions.filter(o => o.label.toLowerCase().includes(kw.trim().toLowerCase()));
-    }, [currentOptions, kw]);
-
-    const handleSelect = (val: string) => {
-        if (activeDropdown === 'category') setCategory(val);
-        else if (activeDropdown === 'flow') setFlow(val);
-        else if (activeDropdown === 'range') setRange(val);
-        setActiveDropdown(null);
-    };
-
-    const getCurrentValue = () => {
-        if (activeDropdown === 'category') return category;
-        if (activeDropdown === 'flow') return flow;
-        if (activeDropdown === 'range') return range;
-        return '';
-    };
+    // Chips logic removed as per user request
 
     return (
         <div className="bar-wrap">
@@ -182,16 +151,6 @@ export function FilterBar({
                 </div>
             )}
 
-            {chips.length > 0 && !activeDropdown && (
-                <div className="chips">
-                    {chips.map((c) => (
-                        <button key={c.k} className="chip" onClick={c.onClear}>
-                            {c.k}：{c.v} <span className="chip-x">×</span>
-                        </button>
-                    ))}
-                </div>
-            )}
-
             <style>{dropdownCss}</style>
         </div>
     );
@@ -213,10 +172,6 @@ const dropdownCss = `
 @keyframes slidedown{from{transform:translateY(-10px);opacity:0}to{transform:translateY(0);opacity:1}}
 
 /* Components */
-.chips{display:flex;gap:8px;flex-wrap:wrap;padding:0 12px 10px;}
-.chip{border:1px solid rgba(0,0,0,.08);background:#fff;border-radius:999px;padding:6px 10px;font-size:12px;color:#333; display: flex; align-items: center;}
-.chip-x{margin-left:4px;opacity:.6}
-
 .pill{flex:0 0 auto;display:flex;align-items:center;gap:8px;border:1px solid rgba(0,0,0,.08);background:#fff;border-radius:999px;padding:8px 12px;box-shadow:0 1px 2px rgba(0,0,0,.03);transition:all .2s;}
 .pill.active{border-color:rgba(255,122,0,.5);color:#FF6B00;background:#FFF0E0;}
 .pill-label{font-size:12px;opacity:.6}
