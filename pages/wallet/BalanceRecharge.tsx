@@ -9,19 +9,14 @@ import { Route } from '../../router/routes';
 import { isSuccess, extractError } from '../../utils/apiHelpers';
 import { useErrorHandler } from '../../hooks/useErrorHandler';
 
+import RechargeOrderList from './RechargeOrderList'; // Import the new component
+import RechargeOrderDetail from './RechargeOrderDetail'; // Import the detail component
+
 interface BalanceRechargeProps {
   onBack: () => void;
   onNavigate?: (route: Route) => void;
   initialAmount?: string;
 }
-
-// Payment Methods Configuration
-const PAYMENT_METHODS = [
-  { id: 'alipay', name: '支付宝', icon: 'http://oss.spyggw.cc/zhifub.png', color: 'bg-blue-50 text-blue-600', border: 'border-blue-100' },
-  { id: 'wechat', name: '微信支付', icon: 'http://oss.spyggw.cc/weix.png', color: 'bg-green-50 text-green-600', border: 'border-green-100' },
-  { id: 'bank_card', name: '银联转账', icon: 'http://oss.spyggw.cc/%E9%93%B6%E8%81%94.png', color: 'bg-indigo-50 text-indigo-600', border: 'border-indigo-100' },
-  { id: 'cloud_flash', name: '云闪付', icon: 'http://oss.spyggw.cc/unnamed.png', color: 'bg-red-50 text-red-600', border: 'border-red-100' },
-];
 
 const BalanceRecharge: React.FC<BalanceRechargeProps> = ({ onBack, onNavigate, initialAmount }) => {
 
@@ -34,14 +29,16 @@ const BalanceRecharge: React.FC<BalanceRechargeProps> = ({ onBack, onNavigate, i
   // ✅ 使用统一错误处理Hook（纯Toast模式，自动日志记录）
   const { handleError } = useErrorHandler({ showToast: true, persist: false });
 
-  // View State: 'input' | 'matching' | 'matched'
-  const [viewState, setViewState] = useState<'input' | 'matching' | 'matched'>('input');
+  // View State: 'input' | 'matching' | 'matched' | 'history' | 'detail'
+  const [viewState, setViewState] = useState<'input' | 'matching' | 'matched' | 'history' | 'detail'>('input');
+  const [selectedOrderId, setSelectedOrderId] = useState<string>('');
 
   const [matchedAccount, setMatchedAccount] = useState<CompanyAccountItem | null>(null);
 
   // Data State
   const [allAccounts, setAllAccounts] = useState<CompanyAccountItem[]>([]);
   const [loading, setLoading] = useState(false);
+  const [availableMethods, setAvailableMethods] = useState<{ id: string; name: string; icon: string }[]>([]);
 
   useEffect(() => {
     loadAccounts();
@@ -52,7 +49,21 @@ const BalanceRecharge: React.FC<BalanceRechargeProps> = ({ onBack, onNavigate, i
     try {
       const res = await fetchCompanyAccountList({ usage: 'recharge' });
       if (isSuccess(res)) {
-        setAllAccounts(res.data.list || []);
+        const list = res.data.list || [];
+        setAllAccounts(list);
+
+        // Extract unique payment methods
+        const methodsMap = new Map<string, { id: string; name: string; icon: string }>();
+        list.forEach(acc => {
+          if (!methodsMap.has(acc.type)) {
+            methodsMap.set(acc.type, {
+              id: acc.type,
+              name: acc.type_text || acc.type,
+              icon: acc.icon // Use API provided icon
+            });
+          }
+        });
+        setAvailableMethods(Array.from(methodsMap.values()));
       } else {
         // ✅ 使用统一错误处理
         handleError(res, {
@@ -78,9 +89,67 @@ const BalanceRecharge: React.FC<BalanceRechargeProps> = ({ onBack, onNavigate, i
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
+  // Helper: Check if amount is within the range specified in remark (e.g., "100-2000")
+  const isAmountInRange = (amount: number, rangeStr: string): boolean => {
+    if (!rangeStr) return true; // No range limit
+    try {
+      const match = rangeStr.match(/(\d+)\s*-\s*(\d+)/);
+      if (match) {
+        const min = Number(match[1]);
+        const max = Number(match[2]);
+        if (!isNaN(min) && !isNaN(max)) {
+          return amount >= min && amount <= max;
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to parse range:', rangeStr, e);
+    }
+    return true;
+  };
+
+  const handleAutoSubmit = async (account: CompanyAccountItem, orderAmount: number) => {
+    try {
+      const response = await submitRechargeOrder({
+        company_account_id: account.id,
+        amount: orderAmount,
+        payment_type: selectedMethod || undefined,
+        payment_method: 'online',
+      });
+
+      if (isSuccess(response)) {
+        const { pay_url } = response.data || {};
+
+        if (pay_url) {
+          showToast('success', '订单创建成功', '正在前往支付...');
+          setTimeout(() => {
+            window.location.href = pay_url;
+          }, 1000);
+        } else {
+          // Fallback to manual view if no pay_url
+          setViewState('matched');
+        }
+      } else {
+        handleError(response, {
+          toastTitle: '创建订单失败',
+          customMessage: response.msg || '充值通道维护中',
+          context: { amount: orderAmount, accountId: account.id }
+        });
+        setViewState('input');
+      }
+    } catch (error) {
+      handleError(error, {
+        toastTitle: '创建订单失败',
+        customMessage: '网络错误，请重试',
+        context: { amount: orderAmount, accountId: account.id }
+      });
+      setViewState('input');
+    }
+  };
+
   const startMatching = () => {
-    if (!amount || Number(amount) <= 0) {
-      showToast('warning', '输入有误', '请输入申购金额');
+    const numAmount = Number(amount);
+    if (!amount || isNaN(numAmount) || numAmount < 100) {
+      showToast('warning', '输入有误', '最低申购金额为 100 元');
       return;
     }
     if (!selectedMethod) {
@@ -90,24 +159,28 @@ const BalanceRecharge: React.FC<BalanceRechargeProps> = ({ onBack, onNavigate, i
 
     setViewState('matching');
 
-    // Simulate Radar Scan Duration
-    setTimeout(() => {
-      // Perform Weighted Matching
-      // Filter accounts by selected method type
-      const relevantAccounts = allAccounts.filter(acc => acc.type === selectedMethod);
+    setTimeout(async () => {
+      // 1. Filter by selected method type
+      // 2. Filter by amount range in remark
+      const validAccounts = allAccounts.filter(acc => {
+        const typeMatch = acc.type === selectedMethod;
+        const rangeMatch = isAmountInRange(Number(amount), acc.remark);
+        return typeMatch && rangeMatch;
+      });
 
-      let selected = null;
-      if (relevantAccounts.length > 0) {
-        // Mock Weight Logic: In real app, check 'weight' property. Here default to first.
-        selected = relevantAccounts[0];
+      if (validAccounts.length > 0) {
+        // Randomly select one
+        const randomIndex = Math.floor(Math.random() * validAccounts.length);
+        const selected = validAccounts[randomIndex];
+        setMatchedAccount(selected);
+
+        // Auto Submit
+        await handleAutoSubmit(selected, Number(amount));
       } else {
-        // Fallback for demo
-        selected = allAccounts[0];
+        showToast('error', '匹配失败', '当前金额暂无匹配通道，请调整金额重试');
+        setViewState('input');
       }
-
-      setMatchedAccount(selected);
-      setViewState('matched');
-    }, 2500); // 2.5s scan time
+    }, 2500);
   };
 
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -199,11 +272,20 @@ const BalanceRecharge: React.FC<BalanceRechargeProps> = ({ onBack, onNavigate, i
     <>
       {/* 1. Header */}
       <div className="bg-gradient-to-b from-orange-100 to-gray-50 px-4 py-5 pt-4">
-        <div className="flex items-center gap-3 mb-6">
-          <button onClick={onBack} className="w-8 h-8 flex items-center justify-center bg-white rounded-full shadow-sm text-gray-700">
-            <ChevronLeft size={20} />
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-3">
+            <button onClick={onBack} className="w-8 h-8 flex items-center justify-center bg-white rounded-full shadow-sm text-gray-700">
+              <ChevronLeft size={20} />
+            </button>
+            <h1 className="text-xl font-bold text-gray-900">专项金申购通道</h1>
+          </div>
+          <button
+            onClick={() => setViewState('history')}
+            className="text-xs font-bold text-orange-600 bg-white/50 px-3 py-1.5 rounded-full border border-orange-100 flex items-center gap-1 hover:bg-white transition-colors"
+          >
+            <Banknote size={14} />
+            充值记录
           </button>
-          <h1 className="text-xl font-bold text-gray-900">专项金申购通道</h1>
         </div>
 
         <div className="bg-white rounded-[24px] p-6 shadow-xl shadow-orange-100/50 mb-4 border border-white">
@@ -218,7 +300,7 @@ const BalanceRecharge: React.FC<BalanceRechargeProps> = ({ onBack, onNavigate, i
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
               placeholder="0.00"
-              className="flex-1 w-full min-w-0 text-4xl font-bold bg-transparent border-none focus:ring-0 p-0 placeholder-gray-200"
+              className="flex-1 w-full min-w-0 text-4xl font-bold bg-transparent border-none focus:ring-0 outline-none p-0 placeholder-gray-200"
             />
             {amount && (
               <button
@@ -237,8 +319,8 @@ const BalanceRecharge: React.FC<BalanceRechargeProps> = ({ onBack, onNavigate, i
                 key={val}
                 onClick={() => setAmount(String(val))}
                 className={`py-2 rounded-lg text-sm font-bold transition-all ${amount === String(val)
-                    ? 'bg-orange-50 text-orange-600 border border-orange-200 shadow-sm'
-                    : 'bg-gray-50 text-gray-500 hover:bg-gray-100 border border-transparent'
+                  ? 'bg-orange-50 text-orange-600 border border-orange-200 shadow-sm'
+                  : 'bg-gray-50 text-gray-500 hover:bg-gray-100 border border-transparent'
                   }`}
               >
                 {val}
@@ -260,29 +342,49 @@ const BalanceRecharge: React.FC<BalanceRechargeProps> = ({ onBack, onNavigate, i
           选择支付通道
         </h2>
 
-        <div className="grid grid-cols-2 gap-3 mb-6">
-          {PAYMENT_METHODS.map((method) => (
-            <button
-              key={method.id}
-              onClick={() => setSelectedMethod(method.id)}
-              className={`relative p-4 rounded-2xl border-2 transition-all duration-300 flex flex-col items-center gap-3 ${selectedMethod === method.id
-                ? `${method.color} ${method.border} shadow-lg scale-[1.02]`
-                : 'bg-white border-gray-100 text-gray-600 hover:border-orange-100 hover:shadow-md'
-                }`}
-            >
-              <div className="w-12 h-12 rounded-full bg-white flex items-center justify-center shadow-sm">
-                <img src={method.icon} alt={method.name} className="w-8 h-8 object-contain" onError={(e) => (e.currentTarget.style.display = 'none')} />
-                <CreditCard size={20} className="absolute opacity-0" />
-              </div>
-              <span className="font-bold text-sm">{method.name}</span>
-              {selectedMethod === method.id && (
-                <div className="absolute top-2 right-2">
-                  <CheckCircle size={16} fill="currentColor" />
+        {loading ? (
+          <div className="flex items-center justify-center py-8">
+            <LoadingSpinner size="md" className="text-orange-500" />
+          </div>
+        ) : availableMethods.length > 0 ? (
+          <div className="grid grid-cols-2 gap-3 mb-6">
+            {availableMethods.map((method) => (
+              <button
+                key={method.id}
+                onClick={() => setSelectedMethod(method.id)}
+                className={`relative p-4 rounded-2xl border-2 transition-all duration-300 flex flex-col items-center gap-3 ${selectedMethod === method.id
+                  ? `bg-orange-50 text-orange-600 border-orange-200 shadow-lg scale-[1.02]`
+                  : 'bg-white border-gray-100 text-gray-600 hover:border-orange-100 hover:shadow-md'
+                  }`}
+              >
+                <div className="w-12 h-12 rounded-full bg-white flex items-center justify-center shadow-sm relative overflow-hidden">
+                  {method.icon && (
+                    <img
+                      src={method.icon}
+                      alt={method.name}
+                      className="w-full h-full object-cover p-2"
+                      onError={(e) => {
+                        e.currentTarget.style.display = 'none';
+                        e.currentTarget.nextElementSibling?.classList.remove('opacity-0');
+                      }}
+                    />
+                  )}
+                  <CreditCard size={24} className={`text-orange-500 absolute transition-opacity ${method.icon ? 'opacity-0' : ''}`} />
                 </div>
-              )}
-            </button>
-          ))}
-        </div>
+                <span className="font-bold text-sm">{method.name}</span>
+                {selectedMethod === method.id && (
+                  <div className="absolute top-2 right-2">
+                    <CheckCircle size={16} fill="currentColor" />
+                  </div>
+                )}
+              </button>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-8 text-gray-400 text-sm bg-gray-50 rounded-xl">
+            暂无可用支付通道
+          </div>
+        )}
       </div>
 
       {/* 3. Bottom Action */}
@@ -390,11 +492,11 @@ const BalanceRecharge: React.FC<BalanceRechargeProps> = ({ onBack, onNavigate, i
               <div className="bg-gray-50 p-3 rounded-xl border border-gray-100/50">
                 <span className="text-xs text-gray-500 block mb-1">收款账号</span>
                 <div className="flex items-center justify-between">
-                  <span className="text-lg font-bold text-gray-900 font-mono tracking-wide">{matchedAccount.account_no}</span>
+                  <span className="text-lg font-bold text-gray-900 font-mono tracking-wide">{matchedAccount.account_number}</span>
                   <button
                     className="text-[10px] bg-white border border-gray-200 px-2 py-1 rounded text-gray-600 active:bg-gray-50"
                     onClick={() => {
-                      navigator.clipboard.writeText(matchedAccount.account_no);
+                      navigator.clipboard.writeText(matchedAccount.account_number);
                       showToast('success', '复制成功', '账号已复制到剪贴板');
                     }}
                   >
@@ -515,11 +617,33 @@ const BalanceRecharge: React.FC<BalanceRechargeProps> = ({ onBack, onNavigate, i
     )
   );
 
+  // Handle navigation to detail
+  const handleNavigateToDetail = (route: Route) => {
+    if (route.name === 'recharge-order-detail' && route.orderId) {
+      setSelectedOrderId(route.orderId);
+      setViewState('detail');
+    } else if (onNavigate) {
+      onNavigate(route);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col font-sans text-gray-900">
       {viewState === 'input' && renderInputView()}
       {viewState === 'matching' && renderMatchingView()}
       {viewState === 'matched' && renderMatchedView()}
+      {viewState === 'history' && (
+        <RechargeOrderList
+          onBack={() => setViewState('input')}
+          onNavigate={handleNavigateToDetail}
+        />
+      )}
+      {viewState === 'detail' && (
+        <RechargeOrderDetail
+          orderId={selectedOrderId}
+          onBack={() => setViewState('history')}
+        />
+      )}
     </div>
   );
 };

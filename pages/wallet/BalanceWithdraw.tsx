@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { X, ChevronLeft, ChevronRight, CreditCard, Wallet, AlertCircle } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, CreditCard, Wallet, AlertCircle, Banknote } from 'lucide-react';
 import {
   fetchPaymentAccountList,
   PaymentAccountItem,
@@ -178,14 +178,20 @@ const BalanceWithdraw: React.FC<BalanceWithdrawProps> = ({ onBack, onNavigate })
     <div className="min-h-screen bg-gray-50 flex flex-col font-sans text-gray-900 pb-safe">
       {/* Header */}
       <div className="bg-gradient-to-b from-orange-100 to-gray-50 p-5 pt-4">
-        <div className="flex items-center gap-3 mb-6">
-          <button onClick={onBack} className="w-8 h-8 flex items-center justify-center bg-white rounded-full shadow-sm text-gray-700">
-            <ChevronLeft size={20} />
-          </button>
-          <h1 className="text-xl font-bold text-gray-900">收益提现</h1>
-          <div className="ml-auto text-xs text-orange-600 font-medium bg-white/50 px-3 py-1 rounded-full backdrop-blur-sm border border-orange-100/50">
-            费率 {feeRate * 100}%
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-3">
+            <button onClick={onBack} className="w-8 h-8 flex items-center justify-center bg-white rounded-full shadow-sm text-gray-700">
+              <ChevronLeft size={20} />
+            </button>
+            <h1 className="text-xl font-bold text-gray-900">收益提现</h1>
           </div>
+          <button
+            onClick={() => onNavigate?.({ name: 'withdraw-order-list' })}
+            className="text-xs font-bold text-orange-600 bg-white/50 px-3 py-1.5 rounded-full border border-orange-100 flex items-center gap-1 hover:bg-white transition-colors"
+          >
+            <Banknote size={14} />
+            提现记录
+          </button>
         </div>
 
         {/* Amount Card */}

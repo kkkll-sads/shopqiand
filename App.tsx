@@ -86,9 +86,10 @@ import './styles/notifications.css';
 // Entry containers
 import HomeEntry from './pages/entries/HomeEntry';
 import MarketEntry from './pages/entries/MarketEntry';
-import OrdersEntry from './pages/entries/OrdersEntry';
+// import OrdersEntry from './pages/entries/OrdersEntry'; // Removed
 import ProfileEntry from './pages/entries/ProfileEntry';
 import RightsEntry from './pages/entries/RightsEntry';
+import LivePage from './pages/live/LivePage';
 
 const getReadNewsIds = (): string[] => readJSON<string[]>(STORAGE_KEYS.READ_NEWS_IDS_KEY, []) || [];
 
@@ -658,8 +659,8 @@ const AppContent: React.FC = () => {
         return <MarketEntry onProductSelect={(product) => handleProductSelect(product, 'market')} />;
       case 'rights':
         return <RightsEntry onNavigate={(route) => navigateRoute(route)} />;
-      case 'orders':
-        return <OrdersEntry onNavigate={(route) => navigateRoute(route)} />;
+      case 'live':
+        return <LivePage />;
       case 'profile':
         return <ProfileEntry onNavigate={(route) => navigateRoute(route)} unreadCount={newsList.filter(n => n.isUnread).length} />;
       default:

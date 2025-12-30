@@ -66,7 +66,7 @@ export interface Banner {
   title?: string;
 }
 
-export type Tab = 'home' | 'market' | 'rights' | 'orders' | 'profile';
+export type Tab = 'home' | 'market' | 'rights' | 'live' | 'profile';
 
 export interface UserInfo {
   id: number;

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Home, ShoppingBag, MessageSquareText, ClipboardList, User, ShieldCheck } from 'lucide-react';
+import { Home, ShoppingBag, MessageSquareText, ClipboardList, User, ShieldCheck, Tv } from 'lucide-react';
 import { Tab } from '../types';
 
 interface BottomNavProps {
@@ -12,7 +12,7 @@ const BottomNav: React.FC<BottomNavProps> = ({ activeTab, onTabChange }) => {
     { id: 'home', label: '首页', icon: Home },
     { id: 'market', label: '商城', icon: ShoppingBag },
     { id: 'rights', label: '数字确权', icon: ShieldCheck },
-    { id: 'orders', label: '订单', icon: ClipboardList },
+    { id: 'live', label: '直播', icon: Tv },
     { id: 'profile', label: '我的', icon: User },
   ];
 

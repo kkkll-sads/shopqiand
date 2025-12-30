@@ -67,6 +67,10 @@ export type RoutePayload =
   | { name: 'my-collection-consignment'; id: string }
   | { name: 'claim-history' }
   | { name: 'claim-detail'; id: string }
+  | { name: 'recharge-order-list' }
+  | { name: 'recharge-order-detail'; orderId: string }
+  | { name: 'withdraw-order-list' }
+  | { name: 'withdraw-order-detail'; orderId: string }
   | { name: 'friend-detail'; id: string; friend?: TeamMember };
 
 // 导航过程中可携带 back，类型安全的回退路径
@@ -182,7 +186,7 @@ export function decodeRoute(s: string): RoutePayload {
       return { name: 'asset-history', type: parts[1] || '', title: parts[2] || undefined };
     case 'wallet':
       if (parts[1] === 'hashrate_exchange') {
-        return { name: 'hashrate-exchange', source: (parts[2] as RoutePayload['source']) || undefined };
+        return { name: 'hashrate-exchange', source: parts[2] as any || undefined };
       }
       return { name: 'asset-view' };
     case 'asset':
@@ -278,7 +282,8 @@ export function decodeRoute(s: string): RoutePayload {
     case 'invite-friends':
       return { name: 'invite-friends' };
     default:
-      return { name: name as RoutePayload['name'] };
+      // Fallback to login for safety
+      return { name: 'login' };
   }
 }
 

@@ -47,6 +47,11 @@ const MessageCenter: React.FC<MessageCenterProps> = ({ onBack, onNavigate }) => 
   const [messages, setMessages] = useState<MessageItem[]>([]);
   const [activeTab, setActiveTab] = useState<'all' | 'unread'>('all');
 
+  // 缓存键
+  const CACHE_KEY = 'message_center_cache';
+  const CACHE_TIMESTAMP_KEY = 'message_center_cache_timestamp';
+  const CACHE_DURATION = 5 * 60 * 1000; // 5分钟缓存有效期
+
   // 从本地存储读取已读消息ID列表
   const getReadMessageIds = (): string[] => {
     try {
@@ -66,8 +71,80 @@ const MessageCenter: React.FC<MessageCenterProps> = ({ onBack, onNavigate }) => 
     }
   };
 
+  // Icon映射表
+  const iconMap: Record<string, React.ElementType> = {
+    AlertCircle,
+    Info,
+    Wallet,
+    Receipt,
+    Package,
+    CheckCircle,
+    Truck,
+  };
+
+  // 从缓存读取消息
+  const getCachedMessages = (): MessageItem[] | null => {
+    try {
+      const cached = sessionStorage.getItem(CACHE_KEY);
+      const timestamp = sessionStorage.getItem(CACHE_TIMESTAMP_KEY);
+
+      if (cached && timestamp) {
+        const cacheAge = Date.now() - parseInt(timestamp);
+        if (cacheAge < CACHE_DURATION) {
+          const parsed = JSON.parse(cached);
+          // 恢复icon组件
+          return parsed.map((msg: any) => ({
+            ...msg,
+            icon: iconMap[msg.iconName] || Info,
+          }));
+        }
+      }
+    } catch {
+      // 缓存读取失败，返回null
+    }
+    return null;
+  };
+
+  // 保存消息到缓存
+  const setCachedMessages = (msgs: MessageItem[]) => {
+    try {
+      // 将icon组件转换为字符串名称以便序列化
+      const serializable = msgs.map(msg => {
+        const iconName = Object.keys(iconMap).find(key => iconMap[key] === msg.icon) || 'Info';
+        return {
+          ...msg,
+          iconName,
+          icon: undefined, // 移除不可序列化的函数
+        };
+      });
+      sessionStorage.setItem(CACHE_KEY, JSON.stringify(serializable));
+      sessionStorage.setItem(CACHE_TIMESTAMP_KEY, String(Date.now()));
+    } catch {
+      // 忽略缓存错误
+    }
+  };
+
+  // 清除缓存
+  const clearCache = () => {
+    try {
+      sessionStorage.removeItem(CACHE_KEY);
+      sessionStorage.removeItem(CACHE_TIMESTAMP_KEY);
+    } catch {
+      // 忽略错误
+    }
+  };
+
   useEffect(() => {
     const loadData = async () => {
+      // 先检查缓存
+      const cachedMessages = getCachedMessages();
+      if (cachedMessages) {
+        console.log('[MessageCenter] 使用缓存数据');
+        setMessages(cachedMessages);
+        setLoading(false);
+        return;
+      }
+
       const token = localStorage.getItem(AUTH_TOKEN_KEY);
       if (!token) {
         setError('请先登录');
@@ -95,9 +172,10 @@ const MessageCenter: React.FC<MessageCenterProps> = ({ onBack, onNavigate }) => 
 
           // 处理平台公告
           // ✅ 使用统一判断
-          const announcementData = extractData(announcementRes);
-          if (announcementData?.list) {
-            announcementData.list.forEach((item: AnnouncementItem) => {
+          const announcementData = extractData(announcementRes) as any;
+          const announcementList = announcementData?.data || announcementData?.list || [];
+          if (announcementList.length > 0) {
+            announcementList.forEach((item: AnnouncementItem) => {
               const id = `announcement-${item.id}`;
               const timestamp = item.createtime ? new Date(item.createtime).getTime() : Date.now();
               // 优先使用全局的新闻已读状态判断
@@ -121,10 +199,11 @@ const MessageCenter: React.FC<MessageCenterProps> = ({ onBack, onNavigate }) => 
 
           // 处理平台动态
           // ✅ 使用统一判断
-          const dynamicData = extractData(dynamicRes);
-          if (dynamicData?.list) {
-            dynamicData.list.forEach((item: AnnouncementItem) => {
-              const id = `dynamic-${item.id}`;
+          const dynamicData = extractData(dynamicRes) as any;
+          const dynamicList = dynamicData?.data || dynamicData?.list || [];
+          if (dynamicList.length > 0) {
+            dynamicList.forEach((item: AnnouncementItem) => {
+              const id = `dynamic-${item.id}`; c
               const timestamp = item.createtime ? new Date(item.createtime).getTime() : Date.now();
               // 优先使用全局的新闻已读状态判断
               const isRead = newsReadIds.includes(String(item.id));
@@ -152,9 +231,11 @@ const MessageCenter: React.FC<MessageCenterProps> = ({ onBack, onNavigate }) => 
         try {
           const rechargeRes = await getMyOrderList({ page: 1, limit: 5, token });
           // ✅ 使用统一判断
-          const rechargeData = extractData(rechargeRes);
-          if (rechargeData?.list) {
-            rechargeData.list.forEach((item: RechargeOrderItem) => {
+          const rechargeData = extractData(rechargeRes) as any;
+          // Fix: API returns data in 'data' property, not 'list'
+          const rechargeList = rechargeData?.data || rechargeData?.list || [];
+          if (rechargeList.length > 0) {
+            rechargeList.forEach((item: RechargeOrderItem) => {
               const id = `recharge-${item.id}`;
               const timestamp = item.create_time ? item.create_time * 1000 : Date.now();
 
@@ -193,9 +274,10 @@ const MessageCenter: React.FC<MessageCenterProps> = ({ onBack, onNavigate }) => 
         try {
           const withdrawRes = await getMyWithdrawList({ page: 1, limit: 5, token });
           // ✅ 使用统一判断
-          const withdrawData = extractData(withdrawRes);
-          if (withdrawData?.list) {
-            withdrawData.list.forEach((item: WithdrawOrderItem) => {
+          const withdrawData = extractData(withdrawRes) as any;
+          const withdrawList = withdrawData?.data || withdrawData?.list || [];
+          if (withdrawList.length > 0) {
+            withdrawList.forEach((item: WithdrawOrderItem) => {
               const id = `withdraw-${item.id}`;
               const timestamp = item.create_time ? item.create_time * 1000 : Date.now();
 
@@ -314,6 +396,8 @@ const MessageCenter: React.FC<MessageCenterProps> = ({ onBack, onNavigate }) => 
         allMessages.sort((a, b) => b.timestamp - a.timestamp);
 
         setMessages(allMessages);
+        // 保存到缓存
+        setCachedMessages(allMessages);
       } catch (err: any) {
         setError(err?.msg || err?.message || '获取消息失败');
       } finally {
@@ -323,6 +407,15 @@ const MessageCenter: React.FC<MessageCenterProps> = ({ onBack, onNavigate }) => 
 
     loadData();
   }, []);
+
+  // 手动刷新功能
+  const handleRefresh = () => {
+    clearCache();
+    setMessages([]);
+    setLoading(true);
+    // 触发重新加载
+    window.location.reload();
+  };
 
   const formatTime = (timeStr: string | number) => {
     try {
@@ -397,6 +490,10 @@ const MessageCenter: React.FC<MessageCenterProps> = ({ onBack, onNavigate }) => 
       if (!readIds.includes(id)) {
         saveReadMessageIds([...readIds, id]);
       }
+
+      // ✅ 重要：更新缓存以保持已读状态
+      setCachedMessages(updated);
+
       return updated;
     });
   };
@@ -429,6 +526,9 @@ const MessageCenter: React.FC<MessageCenterProps> = ({ onBack, onNavigate }) => 
         console.error('批量保存新闻已读状态失败', e);
       }
 
+      // ✅ 重要：更新缓存以保持已读状态
+      setCachedMessages(updated);
+
       return updated;
     });
   };
@@ -450,7 +550,14 @@ const MessageCenter: React.FC<MessageCenterProps> = ({ onBack, onNavigate }) => 
         }
         break;
       case 'recharge':
-        onNavigate({ name: 'balance-recharge', source: 'asset-view', back: { name: 'message-center' } });
+        // 跳转到充值订单详情
+        if (message.sourceId) {
+          onNavigate({
+            name: 'recharge-order-detail',
+            orderId: String(message.sourceId),
+            back: { name: 'message-center' }
+          });
+        }
         break;
       case 'withdraw':
         onNavigate({ name: 'balance-withdraw', source: 'asset-view', back: { name: 'message-center' } });
@@ -558,7 +665,7 @@ const MessageCenter: React.FC<MessageCenterProps> = ({ onBack, onNavigate }) => 
                   <div
                     className={`w-10 h-10 rounded-full ${message.bgColor} flex items-center justify-center flex-shrink-0`}
                   >
-                    <message.icon size={20} className={message.color} />
+                    {React.createElement(message.icon, { size: 20, className: message.color })}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between mb-1">

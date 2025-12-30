@@ -19,6 +19,8 @@ export type UnlockStatusState = {
   currentGold?: number;
   canUnlockDirect?: boolean;
   alreadyUnlocked?: boolean;
+  unlockedCount?: number;
+  availableQuota?: number;
 };
 
 type UseClaimUnlockParams = {
@@ -64,6 +66,8 @@ export const useClaimUnlock = ({ showToast, userInfo, setUserInfo }: UseClaimUnl
           currentGold: data.current_gold,
           canUnlockDirect: data.can_unlock,
           alreadyUnlocked: data.unlock_status === 1,
+          unlockedCount: data.unlocked_count || 0,
+          availableQuota: data.available_quota || 0,
         });
       } else {
         setUnlockStatus((prev) => ({

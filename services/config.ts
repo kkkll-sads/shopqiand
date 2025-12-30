@@ -5,7 +5,7 @@ export const API_PREFIX = '/api';
 // - 开发环境：使用 Vite 代理，走相对路径 /api
 // - 生产环境：优先使用环境变量 VITE_API_BASE_URL，其次降级到写死的线上地址
 
-const DEFAULT_API_ORIGIN = 'http://47.76.239.170:8080';
+const DEFAULT_API_ORIGIN = 'http://18.162.70.209:3005';
 const rawEnv = (import.meta as any).env ?? {};
 
 const resolveApiBaseUrl = () => {
@@ -58,12 +58,12 @@ export const normalizeAssetUrl = (raw?: string) => {
             const url = new URL(raw);
             const apiOrigin = new URL(API_ASSET_ORIGIN);
 
-            // 检查是否指向后端服务器 (包括 47.76.239.170 或配置的 API_ASSET_ORIGIN)
+            // 检查是否指向后端服务器 (包括 18.162.70.209:3005 或配置的 API_ASSET_ORIGIN)
             // 或者是旧的 IP (虽然上面处理了，这里做个兜底)
             // 或者是当前域名（说明后端返回了前端域名的完整URL，需要转为相对路径通过代理访问）
             const isBackendServer =
                 url.host === apiOrigin.host ||
-                url.host === '47.76.239.170:8080' ||
+                url.host === '18.162.70.209:3005' ||
                 url.host === '18.166.211.131';
 
             const isCurrentDomain = typeof window !== 'undefined' &&

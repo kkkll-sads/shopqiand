@@ -1,6 +1,6 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { Settings, MessageSquare, ShieldCheck, CreditCard, MapPin, Users, UserCheck, HelpCircle, FileText, HeadphonesIcon, ChevronRight, Wallet, Receipt, Box, Gem, Sprout, Award, CalendarCheck, Newspaper, Leaf } from 'lucide-react';
+import { Settings, MessageSquare, ShieldCheck, CreditCard, MapPin, Users, UserCheck, HelpCircle, FileText, HeadphonesIcon, ChevronRight, Wallet, Receipt, Box, Gem, Sprout, Award, CalendarCheck, Newspaper, Leaf, ClipboardList } from 'lucide-react';
 import { formatAmount } from '../../utils/format';
 import { AUTH_TOKEN_KEY, USER_INFO_KEY, fetchProfile, normalizeAssetUrl } from '../../services/api';
 import { UserInfo } from '../../types';
@@ -320,6 +320,7 @@ const Profile: React.FC<ProfileProps> = ({ onNavigate, unreadCount = 0 }) => {
               { label: '收益提现', icon: Receipt, color: 'text-orange-500', bg: 'bg-orange-50', action: () => onNavigate('asset:balance-withdraw:profile') },
               { label: '商品寄售', icon: Receipt, color: 'text-blue-500', bg: 'bg-blue-50', action: () => onNavigate('order-list:transaction:0') },
               { label: '消费金兑换', icon: CoinsIcon, color: 'text-yellow-600', bg: 'bg-yellow-50', action: () => onNavigate('switch-to-market') },
+              { label: '消费金订单', icon: ClipboardList, color: 'text-emerald-500', bg: 'bg-emerald-50', action: () => onNavigate('order-list:points:0') },
             ].map((item, idx) => (
               <div key={idx} className="flex flex-col items-center cursor-pointer active:opacity-60 group" onClick={item.action}>
                 <div className={`w-11 h-11 rounded-2xl ${item.bg} flex items-center justify-center mb-2 transition-transform group-active:scale-95`}>

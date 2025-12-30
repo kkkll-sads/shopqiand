@@ -37,7 +37,8 @@ const ClaimStation: React.FC<ClaimStationProps> = ({ onNavigate }) => {
 
   useEffect(() => {
     loadInitialData();
-  }, [loadInitialData]);
+    loadUnlockStatus(); // Load on mount to get current_gold
+  }, [loadInitialData, loadUnlockStatus]);
 
   useEffect(() => {
     if (activeTab === 'unlock') {
@@ -79,7 +80,7 @@ const ClaimStation: React.FC<ClaimStationProps> = ({ onNavigate }) => {
             <ReviewStatsSummary reviewStats={reviewStats} onNavigateHistory={navigateHistory} />
             <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
               <ClaimForm
-                userBalance={userInfo?.money}
+                userBalance={unlockStatus.currentGold || 0}
                 reviewStats={reviewStats}
                 loadHistory={loadHistory}
                 loadReviewStats={loadReviewStats}

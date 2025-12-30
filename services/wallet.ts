@@ -281,12 +281,16 @@ export async function rechargeServiceFee(params: RechargeServiceFeeParams): Prom
 // 公司充值账户
 export interface CompanyAccountItem {
     id: number;
-    bank_name: string;
-    bank_account: string; // 户名
-    bank_card: string; // 卡号
-    bank_address: string;
-    min_recharge: string;
-    max_recharge: string;
+    type: string; // bank_card, alipay, wechat, usdt
+    type_text?: string;
+    account_name: string;
+    account_number: string;
+    bank_name?: string;     // 银行名称(银行卡类型时)
+    bank_branch?: string;   // 开户行(银行卡类型时)
+    icon: string;           // 支付图标URL
+    remark: string;
+    status: number;         // 1=充值可用, 2=提现可用, 3=充值提现可用
+    status_text?: string;
     [key: string]: any;
 }
 
@@ -309,14 +313,21 @@ export interface SubmitRechargeOrderParams {
     payment_screenshot_id?: number | string; // 兼容
     payment_screenshot_url?: string; // 兼容
     payment_type?: string;
+    payment_method?: 'online' | 'offline';
     remark?: string;
     token?: string;
 }
 
-export async function submitRechargeOrder(params: SubmitRechargeOrderParams): Promise<ApiResponse> {
+export async function submitRechargeOrder(params: SubmitRechargeOrderParams): Promise<ApiResponse<{ order_id?: number; order_no?: string; pay_url?: string }>> {
     const payload = new FormData();
     payload.append('company_account_id', String(params.company_account_id));
     payload.append('amount', String(params.amount));
+
+    if (params.payment_method) {
+        payload.append('payment_method', params.payment_method);
+    } else {
+        payload.append('payment_method', 'offline');
+    }
 
     // 兼容不同的图片字段
     const image = params.voucher || params.payment_screenshot;
@@ -325,7 +336,7 @@ export async function submitRechargeOrder(params: SubmitRechargeOrderParams): Pr
     if (params.remark) payload.append('remark', params.remark);
     if (params.payment_type) payload.append('payment_type', params.payment_type);
 
-    return authedFetch(API_ENDPOINTS.recharge.submitOrder, {
+    return authedFetch<{ order_id?: number; order_no?: string; pay_url?: string }>(API_ENDPOINTS.recharge.submitOrder, {
         method: 'POST',
         body: payload,
         token: params.token,
@@ -385,13 +396,15 @@ export interface RechargeOrderItem {
     [key: string]: any;
 }
 
-export async function getMyRechargeOrders(params: { page?: number; limit?: number; token?: string } = {}): Promise<ApiResponse<{ list: RechargeOrderItem[], has_more?: boolean }>> {
+export async function getMyRechargeOrders(params: { page?: number; limit?: number; status?: number; token?: string } = {}): Promise<ApiResponse<{ data: RechargeOrderItem[], total: number, last_page: number, current_page: number }>> {
     const search = new URLSearchParams();
     if (params.page) search.set('page', String(params.page));
     if (params.limit) search.set('limit', String(params.limit));
+    if (params.status !== undefined) search.set('status', String(params.status));
+
 
     const path = `${API_ENDPOINTS.recharge.getMyOrderList}?${search.toString()}`;
-    return authedFetch<{ list: RechargeOrderItem[], has_more?: boolean }>(path, {
+    return authedFetch<{ data: RechargeOrderItem[], total: number, last_page: number, current_page: number }>(path, {
         method: 'GET',
         token: params.token,
     });
@@ -403,28 +416,54 @@ export const getMyOrderList = getMyRechargeOrders;
 
 export interface WithdrawRecordItem {
     id: number;
-    order_no: string;
-    money: number;
-    amount?: number | string; // 兼容
-    actual_amount?: number | string;
-    fee?: number | string;
-    status: number;
+    amount: number | string;
+    fee: number | string;
+    actual_amount: number | string;
+    account_type: string; // 'bank_card' | 'alipay' | 'wechat' | 'usdt'
+    account_type_text: string;
+    account_name: string;
+    account_number: string;
+    bank_name?: string;
+    status: number; // 0=待审核, 1=审核通过, 2=审核拒绝, 3=已打款, 4=打款失败
     status_text: string;
-    createtime: number;
-    create_time?: number; // 兼容
-    [key: string]: any;
+    audit_reason?: string;
+    pay_reason?: string;
+    remark?: string;
+    create_time: number;
+    create_time_text: string;
+    audit_time?: number;
+    audit_time_text?: string;
+    pay_time?: number;
+    pay_time_text?: string;
+    // 兼容旧字段
+    order_no?: string;
+    money?: number;
+    createtime?: number;
 }
 
 // 兼容旧名称
 export type WithdrawOrderItem = WithdrawRecordItem;
 
-export async function getMyWithdrawList(params: { page?: number; limit?: number; token?: string } = {}): Promise<ApiResponse<{ list: WithdrawRecordItem[], has_more?: boolean }>> {
+export async function getMyWithdrawList(params: { page?: number; limit?: number; status?: number; token?: string } = {}): Promise<ApiResponse<{
+    data: WithdrawRecordItem[];
+    total: number;
+    per_page: number;
+    current_page: number;
+    last_page: number;
+}>> {
     const search = new URLSearchParams();
     if (params.page) search.set('page', String(params.page));
     if (params.limit) search.set('limit', String(params.limit));
+    if (params.status !== undefined) search.set('status', String(params.status));
 
-    const path = `${API_ENDPOINTS.recharge.getMyWithdrawList}?${search.toString()}`;
-    return authedFetch<{ list: WithdrawRecordItem[], has_more?: boolean }>(path, {
+    const path = ` ${API_ENDPOINTS.recharge.getMyWithdrawList}?${search.toString()}`;
+    return authedFetch<{
+        data: WithdrawRecordItem[];
+        total: number;
+        per_page: number;
+        current_page: number;
+        last_page: number;
+    }>(path, {
         method: 'GET',
         token: params.token,
     });

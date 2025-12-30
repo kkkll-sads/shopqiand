@@ -170,7 +170,7 @@ server {
 
     # API 代理
     location /api/ {
-        proxy_pass http://47.76.239.170:8080/index.php/;
+        proxy_pass http://18.162.70.209:3005/index.php/;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -178,7 +178,7 @@ server {
 
     # 静态资源代理
     location ~ ^/(uploads|static|storage)/ {
-        proxy_pass http://47.76.239.170:8080;
+        proxy_pass http://18.162.70.209:3005;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;

@@ -20,7 +20,7 @@ const UnlockPanel: React.FC<UnlockPanelProps> = ({ userInfo, unlockStatus, unloc
         <div className="relative z-10">
           <div className="text-white/80 text-sm font-medium mb-1">待激活确权金余额</div>
           <div className="text-3xl font-bold font-mono tracking-wider">
-            ¥{userInfo?.confirm_rights_gold ? Number(userInfo.confirm_rights_gold).toFixed(2) : '0.00'}
+            ¥{unlockStatus.currentGold ? Number(unlockStatus.currentGold).toFixed(2) : '0.00'}
           </div>
           <div className="mt-4 flex items-center gap-2 text-white/90 text-xs bg-white/20 px-3 py-1.5 rounded-full w-fit backdrop-blur-sm">
             <AlertCircle size={12} />
@@ -113,12 +113,24 @@ const UnlockPanel: React.FC<UnlockPanelProps> = ({ userInfo, unlockStatus, unloc
         <div className="mb-4">
           <div className="flex justify-between items-center text-sm mb-2">
             <span className="text-gray-600">解锁消耗</span>
-            <span className="font-bold text-[#FF4500]">{unlockStatus.requiredGold || 1000} 待激活金</span>
+            <span className="font-bold text-[#FF4500]">{unlockStatus.requiredGold || 1000} 确权金</span>
           </div>
-          <div className="text-xs text-center text-gray-400">点击解锁后系统将自动扣除余额并发放权益</div>
+          {unlockStatus.unlockedCount !== undefined && (
+            <div className="flex justify-between items-center text-xs text-gray-400 mb-1">
+              <span>已解锁次数</span>
+              <span className="font-medium text-gray-900">{unlockStatus.unlockedCount} 次</span>
+            </div>
+          )}
+          {unlockStatus.availableQuota !== undefined && unlockStatus.availableQuota > 0 && (
+            <div className="flex justify-between items-center text-xs text-orange-500 mb-1">
+              <span>可解锁名额</span>
+              <span className="font-bold">{unlockStatus.availableQuota} 次</span>
+            </div>
+          )}
+          <div className="text-[10px] text-center text-gray-400 mt-2">点击解锁后系统将自动扣除余额并发放权益</div>
         </div>
 
-        {unlockStatus.alreadyUnlocked ? (
+        {(!unlockStatus.canUnlock && (unlockStatus.availableQuota === 0 || unlockStatus.availableQuota === undefined) && unlockStatus.alreadyUnlocked) ? (
           <div className="w-full py-3.5 rounded-full text-lg font-bold text-white bg-green-500 shadow-lg text-center">
             已解锁 ✓
           </div>
@@ -135,7 +147,7 @@ const UnlockPanel: React.FC<UnlockPanelProps> = ({ userInfo, unlockStatus, unloc
               <span className="flex items-center justify-center gap-2">
                 解锁中 <span className="animate-spin">◌</span>
               </span>
-            ) : '立即解锁'}
+            ) : unlockStatus.unlockedCount && unlockStatus.unlockedCount > 0 ? '再次解锁资产' : '立即解锁'}
           </button>
         )}
       </div>

@@ -29,6 +29,8 @@ import HashrateExchange from '../pages/wallet/HashrateExchange';
 import ConsignmentVoucher from '../pages/wallet/ConsignmentVoucher';
 import CumulativeRights from '../pages/wallet/CumulativeRights';
 import ClaimHistory from '../pages/wallet/ClaimHistory';
+import RechargeOrderDetail from '../pages/wallet/RechargeOrderDetail';
+import WithdrawOrderList from '../pages/wallet/WithdrawOrderList';
 import SignIn from '../pages/cms/SignIn';
 import MessageCenter from '../pages/cms/MessageCenter';
 import News from '../pages/cms/News';
@@ -312,6 +314,18 @@ export const routeComponents: Partial<Record<Route['name'], RouteRenderer>> = {
     />
   ),
   'sign-in': (_route, helpers) => <SignIn onBack={() => helpers.goBack()} onNavigate={(nextRoute) => helpers.navigateRoute(nextRoute)} />,
+  'recharge-order-detail': (route, helpers) => (
+    <RechargeOrderDetail
+      orderId={(route as Extract<Route, { name: 'recharge-order-detail' }>).orderId}
+      onBack={() => helpers.goBack()}
+    />
+  ),
+  'withdraw-order-list': (_route, helpers) => (
+    <WithdrawOrderList
+      onBack={() => helpers.goBack()}
+      onNavigate={(nextRoute) => helpers.navigateRoute(nextRoute)}
+    />
+  ),
   'message-center': (_route, helpers) => (
     <MessageCenter
       onBack={() => helpers.goBack()}
