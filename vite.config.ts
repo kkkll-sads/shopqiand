@@ -81,8 +81,20 @@ export default defineConfig(({ mode }) => {
           // 按需拆分常见依赖，避免引用不存在的包导致构建失败
           manualChunks: (id: string) => {
             if (id.includes('node_modules')) {
-              if (id.includes('react')) return 'react';
-              if (id.includes('axios')) return 'vendor';
+              // React 核心库单独打包
+              if (id.includes('react') || id.includes('react-dom')) {
+                return 'react-vendor';
+              }
+              // 图标库单独打包
+              if (id.includes('lucide-react')) {
+                return 'ui-icons';
+              }
+              // 大数据文件单独打包（如省市区数据）
+              if (id.includes('element-china-area-data')) {
+                return 'area-data';
+              }
+              // 其他第三方依赖
+              return 'vendor';
             }
           },
         },
