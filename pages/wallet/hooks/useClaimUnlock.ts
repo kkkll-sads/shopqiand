@@ -85,8 +85,12 @@ export const useClaimUnlock = ({ showToast, userInfo, setUserInfo }: UseClaimUnl
   }, [showToast]);
 
   const handleUnlockLegacy = useCallback(async () => {
-    if (!userInfo?.confirm_rights_gold || Number(userInfo.confirm_rights_gold) < 1000) {
-      showToast('warning', '余额不足', '待激活确权金不足 1000');
+    // Priority check using the current_gold returned by the check API
+    const currentBalance = unlockStatus.currentGold ?? Number(userInfo?.confirm_rights_gold || 0);
+    const requiredAmount = unlockStatus.requiredGold || 1000;
+
+    if (currentBalance < requiredAmount) {
+      showToast('warning', '余额不足', `待激活确权金不足 ${requiredAmount}`);
       return;
     }
     if (!unlockStatus.canUnlock) {
