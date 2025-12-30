@@ -109,6 +109,16 @@ const AppContent: React.FC = () => {
   const [checkingRealName, setCheckingRealName] = useState(false);
   const { current: currentRoute, navigate, reset, goBack } = useNavigationStack(null);
   const subPage = useMemo(() => (currentRoute ? encodeRoute(currentRoute) : null), [currentRoute]);
+
+  // 明确定义 BottomNav 显示条件：仅当 currentRoute 为 null 时显示
+  // 添加日志帮助调试导航栏消失问题
+  const shouldShowBottomNav = useMemo(() => {
+    const show = currentRoute === null;
+    // Debug: 追踪导航栏显示状态变化
+    console.log('[BottomNav] currentRoute:', currentRoute?.name ?? 'null', '| shouldShow:', show);
+    return show;
+  }, [currentRoute]);
+
   const [consignmentTicketCount, setConsignmentTicketCount] = useState<number>(0);
   // 新闻已读状态统一通过 hook 管理
   const { newsList, initWith: initNews, markAllRead: markAllNewsRead, markReadById } = useNewsReadState([]);
@@ -727,7 +737,7 @@ const AppContent: React.FC = () => {
       />
 
       {/* Hide BottomNav when in a sub-page */}
-      {!subPage && (
+      {shouldShowBottomNav && (
         <BottomNav
           activeTab={activeTab}
           onTabChange={(tab) => {

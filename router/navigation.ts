@@ -42,12 +42,18 @@ export function useNavigationStack(initialRoute: RouteInput = null) {
 
   const goBack = useCallback<GoBackFn>(() => {
     setCurrent((prev) => {
+      let next: Route | null = null;
+
       if (prev?.back) {
-        return normalizeRoute(prev.back);
+        next = normalizeRoute(prev.back);
+        console.log('[goBack] Using route.back:', prev.back, '-> next:', next?.name ?? 'null');
+      } else {
+        const stack = [...historyRef.current];
+        next = stack.pop() ?? null;
+        historyRef.current = stack;
+        console.log('[goBack] Popped from stack, remaining:', stack.length, '-> next:', next?.name ?? 'null');
       }
-      const stack = [...historyRef.current];
-      const next = stack.pop() ?? null;
-      historyRef.current = stack;
+
       return next;
     });
   }, []);
