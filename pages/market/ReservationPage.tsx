@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ChevronLeft, Shield, Zap, Wallet, AlertCircle, Info, CheckCircle2 } from 'lucide-react';
 import { Product, UserInfo } from '../../types';
-import { fetchProfile, bidBuy, fetchCollectionItemDetail } from '../../services/api';
+import { fetchProfile, bidBuy, fetchCollectionItemDetail, fetchCollectionSessionDetail } from '../../services/api';
 import { useNotification } from '../../context/NotificationContext';
 import { getStoredToken } from '../../services/client';
 import { Route } from '../../router/routes';
@@ -57,16 +57,22 @@ const ReservationPage: React.FC<ReservationPageProps> = ({ product, onBack, onNa
         if (triedFillFromDetail) return { sessionId: sessionId ?? product.sessionId, zoneId: zoneId ?? product.zoneId };
         setTriedFillFromDetail(true);
         if (!product?.id) return { sessionId, zoneId };
+
+        console.log('[Reservation] Starting auto-fill check for session/zone...');
+
         try {
+            // 1. 先获取商品详情，看看有没有直接带回 zone_id
             const res = await fetchCollectionItemDetail(Number(product.id));
             const data = extractData(res);
+
             if (data) {
-                const detailSessionId =
+                let detailSessionId =
                     data.session_id ??
                     data.sessionId ??
                     data.session?.id ??
                     data.session?.session_id;
-                const detailZoneId =
+
+                let detailZoneId =
                     data.zone_id ??
                     data.price_zone_id ??
                     data.zoneId ??
@@ -79,13 +85,53 @@ const ReservationPage: React.FC<ReservationPageProps> = ({ product, onBack, onNa
                     data.zoneMaxPrice ??
                     data.max_price ??
                     data.maxPrice ??
-                    data.price;  // 如果没有分区最高价，使用商品价格
+                    data.price;
+
+                console.log('[Reservation] Item detail fetched:', { detailSessionId, detailZoneId, priceZone: data.price_zone });
+
+                // 2. 如果还是没有 valid zone_id (例如为 0)，尝试通过 session detail + price_zone 反查
+                if ((!detailZoneId || Number(detailZoneId) === 0) && detailSessionId) {
+                    try {
+                        console.log('[Reservation] Zone ID missing, fetching session details to map price_zone...');
+                        const sessionRes = await fetchCollectionSessionDetail(Number(detailSessionId));
+                        const sessionData = extractData(sessionRes);
+
+                        if (sessionData && sessionData.zones && Array.isArray(sessionData.zones)) {
+                            // 尝试匹配逻辑
+                            // A. 优先匹配 price_zone 名称 (e.g. "500元区")
+                            let matchedZone = sessionData.zones.find((z: any) => z.name === data.price_zone);
+
+                            // B. 如果没匹配到，尝试匹配价格 (zone.price <= item.price < zone.max_price ??? 或者直接找包含该价格的 zone)
+                            // 通常 zone 有 min_price / max_price 或者 uniform_price
+                            if (!matchedZone) {
+                                const targetPrice = Number(data.price);
+                                matchedZone = sessionData.zones.find((z: any) => {
+                                    // 宽松匹配：如果 zone 名称包含价格数字
+                                    if (z.name && z.name.includes(String(Math.floor(targetPrice)))) return true;
+                                    return false;
+                                });
+                            }
+
+                            if (matchedZone) {
+                                console.log('[Reservation] Found matching zone from session:', matchedZone);
+                                detailZoneId = matchedZone.id;
+                            } else {
+                                console.warn('[Reservation] Could not match any zone in session:', detailSessionId);
+                            }
+                        }
+                    } catch (err) {
+                        console.error('[Reservation] Failed to fetch session details for zone mapping', err);
+                    }
+                }
 
                 if (detailSessionId) setSessionId(detailSessionId);
-                if (detailZoneId) setZoneId(detailZoneId);
+                if (detailZoneId && Number(detailZoneId) !== 0) setZoneId(detailZoneId);
                 if (detailZoneMaxPrice) setZoneMaxPrice(Number(detailZoneMaxPrice));
 
-                return { sessionId: detailSessionId ?? sessionId ?? product.sessionId, zoneId: detailZoneId ?? zoneId ?? product.zoneId };
+                return {
+                    sessionId: detailSessionId ?? sessionId ?? product.sessionId,
+                    zoneId: (detailZoneId && Number(detailZoneId) !== 0) ? detailZoneId : (zoneId ?? product.zoneId)
+                };
             }
         } catch (error) {
             console.warn('补全场次/分区失败', error);

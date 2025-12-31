@@ -289,6 +289,10 @@ export const API_ENDPOINTS = {
         rightsDeliver: '/collectionItem/rightsDeliver',
         /** 盲盒预约记录列表 */
         reservations: '/collectionItem/reservations',
+        /** 预约记录详情 */
+        reservationDetail: '/collectionItem/reservationDetail',
+        /** 转为矿机 */
+        toMining: '/collectionItem/toMining',
     },
     artist: {
         /** 艺术家列表 */
@@ -311,6 +315,10 @@ export const API_ENDPOINTS = {
         records: '/SignIn/records',
         /** 获取提现进度 */
         progress: '/SignIn/progress',
+    },
+    userCollection: {
+        /** 用户藏品详情 */
+        detail: '/userCollection/detail',
     },
     team: {
         /** 获取推广卡信息 */

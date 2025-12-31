@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { ChevronLeft, Share2, Copy, Shield, Fingerprint, Award, ExternalLink, ArrowRightLeft, Store, X } from 'lucide-react';
-import { MyCollectionItem, fetchProfile, fetchRealNameStatus, AUTH_TOKEN_KEY, fetchMyCollectionDetail, getConsignmentCheck, consignCollectionItem, getMyCollection, normalizeAssetUrl } from '../../services/api';
+import { ChevronLeft, Share2, Copy, Shield, Fingerprint, Award, ExternalLink, ArrowRightLeft, Store, X, Cpu } from 'lucide-react';
+import { MyCollectionItem, fetchProfile, fetchRealNameStatus, AUTH_TOKEN_KEY, fetchUserCollectionDetail, getConsignmentCheck, consignCollectionItem, getMyCollection, normalizeAssetUrl, toMining } from '../../services/api';
 import { UserInfo } from '../../types';
 import { useNotification } from '../../context/NotificationContext';
 import { Route } from '../../router/routes';
@@ -36,9 +36,9 @@ const MyCollectionDetail: React.FC<MyCollectionDetailProps> = ({ item: initialIt
             }
 
             try {
-                // Fetch detail from API
+                // Fetch detail from API using correct endpoint
                 const userCollectionId = initialItem.user_collection_id || initialItem.id;
-                const detailRes = await fetchMyCollectionDetail(userCollectionId);
+                const detailRes = await fetchUserCollectionDetail(userCollectionId);
                 const detailData = extractData(detailRes);
                 if (detailData) {
                     setItem(detailData);
@@ -124,9 +124,9 @@ const MyCollectionDetail: React.FC<MyCollectionDetailProps> = ({ item: initialIt
     }
 
     const title = item.name || item.item_title || item.title || '未命名藏品';
-    // Use item.price for now, mock appreciation
-    const price = parseFloat(item.price || '0');
-    const currentValuation = (price * 1.055).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    // Use market_price from API directly (禁止前端计算)
+    const marketPrice = parseFloat(item.market_price || item.price || '0');
+    const currentValuation = marketPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
     return (
         <div className="min-h-screen bg-[#FDFBF7] text-gray-900 font-serif pb-24 relative overflow-hidden" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 6rem)' }}>
@@ -314,10 +314,40 @@ const MyCollectionDetail: React.FC<MyCollectionDetailProps> = ({ item: initialIt
 
                 <div className="flex items-center justify-between gap-3">
                     <button
-                        onClick={() => { showToast('info', '提示', '权益交割功能正在开发中，敬请期待'); }}
+                        onClick={() => {
+                            if (window.confirm('确认将此藏品转为矿机吗？转为矿机后将产生算力收益，但不可再进行寄售。')) {
+                                const token = localStorage.getItem(AUTH_TOKEN_KEY);
+                                if (!token) {
+                                    showToast('warning', '请登录');
+                                    return;
+                                }
+                                const collectionId = item?.user_collection_id || item?.id || initialItem?.user_collection_id || initialItem?.id;
+                                if (!collectionId) {
+                                    showToast('error', '无法获取藏品ID');
+                                    return;
+                                }
+
+                                setActionLoading(true);
+                                toMining({ user_collection_id: Number(collectionId), token })
+                                    .then(res => {
+                                        if (isSuccess(res)) {
+                                            showToast('success', '转换成功', '藏品已成功转为矿机');
+                                            setTimeout(() => onNavigate({ name: 'my-collection' }), 1000);
+                                        } else {
+                                            showToast('error', '转换失败', res.msg || '操作失败');
+                                        }
+                                    })
+                                    .catch(err => {
+                                        showToast('error', '转换失败', err.message || '系统错误');
+                                    })
+                                    .finally(() => {
+                                        setActionLoading(false);
+                                    });
+                            }
+                        }}
                         className="flex-1 bg-gray-500 text-white hover:bg-gray-600 transition-colors py-3.5 rounded-lg font-bold flex items-center justify-center gap-2 shadow-lg shadow-gray-500/20 active:scale-[0.98] pointer-events-auto touch-manipulation">
-                        <ArrowRightLeft size={18} />
-                        权益交割(转分红)
+                        <Cpu size={18} />
+                        转为矿机(权益交割)
                     </button>
                     <button
                         onClick={() => {
@@ -334,7 +364,7 @@ const MyCollectionDetail: React.FC<MyCollectionDetailProps> = ({ item: initialIt
             {/* Consignment Modal */}
             {showConsignmentModal && (
                 <div
-                    className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4 backdrop-blur-sm"
+                    className="fixed inset-0 z-[99999] bg-black/70 flex items-center justify-center p-4 backdrop-blur-sm"
                     onClick={() => setShowConsignmentModal(false)}
                 >
                     <div
@@ -378,20 +408,28 @@ const MyCollectionDetail: React.FC<MyCollectionDetailProps> = ({ item: initialIt
                                 </div>
 
                                 {/* Price Info */}
-                                <div className="grid grid-cols-3 gap-2 pt-3 border-t border-dashed border-gray-100">
-                                    <div className="flex flex-col">
-                                        <span className="text-xs text-gray-400 mb-1">当前估值</span>
-                                        <span className="text-sm font-bold text-gray-900">¥{parseFloat(item.price || '0').toFixed(2)}</span>
-                                    </div>
-                                    <div className="flex flex-col">
-                                        <span className="text-xs text-gray-400 mb-1">预期收益</span>
-                                        <span className="text-sm font-bold text-green-600">+5.5%</span>
-                                    </div>
-                                    <div className="flex flex-col">
-                                        <span className="text-xs text-gray-400 mb-1">预期回款</span>
-                                        <span className="text-sm font-bold text-gray-900">¥{(parseFloat(item.price || '0') * 1.055).toFixed(2)}</span>
-                                    </div>
-                                </div>
+                                {(() => {
+                                    // Price Fallback Logic: Prioritize market_price (Current Valuation)
+                                    const rawPrice = item.market_price || item.price || item.current_price || item.original_price || item.buy_price || '0';
+                                    const safePrice = parseFloat(String(rawPrice)) || 0;
+
+                                    return (
+                                        <div className="grid grid-cols-3 gap-2 pt-3 border-t border-dashed border-gray-100">
+                                            <div className="flex flex-col">
+                                                <span className="text-xs text-gray-400 mb-1">当前估值</span>
+                                                <span className="text-sm font-bold text-gray-900">¥{safePrice.toFixed(2)}</span>
+                                            </div>
+                                            <div className="flex flex-col">
+                                                <span className="text-xs text-gray-400 mb-1">预期收益</span>
+                                                <span className="text-sm font-bold text-green-600">+5.5%</span>
+                                            </div>
+                                            <div className="flex flex-col">
+                                                <span className="text-xs text-gray-400 mb-1">预期回款</span>
+                                                <span className="text-sm font-bold text-gray-900">¥{(safePrice * 1.055).toFixed(2)}</span>
+                                            </div>
+                                        </div>
+                                    );
+                                })()}
                             </div>
 
                             {/* Unlock Status */}
@@ -418,27 +456,36 @@ const MyCollectionDetail: React.FC<MyCollectionDetailProps> = ({ item: initialIt
                             })()}
 
                             {/* Cost Breakdown */}
-                            <div className="bg-white rounded-lg p-4 border border-gray-100">
-                                <div className="text-sm font-bold text-gray-700 mb-3">挂牌成本核算</div>
+                            {(() => {
+                                // Price Fallback Same as above
+                                const rawPrice = item.market_price || item.price || item.current_price || item.original_price || item.buy_price || '0';
+                                const safePrice = parseFloat(String(rawPrice)) || 0;
+                                const serviceFee = safePrice * 0.03;
 
-                                <div className="flex justify-between items-center mb-3">
-                                    <div>
-                                        <div className="text-sm font-medium text-gray-700">确权技术服务费 (3%)</div>
-                                        <div className="text-xs text-gray-400 mt-0.5">当前余额: ¥{userInfo?.service_fee_balance || '0'}</div>
+                                return (
+                                    <div className="bg-white rounded-lg p-4 border border-gray-100">
+                                        <div className="text-sm font-bold text-gray-700 mb-3">挂牌成本核算</div>
+
+                                        <div className="flex justify-between items-center mb-3">
+                                            <div>
+                                                <div className="text-sm font-medium text-gray-700">确权技术服务费 (3%)</div>
+                                                <div className="text-xs text-gray-400 mt-0.5">当前余额: ¥{userInfo?.service_fee_balance || '0'}</div>
+                                            </div>
+                                            <div className="text-sm font-bold text-gray-900">{serviceFee.toFixed(2)} 元</div>
+                                        </div>
+
+                                        <div className="w-full h-px bg-gray-50" />
+
+                                        <div className="flex justify-between items-center mt-3">
+                                            <div>
+                                                <div className="text-sm font-medium text-gray-700">资产流转券</div>
+                                                <div className="text-xs text-gray-400 mt-0.5">持有数量: {consignmentTicketCount} 张</div>
+                                            </div>
+                                            <div className="text-sm font-bold text-gray-900">1 张</div>
+                                        </div>
                                     </div>
-                                    <div className="text-sm font-bold text-gray-900">{(parseFloat(item.price || '0') * 0.03).toFixed(2)} 元</div>
-                                </div>
-
-                                <div className="w-full h-px bg-gray-50" />
-
-                                <div className="flex justify-between items-center mt-3">
-                                    <div>
-                                        <div className="text-sm font-medium text-gray-700">资产流转券</div>
-                                        <div className="text-xs text-gray-400 mt-0.5">持有数量: {consignmentTicketCount} 张</div>
-                                    </div>
-                                    <div className="text-sm font-bold text-gray-900">1 张</div>
-                                </div>
-                            </div>
+                                );
+                            })()}
 
                             {/* Error Message */}
                             {actionError && (
@@ -493,7 +540,7 @@ const MyCollectionDetail: React.FC<MyCollectionDetailProps> = ({ item: initialIt
                                             showToast('success', '提交成功', res.msg || '寄售申请已提交');
                                             setShowConsignmentModal(false);
                                             // Refresh or go back
-                                            setTimeout(() => onBack(), 1000);
+                                            setTimeout(() => onNavigate({ name: 'my-collection' }), 1000);
                                         } else {
                                             const errorMsg = res.msg || res.message || '寄售申请失败';
                                             setActionError(errorMsg);

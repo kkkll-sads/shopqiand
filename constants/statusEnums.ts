@@ -93,17 +93,16 @@ export enum ShopOrderShippingStatus {
 }
 
 /**
- * 预约状态
+ * 预约状态（盲盒申购）
+ * API返回值: 0=待撮合, 1=已撮合/已中签, 2=已退款/未中签
  */
 export enum ReservationStatus {
-  /** 待审核 */
+  /** 待撮合 */
   PENDING = 0,
-  /** 审核通过 */
+  /** 已撮合/已中签 */
   APPROVED = 1,
-  /** 审核拒绝 */
-  REJECTED = 2,
-  /** 已取消 */
-  CANCELLED = 3,
+  /** 已退款/未中签 */
+  REFUNDED = 2,
 }
 
 /**

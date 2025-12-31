@@ -11,7 +11,8 @@ import {
     SignInProgressData,
     fetchPaymentAccountList,
     submitWithdraw,
-    PaymentAccountItem
+    PaymentAccountItem,
+    fetchTeamMembers
 } from '../../services/api';
 import { getStoredToken } from '../../services/client';
 import { Route } from '../../router/routes';
@@ -111,11 +112,17 @@ const SignIn: React.FC<SignInProps> = ({ onBack, onNavigate }) => {
                         console.warn('进度接口返回异常:', progressRes);
                     }
 
-                    // Load invite count from promotion card
-                    // ✅ extractData 已支持 code=0
-                    const promotionData = extractData(promotionRes);
-                    if (promotionData) {
-                        setInviteCount(promotionData.team_count || 0);
+
+                    // Load invite count (Direct Referrals only)
+                    const teamRes = await fetchTeamMembers({ level: 1, page: 1, limit: 1 });
+                    if ((isSuccess(teamRes) || teamRes.code === 0) && teamRes.data) {
+                        setInviteCount(teamRes.data.total || 0);
+                    } else {
+                        // Fallback to promotion card count if team fetch fails
+                        const promotionData = extractData(promotionRes);
+                        if (promotionData) {
+                            setInviteCount(promotionData.team_count || 0);
+                        }
                     }
                 }
             } catch (error: any) {
@@ -198,7 +205,7 @@ const SignIn: React.FC<SignInProps> = ({ onBack, onNavigate }) => {
 
     const handleInvite = () => {
         if (onNavigate) {
-            onNavigate('my-friends');
+            onNavigate('invite-friends');
         }
     };
 

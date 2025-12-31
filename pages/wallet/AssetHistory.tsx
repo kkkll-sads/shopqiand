@@ -135,14 +135,26 @@ const AssetHistory: React.FC<AssetHistoryProps> = ({ onBack }) => {
     const isGreenPower = item.field_type === 'green_power' || item.type === 'green_power';
     const isScore = item.type === 'score';
     const amountVal = Number(item.amount);
-    const isPositive = amountVal > 0;
+
+    // Determine direction based on balance change if available, otherwise fallback to amount sign
+    let isPositive = amountVal > 0;
+    if (item.before_value !== undefined && item.after_value !== undefined) {
+      isPositive = Number(item.after_value) > Number(item.before_value);
+    } else if (item.before_balance !== undefined && item.after_balance !== undefined) {
+      // Fallback for some API responses that use 'balance' instead of 'value'
+      isPositive = Number(item.after_balance) > Number(item.before_balance);
+    } else if (item.flow_direction) {
+      // Fallback to explicit flow direction if available
+      isPositive = item.flow_direction === 'in';
+    }
+
     const typeLabel = getTypeLabel(item.type, item.field_type);
 
     return (
       <div key={`log-${item.id}`} className="bg-white rounded-xl p-4 mb-3 border border-gray-100 shadow-sm relative">
         <div className="flex justify-between items-start mb-2">
           {/* 左侧：标题与标签 */}
-          <div className="flex-1 pr-4">
+          <div className="flex-1 pr-4 min-w-0">
             <div className="flex items-center gap-2 mb-1.5">
               {/* Type Category Tag */}
               <span className={`text-[10px] px-1.5 py-0.5 rounded flex-shrink-0 ${item.type === 'balance_available' ? 'bg-orange-50 text-orange-600' :
@@ -165,7 +177,7 @@ const AssetHistory: React.FC<AssetHistoryProps> = ({ onBack }) => {
           {/* 右侧：金额 */}
           <div className="text-right flex-shrink-0">
             <div className={`text-base font-bold font-[DINAlternate-Bold,Roboto,sans-serif] ${isPositive ? 'text-[#FF6B00]' : 'text-gray-900'}`}>
-              {isPositive ? '+' : ''}{Math.abs(amountVal).toFixed(isScore ? 0 : 2)}
+              {isPositive ? '+' : ''}{Math.abs(amountVal).toFixed(2)}
               <span className="text-xs font-normal ml-0.5 text-gray-400">
                 {isGreenPower ? '算力' : isScore ? '' : '元'}
               </span>
@@ -176,9 +188,9 @@ const AssetHistory: React.FC<AssetHistoryProps> = ({ onBack }) => {
         {/* 底部：余额 */}
         <div className="mt-2 pt-2 border-t border-gray-50 flex justify-end">
           <span className="text-xs text-gray-400 flex items-center">
-            余额: {Number(item.before_value).toFixed(isScore ? 0 : 2)}
+            余额: {Number(item.before_value).toFixed(2)}
             <span className="mx-1">→</span>
-            {Number(item.after_value || item.after_balance).toFixed(isScore ? 0 : 2)}
+            {Number(item.after_value || item.after_balance).toFixed(2)}
           </span>
         </div>
       </div>

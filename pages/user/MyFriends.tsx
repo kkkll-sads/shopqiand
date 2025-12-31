@@ -39,6 +39,7 @@ const MyFriends: React.FC<MyFriendsProps> = ({ onBack, onNavigate }) => {
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
+  const [activeTab, setActiveTab] = useState<'direct' | 'indirect'>('direct');
   const containerRef = useRef<HTMLDivElement>(null);
 
   // 加载好友列表
@@ -51,7 +52,8 @@ const MyFriends: React.FC<MyFriendsProps> = ({ onBack, onNavigate }) => {
       }
       setError(null);
 
-      const response = await fetchTeamMembers({ page: pageNum, page_size: PAGE_SIZE });
+      const level = activeTab === 'direct' ? 1 : 2;
+      const response = await fetchTeamMembers({ page: pageNum, page_size: PAGE_SIZE, level });
       if ((isSuccess(response) || response.code === 0) && response.data) {
         const newList = response.data.list || [];
         const totalCount = response.data.total || 0;
@@ -74,7 +76,7 @@ const MyFriends: React.FC<MyFriendsProps> = ({ onBack, onNavigate }) => {
       setLoading(false);
       setLoadingMore(false);
     }
-  }, []);
+  }, [activeTab]);
 
   useEffect(() => {
     loadTeamMembers(1, false);
@@ -94,14 +96,17 @@ const MyFriends: React.FC<MyFriendsProps> = ({ onBack, onNavigate }) => {
    * 格式化日期
    */
   const formatDate = (friend: TeamMember) => {
-    // 优先使用 join_date 字段
+    // 优先使用 register_time 字段 (API 返回)
+    if (friend.register_time) return friend.register_time;
+
+    // 其次使用 join_date 字段
     if (friend.join_date) return friend.join_date;
-    
+
     // 尝试使用 join_time 时间戳
     if (friend.join_time) {
       return formatTime(friend.join_time, 'YYYY-MM-DD');
     }
-    
+
     // 尝试使用其他可能的时间字段
     const anyFriend = friend as any;
     if (anyFriend.create_time) {
@@ -116,7 +121,7 @@ const MyFriends: React.FC<MyFriendsProps> = ({ onBack, onNavigate }) => {
     if (anyFriend.reg_time) {
       return formatTime(anyFriend.reg_time, 'YYYY-MM-DD');
     }
-    
+
     // 如果都没有，返回默认值
     return '-';
   };
@@ -140,8 +145,34 @@ const MyFriends: React.FC<MyFriendsProps> = ({ onBack, onNavigate }) => {
           onClick={() => onNavigate?.({ name: 'invite-friends' })}
         />
 
+        {/* Tab 切换 */}
+        <div className="flex items-center justify-center mt-4 mb-2">
+          <div className="flex bg-gray-100 p-1 rounded-lg">
+            <button
+              onClick={() => setActiveTab('direct')}
+              className={`px-6 py-2 rounded-md text-sm font-medium transition-all ${activeTab === 'direct'
+                ? 'bg-white text-gray-900 shadow-sm'
+                : 'text-gray-500 hover:text-gray-700'
+                }`}
+            >
+              直推好友
+            </button>
+            <button
+              onClick={() => setActiveTab('indirect')}
+              className={`px-6 py-2 rounded-md text-sm font-medium transition-all ${activeTab === 'indirect'
+                ? 'bg-white text-gray-900 shadow-sm'
+                : 'text-gray-500 hover:text-gray-700'
+                }`}
+            >
+              间推好友
+            </button>
+          </div>
+        </div>
+
         {/* 好友列表标题 */}
-        <h3 className="text-sm font-bold text-gray-800 mb-3 pl-1 mt-4">好友列表 ({total})</h3>
+        <h3 className="text-sm font-bold text-gray-800 mb-3 pl-1">
+          {activeTab === 'direct' ? '直推列表' : '间推列表'} ({total})
+        </h3>
 
         {/* 加载状态 */}
         {loading && <LoadingSpinner text="加载中..." />}

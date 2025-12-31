@@ -578,16 +578,20 @@ const MessageCenter: React.FC<MessageCenterProps> = ({ onBack, onNavigate }) => 
         }
         break;
       case 'recharge':
-        // 跳转到充值订单详情
         if (message.sourceId) {
           onNavigate({
             name: 'recharge-order-detail',
             orderId: String(message.sourceId),
+            back: { name: 'service-center:message' }
           });
         }
         break;
       case 'withdraw':
-        onNavigate({ name: 'balance-withdraw', source: 'asset-view' });
+        onNavigate({
+          name: 'balance-withdraw',
+          source: 'asset-view',
+          back: { name: 'service-center:message' }
+        });
         break;
       case 'shop_order':
         // 商城订单，跳转到订单列表（全部）

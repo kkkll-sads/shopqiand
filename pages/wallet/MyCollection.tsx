@@ -152,7 +152,10 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onBack, onItemSelect, initi
           const filteredList = list.filter(item => {
             const dStatus = Number(item.delivery_status) || 0;
             if (activeTab === 'hold') {
-              return dStatus === DeliveryStatus.NOT_DELIVERED;
+              // 待售列表：未提货 (0) 且 未寄售 (0)
+              // 注意：consignment_status 可能为 undefined/null，视为 0
+              const cStatus = Number(item.consignment_status) || 0;
+              return dStatus === DeliveryStatus.NOT_DELIVERED && cStatus === 0;
             } else {
               return dStatus === DeliveryStatus.DELIVERED;
             }
@@ -376,8 +379,11 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onBack, onItemSelect, initi
         );
         setAvailableCouponCount(matched.length);
       } else {
-        // 如果无法从藏品获取场次信息，暂时显示总数或0
-        setAvailableCouponCount(coupons.length > 0 ? coupons.length : 0);
+        // 如果无法从藏品获取场次信息，默认显示所有可用券，或尝试从 API 获取详情
+        // 这里做宽松处理：显示所有券，但在提交时可能会校验失败（如果不匹配）
+        // 这样至少能显示出"有券"，避免 UI 显示为 0 误导用户
+        setAvailableCouponCount(coupons.length);
+        console.warn('[MyCollection] Item missing session/zone info, showing all coupons:', { itemSessionId, itemZoneId, total: coupons.length });
       }
     }).catch(err => {
       console.error('Fetch data failed', err);
@@ -829,7 +835,7 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onBack, onItemSelect, initi
                   }`}>
                   {item.status_text}
                 </div>
-              ) : activeTab === 'sold' || item.consignment_status === 2 ? (
+              ) : activeTab === 'sold' || item.consignment_status === ConsignmentStatus.SOLD ? (
                 // Specially for Sold Items (from myCollection endpoint)
                 // Display sold price, time, and settlement status
                 <div className="flex flex-col w-full gap-1 mt-1">
@@ -851,8 +857,8 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onBack, onItemSelect, initi
                   {item.settle_status !== undefined && (
                     <div className="flex justify-between text-xs px-1 mt-1 pt-1 border-t border-gray-100 border-dashed">
                       <span className="text-gray-400">结算状态</span>
-                      <span className={`${item.settle_status === 1 ? 'text-blue-600' : 'text-orange-500'}`}>
-                        {item.settle_status === 1 ? '已结算' : '待结算'}
+                      <span className={`${(Number(item.settle_status) === 1 || Number(item.settle_status) === 0) ? 'text-green-600 font-medium' : 'text-orange-500'}`}>
+                        {(Number(item.settle_status) === 1 || Number(item.settle_status) === 0) ? '已结算' : '待结算'}
                       </span>
                     </div>
                   )}
@@ -1024,16 +1030,20 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onBack, onItemSelect, initi
 
                   {/* 核心数据网格 */}
                   {(() => {
-                    const price = parseFloat(selectedItem.price || '0');
-                    const expectedProfit = price * 0.055;
-                    const expectedTotal = price * 1.055;
+                    // 价格处理：优先 check selectedItem.market_price -> price -> current_price -> original_price -> 0
+                    const rawPrice = selectedItem.market_price || selectedItem.price || selectedItem.current_price || selectedItem.original_price || '0';
+                    const price = parseFloat(String(rawPrice));
+                    const safePrice = isNaN(price) ? 0 : price;
+
+                    const expectedProfit = safePrice * 0.055;
+                    const expectedTotal = safePrice * 1.055;
 
                     return (
                       <div className="grid grid-cols-3 gap-2 pt-3 border-t border-dashed border-gray-100">
                         <div className="flex flex-col">
                           <span className="text-[10px] text-gray-400 mb-0.5">当前估值</span>
                           <span className="text-sm font-bold text-gray-900 font-[DINAlternate-Bold]">
-                            ¥{price.toFixed(2)}
+                            ¥{safePrice.toFixed(2)}
                           </span>
                         </div>
                         <div className="flex flex-col items-center border-l border-r border-gray-50">
@@ -1107,8 +1117,10 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onBack, onItemSelect, initi
 
                   <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 space-y-4">
                     {(() => {
-                      const price = parseFloat(selectedItem.price || '0');
-                      const serviceFee = price * 0.03;
+                      const rawPrice = selectedItem.market_price || selectedItem.price || selectedItem.current_price || selectedItem.original_price || '0';
+                      const safePrice = parseFloat(String(rawPrice)) || 0;
+
+                      const serviceFee = safePrice * 0.03;
                       const balance = parseFloat(userInfo?.service_fee_balance || '0');
                       const isBalanceEnough = balance >= serviceFee;
 

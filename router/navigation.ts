@@ -33,7 +33,7 @@ export function useNavigationStack(initialRoute: RouteInput = null) {
         historyRef.current = [...historyRef.current, current];
       }
       const nextRoute = normalized
-        ? { ...normalized, back: options?.back ?? normalized.back ?? null }
+        ? { ...normalized, back: options?.back ?? normalized.back }
         : null;
       setCurrent(nextRoute);
     },
