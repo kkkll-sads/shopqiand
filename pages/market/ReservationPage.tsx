@@ -7,6 +7,28 @@ import { getStoredToken } from '../../services/client';
 import { Route } from '../../router/routes';
 import { isSuccess, extractData } from '../../utils/apiHelpers';
 
+/**
+ * 从价格分区字符串中提取价格数字
+ * @param priceZone - 价格分区字符串，如 "500元区" 或 "1K区"
+ * @returns 提取的价格数字，如果提取失败返回 0
+ */
+const extractPriceFromZone = (priceZone?: string): number => {
+    if (!priceZone) return 0;
+    
+    // 处理带单位的情况，如 "1K区" -> 1000, "2K区" -> 2000
+    const upperZone = priceZone.toUpperCase();
+    if (upperZone.includes('K')) {
+        const match = upperZone.match(/(\d+)\s*K/i);
+        if (match) {
+            return Number(match[1]) * 1000;
+        }
+    }
+    
+    // 处理普通数字，如 "500元区" -> 500
+    const match = priceZone.match(/(\d+)/);
+    return match ? Number(match[1]) : 0;
+};
+
 interface ReservationPageProps {
     product: Product;
     onBack: () => void;
@@ -18,9 +40,10 @@ const ReservationPage: React.FC<ReservationPageProps> = ({ product, onBack, onNa
     const [extraHashrate, setExtraHashrate] = useState(0);
     const [showConfirmModal, setShowConfirmModal] = useState(false);
     const [loading, setLoading] = useState(false);
-    // 新版预约需要后端提供的场次/分区，若入参缺失则尝试自动补全
+    // 新版预约需要后端提供的场次/分区/资产包，若入参缺失则尝试自动补全
     const [sessionId, setSessionId] = useState<number | string | undefined>(product.sessionId);
     const [zoneId, setZoneId] = useState<number | string | undefined>(product.zoneId);
+    const [packageId, setPackageId] = useState<number | string | undefined>((product as any).packageId ?? (product as any).package_id);
 
     // 分区最高价（用于计算冻结金额）
     const [zoneMaxPrice, setZoneMaxPrice] = useState<number>(product.price);
@@ -54,9 +77,9 @@ const ReservationPage: React.FC<ReservationPageProps> = ({ product, onBack, onNa
     const [triedFillFromDetail, setTriedFillFromDetail] = useState(false);
 
     const fillSessionZoneFromDetail = async () => {
-        if (triedFillFromDetail) return { sessionId: sessionId ?? product.sessionId, zoneId: zoneId ?? product.zoneId };
+        if (triedFillFromDetail) return { sessionId: sessionId ?? product.sessionId, zoneId: zoneId ?? product.zoneId, packageId: packageId ?? (product as any).packageId ?? (product as any).package_id };
         setTriedFillFromDetail(true);
-        if (!product?.id) return { sessionId, zoneId };
+        if (!product?.id) return { sessionId, zoneId, packageId };
 
         console.log('[Reservation] Starting auto-fill check for session/zone...');
 
@@ -80,17 +103,43 @@ const ReservationPage: React.FC<ReservationPageProps> = ({ product, onBack, onNa
                     data.zone?.id;
 
                 // 获取分区最高价，用于冻结金额计算
-                const detailZoneMaxPrice =
-                    data.zone_max_price ??
-                    data.zoneMaxPrice ??
-                    data.max_price ??
-                    data.maxPrice ??
-                    data.price;
+                // 优先从 price_zone 字段解析价格（如 "500元区" -> 500）
+                let detailZoneMaxPrice: number | undefined;
+                if (data.price_zone) {
+                    const parsedPrice = extractPriceFromZone(data.price_zone);
+                    if (parsedPrice > 0) {
+                        detailZoneMaxPrice = parsedPrice;
+                    }
+                }
+                
+                // 如果从 price_zone 解析失败，回退到其他字段
+                if (!detailZoneMaxPrice) {
+                    detailZoneMaxPrice =
+                        data.zone_max_price ??
+                        data.zoneMaxPrice ??
+                        data.max_price ??
+                        data.maxPrice ??
+                        data.price;
+                }
 
-                console.log('[Reservation] Item detail fetched:', { detailSessionId, detailZoneId, priceZone: data.price_zone });
+                // 获取资产包ID
+                const detailPackageId =
+                    data.package_id ??
+                    data.packageId ??
+                    data.package?.id;
 
-                // 2. 如果还是没有 valid zone_id (例如为 0)，尝试通过 session detail + price_zone 反查
-                if ((!detailZoneId || Number(detailZoneId) === 0) && detailSessionId) {
+                console.log('[Reservation] Item detail fetched:', { 
+                    detailSessionId, 
+                    detailZoneId, 
+                    detailPackageId, 
+                    priceZone: data.price_zone,
+                    parsedPriceFromZone: data.price_zone ? extractPriceFromZone(data.price_zone) : null,
+                    detailZoneMaxPrice 
+                });
+
+                // 2. 如果存在 price_zone 名称，或者没有 valid zone_id，都尝试通过 session detail 反查
+                // (强制校验: 防止 item data 中 zone_id 与 price_zone 不一致)
+                if (detailSessionId && (data.price_zone || !detailZoneId || Number(detailZoneId) === 0)) {
                     try {
                         console.log('[Reservation] Zone ID missing, fetching session details to map price_zone...');
                         const sessionRes = await fetchCollectionSessionDetail(Number(detailSessionId));
@@ -127,25 +176,27 @@ const ReservationPage: React.FC<ReservationPageProps> = ({ product, onBack, onNa
                 if (detailSessionId) setSessionId(detailSessionId);
                 if (detailZoneId && Number(detailZoneId) !== 0) setZoneId(detailZoneId);
                 if (detailZoneMaxPrice) setZoneMaxPrice(Number(detailZoneMaxPrice));
+                if (detailPackageId) setPackageId(detailPackageId);
 
                 return {
                     sessionId: detailSessionId ?? sessionId ?? product.sessionId,
-                    zoneId: (detailZoneId && Number(detailZoneId) !== 0) ? detailZoneId : (zoneId ?? product.zoneId)
+                    zoneId: (detailZoneId && Number(detailZoneId) !== 0) ? detailZoneId : (zoneId ?? product.zoneId),
+                    packageId: detailPackageId ?? packageId ?? (product as any).packageId ?? (product as any).package_id
                 };
             }
         } catch (error) {
             console.warn('补全场次/分区失败', error);
         }
-        return { sessionId: sessionId ?? product.sessionId, zoneId: zoneId ?? product.zoneId };
+        return { sessionId: sessionId ?? product.sessionId, zoneId: zoneId ?? product.zoneId, packageId: packageId ?? (product as any).packageId ?? (product as any).package_id };
     };
 
-    // 如果缺少场次/分区，从详情接口补全
+    // 如果缺少场次/分区/资产包，从详情接口补全
     useEffect(() => {
-        if (sessionId && zoneId) return;
+        if (sessionId && zoneId && packageId) return;
         if (!product?.id) return;
 
         fillSessionZoneFromDetail();
-    }, [product?.id, sessionId, zoneId]);
+    }, [product?.id, sessionId, zoneId, packageId]);
 
     useEffect(() => {
         // 获取用户信息（算力和余额）
@@ -202,15 +253,18 @@ const ReservationPage: React.FC<ReservationPageProps> = ({ product, onBack, onNa
             // 若初始缺失或为 0，先尝试详情补全一次
             let ensuredSessionId = finalSessionId;
             let ensuredZoneId = finalZoneId;
-            if (!ensuredSessionId || Number(ensuredSessionId) <= 0 || !ensuredZoneId || Number(ensuredZoneId) <= 0) {
+            let ensuredPackageId = packageId ?? (product as any).packageId ?? (product as any).package_id;
+            if (!ensuredSessionId || Number(ensuredSessionId) <= 0 || !ensuredZoneId || Number(ensuredZoneId) <= 0 || !ensuredPackageId) {
                 const filled = await fillSessionZoneFromDetail();
                 ensuredSessionId = filled.sessionId;
                 ensuredZoneId = filled.zoneId;
+                if (filled.packageId) ensuredPackageId = filled.packageId;
             }
 
             const response = await bidBuy({
                 session_id: ensuredSessionId,
                 zone_id: ensuredZoneId,
+                package_id: ensuredPackageId,
                 extra_hashrate: extraHashrate,
             });
 

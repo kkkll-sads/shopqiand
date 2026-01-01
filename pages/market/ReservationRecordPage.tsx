@@ -107,7 +107,7 @@ const ReservationRecordPage: React.FC<ReservationRecordPageProps> = ({ onBack, o
                         <CheckCircle2 size={10} className="text-green-500" /> 已撮合
                     </span>
                 );
-            case ReservationStatus.REJECTED:
+            case ReservationStatus.REFUNDED:
                 return (
                     <span className="text-xs font-bold px-2 py-0.5 rounded border flex items-center gap-1 bg-gray-100 text-gray-500 border-gray-200">
                         <AlertCircle size={10} className="text-gray-400" /> 已退款
@@ -199,7 +199,7 @@ const ReservationRecordPage: React.FC<ReservationRecordPageProps> = ({ onBack, o
                         { key: -1 as ReservationStatusType, label: '全部' },
                         { key: ReservationStatus.PENDING as ReservationStatusType, label: '待撮合' },
                         { key: ReservationStatus.APPROVED as ReservationStatusType, label: '已撮合' },
-                        { key: ReservationStatus.REJECTED as ReservationStatusType, label: '已退款' }
+                        { key: ReservationStatus.REFUNDED as ReservationStatusType, label: '已退款' }
                     ].map(status => (
                         <button
                             key={status.key}
@@ -326,7 +326,7 @@ const ReservationRecordPage: React.FC<ReservationRecordPageProps> = ({ onBack, o
                                 <div className="text-gray-400">
                                     {record.status === ReservationStatus.PENDING && record.session_end_time && `预计 ${record.session_end_time} 结束撮合`}
                                     {record.status === ReservationStatus.APPROVED && record.match_time && `撮合时间: ${record.match_time}`}
-                                    {record.status === ReservationStatus.REJECTED && '未中签，冻结金额已退回'}
+                                    {record.status === ReservationStatus.REFUNDED && '未中签，冻结金额已退回'}
                                 </div>
 
                                 {record.status === ReservationStatus.APPROVED && (

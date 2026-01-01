@@ -159,7 +159,8 @@ export function useAssetTabs<T = any>(
 
     const tabConfig = tabs.find(t => t.id === tabId);
     if (!tabConfig) {
-      updateTabState(tabId, { error: '标签页配置不存在', loading: false });
+      // 不设置错误状态，直接返回，避免显示错误信息
+      console.warn(`Tab config not found for tabId: ${tabId}`);
       return;
     }
 
@@ -173,18 +174,21 @@ export function useAssetTabs<T = any>(
       // 解析数据
       const { list, hasMore, extra } = tabConfig.parseData(response);
 
-      // 合并数据（首页替换，加载更多追加）
-      const currentState = tabStates.get(tabId);
-      const newData = page === 1 ? list : [...(currentState?.data || []), ...list];
-
-      // 更新状态
-      updateTabState(tabId, {
-        data: newData as T[],
-        page,
-        hasMore,
-        loading: false,
-        error: null,
-        initialized: true,
+      // 使用函数式更新来获取当前状态，避免依赖 tabStates
+      setTabStates(prev => {
+        const newMap = new Map(prev);
+        const currentState = newMap.get(tabId);
+        const newData = page === 1 ? list : [...(currentState?.data || []), ...list];
+        newMap.set(tabId, {
+          ...currentState,
+          data: newData as T[],
+          page,
+          hasMore,
+          loading: false,
+          error: null,
+          initialized: true,
+        } as TabState<T>);
+        return newMap;
       });
 
       // 处理额外数据（如寄售券数量）
@@ -197,27 +201,37 @@ export function useAssetTabs<T = any>(
         error: err?.message || '加载失败',
       });
     }
-  }, [tabs, tabStates, updateTabState]);
+  }, [tabs, updateTabState]);
 
   /**
    * 切换标签页时，如果未初始化则加载数据
    */
   useEffect(() => {
+    // 检查 activeTab 是否在配置中存在
+    const tabConfig = tabs.find(t => t.id === activeTab);
+    if (!tabConfig) {
+      // 如果当前 activeTab 不在配置中，重置为第一个标签页
+      if (tabs.length > 0) {
+        setActiveTab(tabs[0].id);
+      }
+      return;
+    }
+
     const state = tabStates.get(activeTab);
     if (!state?.initialized && !state?.loading) {
       loadTab(activeTab, 1);
     }
-  }, [activeTab, tabStates, loadTab]);
+  }, [activeTab, loadTab, tabs]);
 
   /**
    * 加载更多
    */
   const loadMore = useCallback(() => {
-    const state = tabStates.get(activeTab);
+    const state = currentTabState;
     if (state && !state.loading && state.hasMore) {
       loadTab(activeTab, state.page + 1);
     }
-  }, [activeTab, tabStates, loadTab]);
+  }, [activeTab, loadTab, currentTabState]);
 
   /**
    * 刷新当前标签页（重新加载第1页）

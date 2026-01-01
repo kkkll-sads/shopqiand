@@ -12,7 +12,7 @@ interface UnlockPanelProps {
 
 const UnlockPanel: React.FC<UnlockPanelProps> = ({ userInfo, unlockStatus, unlockLoading, onUnlock }) => {
   return (
-    <div className="space-y-6 pt-4 animate-in fade-in slide-in-from-right-4 duration-500">
+    <div className="space-y-6 pt-4">
       {/* 顶部余额卡片 - 优化渐变和质感 */}
       <div className="bg-gradient-to-br from-[#FF8C42] via-[#FF6B6B] to-[#FF4757] rounded-3xl p-6 text-white shadow-xl shadow-orange-200/50 relative overflow-hidden ring-1 ring-white/20">
         {/* 背景装饰 */}
@@ -53,13 +53,13 @@ const UnlockPanel: React.FC<UnlockPanelProps> = ({ userInfo, unlockStatus, unloc
         <div className="space-y-3">
           {/* 条件1：自身交易 */}
           <div className={`group flex items-center justify-between p-4 rounded-2xl transition-all border ${unlockStatus.hasSelfTrade
-              ? 'bg-[#F0F9FF] border-blue-100/50'
-              : 'bg-white border-gray-100 shadow-sm'
+            ? 'bg-[#F0F9FF] border-blue-100/50'
+            : 'bg-white border-gray-100 shadow-sm'
             }`}>
             <div className="flex items-center gap-4">
               <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${unlockStatus.hasSelfTrade
-                  ? 'bg-blue-100 text-blue-600'
-                  : 'bg-gray-100 text-gray-400'
+                ? 'bg-blue-100 text-blue-600'
+                : 'bg-gray-100 text-gray-400'
                 }`}>
                 <ShoppingBag size={20} strokeWidth={2.5} />
               </div>
@@ -91,13 +91,13 @@ const UnlockPanel: React.FC<UnlockPanelProps> = ({ userInfo, unlockStatus, unloc
 
           {/* 条件2：直推用户 */}
           <div className={`group flex items-center justify-between p-4 rounded-2xl transition-all border ${unlockStatus.activeReferrals >= unlockStatus.referralTarget
-              ? 'bg-[#F0FDF4] border-green-100/50'
-              : 'bg-white border-gray-100 shadow-sm'
+            ? 'bg-[#F0FDF4] border-green-100/50'
+            : 'bg-white border-gray-100 shadow-sm'
             }`}>
             <div className="flex items-center gap-4">
               <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${unlockStatus.activeReferrals >= unlockStatus.referralTarget
-                  ? 'bg-green-100 text-green-600'
-                  : 'bg-gray-100 text-gray-400'
+                ? 'bg-green-100 text-green-600'
+                : 'bg-gray-100 text-gray-400'
                 }`}>
                 <Users size={20} strokeWidth={2.5} />
               </div>

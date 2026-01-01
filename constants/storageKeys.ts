@@ -40,6 +40,9 @@ export const STORAGE_KEYS = {
 
     /** 登录页记住密码 - 开关状态 */
     LOGIN_REMEMBER_ME: 'login_remember_me',
+
+    /** 上次签到日期 (YYYY-MM-DD) */
+    LAST_SIGN_IN_DATE_KEY: 'cat_last_sign_in_date',
 } as const;
 
 // 为了向后兼容，导出单独的常量（逐步废弃，推荐使用 STORAGE_KEYS）

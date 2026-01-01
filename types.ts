@@ -120,6 +120,7 @@ export interface UserInfo {
 export interface ProfileResponse {
   userInfo: UserInfo;
   accountVerificationType: any[];
+  liveUrl?: string; // 直播间URL（HLS流地址）
 }
 
 export interface LoginSuccessPayload {

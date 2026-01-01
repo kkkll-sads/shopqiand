@@ -200,6 +200,7 @@ export async function fetchCollectionItemsBySession(
 /**
  * 官方商品原始详情数据接口
  * API: GET /api/collectionItem/originalDetail
+ * @deprecated 此接口已废弃，请使用 fetchCollectionItemDetail 替代
  */
 export interface CollectionItemOriginalDetailData extends CollectionItemDetailData {
     status_text: string;  // 上架状态文本
@@ -209,12 +210,14 @@ export interface CollectionItemOriginalDetailData extends CollectionItemDetailDa
  * 获取官方商品原始详情
  * API: GET /api/collectionItem/originalDetail
  * 
+ * @deprecated 此接口已废弃，请使用 fetchCollectionItemDetail 替代
  * @param id - 商品ID
  * @returns 返回商品详细信息，包括：
  *          - 所有商品详情字段（id、title、image、images、price、description、artist、stock、sales）
  *          - status_text: 上架状态文本
  */
 export async function fetchCollectionItemOriginalDetail(id: number | string): Promise<ApiResponse<CollectionItemOriginalDetailData>> {
+    console.warn('[DEPRECATED] fetchCollectionItemOriginalDetail is deprecated. Use fetchCollectionItemDetail instead.');
     const path = `${API_ENDPOINTS.collectionItem.originalDetail}?id=${id}`;
     return authedFetch<CollectionItemOriginalDetailData>(path, { method: 'GET' });
 }
@@ -516,51 +519,59 @@ export async function fetchReservationDetail(id: number | string, token?: string
 }
 
 /**
- * 盲盒预约参数接口（新模式，仅保留预约）
+ * 盲盒预约参数接口
  */
 export interface BidBuyParams {
-    session_id?: number | string;  // 场次ID（优先透传后端，不前端拦截）
-    zone_id?: number | string;     // 价格分区ID（透传后端，不前端拦截）
-    extra_hashrate?: number;       // 额外加注算力 (0-50)
-    token?: string;                // 用户登录Token
+    session_id: number | string;      // 场次ID（必填）
+    zone_id: number | string;         // 价格分区ID（必填，如1=500元区）
+    package_id: number | string;      // 资产包ID（必填）
+    extra_hashrate?: number;          // 额外加注算力（可选，默认0，用于增加权重）
+    token?: string;                   // 用户登录Token
 }
 
 /**
  * 盲盒预约返回数据接口
  */
 export interface BidBuyResult {
-    reservation_id?: number;
-    freeze_amount?: number;
-    power_used?: number;
-    weight?: number;
-    zone_id?: number;
-    zone_name?: string;
-    session_id?: number;
-    message?: string;
+    reservation_id?: number;          // 预约记录ID
+    freeze_amount?: number;           // 冻结金额（分区最高价）
+    power_used?: number;              // 消耗的算力
+    weight?: number;                  // 获得的权重
+    zone_name?: string;               // 分区名称
+    package_id?: number;              // 资产包ID
+    package_name?: string;            // 资产包名称
+    message?: string;                 // 提示信息
     [key: string]: any;
 }
 
 /**
- * 盲盒预约（唯一模式）
+ * 盲盒预约（冻结专项资金与算力）
  * API: POST /api/collectionItem/bidBuy
  */
 export async function bidBuy(params: BidBuyParams): Promise<ApiResponse<BidBuyResult>> {
     debugLog('collection.bidBuy', '开始调用', params);
     const token = params.token ?? getStoredToken();
 
-    // 直接透传场次/分区给后端，不做前端拦截
-    const sessionIdNum = params.session_id !== undefined ? Number(params.session_id) : NaN;
-    const zoneIdNum = params.zone_id !== undefined ? Number(params.zone_id) : NaN;
-
-    const extraHashrateRaw = params.extra_hashrate ?? 0;
-    const extraHashrate = Number.isFinite(extraHashrateRaw) ? extraHashrateRaw : 0;
-    if (extraHashrate < 0 || extraHashrate > 50) {
-        throw new Error('额外算力需在 0-50 之间');
+    // 验证必填参数
+    if (params.session_id === undefined || params.session_id === null || params.session_id === '') {
+        throw new Error('场次ID(session_id)不能为空');
+    }
+    if (params.zone_id === undefined || params.zone_id === null || params.zone_id === '') {
+        throw new Error('价格分区ID(zone_id)不能为空');
+    }
+    if (params.package_id === undefined || params.package_id === null || params.package_id === '') {
+        throw new Error('资产包ID(package_id)不能为空');
     }
 
     const formData = new FormData();
-    formData.append('session_id', params.session_id !== undefined ? String(params.session_id) : '');
-    formData.append('zone_id', params.zone_id !== undefined ? String(params.zone_id) : '');
+    formData.append('session_id', String(params.session_id));
+    formData.append('zone_id', String(params.zone_id));
+    formData.append('package_id', String(params.package_id));
+    
+    const extraHashrate = params.extra_hashrate ?? 0;
+    if (extraHashrate < 0) {
+        throw new Error('额外算力不能小于0');
+    }
     formData.append('extra_hashrate', String(extraHashrate));
 
     const response = await authedFetch<BidBuyResult>(API_ENDPOINTS.collectionItem.bidBuy, {
@@ -571,6 +582,7 @@ export async function bidBuy(params: BidBuyParams): Promise<ApiResponse<BidBuyRe
     bizLog('collection.bidBuy', {
         sessionId: params.session_id,
         zoneId: params.zone_id,
+        packageId: params.package_id,
         code: response.code,
     });
     debugLog('collection.bidBuy', '响应结果', response);
@@ -665,6 +677,82 @@ export async function queryCollectionByCode(params: QueryByCodeParams): Promise<
 
     const path = `${API_ENDPOINTS.collectionItem.queryByCode}?${search.toString()}`;
     return authedFetch<CollectionItemDetail>(path, { method: 'GET' });
+}
+
+// ============================================================================
+// 藏品订单
+// ============================================================================
+
+/**
+ * 藏品订单明细项接口
+ */
+export interface CollectionOrderItemDetail {
+    id: number;
+    item_id: number;
+    item_title: string;
+    item_image: string;
+    price: number;
+    quantity: number;
+    subtotal: number;
+    [key: string]: any;
+}
+
+/**
+ * 藏品订单详情数据接口
+ * API: GET /api/collectionItem/orderDetail
+ */
+export interface CollectionOrderDetailData {
+    id: number;
+    order_no: string;
+    user_id: number;
+    total_amount: number;
+    pay_type: string;
+    pay_type_text?: string;
+    status: string;
+    status_text: string;
+    pay_time?: number;
+    pay_time_text?: string;
+    complete_time?: number;
+    complete_time_text?: string;
+    create_time: number;
+    create_time_text?: string;
+    remark?: string;
+    items: CollectionOrderItemDetail[];
+    [key: string]: any;
+}
+
+/**
+ * 获取藏品订单详情的参数接口
+ */
+export interface GetCollectionOrderDetailParams {
+    id?: number | string;
+    order_no?: string;
+    token?: string;
+}
+
+/**
+ * 获取藏品订单详情
+ * API: GET /api/collectionItem/orderDetail
+ * 
+ * @param params - 查询参数，支持通过 id 或 order_no 查询
+ * @returns 订单详情数据
+ */
+export async function getCollectionOrderDetail(params: GetCollectionOrderDetailParams): Promise<ApiResponse<CollectionOrderDetailData>> {
+    const token = params.token ?? getStoredToken();
+    const search = new URLSearchParams();
+    
+    if (params.id !== undefined && params.id !== null) {
+        search.set('id', String(params.id));
+    }
+    if (params.order_no) {
+        search.set('order_no', params.order_no);
+    }
+
+    const path = `${API_ENDPOINTS.collectionItem.orderDetail}?${search.toString()}`;
+    return authedFetch<CollectionOrderDetailData>(path, {
+        method: 'GET',
+        token,
+    });
 }
 
 export async function getMyCollection(params: { page?: number; limit?: number; status?: string; token?: string } = {}): Promise<ApiResponse<{ list: MyCollectionItem[], total: number, has_more?: boolean, consignment_coupon?: number }>> {

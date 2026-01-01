@@ -3,9 +3,15 @@ export const API_PREFIX = '/api';
 
 // API 基础配置：
 // - 开发环境：使用 Vite 代理，走相对路径 /api
-// - 生产环境：优先使用环境变量 VITE_API_BASE_URL，其次降级到写死的线上地址
+// - 生产环境：优先使用环境变量 VITE_API_BASE_URL，其次使用当前域名
 
-const DEFAULT_API_ORIGIN = 'http://47.76.239.170:8080';
+// 动态获取当前域名，避免硬编码后端地址被攻击
+const getOrigin = () => {
+    if (typeof window !== 'undefined') {
+        return window.location.origin;
+    }
+    return '';
+};
 const rawEnv = (import.meta as any).env ?? {};
 
 const resolveApiBaseUrl = () => {
@@ -37,7 +43,8 @@ const resolveApiOrigin = () => {
         }
     }
 
-    return DEFAULT_API_ORIGIN;
+    // 使用 window.location.origin 自适应当前域名
+    return getOrigin();
 };
 
 // API 基础配置
@@ -47,31 +54,31 @@ export const API_ASSET_ORIGIN = resolveApiOrigin();
 export const normalizeAssetUrl = (raw?: string) => {
     if (!raw) return '';
 
-    // 1. 处理旧的硬编码 IP (18.166.211.131)，替换为相对路径或当前 API Origin
-    if (raw.includes('18.166.211.131')) {
-        raw = raw.replace(/^https?:\/\/18\.166\.211\.131/, '');
-    }
-
-    // 2. 如果是完整URL
+    // 如果是完整URL，检查是否需要转为相对路径
     if (raw.startsWith('http')) {
         try {
             const url = new URL(raw);
-            const apiOrigin = new URL(API_ASSET_ORIGIN);
+            const currentOrigin = getOrigin();
 
-            // 检查是否指向后端服务器 (包括 47.76.239.170:8080 或配置的 API_ASSET_ORIGIN)
-            // 或者是旧的 IP (虽然上面处理了，这里做个兜底)
-            // 或者是当前域名（说明后端返回了前端域名的完整URL，需要转为相对路径通过代理访问）
-            const isBackendServer =
-                url.host === apiOrigin.host ||
-                url.host === '47.76.239.170:8080' ||
-                url.host === '18.162.70.209:3005' ||
-                url.host === '18.166.211.131';
-
+            // 检查是否是当前域名
             const isCurrentDomain = typeof window !== 'undefined' &&
                 url.host === window.location.host;
 
-            if (isBackendServer || isCurrentDomain) {
-                // 转换为相对路径，通过本地代理访问 (解决 Mixed Content 和 跨域问题)
+            // 检查是否与配置的 API Origin 匹配
+            const isConfiguredApi = currentOrigin && (() => {
+                try {
+                    return url.host === new URL(currentOrigin).host;
+                } catch {
+                    return false;
+                }
+            })();
+
+            // 兼容处理：后端返回的 URL 可能包含旧的服务器地址（IP 格式）
+            // 这些地址需要转换为相对路径，通过 Nginx 代理访问
+            const isLegacyBackendUrl = /^\d+\.\d+\.\d+\.\d+/.test(url.hostname);
+
+            if (isCurrentDomain || isConfiguredApi || isLegacyBackendUrl) {
+                // 转换为相对路径，通过本地代理访问 (解决 Mixed Content 和跨域问题)
                 const relativePath = url.pathname + url.search;
                 return relativePath.startsWith('/') ? relativePath : '/' + relativePath;
             }
@@ -118,6 +125,8 @@ export const API_ENDPOINTS = {
         rechargeServiceFee: '/Account/rechargeServiceFee',
         /** 全部明细 */
         allLog: '/Account/allLog',
+        /** 资金明细详情 */
+        moneyLogDetail: '/Account/moneyLogDetail',
         /** 消费金日志 */
         integral: '/Account/integral',
         /** 消费金兑换绿色算力 */
@@ -291,6 +300,8 @@ export const API_ENDPOINTS = {
         reservations: '/collectionItem/reservations',
         /** 预约记录详情 */
         reservationDetail: '/collectionItem/reservationDetail',
+        /** 订单详情 */
+        orderDetail: '/collectionItem/orderDetail',
         /** 转为矿机 */
         toMining: '/collectionItem/toMining',
     },

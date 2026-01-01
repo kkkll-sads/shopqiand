@@ -67,6 +67,21 @@
         padding-bottom: constant(safe-area-inset-bottom); /* iOS 11.0 */
         padding-bottom: env(safe-area-inset-bottom); /* iOS 11.2 */
       }
+
+      /* 动态视口高度变量 */
+      :root {
+        --vh: 1vh;
+        --100vh: 100vh;
+      }
+
+      /* 使用CSS变量的最小高度工具类 */
+      .min-h-screen-dynamic {
+        min-height: calc(var(--100vh, 100vh));
+      }
+
+      .h-screen-dynamic {
+        height: calc(var(--100vh, 100vh));
+      }
     </style>
   <script type="importmap">
 {
@@ -213,6 +228,41 @@
         e.preventDefault();
         return false;
       }, false);
+
+      // 修复移动浏览器导航栏隐藏时的视口高度问题
+      function setViewportHeight() {
+        const vh = window.innerHeight * 0.01;
+        document.documentElement.style.setProperty('--vh', vh + 'px');
+        document.documentElement.style.setProperty('--100vh', window.innerHeight + 'px');
+      }
+
+      // 初始化
+      setViewportHeight();
+
+      // 监听窗口大小变化（包括地址栏显示/隐藏）
+      window.addEventListener('resize', setViewportHeight);
+      window.addEventListener('orientationchange', function() {
+        // 延迟执行，等待浏览器完成旋转
+        setTimeout(setViewportHeight, 100);
+      });
+
+      // 监听滚动事件，因为移动浏览器在滚动时可能会显示/隐藏地址栏
+      let lastHeight = window.innerHeight;
+      let ticking = false;
+      window.addEventListener('scroll', function() {
+        if (!ticking) {
+          window.requestAnimationFrame(function() {
+            const currentHeight = window.innerHeight;
+            if (Math.abs(currentHeight - lastHeight) > 50) {
+              // 高度变化超过50px，说明地址栏显示/隐藏了
+              setViewportHeight();
+              lastHeight = currentHeight;
+            }
+            ticking = false;
+          });
+          ticking = true;
+        }
+      }, { passive: true });
     </script>
   </body>
 </html>

@@ -194,6 +194,50 @@ export async function getAllLog(params: GetAllLogParams = {}): Promise<ApiRespon
     });
 }
 
+// 资金明细详情
+export interface MoneyLogDetailData {
+    id: number;
+    flow_no: string;
+    batch_no?: string;
+    biz_type?: string;
+    biz_id?: number;
+    account_type?: string;
+    amount: number;
+    before_value: number;
+    after_value: number;
+    memo?: string;
+    create_time: number;
+    create_time_text?: string;
+    title_snapshot?: string;
+    image_snapshot?: string;
+    user_collection_id?: number;
+    item_id?: number;
+    breakdown?: any;
+    [key: string]: any;
+}
+
+export interface GetMoneyLogDetailParams {
+    id?: number | string;
+    flow_no?: string;
+    token?: string;
+}
+
+export async function getMoneyLogDetail(params: GetMoneyLogDetailParams): Promise<ApiResponse<MoneyLogDetailData>> {
+    const search = new URLSearchParams();
+    if (params.id !== undefined && params.id !== null) {
+        search.set('id', String(params.id));
+    }
+    if (params.flow_no) {
+        search.set('flow_no', params.flow_no);
+    }
+
+    const path = `${API_ENDPOINTS.account.moneyLogDetail}?${search.toString()}`;
+    return authedFetch<MoneyLogDetailData>(path, {
+        method: 'GET',
+        token: params.token,
+    });
+}
+
 // 服务费相关
 export interface ServiceFeeLogItem {
     id: number;

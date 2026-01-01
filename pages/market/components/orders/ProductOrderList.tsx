@@ -10,6 +10,7 @@ interface ProductOrderListProps {
   formatOrderDate: (date: number | string | undefined) => string;
   formatOrderPrice: (price: number | string | undefined) => string;
   onViewConsignmentDetail: (consignmentId: number) => void;
+  onViewOrderDetail?: (id?: number | string, orderNo?: string) => void;
 }
 
 const ProductOrderList: React.FC<ProductOrderListProps> = ({
@@ -20,6 +21,7 @@ const ProductOrderList: React.FC<ProductOrderListProps> = ({
   formatOrderDate,
   formatOrderPrice,
   onViewConsignmentDetail,
+  onViewOrderDetail,
 }) => {
   const renderEmpty = (text: string) => (
     <div className="flex flex-col items-center justify-center py-20 text-gray-400">
@@ -33,7 +35,15 @@ const ProductOrderList: React.FC<ProductOrderListProps> = ({
     return (
       <>
         {purchaseRecords.map((record) => (
-          <div key={record.order_id} className="bg-white rounded-xl p-4 shadow-sm border border-gray-50">
+          <div
+            key={record.order_id}
+            className="bg-white rounded-xl p-4 shadow-sm border border-gray-50 cursor-pointer active:bg-gray-50 transition-colors"
+            onClick={() => {
+              if (onViewOrderDetail && (record.order_id || record.order_no)) {
+                onViewOrderDetail(record.order_id, record.order_no);
+              }
+            }}
+          >
             <div className="flex justify-between items-center mb-3 pb-3 border-b border-gray-50">
               <span className="text-xs text-gray-500">
                 {record.pay_time_text || formatOrderDate(record.pay_time)}

@@ -5,7 +5,6 @@ import { LoadingSpinner, LazyImage } from '../../components/common';
 import { Product } from '../../types';
 import {
   fetchCollectionItemDetail,
-  fetchCollectionItemOriginalDetail,
   fetchShopProductDetail,
   CollectionItemDetailData,
   ShopProductDetailData,
@@ -22,11 +21,22 @@ import { useErrorHandler } from '../../hooks/useErrorHandler';
 
 /**
  * 从价格分区字符串中提取价格数字
- * @param priceZone - 价格分区字符串，如 "1000元区"
+ * @param priceZone - 价格分区字符串，如 "1000元区" 或 "1K区"
  * @returns 提取的价格数字，如果提取失败返回 0
  */
 const extractPriceFromZone = (priceZone?: string): number => {
   if (!priceZone) return 0;
+  
+  // 处理带单位的情况，如 "1K区" -> 1000, "2K区" -> 2000
+  const upperZone = priceZone.toUpperCase();
+  if (upperZone.includes('K')) {
+    const match = upperZone.match(/(\d+)\s*K/i);
+    if (match) {
+      return Number(match[1]) * 1000;
+    }
+  }
+  
+  // 处理普通数字，如 "500元区" -> 500
   const match = priceZone.match(/(\d+)/);
   return match ? Number(match[1]) : 0;
 };
@@ -68,14 +78,7 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, onNaviga
         if (isShopProduct) {
           response = await fetchShopProductDetail(product.id);
         } else {
-          try {
-            response = await fetchCollectionItemDetail(product.id);
-            if (response.code !== 1 || !response.data) {
-              response = await fetchCollectionItemOriginalDetail(product.id);
-            }
-          } catch (err) {
-            response = await fetchCollectionItemOriginalDetail(product.id);
-          }
+          response = await fetchCollectionItemDetail(product.id);
         }
 
         // ✅ 使用统一判断

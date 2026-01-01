@@ -52,17 +52,20 @@ export type RoutePayload =
   | { name: 'masterpiece-showcase' }
   | { name: 'order-list'; kind: 'product' | 'transaction' | 'delivery' | 'points'; status: number }
   | { name: 'order-detail'; orderId: string; back?: RoutePayload | null }
+  | { name: 'collection-order-detail'; id?: number | string; orderNo?: string; back?: RoutePayload | null }
   | { name: 'cashier'; orderId: string; back?: RoutePayload | null }
   // 钱包/资产
   | { name: 'asset-view'; tab?: number }
   | { name: 'asset-history'; type: string; title?: string }
   | { name: 'hashrate-exchange'; source?: 'profile' | 'reservation' | 'asset-view' }
   | { name: 'balance-recharge'; source?: 'profile' | 'reservation' | 'asset-view'; amount?: string }
-  | { name: 'balance-withdraw'; source?: 'profile' | 'asset-view' }
+  | { name: 'balance-withdraw'; source?: 'profile' | 'asset-view' | 'sign-in' }
   | { name: 'service-recharge'; source?: 'profile' | 'asset-view' }
   | { name: 'extension-withdraw' }
   | { name: 'consignment-voucher' }
   | { name: 'cumulative-rights' }
+  | { name: 'order-fund-detail' }
+  | { name: 'money-log-detail'; id?: number | string; flowNo?: string }
   | { name: 'my-collection' }
   | { name: 'my-collection-detail'; id: string }
   | { name: 'my-collection-consignment'; id: string }
@@ -115,6 +118,12 @@ export function encodeRoute(r: RoutePayload): string {
       return `cashier:${r.orderId}`;
     case 'order-detail':
       return `order-detail:${r.orderId}`;
+    case 'collection-order-detail': {
+      const parts = ['collection-order-detail'];
+      if (r.id) parts.push(String(r.id));
+      if (r.orderNo) parts.push(r.orderNo);
+      return parts.join(':');
+    }
     case 'order-list':
       return `order-list:${r.kind}:${r.status}`;
     case 'asset-view':
@@ -141,6 +150,12 @@ export function encodeRoute(r: RoutePayload): string {
     }
     case 'claim-detail':
       return `claim-detail:${r.id}`;
+    case 'money-log-detail': {
+      const parts = ['money-log-detail'];
+      if (r.id) parts.push(String(r.id));
+      if (r.flowNo) parts.push(r.flowNo);
+      return parts.join(':');
+    }
     case 'my-collection-detail':
       return `my-collection-detail:${r.id}`;
     case 'my-collection-consignment':
@@ -268,6 +283,16 @@ export function decodeRoute(s: string): RoutePayload {
       return { name: 'sign-in' };
     case 'cumulative-rights':
       return { name: 'cumulative-rights' };
+    case 'order-fund-detail':
+      return { name: 'order-fund-detail' };
+    case 'money-log-detail': {
+      const parts = s.split(':');
+      return {
+        name: 'money-log-detail',
+        id: parts[1] ? (isNaN(Number(parts[1])) ? parts[1] : Number(parts[1])) : undefined,
+        flowNo: parts[2] || undefined,
+      };
+    }
     case 'consignment-voucher':
       return { name: 'consignment-voucher' };
     case 'my-collection':

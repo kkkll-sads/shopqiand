@@ -63,7 +63,6 @@ export {
     fetchCollectionItems,
     fetchCollectionItemDetail,
     fetchCollectionItemsBySession,
-    fetchCollectionItemOriginalDetail,
     fetchMyCollectionDetail,
     getMyCollection,
     fetchMyCollectionList,

@@ -107,14 +107,13 @@ export const useClaimUnlock = ({ showToast, userInfo, setUserInfo }: UseClaimUnl
     setUnlockLoading(true);
     try {
       const res = await unlockOldAssets(token);
-      const data = extractData(res);
-      if (data) {
-        if (data.unlock_status === 1) {
-          showToast(
-            'success',
-            '解锁成功',
-            `权益资产包 ¥${data.reward_equity_package} 与 ${data.reward_consignment_coupon} 张寄售券已发放`,
-          );
+      // 使用 isSuccess 判断是否成功
+      if (isSuccess(res)) {
+        const data = extractData(res);
+        if (data) {
+          // 优先使用响应中的 message 字段
+          const successMessage = data.message || `已发放旧资产包（价值${data.reward_item_price || 1000}元）和寄售券x${data.reward_consignment_coupon || 1}，请前往"我的藏品"寄售变现`;
+          showToast('success', '解锁成功', successMessage);
 
           if (userInfo && data.consumed_gold) {
             setUserInfo({
@@ -124,16 +123,11 @@ export const useClaimUnlock = ({ showToast, userInfo, setUserInfo }: UseClaimUnl
           }
 
           await loadUnlockStatus(token);
-        } else {
-          const messages = data.unlock_conditions?.messages || [];
-          if (messages.length > 0) {
-            showToast('warning', '解锁失败', messages.join('; '));
-          } else {
-            showToast('warning', '解锁失败', '条件未满足');
-          }
         }
       } else {
-        showToast('error', '解锁失败', extractError(res, '解锁失败，请重试'));
+        // 失败情况，使用错误信息
+        const errorMsg = extractError(res, '解锁失败，请重试');
+        showToast('error', '解锁失败', errorMsg);
       }
     } catch (error: any) {
       console.error('解锁旧资产失败:', error);

@@ -1,71 +1,62 @@
-
-import React, { useState } from 'react';
-import { Search, Video, PlayCircle, BookOpen, Clock, Signal, Radio } from 'lucide-react';
-
-interface LiveStream {
-    id: string;
-    title: string;
-    streamer: string;
-    viewers: number;
-    image: string;
-    avatar: string;
-    tags?: string[];
-    isLive: boolean;
-}
-
-const MOCK_STREAMS: LiveStream[] = [
-    {
-        id: '1',
-        title: '开启全民数商新生活',
-        streamer: '树拍集团董事长',
-        viewers: 12500,
-        image: 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&q=80&w=1000',
-        avatar: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&q=80&w=100',
-        isLive: true
-    },
-    {
-        id: '2',
-        title: '新时代，新气象',
-        streamer: '树拍易购官方直播间',
-        viewers: 8900,
-        image: 'https://images.unsplash.com/photo-1556761175-5973dc0f32e7?auto=format&fit=crop&q=80&w=1000',
-        avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&q=80&w=100',
-        isLive: true
-    },
-    {
-        id: '3',
-        title: '如何开通数字店',
-        streamer: '众欢商贸商行',
-        viewers: 3400,
-        image: 'https://images.unsplash.com/photo-1551836022-d5d88e9218df?auto=format&fit=crop&q=80&w=1000',
-        avatar: 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?auto=format&fit=crop&q=80&w=100',
-        isLive: true
-    },
-    {
-        id: '4',
-        title: '数字确权最新政策解读',
-        streamer: '政策解读中心',
-        viewers: 5600,
-        image: 'https://images.unsplash.com/photo-1556155092-490a1ba16284?auto=format&fit=crop&q=80&w=1000',
-        avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=100',
-        isLive: true
-    }
-];
+import React, { useState, useEffect } from 'react';
+import { PlayCircle, Radio, ArrowLeft } from 'lucide-react';
+import { fetchProfile } from '../../services/api';
+import { getStoredToken } from '../../services/client';
+import { isSuccess, extractData } from '../../utils/apiHelpers';
+import { LoadingSpinner } from '../../components/common';
+import { useErrorHandler } from '../../hooks/useErrorHandler';
 
 const LivePage: React.FC = () => {
     const [activeTab, setActiveTab] = useState('live');
+    const [liveUrl, setLiveUrl] = useState<string | null>(null);
+    const [loading, setLoading] = useState<boolean>(true);
+    const [showPlayer, setShowPlayer] = useState<boolean>(false);
+    const { handleError } = useErrorHandler();
 
     const tabs = [
         { id: 'live', label: '直播', icon: Radio },
         { id: 'replay', label: '回放', icon: PlayCircle },
     ];
 
+    useEffect(() => {
+        const loadLiveUrl = async () => {
+            const token = getStoredToken();
+            if (!token) {
+                handleError('未登录，请先登录', { showToast: true });
+                setLoading(false);
+                return;
+            }
+
+            try {
+                setLoading(true);
+                const response = await fetchProfile(token);
+                
+                if (isSuccess(response) && response.data) {
+                    const data = extractData(response);
+                    if (data?.liveUrl) {
+                        setLiveUrl(data.liveUrl);
+                    } else {
+                        handleError('直播间URL不存在', { showToast: true });
+                    }
+                } else {
+                    handleError(response, { showToast: true, customMessage: '获取直播间信息失败' });
+                }
+            } catch (error: any) {
+                handleError(error, { showToast: true, customMessage: '加载直播间失败' });
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        if (activeTab === 'live') {
+            loadLiveUrl();
+        }
+    }, [activeTab, handleError]);
+
     return (
-        <div className="min-h-screen bg-gray-50 pb-24">
+        <div className="min-h-screen-dynamic bg-gray-50 pb-24">
             {/* Header with Tabs */}
             <div className="bg-orange-600 sticky top-0 z-20 text-white shadow-lg">
-                {/* Top Status Bar Placeholder if needed (usually handled by OS/Browser) */}
-
                 {/* Tab Navigation */}
                 <div className="flex items-center justify-center px-4 pt-4 pb-2">
                     <div className="flex justify-center space-x-12 text-base font-medium">
@@ -73,8 +64,11 @@ const LivePage: React.FC = () => {
                             <button
                                 key={tab.id}
                                 onClick={() => setActiveTab(tab.id)}
-                                className={`relative px-2 py-2 transition-colors duration-200 whitespace-nowrap ${activeTab === tab.id ? 'text-white text-lg font-bold' : 'text-orange-100/90'
-                                    }`}
+                                className={`relative px-2 py-2 transition-colors duration-200 whitespace-nowrap ${
+                                    activeTab === tab.id
+                                        ? 'text-white text-lg font-bold'
+                                        : 'text-orange-100/90'
+                                }`}
                             >
                                 {tab.label}
                                 {activeTab === tab.id && (
@@ -86,66 +80,106 @@ const LivePage: React.FC = () => {
                 </div>
             </div>
 
-            {/* Content Grid */}
+            {/* Content */}
             <div className="p-3">
                 {activeTab === 'live' && (
-                    <div className="grid grid-cols-2 gap-3">
-                        {MOCK_STREAMS.map(stream => (
-                            <div key={stream.id} className="bg-white rounded-xl overflow-hidden shadow-sm aspect-[3/4] relative group">
-                                {/* Image Background */}
-                                <img
-                                    src={stream.image}
-                                    alt={stream.title}
-                                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                                />
+                    <div className="w-full">
+                        {loading ? (
+                            <div className="flex items-center justify-center py-20">
+                                <LoadingSpinner text="加载中..." />
+                            </div>
+                        ) : showPlayer && liveUrl ? (
+                            /* 视频播放器视图 */
+                            <div className="relative">
+                                {/* 返回按钮 */}
+                                <button
+                                    onClick={() => setShowPlayer(false)}
+                                    className="absolute top-3 left-3 z-20 bg-black/50 hover:bg-black/70 backdrop-blur-sm text-white p-2 rounded-full transition-colors"
+                                >
+                                    <ArrowLeft size={20} />
+                                </button>
 
-                                {/* Gradient Overlay */}
-                                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-90"></div>
-
-                                {/* Live Badge */}
-                                {stream.isLive && (
-                                    <div className="absolute top-3 left-3 flex items-center gap-1 bg-orange-600/90 backdrop-blur-sm px-2 py-0.5 rounded text-[10px] text-white font-medium">
+                                {/* 视频播放器 */}
+                                <div className="bg-black rounded-xl overflow-hidden shadow-lg aspect-video relative">
+                                    {/* Live Badge */}
+                                    <div className="absolute top-3 left-14 z-10 flex items-center gap-1 bg-orange-600/90 backdrop-blur-sm px-2 py-0.5 rounded text-xs text-white font-medium">
                                         <span className="relative flex h-2 w-2">
                                             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
                                             <span className="relative inline-flex rounded-full h-2 w-2 bg-white"></span>
                                         </span>
                                         正在直播
                                     </div>
-                                )}
 
-                                {/* Viewers Count */}
-                                <div className="absolute top-3 right-3 bg-black/30 backdrop-blur-md px-2 py-0.5 rounded text-[10px] text-white/90">
-                                    {stream.viewers > 10000 ? (stream.viewers / 10000).toFixed(1) + 'w' : stream.viewers}观看
-                                </div>
-
-                                {/* Bottom Content */}
-                                <div className="absolute bottom-0 left-0 right-0 p-3 text-white">
-                                    <h3 className="text-sm font-bold line-clamp-2 mb-2 leading-tight text-shadow-sm">{stream.title}</h3>
-
-                                    <div className="flex items-center gap-2">
-                                        <div className="w-5 h-5 rounded-full border border-white/50 overflow-hidden shrink-0">
-                                            <img src={stream.avatar} alt={stream.streamer} className="w-full h-full object-cover" />
-                                        </div>
-                                        <span className="text-xs text-white/90 truncate">{stream.streamer}</span>
-                                    </div>
+                                    {/* Video Player */}
+                                    <video
+                                        key={liveUrl}
+                                        className="w-full h-full object-contain"
+                                        controls
+                                        playsInline
+                                        autoPlay
+                                        muted={false}
+                                        src={liveUrl}
+                                    >
+                                        您的浏览器不支持视频播放
+                                    </video>
                                 </div>
                             </div>
-                        ))}
+                        ) : liveUrl ? (
+                            /* 直播卡片视图 */
+                            <div
+                                onClick={() => setShowPlayer(true)}
+                                className="bg-white rounded-xl overflow-hidden shadow-lg active:scale-[0.98] transition-transform cursor-pointer"
+                            >
+                                {/* 封面图片区域 */}
+                                <div className="relative bg-gradient-to-br from-orange-500 to-red-500 aspect-video flex items-center justify-center">
+                                    {/* 渐变背景 */}
+                                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
+                                    
+                                    {/* Live Badge */}
+                                    <div className="absolute top-4 left-4 z-10 flex items-center gap-1 bg-orange-600/90 backdrop-blur-sm px-3 py-1 rounded-full text-sm text-white font-medium">
+                                        <span className="relative flex h-2 w-2">
+                                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
+                                            <span className="relative inline-flex rounded-full h-2 w-2 bg-white"></span>
+                                        </span>
+                                        正在直播
+                                    </div>
+
+                                    {/* 播放按钮 */}
+                                    <div className="relative z-10 flex flex-col items-center gap-3">
+                                        <div className="w-20 h-20 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center shadow-xl">
+                                            <PlayCircle size={40} className="text-orange-600 ml-1" fill="currentColor" />
+                                        </div>
+                                        <span className="text-white text-lg font-semibold drop-shadow-lg">点击观看直播</span>
+                                    </div>
+                                </div>
+
+                                {/* 卡片信息 */}
+                                <div className="p-4">
+                                    <h3 className="text-lg font-bold text-gray-900 mb-2">直播间</h3>
+                                    <p className="text-sm text-gray-500">点击卡片进入直播间观看</p>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="flex flex-col items-center justify-center py-20 text-gray-400">
+                                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                                    <Radio size={32} className="text-gray-300" />
+                                </div>
+                                <p>暂无直播内容</p>
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {/* Empty State for other tabs */}
+                {activeTab !== 'live' && (
+                    <div className="flex flex-col items-center justify-center py-20 text-gray-400">
+                        <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                            {tabs.find(t => t.id === activeTab)?.icon({ size: 32, className: 'text-gray-300' }) as React.ReactNode}
+                        </div>
+                        <p>暂无{tabs.find(t => t.id === activeTab)?.label}内容</p>
                     </div>
                 )}
             </div>
-
-
-
-            {/* Empty State for other tabs */}
-            {activeTab !== 'live' && (
-                <div className="flex flex-col items-center justify-center py-20 text-gray-400">
-                    <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-                        {tabs.find(t => t.id === activeTab)?.icon({ size: 32, className: 'text-gray-300' }) as React.ReactNode}
-                    </div>
-                    <p>暂无{tabs.find(t => t.id === activeTab)?.label}内容</p>
-                </div>
-            )}
         </div>
     );
 };

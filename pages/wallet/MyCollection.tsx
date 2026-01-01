@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { FileText, ShoppingBag, ArrowRight, X, AlertCircle, CheckCircle } from 'lucide-react';
 import SubPageLayout from '../../components/SubPageLayout';
 import { formatAmount, formatTime } from '../../utils/format';
@@ -15,7 +15,6 @@ import {
   USER_INFO_KEY,
   normalizeAssetUrl,
   fetchConsignmentCoupons,
-  getMyConsignmentList,
 } from '../../services/api';
 
 import { UserInfo } from '../../types';
@@ -53,7 +52,7 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onBack, onItemSelect, initi
 
   const tabs: { id: CategoryTab; label: string }[] = [
     { id: 'hold', label: '待售' },
-    { id: 'consign', label: '挂单' },
+    { id: 'consign', label: '寄售中' },
     { id: 'sold', label: '已卖出' },
     { id: 'dividend', label: '已转分红' },
   ];
@@ -95,45 +94,13 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onBack, onItemSelect, initi
     loadUserInfo();
   }, []);
 
-  useEffect(() => {
-    loadData();
-  }, [page, activeTab]);
-
-  // 如果父级要求初始打开寄售弹窗（通过 initialConsignItemId），在数据加载后自动打开对应项的寄售页
-  useEffect(() => {
-    if (!initialConsignItemId) return;
-    if (!myCollections || myCollections.length === 0) return;
-
-    const found = myCollections.find((it) => {
-      const resolved = resolveCollectionId(it);
-      return String(resolved) === String(initialConsignItemId) || String(it.id) === String(initialConsignItemId) || String(it.item_id) === String(initialConsignItemId);
-    });
-
-    if (found) {
-      setSelectedItem(found);
-      setActionTab('consignment');
-      setActionError(null);
-      setShowActionModal(true);
-    }
-  }, [initialConsignItemId, myCollections]);
-
-  // NEW: 如果通过 helpers.selectedCollectionItem 传入了预选项，立即打开寄售模态框
-  useEffect(() => {
-    if (!preSelectedItem) return;
-    // 立即打开弹窗，不需要等待数据加载
-    setSelectedItem(preSelectedItem);
-    setActionTab('consignment');
-    setActionError(null);
-    setShowActionModal(true);
-  }, [preSelectedItem]);
-
   const handleTabChange = (tab: CategoryTab) => {
     setActiveTab(tab);
     setPage(1);
     setMyCollections([]);
   };
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     const token = localStorage.getItem(AUTH_TOKEN_KEY);
     if (!token) {
       setError('请先登录');
@@ -188,41 +155,32 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onBack, onItemSelect, initi
         } else {
           setError(extractError(res, '获取已售出列表失败'));
         }
-      } else {
-        // consign tab (still uses myConsignmentList for specifically Consignment focused view, OR could strictly use myCollection? 
-        // User doc says myCollection supports 'consigned'. But existing getMyConsignmentList might have specific fields.
-        // Let's keep consign tab as is for now unless user requested change there too.
-        // Wait, user doc for myCollection says: status: consigned=寄售中. 
-        // But MyCollection.tsx uses `getMyConsignmentList` which maps to `myConsignmentList` endpoint.
-        // Let's stick to existing logic for Consign tab to minimize risk, only change Sold tab as requested.
-
-        const res = await getMyConsignmentList({
-          page,
-          token,
-          status: 1 // 1=consigning
-        });
+      } else if (activeTab === 'consign') {
+        // 使用 getMyCollection 接口获取所有藏品，然后在客户端过滤出寄售中的藏品
+        const res = await getMyCollection({ page, token });
 
         if (isSuccess(res) && res.data) {
           const list = res.data.list || [];
-          // Map MyConsignmentItem to MyCollectionItem structure for UI compatibility
-          const mappedList: MyCollectionItem[] = list.map(item => ({
-            id: item.id,
-            item_id: (item as any).item_id || 0,
-            user_collection_id: (item as any).user_collection_id || 0,
-            item_title: item.item_title,
-            item_image: (item as any).image || (item as any).item_image || '',
-            price: String(item.consignment_price),
-            status_text: item.status_text,
-            consignment_status: ConsignmentStatus.CONSIGNING,
-            delivery_status: DeliveryStatus.NOT_DELIVERED,
-          } as any)) as MyCollectionItem[];
+          // 过滤出寄售中的藏品（根据 status_text 或 consignment_status 判断）
+          const filteredList = list.filter(item => {
+            // 优先使用 status_text 判断
+            if (item.status_text) {
+              return item.status_text.includes('寄售中') || item.status_text === '寄售中';
+            }
+            // 回退到 consignment_status 判断：CONSIGNING(2) 或 PENDING(1) 且 status_text 包含"寄售"
+            const cStatus = Number(item.consignment_status) || 0;
+            return cStatus === ConsignmentStatus.CONSIGNING || cStatus === ConsignmentStatus.PENDING;
+          });
 
           if (page === 1) {
-            setMyCollections(mappedList);
+            setMyCollections(filteredList);
           } else {
-            setMyCollections(prev => [...prev, ...mappedList]);
+            setMyCollections(prev => [...prev, ...filteredList]);
           }
           setHasMore(list.length >= 10 && res.data.has_more !== false);
+          if (typeof (res.data as any).consignment_coupon === 'number') {
+            setConsignmentTicketCount((res.data as any).consignment_coupon);
+          }
         } else {
           setError(extractError(res, '获取寄售列表失败'));
         }
@@ -232,7 +190,39 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onBack, onItemSelect, initi
     } finally {
       setLoading(false);
     }
-  };
+  }, [activeTab, page]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  // 如果父级要求初始打开寄售弹窗（通过 initialConsignItemId），在数据加载后自动打开对应项的寄售页
+  useEffect(() => {
+    if (!initialConsignItemId) return;
+    if (!myCollections || myCollections.length === 0) return;
+
+    const found = myCollections.find((it) => {
+      const resolved = resolveCollectionId(it);
+      return String(resolved) === String(initialConsignItemId) || String(it.id) === String(initialConsignItemId) || String(it.item_id) === String(initialConsignItemId);
+    });
+
+    if (found) {
+      setSelectedItem(found);
+      setActionTab('consignment');
+      setActionError(null);
+      setShowActionModal(true);
+    }
+  }, [initialConsignItemId, myCollections]);
+
+  // NEW: 如果通过 helpers.selectedCollectionItem 传入了预选项，立即打开寄售模态框
+  useEffect(() => {
+    if (!preSelectedItem) return;
+    // 立即打开弹窗，不需要等待数据加载
+    setSelectedItem(preSelectedItem);
+    setActionTab('consignment');
+    setActionError(null);
+    setShowActionModal(true);
+  }, [preSelectedItem]);
 
   // 检查是否满足48小时
   const check48Hours = (buyTime: number): { passed: boolean; hoursLeft: number } => {
@@ -783,81 +773,84 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onBack, onItemSelect, initi
 
     return (
       <div
-        key={item.id}
-        className="bg-white rounded-lg p-4 mb-3 shadow-sm cursor-pointer active:bg-gray-50 transition-colors"
+        key={item.id || item.user_collection_id || `item-${item.item_id}`}
+        className="bg-white rounded-xl p-5 mb-4 shadow-sm hover:shadow-md border border-gray-100 cursor-pointer active:scale-[0.98] transition-all duration-200"
         onClick={() => handleItemClick(item)}
       >
-        <div className="flex gap-3">
-          <div className="w-20 h-20 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
+        <div className="flex gap-4">
+          <div className="w-24 h-24 bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl overflow-hidden flex-shrink-0 border border-gray-200/50 shadow-inner">
             <img
-              src={normalizeAssetUrl(image)}
+              src={normalizeAssetUrl(image) || undefined}
               alt={title}
               className="w-full h-full object-cover"
               onError={(e) => {
-                // (e.target as HTMLImageElement).src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
                 (e.target as HTMLImageElement).style.visibility = 'hidden';
               }}
             />
           </div>
-          <div className="flex-1">
-            <div className="flex items-start justify-between mb-1">
-              <div className="text-sm font-medium text-gray-800 flex-1">{title}</div>
-              <ArrowRight size={16} className="text-gray-400 ml-2 flex-shrink-0" />
+          <div className="flex-1 min-w-0">
+            <div className="flex items-start justify-between mb-2">
+              <div className="text-base font-semibold text-gray-900 flex-1 line-clamp-2 leading-snug pr-2">{title}</div>
+              <ArrowRight size={18} className="text-gray-400 flex-shrink-0 mt-0.5" strokeWidth={2} />
             </div>
-            {item.order_no && (
-              <div className="text-xs text-gray-400 mb-1">订单号: {item.order_no}</div>
-            )}
-            {item.asset_code && (
-              <div className="text-xs text-gray-400 mb-1 truncate" title={item.asset_code}>
-                确权编号: {item.asset_code}
-              </div>
-            )}
-            {item.fingerprint && (
-              <div className="text-xs text-gray-400 mb-1 truncate" title={item.fingerprint}>
-                存证指纹: {item.fingerprint.length > 20 ? `${item.fingerprint.substring(0, 10)}...${item.fingerprint.substring(item.fingerprint.length - 10)}` : item.fingerprint}
-              </div>
-            )}
-            <div className="text-xs text-gray-500 mb-2">购买时间: {item.pay_time_text || item.buy_time_text}</div>
-            <div className="text-sm font-bold text-gray-900 mb-2">¥ {item.price}</div>
+            <div className="space-y-1.5 mb-3">
+              {item.order_no && (
+                <div className="text-xs text-gray-500 font-mono">订单号: {item.order_no}</div>
+              )}
+              {item.asset_code && (
+                <div className="text-xs text-gray-500 font-mono truncate bg-gray-50 px-2 py-1 rounded-md inline-block" title={item.asset_code}>
+                  确权编号: {item.asset_code}
+                </div>
+              )}
+              {item.fingerprint && (
+                <div className="text-xs text-gray-500 font-mono truncate bg-gray-50 px-2 py-1 rounded-md inline-block" title={item.fingerprint}>
+                  存证: {item.fingerprint.length > 20 ? `${item.fingerprint.substring(0, 10)}...${item.fingerprint.substring(item.fingerprint.length - 10)}` : item.fingerprint}
+                </div>
+              )}
+            </div>
+            <div className="flex items-baseline justify-between mb-3">
+              <div className="text-lg font-bold text-gray-900">¥ {item.price}</div>
+              <div className="text-xs text-gray-500">{item.pay_time_text || item.buy_time_text}</div>
+            </div>
 
             <div className="flex gap-2 flex-wrap">
               {/* 优先使用 status_text 字段显示状态 */}
               {item.status_text ? (
-                <div className={`text-xs px-2 py-1 rounded-full border ${item.status_text.includes('寄售') || item.status_text.includes('出售')
-                  ? 'bg-blue-50 text-blue-600 border-blue-200'
+                <div className={`text-xs font-medium px-3 py-1.5 rounded-full border-2 ${item.status_text.includes('寄售') || item.status_text.includes('出售')
+                  ? 'bg-blue-50/80 text-blue-700 border-blue-300 shadow-sm'
                   : item.status_text.includes('确权') || item.status_text.includes('成功') || item.status_text.includes('已售出')
-                    ? 'bg-green-50 text-green-600 border-green-200'
+                    ? 'bg-green-50/80 text-green-700 border-green-300 shadow-sm'
                     : item.status_text.includes('失败') || item.status_text.includes('取消')
-                      ? 'bg-red-50 text-red-600 border-red-200'
+                      ? 'bg-red-50/80 text-red-700 border-red-300 shadow-sm'
                       : item.status_text.includes('提货') || item.status_text.includes('待')
-                        ? 'bg-orange-50 text-orange-600 border-orange-200'
-                        : 'bg-gray-50 text-gray-600 border-gray-200'
+                        ? 'bg-orange-50/80 text-orange-700 border-orange-300 shadow-sm'
+                        : 'bg-gray-50/80 text-gray-700 border-gray-300 shadow-sm'
                   }`}>
                   {item.status_text}
                 </div>
               ) : activeTab === 'sold' || item.consignment_status === ConsignmentStatus.SOLD ? (
                 // Specially for Sold Items (from myCollection endpoint)
                 // Display sold price, time, and settlement status
-                <div className="flex flex-col w-full gap-1 mt-1">
-                  <div className="flex justify-between items-center bg-green-50 px-2 py-1.5 rounded-lg border border-green-100">
-                    <span className="text-xs font-medium text-green-700">已售出</span>
-                    <span className="text-sm font-bold text-green-700 font-[DINAlternate-Bold]">
+                <div className="flex flex-col w-full gap-2 mt-1 bg-gradient-to-br from-green-50 to-emerald-50 p-3 rounded-xl border border-green-200/50">
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs font-semibold text-green-700 bg-white/60 px-2.5 py-1 rounded-full border border-green-300">已售出</span>
+                    <span className="text-base font-bold text-green-700 font-[DINAlternate-Bold]">
                       成交 ¥{formatAmount(item.sold_price || item.consignment_price || 0, { prefix: '', thousandSeparator: false })}
                     </span>
                   </div>
 
                   {item.sold_time && (
-                    <div className="flex justify-between text-xs text-gray-400 px-1">
-                      <span>成交时间</span>
+                    <div className="flex justify-between text-xs text-gray-600 px-1">
+                      <span className="font-medium">成交时间</span>
                       <span>{formatTime(item.sold_time)}</span>
                     </div>
                   )}
 
                   {/* Settlement Info if available */}
                   {item.settle_status !== undefined && (
-                    <div className="flex justify-between text-xs px-1 mt-1 pt-1 border-t border-gray-100 border-dashed">
-                      <span className="text-gray-400">结算状态</span>
-                      <span className={`${(Number(item.settle_status) === 1 || Number(item.settle_status) === 0) ? 'text-green-600 font-medium' : 'text-orange-500'}`}>
+                    <div className="flex justify-between text-xs px-1 pt-1.5 border-t border-green-200/50">
+                      <span className="text-gray-600 font-medium">结算状态</span>
+                      <span className={`font-semibold ${(Number(item.settle_status) === 1 || Number(item.settle_status) === 0) ? 'text-green-600' : 'text-orange-500'}`}>
                         {(Number(item.settle_status) === 1 || Number(item.settle_status) === 0) ? '已结算' : '待结算'}
                       </span>
                     </div>
@@ -866,8 +859,8 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onBack, onItemSelect, initi
                   {/* Show Payout Snapshot if available (Profit) */}
                   {(item.payout_profit_consume || item.payout_profit_withdrawable) ? (
                     <div className="flex justify-between text-xs px-1">
-                      <span className="text-gray-400">利润收益</span>
-                      <span className="text-red-500 font-medium">
+                      <span className="text-gray-600 font-medium">利润收益</span>
+                      <span className="text-red-600 font-bold">
                         +{formatAmount((Number(item.payout_profit_consume) + Number(item.payout_profit_withdrawable)), { prefix: '¥' })}
                       </span>
                     </div>
@@ -876,38 +869,38 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onBack, onItemSelect, initi
               ) : (
                 /* 回退到原有的逻辑（如果没有 status_text 字段且不是新版已售出） */
                 item.consignment_status === ConsignmentStatus.SOLD ? (
-                  <div className="text-xs px-2 py-1 rounded-full bg-green-50 text-green-600 border border-green-200">
+                  <div className="text-xs font-medium px-3 py-1.5 rounded-full bg-green-50/80 text-green-700 border-2 border-green-300 shadow-sm">
                     已售出
                   </div>
                 ) : item.consignment_status === ConsignmentStatus.CONSIGNING ? (
-                  <div className="text-xs px-2 py-1 rounded-full bg-blue-50 text-blue-600 border border-blue-200">
+                  <div className="text-xs font-medium px-3 py-1.5 rounded-full bg-blue-50/80 text-blue-700 border-2 border-blue-300 shadow-sm">
                     寄售中
                   </div>
                 ) : item.delivery_status === DeliveryStatus.DELIVERED ? (
                   // 已提货：显示提货订单状态（待发货/待收货/已签收）
-                  <div className={`text-xs px-2 py-1 rounded-full ${item.delivery_status_text === '待发货'
-                    ? 'bg-blue-50 text-blue-600 border border-blue-200'
+                  <div className={`text-xs font-medium px-3 py-1.5 rounded-full border-2 shadow-sm ${item.delivery_status_text === '待发货'
+                    ? 'bg-blue-50/80 text-blue-700 border-blue-300'
                     : item.delivery_status_text === '待收货'
-                      ? 'bg-yellow-50 text-yellow-600 border border-yellow-200'
+                      ? 'bg-yellow-50/80 text-yellow-700 border-yellow-300'
                       : item.delivery_status_text === '已签收'
-                        ? 'bg-green-50 text-green-600 border border-green-200'
-                        : 'bg-green-50 text-green-600 border border-green-200'
+                        ? 'bg-green-50/80 text-green-700 border-green-300'
+                        : 'bg-green-50/80 text-green-700 border-green-300'
                     }`}>
                     {item.delivery_status_text || '已提货'}
                   </div>
                 ) : hasConsignedBefore(item) ? (
                   // 待提货：显示"待提货"和"待寄售"标签
                   <>
-                    <div className="text-xs px-2 py-1 rounded-full bg-orange-50 text-orange-600 border border-orange-200">
+                    <div className="text-xs font-medium px-3 py-1.5 rounded-full bg-orange-50/80 text-orange-700 border-2 border-orange-300 shadow-sm">
                       待提货
                     </div>
-                    <div className={`text-xs px-2 py-1 rounded-full ${item.consignment_status === ConsignmentStatus.NOT_CONSIGNED
-                      ? 'bg-gray-50 text-gray-600 border border-gray-200'
+                    <div className={`text-xs font-medium px-3 py-1.5 rounded-full border-2 shadow-sm ${item.consignment_status === ConsignmentStatus.NOT_CONSIGNED
+                      ? 'bg-gray-50/80 text-gray-700 border-gray-300'
                       : item.consignment_status === ConsignmentStatus.PENDING
-                        ? 'bg-yellow-50 text-yellow-600 border border-yellow-200'
+                        ? 'bg-yellow-50/80 text-yellow-700 border-yellow-300'
                         : item.consignment_status === ConsignmentStatus.REJECTED
-                          ? 'bg-red-50 text-red-600 border border-red-200'
-                          : 'bg-green-50 text-green-600 border border-green-200'
+                          ? 'bg-red-50/80 text-red-700 border-red-300'
+                          : 'bg-green-50/80 text-green-700 border-green-300'
                       }`}>
                       {item.consignment_status_text || '待寄售'}
                     </div>
@@ -915,16 +908,16 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onBack, onItemSelect, initi
                 ) : (
                   // 未提货：显示"未提货"和寄售状态
                   <>
-                    <div className="text-xs px-2 py-1 rounded-full bg-orange-50 text-orange-600 border border-orange-200">
+                    <div className="text-xs font-medium px-3 py-1.5 rounded-full bg-orange-50/80 text-orange-700 border-2 border-orange-300 shadow-sm">
                       ○ 未提货
                     </div>
-                    <div className={`text-xs px-2 py-1 rounded-full ${item.consignment_status === ConsignmentStatus.NOT_CONSIGNED
-                      ? 'bg-gray-50 text-gray-600 border border-gray-200'
+                    <div className={`text-xs font-medium px-3 py-1.5 rounded-full border-2 shadow-sm ${item.consignment_status === ConsignmentStatus.NOT_CONSIGNED
+                      ? 'bg-gray-50/80 text-gray-700 border-gray-300'
                       : item.consignment_status === ConsignmentStatus.PENDING
-                        ? 'bg-yellow-50 text-yellow-600 border border-yellow-200'
+                        ? 'bg-yellow-50/80 text-yellow-700 border-yellow-300'
                         : item.consignment_status === ConsignmentStatus.REJECTED
-                          ? 'bg-red-50 text-red-600 border border-red-200'
-                          : 'bg-green-50 text-green-600 border border-green-200'
+                          ? 'bg-red-50/80 text-red-700 border-red-300'
+                          : 'bg-green-50/80 text-green-700 border-green-300'
                       }`}>
                       {item.consignment_status_text || '未寄售'}
                     </div>
@@ -942,37 +935,47 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onBack, onItemSelect, initi
     <SubPageLayout title="我的藏品" onBack={onBack}>
       <div className="flex-1 overflow-hidden flex flex-col">
         {/* Category Tabs */}
-        <div className="bg-white px-4 pt-2 pb-0 border-b border-gray-100 flex justify-between items-center z-10 shrink-0">
+        <div className="bg-white px-4 pt-3 pb-2 border-b border-gray-100/80 flex justify-between items-center z-10 shrink-0">
           {tabs.map((tab) => (
             <button
               key={tab.id}
               onClick={() => handleTabChange(tab.id)}
-              className={`flex-1 py-3 text-sm font-medium relative transition-colors ${activeTab === tab.id ? 'text-orange-600' : 'text-gray-500 hover:text-gray-700'
-                }`}
+              className={`flex-1 py-3 text-sm font-semibold relative transition-all duration-200 ${activeTab === tab.id 
+                ? 'text-orange-600' 
+                : 'text-gray-500 hover:text-gray-700 active:text-gray-800'
+              }`}
             >
               {tab.label}
               {activeTab === tab.id && (
-                <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-8 h-0.5 bg-orange-600 rounded-full" />
+                <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-10 h-1 bg-gradient-to-r from-orange-500 to-orange-400 rounded-full shadow-sm shadow-orange-200" />
               )}
             </button>
           ))}
         </div>
 
-        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        <div className="flex-1 overflow-y-auto p-4 pb-6 bg-gradient-to-b from-gray-50/50 to-white">
           {loading && page === 1 ? (
-            <LoadingSpinner text="加载中..." />
+            <div className="flex items-center justify-center py-12">
+              <LoadingSpinner text="加载中..." />
+            </div>
           ) : error ? (
-            <EmptyState icon={<FileText size={48} className="text-gray-300" />} title="加载失败" description={error} />
+            <div className="py-12">
+              <EmptyState icon={<FileText size={48} className="text-gray-300" />} title="加载失败" description={error} />
+            </div>
           ) : myCollections.length === 0 ? (
-            <EmptyState icon={<ShoppingBag size={48} className="text-gray-300" />} title="暂无藏品" description="您还没有任何藏品" />
+            <div className="py-12">
+              <EmptyState icon={<ShoppingBag size={48} className="text-gray-300" />} title="暂无藏品" description="您还没有任何藏品" />
+            </div>
           ) : (
             <>
-              {myCollections.map(renderCollectionItem)}
+              <div className="space-y-4">
+                {myCollections.map((item) => renderCollectionItem(item))}
+              </div>
               {hasMore && (
                 <button
                   onClick={() => setPage(prev => prev + 1)}
                   disabled={loading}
-                  className="w-full py-2 text-sm text-blue-600 disabled:opacity-50"
+                  className="w-full mt-4 py-3 text-sm font-medium text-gray-700 bg-white border-2 border-gray-200 rounded-xl hover:border-orange-300 hover:text-orange-600 hover:bg-orange-50/50 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-sm hover:shadow-md active:scale-[0.98]"
                 >
                   {loading ? '加载中...' : '加载更多'}
                 </button>

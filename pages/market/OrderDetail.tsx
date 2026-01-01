@@ -165,58 +165,66 @@ const OrderDetail: React.FC<OrderDetailProps> = ({ orderId, onBack, onNavigate }
     ];
 
     return (
-        <div className="min-h-screen bg-gradient-to-b from-orange-50/30 to-gray-50 max-w-[480px] mx-auto pb-safe">
+        <div className="min-h-screen bg-gray-50 max-w-[480px] mx-auto pb-safe">
             {/* Header */}
-            <header className="bg-gradient-to-r from-[#fedab0] to-[#ffd9a8] text-gray-800 shadow-md sticky top-0 z-10">
+            <header className="bg-white border-b border-gray-100 sticky top-0 z-10 shadow-sm">
                 <div className="flex items-center h-14 px-4">
                     <button
                         onClick={onBack}
-                        className="p-2 -ml-2 hover:bg-white/30 rounded-full transition-colors"
+                        className="p-2 -ml-2 hover:bg-gray-50 rounded-full transition-colors"
                         aria-label="返回"
                     >
-                        <ArrowLeft className="w-5 h-5" />
+                        <ArrowLeft className="w-5 h-5 text-gray-700" />
                     </button>
-                    <h1 className="flex-1 text-center pr-9 font-medium">订单详情</h1>
+                    <h1 className="flex-1 text-center pr-9 font-semibold text-gray-900">订单详情</h1>
                 </div>
             </header>
 
-            <div className="pb-24">
+            <div className="pb-24 pt-4">
                 {/* Order Progress */}
-                <div className="bg-white mx-3 mt-3 rounded-2xl shadow-md p-5 mb-3">
-                    <div className="flex items-center gap-2 mb-4">
-                        <div className="w-1 h-5 bg-gradient-to-b from-[#fedab0] to-[#ffd9a8] rounded-full" />
-                        <h2 className="font-medium text-gray-800">物流进度</h2>
+                <div className="bg-white mx-4 mt-0 rounded-xl shadow-sm border border-gray-100 p-6 mb-4">
+                    <div className="flex items-center gap-2.5 mb-6">
+                        <div className="w-1 h-5 bg-gradient-to-b from-orange-500 to-orange-400 rounded-full" />
+                        <h2 className="font-semibold text-gray-900 text-base">物流进度</h2>
                     </div>
 
-                    <div className="relative pl-6">
+                    <div className="relative">
                         {orderSteps.map((step, index) => (
-                            <div key={step.key} className="relative pb-8 last:pb-0">
-                                {/* Connection line */}
+                            <div key={step.key} className="relative pb-8 last:pb-0 flex items-start">
+                                {/* Connection line - 在节点中心位置 */}
                                 {index < orderSteps.length - 1 && (
-                                    <div className={`absolute left-2 top-6 w-0.5 h-full ${step.active ? 'bg-[#fedab0]' : 'bg-gray-200'
-                                        }`} />
+                                    <div className={`absolute left-3 top-8 w-0.5 h-full transition-colors z-0 ${
+                                        step.active 
+                                            ? 'bg-gradient-to-b from-orange-500 to-orange-300' 
+                                            : 'bg-gray-200'
+                                    }`} />
                                 )}
 
-                                {/* Node */}
-                                <div className="flex items-start gap-3">
-                                    <div className={`absolute left-0 w-4 h-4 rounded-full border-2 ${step.active
-                                            ? 'bg-[#fedab0] border-[#fedab0] shadow-md'
-                                            : 'bg-white border-gray-300'
-                                        }`}>
-                                        {step.active && (
-                                            <Check className="w-2.5 h-2.5 text-white absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
-                                        )}
-                                    </div>
+                                {/* Node - 固定在左边 */}
+                                <div className={`relative z-10 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all flex-shrink-0 ${
+                                    step.active
+                                        ? 'bg-gradient-to-br from-orange-500 to-orange-400 border-orange-500 shadow-lg shadow-orange-500/30 scale-110'
+                                        : 'bg-white border-gray-300'
+                                }`}>
+                                    {step.active && (
+                                        <Check className="w-3.5 h-3.5 text-white font-bold" strokeWidth={3} />
+                                    )}
+                                </div>
 
-                                    <div className="flex-1 pt-0.5">
-                                        <p className={`text-sm mb-1 ${step.active ? 'text-gray-800 font-medium' : 'text-gray-400'
-                                            }`}>
-                                            {step.label}
-                                        </p>
-                                        <p className="text-xs text-gray-500">
-                                            {step.time > 0 ? formatDateTime(step.time) : '等待中...'}
-                                        </p>
-                                    </div>
+                                {/* Text content - 在节点右边，有足够间距 */}
+                                <div className="flex-1 ml-4 pt-0.5 min-w-0">
+                                    <p className={`text-sm mb-1.5 transition-colors ${
+                                        step.active 
+                                            ? 'text-gray-900 font-semibold' 
+                                            : 'text-gray-400'
+                                    }`}>
+                                        {step.label}
+                                    </p>
+                                    <p className={`text-xs transition-colors ${
+                                        step.active ? 'text-gray-600' : 'text-gray-400'
+                                    }`}>
+                                        {step.time > 0 ? formatDateTime(step.time) : '等待中...'}
+                                    </p>
                                 </div>
                             </div>
                         ))}
@@ -225,21 +233,23 @@ const OrderDetail: React.FC<OrderDetailProps> = ({ orderId, onBack, onNavigate }
 
                 {/* Logistics Info */}
                 {order.shipping_company && (
-                    <div className="bg-white mx-3 rounded-2xl shadow-md p-5 mb-3">
-                        <div className="flex items-center gap-2 mb-4">
-                            <Truck className="w-5 h-5 text-[#fedab0]" />
-                            <h2 className="font-medium text-gray-800">物流信息</h2>
+                    <div className="bg-white mx-4 rounded-xl shadow-sm border border-gray-100 p-5 mb-4">
+                        <div className="flex items-center gap-2.5 mb-5">
+                            <div className="w-8 h-8 rounded-lg bg-orange-50 flex items-center justify-center">
+                                <Truck className="w-4 h-4 text-orange-500" />
+                            </div>
+                            <h2 className="font-semibold text-gray-900 text-base">物流信息</h2>
                         </div>
 
-                        <div className="space-y-3">
-                            <div className="flex justify-between text-sm">
-                                <span className="text-gray-600">物流公司</span>
-                                <span className="text-gray-800 font-medium">{order.shipping_company}</span>
+                        <div className="space-y-4">
+                            <div className="flex justify-between items-center py-2">
+                                <span className="text-sm text-gray-500">物流公司</span>
+                                <span className="text-sm text-gray-900 font-medium">{order.shipping_company}</span>
                             </div>
                             {order.shipping_no && (
-                                <div className="flex justify-between text-sm">
-                                    <span className="text-gray-600">物流单号</span>
-                                    <span className="text-gray-800 font-medium">{order.shipping_no}</span>
+                                <div className="flex justify-between items-center py-2 border-t border-gray-50 pt-4">
+                                    <span className="text-sm text-gray-500">物流单号</span>
+                                    <span className="text-sm text-gray-900 font-medium font-mono">{order.shipping_no}</span>
                                 </div>
                             )}
                         </div>
@@ -248,27 +258,29 @@ const OrderDetail: React.FC<OrderDetailProps> = ({ orderId, onBack, onNavigate }
 
                 {/* Recipient Info */}
                 {order.recipient_name && (
-                    <div className="bg-white mx-3 rounded-2xl shadow-md p-5 mb-3">
-                        <div className="flex items-center gap-2 mb-4">
-                            <MapPin className="w-5 h-5 text-[#fedab0]" />
-                            <h2 className="font-medium text-gray-800">收货信息</h2>
+                    <div className="bg-white mx-4 rounded-xl shadow-sm border border-gray-100 p-5 mb-4">
+                        <div className="flex items-center gap-2.5 mb-5">
+                            <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center">
+                                <MapPin className="w-4 h-4 text-blue-500" />
+                            </div>
+                            <h2 className="font-semibold text-gray-900 text-base">收货信息</h2>
                         </div>
 
-                        <div className="space-y-3">
-                            <div className="flex items-start gap-3">
-                                <span className="text-sm text-gray-600 w-16 flex-shrink-0">收货人</span>
-                                <span className="text-sm text-gray-800">{order.recipient_name}</span>
+                        <div className="space-y-4">
+                            <div className="flex items-center gap-3 py-2">
+                                <span className="text-sm text-gray-500 w-16 flex-shrink-0">收货人</span>
+                                <span className="text-sm text-gray-900 font-medium">{order.recipient_name}</span>
                             </div>
                             {order.recipient_phone && (
-                                <div className="flex items-start gap-3">
-                                    <Phone className="w-4 h-4 text-gray-400 mt-0.5" />
-                                    <span className="text-sm text-gray-800">{order.recipient_phone}</span>
+                                <div className="flex items-center gap-3 py-2 border-t border-gray-50 pt-4">
+                                    <Phone className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                                    <span className="text-sm text-gray-900 font-medium">{order.recipient_phone}</span>
                                 </div>
                             )}
                             {order.recipient_address && (
-                                <div className="flex items-start gap-3">
+                                <div className="flex items-start gap-3 py-2 border-t border-gray-50 pt-4">
                                     <MapPin className="w-4 h-4 text-gray-400 mt-0.5 flex-shrink-0" />
-                                    <span className="text-sm text-gray-800 leading-relaxed">{order.recipient_address}</span>
+                                    <span className="text-sm text-gray-900 leading-relaxed">{order.recipient_address}</span>
                                 </div>
                             )}
                         </div>
@@ -276,15 +288,17 @@ const OrderDetail: React.FC<OrderDetailProps> = ({ orderId, onBack, onNavigate }
                 )}
 
                 {/* Product Info */}
-                <div className="bg-white mx-3 rounded-2xl shadow-md p-5 mb-3">
-                    <div className="flex items-center gap-2 mb-4">
-                        <Package className="w-5 h-5 text-[#fedab0]" />
-                        <h2 className="font-medium text-gray-800">商品信息</h2>
+                <div className="bg-white mx-4 rounded-xl shadow-sm border border-gray-100 p-5 mb-4">
+                    <div className="flex items-center gap-2.5 mb-5">
+                        <div className="w-8 h-8 rounded-lg bg-purple-50 flex items-center justify-center">
+                            <Package className="w-4 h-4 text-purple-500" />
+                        </div>
+                        <h2 className="font-semibold text-gray-900 text-base">商品信息</h2>
                     </div>
 
                     {order.items?.map((item) => (
-                        <div key={item.id} className="flex gap-3 pb-4 mb-4 border-b border-gray-100 last:border-0 last:mb-0 last:pb-0">
-                            <div className="w-20 h-20 flex-shrink-0 bg-gradient-to-br from-[#fedab0]/30 to-[#ffd9a8]/20 rounded-xl overflow-hidden shadow-sm border border-[#fedab0]/40">
+                        <div key={item.id} className="flex gap-4 pb-5 mb-5 border-b border-gray-100 last:border-0 last:mb-0 last:pb-0">
+                            <div className="w-24 h-24 flex-shrink-0 bg-gray-50 rounded-lg overflow-hidden border border-gray-100 shadow-sm">
                                 <LazyImage
                                     src={normalizeAssetUrl(item.product_thumbnail || '')}
                                     alt={item.product_name}
@@ -292,93 +306,103 @@ const OrderDetail: React.FC<OrderDetailProps> = ({ orderId, onBack, onNavigate }
                                 />
                             </div>
 
-                            <div className="flex-1 min-w-0">
-                                <p className="text-sm leading-relaxed line-clamp-2 mb-2 text-gray-800">
+                            <div className="flex-1 min-w-0 flex flex-col justify-between">
+                                <p className="text-sm leading-relaxed line-clamp-2 text-gray-900 mb-3 font-medium">
                                     {item.product_name}
                                 </p>
-                                <div className="flex items-center justify-between">
-                                    <div className="flex items-baseline gap-1">
-                                        <span className="text-lg font-bold text-gray-800">
+                                <div className="flex items-end justify-between">
+                                    <div className="flex items-baseline gap-1.5">
+                                        <span className="text-lg font-bold text-gray-900">
                                             {isScoreOrder ? item.score_price : `¥${formatAmount(item.price)}`}
                                         </span>
-                                        {isScoreOrder && <span className="text-xs text-gray-600">消费金</span>}
+                                        {isScoreOrder && (
+                                            <span className="text-xs text-orange-600 bg-orange-50 px-1.5 py-0.5 rounded font-medium">
+                                                消费金
+                                            </span>
+                                        )}
                                     </div>
-                                    <span className="text-sm text-gray-500">x{item.quantity}</span>
+                                    <span className="text-sm text-gray-500 bg-gray-50 px-2 py-1 rounded">x{item.quantity}</span>
                                 </div>
                             </div>
                         </div>
                     ))}
 
                     {/* Total */}
-                    <div className="mt-4 pt-4 border-t-2 border-dashed border-[#fedab0]/30">
+                    <div className="mt-5 pt-5 border-t-2 border-gray-100">
                         <div className="flex items-center justify-between">
-                            <span className="text-sm text-gray-600">合计</span>
-                            <div className="flex items-baseline gap-1">
-                                <span className="text-xl font-bold text-gray-800">
+                            <span className="text-base text-gray-600 font-medium">合计</span>
+                            <div className="flex items-baseline gap-2">
+                                <span className="text-2xl font-bold text-gray-900">
                                     {isScoreOrder ? order.total_score : `¥${formatAmount(order.total_amount)}`}
                                 </span>
-                                {isScoreOrder && <span className="text-sm text-gray-600">消费金</span>}
+                                {isScoreOrder && (
+                                    <span className="text-sm text-orange-600 bg-orange-50 px-2 py-1 rounded font-medium">
+                                        消费金
+                                    </span>
+                                )}
                             </div>
                         </div>
                     </div>
                 </div>
 
                 {/* Order Info */}
-                <div className="bg-white mx-3 rounded-2xl shadow-md p-5 mb-3">
-                    <div className="flex items-center gap-2 mb-4">
-                        <Calendar className="w-5 h-5 text-[#fedab0]" />
-                        <h2 className="font-medium text-gray-800">订单信息</h2>
+                <div className="bg-white mx-4 rounded-xl shadow-sm border border-gray-100 p-5 mb-4">
+                    <div className="flex items-center gap-2.5 mb-5">
+                        <div className="w-8 h-8 rounded-lg bg-green-50 flex items-center justify-center">
+                            <Calendar className="w-4 h-4 text-green-500" />
+                        </div>
+                        <h2 className="font-semibold text-gray-900 text-base">订单信息</h2>
                     </div>
 
-                    <div className="space-y-3">
-                        <div className="flex justify-between items-start text-sm">
-                            <span className="text-gray-600">订单编号</span>
+                    <div className="space-y-4">
+                        <div className="flex justify-between items-center py-2">
+                            <span className="text-sm text-gray-500">订单编号</span>
                             <div className="flex items-center gap-2">
-                                <span className="text-gray-800 text-xs">{order.order_no || order.id}</span>
+                                <span className="text-gray-900 text-xs font-mono">{order.order_no || order.id}</span>
                                 <button
                                     onClick={() => copyOrderNo(order.order_no || String(order.id))}
-                                    className="p-1 hover:bg-gray-100 rounded transition-colors"
+                                    className="p-1.5 hover:bg-gray-50 rounded-lg transition-colors active:scale-95"
                                     aria-label="复制订单号"
                                 >
                                     {copiedOrderNo ? (
-                                        <Check className="w-3.5 h-3.5 text-green-600" />
+                                        <Check className="w-4 h-4 text-green-600" />
                                     ) : (
-                                        <Copy className="w-3.5 h-3.5 text-gray-400" />
+                                        <Copy className="w-4 h-4 text-gray-400" />
                                     )}
                                 </button>
                             </div>
                         </div>
                         {order.status_text && (
-                            <div className="flex justify-between text-sm">
-                                <span className="text-gray-600">订单状态</span>
-                                <span className="text-gray-800 font-medium">{order.status_text}</span>
+                            <div className="flex justify-between items-center py-2 border-t border-gray-50 pt-4">
+                                <span className="text-sm text-gray-500">订单状态</span>
+                                <span className="text-sm text-gray-900 font-medium">{order.status_text}</span>
                             </div>
                         )}
                         {order.pay_type_text && (
-                            <div className="flex justify-between text-sm">
-                                <span className="text-gray-600">支付方式</span>
-                                <div className="flex items-center gap-1">
-                                    <Gift className="w-3.5 h-3.5 text-[#fedab0]" />
-                                    <span className="text-gray-800">{order.pay_type_text}</span>
+                            <div className="flex justify-between items-center py-2 border-t border-gray-50 pt-4">
+                                <span className="text-sm text-gray-500">支付方式</span>
+                                <div className="flex items-center gap-1.5">
+                                    <Gift className="w-4 h-4 text-orange-500" />
+                                    <span className="text-sm text-gray-900 font-medium">{order.pay_type_text}</span>
                                 </div>
                             </div>
                         )}
                         {order.product_type_text && (
-                            <div className="flex justify-between text-sm">
-                                <span className="text-gray-600">商品类型</span>
-                                <span className="text-gray-800">{order.product_type_text}</span>
+                            <div className="flex justify-between items-center py-2 border-t border-gray-50 pt-4">
+                                <span className="text-sm text-gray-500">商品类型</span>
+                                <span className="text-sm text-gray-900 font-medium">{order.product_type_text}</span>
                             </div>
                         )}
                         {order.create_time > 0 && (
-                            <div className="flex justify-between text-sm">
-                                <span className="text-gray-600">下单时间</span>
-                                <span className="text-gray-800 text-xs">{formatDateTime(order.create_time)}</span>
+                            <div className="flex justify-between items-center py-2 border-t border-gray-50 pt-4">
+                                <span className="text-sm text-gray-500">下单时间</span>
+                                <span className="text-sm text-gray-900">{formatDateTime(order.create_time)}</span>
                             </div>
                         )}
                         {order.remark && (
-                            <div className="flex justify-between items-start text-sm pt-2 border-t border-gray-100">
-                                <span className="text-gray-600">备注</span>
-                                <span className="text-gray-800 text-right max-w-[200px]">{order.remark}</span>
+                            <div className="flex justify-between items-start py-2 pt-4 border-t border-gray-100">
+                                <span className="text-sm text-gray-500 flex-shrink-0">备注</span>
+                                <span className="text-sm text-gray-900 text-right max-w-[200px] leading-relaxed">{order.remark}</span>
                             </div>
                         )}
                     </div>
@@ -386,12 +410,12 @@ const OrderDetail: React.FC<OrderDetailProps> = ({ orderId, onBack, onNavigate }
             </div>
 
             {/* Bottom Actions */}
-            <div className="fixed bottom-0 left-0 right-0 bg-white border-t shadow-lg max-w-[480px] mx-auto safe-area-bottom">
+            <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] max-w-[480px] mx-auto safe-area-bottom">
                 <div className="p-4 flex gap-3">
                     {(order.status === ShopOrderPayStatus.UNPAID || order.status === 'pending' || String(order.status) === '0') && (
                         <button
                             onClick={() => handlePayOrder(order.id)}
-                            className="flex-1 h-11 rounded-full bg-gradient-to-r from-[#fedab0] to-[#ffd9a8] text-gray-800 hover:shadow-lg font-medium transition-all active:scale-95"
+                            className="flex-1 h-12 rounded-xl bg-gradient-to-r from-orange-500 to-orange-400 text-white hover:from-orange-600 hover:to-orange-500 font-semibold shadow-lg shadow-orange-500/30 transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             立即支付
                         </button>
@@ -399,13 +423,13 @@ const OrderDetail: React.FC<OrderDetailProps> = ({ orderId, onBack, onNavigate }
                     {(order.status === ShopOrderShippingStatus.SHIPPED || order.status === 'shipped' || String(order.status) === '2') && (
                         <>
                             <button
-                                className="flex-1 h-11 rounded-full border-2 border-[#fedab0] text-gray-700 hover:bg-[#fedab0]/20 font-medium transition-all"
+                                className="flex-1 h-12 rounded-xl border-2 border-gray-300 text-gray-700 hover:border-gray-400 hover:bg-gray-50 font-semibold transition-all active:scale-[0.98]"
                             >
                                 查看物流
                             </button>
                             <button
                                 onClick={() => handleConfirmReceipt(order.id)}
-                                className="flex-1 h-11 rounded-full bg-gradient-to-r from-[#fedab0] to-[#ffd9a8] text-gray-800 hover:shadow-lg font-medium transition-all active:scale-95"
+                                className="flex-1 h-12 rounded-xl bg-gradient-to-r from-orange-500 to-orange-400 text-white hover:from-orange-600 hover:to-orange-500 font-semibold shadow-lg shadow-orange-500/30 transition-all active:scale-[0.98]"
                             >
                                 确认收货
                             </button>
@@ -413,7 +437,7 @@ const OrderDetail: React.FC<OrderDetailProps> = ({ orderId, onBack, onNavigate }
                     )}
                     {(order.status === ShopOrderShippingStatus.RECEIVED || order.status === 'completed' || String(order.status) === '3') && (
                         <button
-                            className="flex-1 h-11 rounded-full bg-gradient-to-r from-[#fedab0] to-[#ffd9a8] text-gray-800 hover:shadow-lg font-medium transition-all active:scale-95"
+                            className="flex-1 h-12 rounded-xl bg-gradient-to-r from-orange-500 to-orange-400 text-white hover:from-orange-600 hover:to-orange-500 font-semibold shadow-lg shadow-orange-500/30 transition-all active:scale-[0.98]"
                         >
                             再次购买
                         </button>

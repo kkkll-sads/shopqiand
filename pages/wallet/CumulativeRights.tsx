@@ -9,25 +9,27 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { ShieldCheck, FileText, TrendingUp, Award, Gift } from 'lucide-react';
+import { ShieldCheck, FileText, TrendingUp, Award, Gift, Receipt } from 'lucide-react';
 import PageContainer from '../../components/layout/PageContainer';
 import { LoadingSpinner } from '../../components/common';
 import { AUTH_TOKEN_KEY, fetchProfile } from '../../services/api';
 import { UserInfo } from '../../types';
 import { formatAmount } from '../../utils/format';
 import { isSuccess, extractError } from '../../utils/apiHelpers';
+import { Route } from '../../router/routes';
 
 /**
  * CumulativeRights 组件属性接口
  */
 interface CumulativeRightsProps {
   onBack: () => void;
+  onNavigate?: (route: Route) => void;
 }
 
 /**
  * CumulativeRights 累计权益页面组件
  */
-const CumulativeRights: React.FC<CumulativeRightsProps> = ({ onBack }) => {
+const CumulativeRights: React.FC<CumulativeRightsProps> = ({ onBack, onNavigate }) => {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
@@ -160,6 +162,27 @@ const CumulativeRights: React.FC<CumulativeRightsProps> = ({ onBack }) => {
               </div>
             ))}
           </div>
+
+          {/* 订单资金详情入口 */}
+          {onNavigate && (
+            <div className="mb-6">
+              <button
+                onClick={() => onNavigate({ name: 'order-fund-detail', back: { name: 'cumulative-rights' } })}
+                className="w-full bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl p-4 shadow-lg hover:shadow-xl transition-all active:scale-[0.98] flex items-center justify-between"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-white/20 flex items-center justify-center">
+                    <Receipt size={20} className="text-white" />
+                  </div>
+                  <div className="text-left">
+                    <div className="font-bold text-base">订单资金详情</div>
+                    <div className="text-xs text-white/80">查看订单相关的资金明细记录</div>
+                  </div>
+                </div>
+                <TrendingUp size={20} className="opacity-80" />
+              </button>
+            </div>
+          )}
 
           {/* 权益说明 */}
           <div className="bg-white rounded-xl p-4 shadow-sm">

@@ -1,0 +1,300 @@
+/**
+ * CollectionOrderDetail - 藏品订单详情页面
+ * 
+ * 显示藏品订单的详细信息
+ * 
+ * @author 树交所前端团队
+ * @version 1.0.0
+ */
+
+import React, { useState, useEffect } from 'react';
+import { ArrowLeft, Package, Copy, Check, Calendar, Receipt, CheckCircle } from 'lucide-react';
+import PageContainer from '../../components/layout/PageContainer';
+import { LoadingSpinner, LazyImage } from '../../components/common';
+import { getCollectionOrderDetail, CollectionOrderDetailData } from '../../services/collection';
+import { normalizeAssetUrl } from '../../services/config';
+import { isSuccess, extractData, extractError } from '../../utils/apiHelpers';
+import { formatTime, formatAmount } from '../../utils/format';
+import { AUTH_TOKEN_KEY } from '../../constants/storageKeys';
+import { useNotification } from '../../context/NotificationContext';
+
+interface CollectionOrderDetailProps {
+  id?: number | string;
+  orderNo?: string;
+  onBack: () => void;
+}
+
+const CollectionOrderDetail: React.FC<CollectionOrderDetailProps> = ({ id, orderNo, onBack }) => {
+  const { showToast } = useNotification();
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+  const [order, setOrder] = useState<CollectionOrderDetailData | null>(null);
+  const [copiedOrderNo, setCopiedOrderNo] = useState(false);
+
+  useEffect(() => {
+    loadOrder();
+  }, [id, orderNo]);
+
+  const loadOrder = async () => {
+    const token = localStorage.getItem(AUTH_TOKEN_KEY);
+    if (!token) {
+      setError('请先登录');
+      setLoading(false);
+      return;
+    }
+
+    if (!id && !orderNo) {
+      setError('缺少必要参数');
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const res = await getCollectionOrderDetail({
+        id,
+        order_no: orderNo,
+        token,
+      });
+
+      const data = extractData(res);
+      if (isSuccess(res) && data) {
+        setOrder(data);
+      } else {
+        setError(extractError(res, '获取订单详情失败'));
+      }
+    } catch (e: any) {
+      console.error('[CollectionOrderDetail] 加载失败:', e);
+      setError(e?.message || '加载数据失败');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const copyOrderNo = (text: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedOrderNo(true);
+    showToast('success', '复制成功', '订单号已复制到剪贴板');
+    setTimeout(() => setCopiedOrderNo(false), 2000);
+  };
+
+  const formatDateTime = (timestamp?: number): string => {
+    if (!timestamp || timestamp === 0) return '-';
+    return formatTime(timestamp);
+  };
+
+  if (loading) {
+    return (
+      <PageContainer title="订单详情" onBack={onBack}>
+        <LoadingSpinner text="加载中..." />
+      </PageContainer>
+    );
+  }
+
+  if (error || !order) {
+    return (
+      <PageContainer title="订单详情" onBack={onBack}>
+        <div className="flex flex-col items-center justify-center py-20 text-red-400">
+          <div className="w-16 h-16 mb-4 border-2 border-red-200 rounded-lg flex items-center justify-center">
+            <Package size={32} className="opacity-50" />
+          </div>
+          <span className="text-xs">{error || '订单不存在'}</span>
+        </div>
+      </PageContainer>
+    );
+  }
+
+  // 订单状态步骤
+  const orderSteps = [
+    { key: 'created', label: '订单创建', time: order.create_time, active: true },
+    { key: 'paid', label: '支付成功', time: order.pay_time, active: (order.pay_time || 0) > 0 },
+    { key: 'completed', label: '交易完成', time: order.complete_time, active: (order.complete_time || 0) > 0 },
+  ];
+
+  return (
+    <PageContainer title="订单详情" onBack={onBack}>
+      <div className="space-y-4 pb-safe">
+        {/* 订单状态横幅 */}
+        <div className="bg-gradient-to-br from-orange-500 to-orange-600 rounded-2xl p-6 text-white shadow-lg mx-4">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <div className="text-sm opacity-90 mb-1">订单状态</div>
+              <div className="text-2xl font-bold">{order.status_text}</div>
+            </div>
+            <div className="w-16 h-16 rounded-full bg-white/20 flex items-center justify-center">
+              <Package size={32} className="text-white" />
+            </div>
+          </div>
+          <div className="text-sm opacity-90">
+            订单号: {order.order_no}
+          </div>
+        </div>
+
+        {/* 订单进度 */}
+        <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100 mx-4">
+          <div className="flex items-center gap-2.5 mb-5">
+            <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center">
+              <Calendar className="w-4 h-4 text-blue-600" />
+            </div>
+            <h2 className="font-semibold text-gray-900 text-base">订单进度</h2>
+          </div>
+
+          <div className="relative">
+            {orderSteps.map((step, index) => (
+              <div key={step.key} className="relative pb-8 last:pb-0 flex items-start">
+                {/* Node */}
+                <div className={`relative z-10 w-6 h-6 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all ${
+                  step.active
+                    ? 'bg-gradient-to-br from-orange-500 to-orange-400 border-orange-500 shadow-lg shadow-orange-500/30 scale-110'
+                    : 'bg-white border-gray-300'
+                }`}>
+                  {step.active && (
+                    <CheckCircle className="w-3.5 h-3.5 text-white font-bold" strokeWidth={3} />
+                  )}
+                </div>
+
+                {/* Connection line */}
+                {index < orderSteps.length - 1 && (
+                  <div className={`absolute left-3 top-8 w-0.5 h-full transition-colors z-0 ${
+                    step.active
+                      ? 'bg-gradient-to-b from-orange-500 to-orange-300'
+                      : 'bg-gray-200'
+                  }`} />
+                )}
+
+                <div className="flex-1 pt-0.5 ml-4 min-w-0">
+                  <p className={`text-sm mb-1.5 transition-colors ${
+                    step.active
+                      ? 'text-gray-900 font-semibold'
+                      : 'text-gray-400'
+                  }`}>
+                    {step.label}
+                  </p>
+                  <p className={`text-xs transition-colors ${
+                    step.active ? 'text-gray-600' : 'text-gray-400'
+                  }`}>
+                    {step.time > 0 ? formatDateTime(step.time) : '等待中...'}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* 订单信息 */}
+        <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100 mx-4">
+          <div className="flex items-center gap-2.5 mb-5">
+            <div className="w-8 h-8 rounded-lg bg-green-50 flex items-center justify-center">
+              <Receipt className="w-4 h-4 text-green-600" />
+            </div>
+            <h2 className="font-semibold text-gray-900 text-base">订单信息</h2>
+          </div>
+
+          <div className="space-y-4">
+            <div className="flex justify-between items-center py-2">
+              <span className="text-sm text-gray-500">订单编号</span>
+              <div className="flex items-center gap-2">
+                <span className="text-gray-900 text-xs font-mono">{order.order_no}</span>
+                <button
+                  onClick={() => copyOrderNo(order.order_no)}
+                  className="p-1.5 hover:bg-gray-50 rounded-lg transition-colors active:scale-95"
+                  aria-label="复制订单号"
+                >
+                  {copiedOrderNo ? (
+                    <Check className="w-4 h-4 text-green-600" />
+                  ) : (
+                    <Copy className="w-4 h-4 text-gray-400" />
+                  )}
+                </button>
+              </div>
+            </div>
+
+            <div className="flex justify-between items-center py-2">
+              <span className="text-sm text-gray-500">支付方式</span>
+              <span className="text-sm text-gray-900">{order.pay_type_text || order.pay_type}</span>
+            </div>
+
+            <div className="flex justify-between items-center py-2">
+              <span className="text-sm text-gray-500">创建时间</span>
+              <span className="text-sm text-gray-900">{order.create_time_text || formatDateTime(order.create_time)}</span>
+            </div>
+
+            {order.pay_time && order.pay_time > 0 && (
+              <div className="flex justify-between items-center py-2">
+                <span className="text-sm text-gray-500">支付时间</span>
+                <span className="text-sm text-gray-900">{order.pay_time_text || formatDateTime(order.pay_time)}</span>
+              </div>
+            )}
+
+            {order.complete_time && order.complete_time > 0 && (
+              <div className="flex justify-between items-center py-2">
+                <span className="text-sm text-gray-500">完成时间</span>
+                <span className="text-sm text-gray-900">{order.complete_time_text || formatDateTime(order.complete_time)}</span>
+              </div>
+            )}
+
+            {order.remark && (
+              <div className="flex justify-between items-start py-2">
+                <span className="text-sm text-gray-500">备注</span>
+                <span className="text-sm text-gray-900 text-right flex-1 ml-4">{order.remark}</span>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* 订单明细 */}
+        <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100 mx-4">
+          <div className="flex items-center gap-2.5 mb-5">
+            <div className="w-8 h-8 rounded-lg bg-purple-50 flex items-center justify-center">
+              <Package className="w-4 h-4 text-purple-600" />
+            </div>
+            <h2 className="font-semibold text-gray-900 text-base">订单明细</h2>
+          </div>
+
+          <div className="space-y-4">
+            {order.items && order.items.length > 0 ? (
+              order.items.map((item) => (
+                <div key={item.id} className="flex gap-3 p-3 bg-gray-50 rounded-lg">
+                  <div className="w-16 h-16 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
+                    <LazyImage
+                      src={normalizeAssetUrl(item.item_image)}
+                      alt={item.item_title}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-medium text-gray-900 mb-1 line-clamp-2">
+                      {item.item_title}
+                    </div>
+                    <div className="flex justify-between items-center text-xs text-gray-500">
+                      <span>单价: {formatAmount(item.price)}</span>
+                      <span>数量: {item.quantity}</span>
+                    </div>
+                    <div className="text-sm font-bold text-orange-600 mt-1">
+                      {formatAmount(item.subtotal)}
+                    </div>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="text-center py-8 text-gray-400 text-sm">暂无订单明细</div>
+            )}
+          </div>
+
+          {/* 订单总额 */}
+          <div className="mt-4 pt-4 border-t border-gray-100 flex justify-between items-center">
+            <span className="text-base font-semibold text-gray-900">订单总额</span>
+            <span className="text-2xl font-bold text-orange-600 font-[DINAlternate-Bold,Roboto,sans-serif]">
+              {formatAmount(order.total_amount)}
+            </span>
+          </div>
+        </div>
+      </div>
+    </PageContainer>
+  );
+};
+
+export default CollectionOrderDetail;
+

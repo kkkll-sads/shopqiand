@@ -125,8 +125,18 @@ const MyCollectionDetail: React.FC<MyCollectionDetailProps> = ({ item: initialIt
 
     const title = item.name || item.item_title || item.title || '未命名藏品';
     // Use market_price from API directly (禁止前端计算)
-    const marketPrice = parseFloat(item.market_price || item.price || '0');
-    const currentValuation = marketPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const buyPrice = parseFloat(item.buy_price || item.price || '0');
+    const marketPrice = parseFloat(item.market_price || '0');
+    const currentValuation = buyPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+    // Dynamic Yield Rate
+    let yieldRateStr = '0.0';
+    if (buyPrice > 0) {
+        yieldRateStr = ((marketPrice - buyPrice) / buyPrice * 100).toFixed(1);
+    }
+    const yieldRateVal = parseFloat(yieldRateStr);
+    const isPositive = yieldRateVal >= 0;
+    const yieldText = (isPositive ? '+' : '') + yieldRateStr + '%';
 
     return (
         <div className="min-h-screen bg-[#FDFBF7] text-gray-900 font-serif pb-24 relative overflow-hidden" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 6rem)' }}>
@@ -308,7 +318,7 @@ const MyCollectionDetail: React.FC<MyCollectionDetailProps> = ({ item: initialIt
                     <span className="text-sm text-gray-500 font-medium">当前估值</span>
                     <div className="text-right">
                         <span className="text-lg font-bold text-gray-700 font-mono">¥{currentValuation}</span>
-                        <span className="text-xs text-red-500 font-bold ml-2 bg-red-50 px-1.5 py-0.5 rounded-full">+5.5%</span>
+                        <span className={`text-xs font-bold ml-2 px-1.5 py-0.5 rounded-full ${isPositive ? 'text-red-500 bg-red-50' : 'text-green-500 bg-green-50'}`}>{yieldText}</span>
                     </div>
                 </div>
 
@@ -409,23 +419,34 @@ const MyCollectionDetail: React.FC<MyCollectionDetailProps> = ({ item: initialIt
 
                                 {/* Price Info */}
                                 {(() => {
-                                    // Price Fallback Logic: Prioritize market_price (Current Valuation)
-                                    const rawPrice = item.market_price || item.price || item.current_price || item.original_price || item.buy_price || '0';
-                                    const safePrice = parseFloat(String(rawPrice)) || 0;
+                                    // Price Fallback Logic
+                                    const rawBuyPrice = item.buy_price || item.price || '0';
+                                    const safeBuyPrice = parseFloat(String(rawBuyPrice)) || 0;
+
+                                    const rawMarketPrice = item.market_price || '0';
+                                    const safeMarketPrice = parseFloat(String(rawMarketPrice)) || 0;
+
+                                    let dynamicYieldStr = '0.0';
+                                    if (safeBuyPrice > 0) {
+                                        dynamicYieldStr = ((safeMarketPrice - safeBuyPrice) / safeBuyPrice * 100).toFixed(1);
+                                    }
+                                    const isPos = parseFloat(dynamicYieldStr) >= 0;
 
                                     return (
                                         <div className="grid grid-cols-3 gap-2 pt-3 border-t border-dashed border-gray-100">
                                             <div className="flex flex-col">
                                                 <span className="text-xs text-gray-400 mb-1">当前估值</span>
-                                                <span className="text-sm font-bold text-gray-900">¥{safePrice.toFixed(2)}</span>
+                                                <span className="text-sm font-bold text-gray-900">¥{safeBuyPrice.toFixed(2)}</span>
                                             </div>
                                             <div className="flex flex-col">
                                                 <span className="text-xs text-gray-400 mb-1">预期收益</span>
-                                                <span className="text-sm font-bold text-green-600">+5.5%</span>
+                                                <span className={`text-sm font-bold ${isPos ? 'text-red-500' : 'text-green-600'}`}>
+                                                    {(isPos ? '+' : '') + dynamicYieldStr + '%'}
+                                                </span>
                                             </div>
                                             <div className="flex flex-col">
                                                 <span className="text-xs text-gray-400 mb-1">预期回款</span>
-                                                <span className="text-sm font-bold text-gray-900">¥{(safePrice * 1.055).toFixed(2)}</span>
+                                                <span className="text-sm font-bold text-gray-900">¥{safeMarketPrice.toFixed(2)}</span>
                                             </div>
                                         </div>
                                     );
@@ -457,9 +478,7 @@ const MyCollectionDetail: React.FC<MyCollectionDetailProps> = ({ item: initialIt
 
                             {/* Cost Breakdown */}
                             {(() => {
-                                // Price Fallback Same as above
-                                const rawPrice = item.market_price || item.price || item.current_price || item.original_price || item.buy_price || '0';
-                                const safePrice = parseFloat(String(rawPrice)) || 0;
+                                const safePrice = parseFloat(String(item.market_price || item.price || '0')) || 0;
                                 const serviceFee = safePrice * 0.03;
 
                                 return (

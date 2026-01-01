@@ -95,6 +95,17 @@ const OrderListPage: React.FC<OrderListPageProps> = ({ category, initialTab, onB
     onNavigate({ name: 'order-detail', orderId: String(id), back: backRoute });
   };
 
+  // Navigate to Collection Order Detail
+  const handleViewCollectionOrderDetail = (id?: number | string, orderNo?: string) => {
+    const backRoute: Route = { name: 'order-list', kind: category, status: activeTab };
+    onNavigate({
+      name: 'collection-order-detail',
+      id,
+      orderNo,
+      back: backRoute,
+    });
+  };
+
   // ... (other handlers)
 
   // Fetch orders for points category
@@ -776,6 +787,7 @@ const OrderListPage: React.FC<OrderListPageProps> = ({ category, initialTab, onB
             formatOrderDate={(date) => formatOrderDate(date)}
             formatOrderPrice={formatOrderPrice}
             onViewConsignmentDetail={handleViewConsignmentDetail}
+            onViewOrderDetail={handleViewCollectionOrderDetail}
           />
         ) : category === 'delivery' ? (
           <PointDeliveryOrderList

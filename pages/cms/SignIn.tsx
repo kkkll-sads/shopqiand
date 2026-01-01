@@ -9,15 +9,13 @@ import {
     doSignIn,
     SignInRulesData,
     SignInProgressData,
-    fetchPaymentAccountList,
-    submitWithdraw,
-    PaymentAccountItem,
     fetchTeamMembers
 } from '../../services/api';
 import { getStoredToken } from '../../services/client';
 import { Route } from '../../router/routes';
 import { useNotification } from '../../context/NotificationContext';
 import { AUTH_TOKEN_KEY } from '../../constants/storageKeys';
+import { STORAGE_KEYS } from '../../constants/storageKeys';
 // ✅ 引入统一 API 处理工具
 import { isSuccess, extractData, extractError } from '../../utils/apiHelpers';
 
@@ -39,14 +37,6 @@ const SignIn: React.FC<SignInProps> = ({ onBack, onNavigate }) => {
     const [progressInfo, setProgressInfo] = useState<SignInProgressData | null>(null);
     const [loading, setLoading] = useState<boolean>(true);
 
-    // Withdrawal State
-    const [showAccountModal, setShowAccountModal] = useState<boolean>(false);
-    const [accounts, setAccounts] = useState<PaymentAccountItem[]>([]);
-    const [selectedAccount, setSelectedAccount] = useState<PaymentAccountItem | null>(null);
-    const [loadingAccounts, setLoadingAccounts] = useState<boolean>(false);
-    const [payPassword, setPayPassword] = useState<string>('');
-    const [submitting, setSubmitting] = useState<boolean>(false);
-    const [withdrawError, setWithdrawError] = useState<string | null>(null);
 
     // Calendar state
     const [currentDate, setCurrentDate] = useState(new Date());
@@ -58,22 +48,36 @@ const SignIn: React.FC<SignInProps> = ({ onBack, onNavigate }) => {
             const token = getStoredToken();
 
             try {
-                // Load activity rules (no token required)
-                const rulesRes = await fetchSignInRules();
-                // ✅ 使用统一判断（此接口 code=0 也表示成功）
+                // 并行加载所有请求，显著减少加载时间
+                const requests: Promise<any>[] = [
+                    // 活动规则（不需要token）
+                    fetchSignInRules()
+                ];
+
+                // 需要token的请求
+                if (token) {
+                    requests.push(
+                        fetchSignInInfo(token),
+                        fetchSignInProgress(token),
+                        fetchPromotionCard(token).catch(() => ({ code: -1, data: null })),
+                        fetchTeamMembers({ level: 1, page: 1, limit: 1 }).catch(() => ({ code: -1, data: null }))
+                    );
+                }
+
+                // 并行执行所有请求
+                const results = await Promise.all(requests);
+
+                // 处理活动规则（第一个请求）
+                const rulesRes = results[0];
                 if ((isSuccess(rulesRes) || rulesRes.code === 0) && extractData(rulesRes)) {
                     setActivityInfo(extractData(rulesRes)!);
                 }
 
-                // Load sign-in info (requires token)
-                if (token) {
-                    const [infoRes, progressRes, promotionRes] = await Promise.all([
-                        fetchSignInInfo(token),
-                        fetchSignInProgress(token),
-                        fetchPromotionCard(token).catch(() => ({ code: -1, data: null })) // 如果失败不影响其他数据加载
-                    ]);
+                // 处理需要token的请求结果
+                if (token && results.length > 1) {
+                    const [infoRes, progressRes, promotionRes, teamRes] = results.slice(1);
 
-                    // ✅ 使用统一判断（此接口 code=0 也表示成功）
+                    // 处理签到信息
                     const infoData = extractData(infoRes);
                     if ((isSuccess(infoRes) || infoRes.code === 0) && infoData) {
                         const data = infoData;
@@ -81,40 +85,39 @@ const SignIn: React.FC<SignInProps> = ({ onBack, onNavigate }) => {
                         setHasSignedIn(data.today_signed || false);
 
                         // Convert signed dates from YYYY-MM-DD to DateString format for calendar
-                        // Store both formats for compatibility
                         const dates = data.calendar?.signed_dates?.map((dateStr: string) => {
                             try {
                                 const date = new Date(dateStr);
                                 if (!isNaN(date.getTime())) {
                                     return date.toDateString();
                                 }
-                                return dateStr; // Fallback to original format
+                                return dateStr;
                             } catch {
                                 return dateStr;
                             }
                         }) || [];
                         setSignedInDates(dates);
+
+                        // 如果API确认已签到，更新本地存储
+                        if (data.today_signed) {
+                            const todayStr = new Date().toISOString().split('T')[0];
+                            localStorage.setItem(STORAGE_KEYS.LAST_SIGN_IN_DATE_KEY, todayStr);
+                        }
                     }
 
-                    // ✅ extractData 已支持 code=0
+                    // 处理进度信息（优先级更高，会覆盖balance）
                     const progressData = extractData(progressRes);
                     if (progressData) {
-                        console.log('进度数据:', progressData);
                         setProgressInfo(progressData);
                         // 使用 withdrawable_money 作为当前累计奖励（可提现金额）
                         if (progressData.withdrawable_money !== undefined) {
                             setBalance(progressData.withdrawable_money);
                         } else if (progressData.total_money !== undefined) {
-                            // 如果没有 withdrawable_money，使用 total_money 作为后备
                             setBalance(progressData.total_money);
                         }
-                    } else {
-                        console.warn('进度接口返回异常:', progressRes);
                     }
 
-
-                    // Load invite count (Direct Referrals only)
-                    const teamRes = await fetchTeamMembers({ level: 1, page: 1, limit: 1 });
+                    // 处理邀请人数
                     if ((isSuccess(teamRes) || teamRes.code === 0) && teamRes.data) {
                         setInviteCount(teamRes.data.total || 0);
                     } else {
@@ -159,6 +162,10 @@ const SignIn: React.FC<SignInProps> = ({ onBack, onNavigate }) => {
                 setShowRedPacket(true);
                 setBalance(data.total_reward || 0);
                 setHasSignedIn(true);
+
+                // 签到成功，更新本地存储
+                const todayStr = new Date().toISOString().split('T')[0];
+                localStorage.setItem(STORAGE_KEYS.LAST_SIGN_IN_DATE_KEY, todayStr);
 
                 // Update signed dates
                 const dates = data.calendar?.signed_dates?.map((dateStr: string) => {
@@ -209,37 +216,6 @@ const SignIn: React.FC<SignInProps> = ({ onBack, onNavigate }) => {
         }
     };
 
-    const loadAccounts = async () => {
-        const token = localStorage.getItem(AUTH_TOKEN_KEY);
-        if (!token) {
-            setWithdrawError('未检测到登录信息，请重新登录');
-            return;
-        }
-
-        setLoadingAccounts(true);
-        setWithdrawError(null);
-        try {
-            const res = await fetchPaymentAccountList(token);
-            // ✅ 使用统一判断
-            const data = extractData(res);
-            if (data && data.list) {
-                setAccounts(data.list || []);
-                // Default select the first account if available
-                if (data.list.length > 0) {
-                    // Try to find default account
-                    const defaultAccount = data.list.find((acc: any) => Number(acc.is_default) === 1);
-                    setSelectedAccount(defaultAccount || data.list[0]);
-                }
-            } else {
-                setWithdrawError(extractError(res, '获取收款账户信息失败'));
-            }
-        } catch (e: any) {
-            setWithdrawError(e?.msg || '获取收款账户信息失败');
-        } finally {
-            setLoadingAccounts(false);
-        }
-    };
-
     const handleWithdrawClick = () => {
         const minAmount = progressInfo?.withdraw_min_amount || activityInfo?.activity?.withdraw_min_amount || 10;
         const canWithdraw = progressInfo?.can_withdraw ?? (balance >= minAmount);
@@ -248,79 +224,17 @@ const SignIn: React.FC<SignInProps> = ({ onBack, onNavigate }) => {
             showToast('warning', '余额不足', `余额不足 ${minAmount.toFixed(2)} 元，暂不可提现`);
             return;
         }
-        setShowAccountModal(true);
-        loadAccounts();
-    };
-
-    const handleConfirmWithdraw = async () => {
-        if (!selectedAccount) {
-            setWithdrawError('请选择收款账户');
-            return;
-        }
-        if (!payPassword) {
-            setWithdrawError('请输入支付密码');
-            return;
-        }
-        if (!/^\d{6}$/.test(payPassword)) {
-            setWithdrawError('支付密码必须为6位数字');
-            return;
-        }
-
-        setSubmitting(true);
-        setWithdrawError(null);
-
-        try {
-            const res = await submitWithdraw({
-                amount: balance, // Withdraw all
-                payment_account_id: selectedAccount.id as number,
-                pay_password: payPassword,
-                remark: '签到活动提现'
+        
+        // 跳转到提现页面
+        if (onNavigate) {
+            onNavigate({ 
+                name: 'balance-withdraw', 
+                source: 'sign-in',
+                back: { name: 'sign-in' }
             });
-
-            // ✅ 使用统一判断（此接口 code=0 也表示成功）
-            if (isSuccess(res) || res.code === 0) {
-                showToast('success', '提交成功', '提现申请已提交，请等待审核');
-                setShowAccountModal(false);
-                setPayPassword('');
-                // Refresh balance and progress from API
-                const token = localStorage.getItem(AUTH_TOKEN_KEY);
-                if (token) {
-                    try {
-                        const [infoRes, progressRes] = await Promise.all([
-                            fetchSignInInfo(token),
-                            fetchSignInProgress(token)
-                        ]);
-
-                        // ✅ 使用统一判断（此接口 code=0 也表示成功）
-                        const refreshedInfoData = extractData(infoRes);
-                        if ((isSuccess(infoRes) || infoRes.code === 0) && refreshedInfoData) {
-                            setBalance(refreshedInfoData.total_reward || 0);
-                        }
-
-                        // ✅ 使用统一判断（此接口 code=0 也表示成功）
-                        const refreshedProgressData = extractData(progressRes);
-                        if ((isSuccess(progressRes) || progressRes.code === 0) && refreshedProgressData) {
-                            setProgressInfo(refreshedProgressData);
-                            // 使用 withdrawable_money 作为当前累计奖励（可提现金额）
-                            if (refreshedProgressData.withdrawable_money !== undefined) {
-                                setBalance(refreshedProgressData.withdrawable_money);
-                            } else if (refreshedProgressData.total_money !== undefined) {
-                                setBalance(refreshedProgressData.total_money);
-                            }
-                        }
-                    } catch (error) {
-                        console.error('刷新数据失败:', error);
-                    }
-                }
-            } else {
-                setWithdrawError(extractError(res, '提交失败，请重试'));
-            }
-        } catch (e: any) {
-            setWithdrawError(e?.msg || e?.message || '提交失败，请重试');
-        } finally {
-            setSubmitting(false);
         }
     };
+
 
     // Calendar Logic
     const getDaysInMonth = (date: Date) => {
@@ -619,96 +533,6 @@ const SignIn: React.FC<SignInProps> = ({ onBack, onNavigate }) => {
                 </div>
             )}
 
-            {/* Withdrawal Account Modal */}
-            {showAccountModal && (
-                <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 animate-in fade-in duration-200 p-4">
-                    <div className="bg-white w-full max-w-sm rounded-2xl p-6 relative shadow-2xl scale-100 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto">
-                        <button
-                            onClick={() => setShowAccountModal(false)}
-                            className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 z-10"
-                        >
-                            <X size={24} />
-                        </button>
-                        <h3 className="text-center font-bold text-lg mb-6">确认提现</h3>
-
-                        <div className="space-y-4">
-                            <div>
-                                <label className="block text-xs text-gray-500 mb-1">提现金额 (全部)</label>
-                                <div className="text-2xl font-bold text-gray-900">¥ {balance.toFixed(2)}</div>
-                            </div>
-
-                            <div>
-                                <label className="block text-xs text-gray-500 mb-2">收款账户</label>
-                                {loadingAccounts ? (
-                                    <div className="text-center py-4 text-gray-400 text-sm">加载账户中...</div>
-                                ) : accounts.length === 0 ? (
-                                    <div className="bg-gray-50 p-4 rounded-lg text-center">
-                                        <p className="text-gray-500 text-sm mb-2">暂无收款账户</p>
-                                        {onNavigate && (
-                                            <button
-                                                onClick={() => {
-                                                    setShowAccountModal(false);
-                                                    onNavigate('cardManagement');
-                                                }}
-                                                className="text-orange-600 text-sm font-medium"
-                                            >
-                                                去添加账户
-                                            </button>
-                                        )}
-                                    </div>
-                                ) : (
-                                    <div className="space-y-2 max-h-40 overflow-y-auto">
-                                        {accounts.map(acc => (
-                                            <div
-                                                key={acc.id}
-                                                onClick={() => setSelectedAccount(acc)}
-                                                className={`p-3 rounded-lg border cursor-pointer transition-all ${selectedAccount?.id === acc.id
-                                                    ? 'border-orange-500 bg-orange-50'
-                                                    : 'border-gray-200 hover:border-gray-300'
-                                                    }`}
-                                            >
-                                                <div className="flex justify-between items-center mb-1">
-                                                    <span className="font-medium text-sm">{acc.account_name}</span>
-                                                    <span className="text-xs text-gray-500">{acc.type_text}</span>
-                                                </div>
-                                                <div className="text-xs text-gray-400">{acc.account}</div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
-
-                            <div>
-                                <label className="block text-xs text-gray-500 mb-1">支付密码</label>
-                                <input
-                                    type="password"
-                                    value={payPassword}
-                                    onChange={(e) => setPayPassword(e.target.value)}
-                                    placeholder="请输入支付密码"
-                                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-orange-500 transition-colors"
-                                />
-                            </div>
-
-                            {withdrawError && (
-                                <div className="text-xs text-red-500 bg-red-50 px-3 py-2 rounded">
-                                    {withdrawError}
-                                </div>
-                            )}
-
-                            <button
-                                onClick={handleConfirmWithdraw}
-                                disabled={submitting || !selectedAccount || !payPassword}
-                                className={`w-full py-3 rounded-xl font-bold text-white transition-all ${submitting || !selectedAccount || !payPassword
-                                    ? 'bg-gray-300 cursor-not-allowed'
-                                    : 'bg-orange-600 active:bg-orange-700 shadow-lg active:scale-95'
-                                    }`}
-                            >
-                                {submitting ? '提交中...' : '确认提现'}
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
         </div>
     );
 };

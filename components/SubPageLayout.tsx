@@ -17,7 +17,7 @@ const SubPageLayout: React.FC<SubPageLayoutProps> = ({
   bgColor = "bg-gray-50"
 }) => {
   return (
-    <div className={`h-screen flex flex-col ${bgColor} pb-safe`}>
+    <div className={`h-screen-dynamic flex flex-col ${bgColor} pb-safe`}>
       <header className="bg-white px-4 py-3 flex items-center shadow-sm shrink-0 z-30">
         <button
           onClick={onBack}

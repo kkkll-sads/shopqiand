@@ -734,6 +734,7 @@ const AppContent: React.FC = () => {
     }
 
     // Handle Announcement Detail Page: "news-detail:ID"
+    // 注意：这个处理逻辑是 fallback，优先使用 routeComponents 中的处理
     if (currentRoute?.name === 'news-detail') {
       const newsId = currentRoute.id;
       const newsItem = newsList.find(item => item.id === newsId);
@@ -746,7 +747,20 @@ const AppContent: React.FC = () => {
         } catch (e) {
           // 忽略存储错误
         }
-        return <AnnouncementDetail newsItem={newsItem} onBack={() => goBack()} />;
+        return (
+          <AnnouncementDetail
+            newsItem={newsItem}
+            onBack={() => {
+              // 如果路由中有 back 字段，使用 goBack() 会自动使用它
+              // 否则使用默认的 news 页面
+              if (currentRoute.back !== undefined) {
+                goBack();
+              } else {
+                navigateRoute({ name: 'news' });
+              }
+            }}
+          />
+        );
       }
     }
 
@@ -820,8 +834,8 @@ const AppContent: React.FC = () => {
 
 
   return (
-    <div className="bg-gray-100 min-h-screen font-sans antialiased text-gray-900 max-w-md mx-auto relative shadow-2xl">
-      <div className="min-h-screen bg-gray-50 pb-safe">
+    <div className="bg-gray-100 min-h-screen-dynamic font-sans antialiased text-gray-900 max-w-md mx-auto relative shadow-2xl">
+      <div className="min-h-screen-dynamic bg-gray-50 pb-safe">
         {renderContent()}
       </div>
       {/* 实名认证提示弹窗 */}

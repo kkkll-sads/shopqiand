@@ -144,7 +144,17 @@ const AssetView: React.FC<AssetViewProps> = ({ onBack, onNavigate, onProductSele
     if (tabs.activeTab === 0) {
       tabs.refresh();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filterCategory, filterFlow, filterTime]);
+
+  // 当 tabConfigs 变化时，确保 activeTab 有效
+  useEffect(() => {
+    const validTabIds = tabConfigs.map(t => t.id);
+    if (!validTabIds.includes(tabs.activeTab) && tabConfigs.length > 0) {
+      tabs.setActiveTab(tabConfigs[0].id);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tabConfigs]);
 
   const actionModal = useAssetActionModal(consignmentTicketCount, () => {
     tabs.refresh();
@@ -215,7 +225,19 @@ const AssetView: React.FC<AssetViewProps> = ({ onBack, onNavigate, onProductSele
     const typeText = getBalanceTypeLabel(item.type);
 
     return (
-      <div key={item.id} className="bg-white rounded-lg p-4 mb-3 shadow-sm border border-gray-100">
+      <div
+        key={item.id}
+        className="bg-white rounded-lg p-4 mb-3 shadow-sm border border-gray-100 cursor-pointer active:bg-gray-50 transition-colors"
+        onClick={() => {
+          if (onNavigate && item.id) {
+            onNavigate({
+              name: 'money-log-detail',
+              id: item.id,
+              back: { name: 'asset-view' },
+            });
+          }
+        }}
+      >
         <div className="flex justify-between items-start mb-2">
           <div className="flex-1">
             <div className="text-sm font-medium text-gray-800 mb-1">{item.memo || item.remark || '资金变动'}</div>

@@ -3,6 +3,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Settings, MessageSquare, ShieldCheck, CreditCard, MapPin, Users, UserCheck, HelpCircle, FileText, HeadphonesIcon, ChevronRight, Wallet, Receipt, Box, Gem, Sprout, Award, CalendarCheck, Newspaper, Leaf, ClipboardList } from 'lucide-react';
 import { formatAmount } from '../../utils/format';
 import { AUTH_TOKEN_KEY, USER_INFO_KEY, fetchProfile, normalizeAssetUrl, fetchShopOrderStatistics, ShopOrderStatistics, fetchSignInInfo } from '../../services/api';
+import { STORAGE_KEYS } from '../../constants/storageKeys';
 import { UserInfo } from '../../types';
 import useAuth from '../../hooks/useAuth';
 import { isSuccess, extractError } from '../../utils/apiHelpers';
@@ -119,6 +120,18 @@ const Profile: React.FC<ProfileProps> = ({ onNavigate, unreadCount = 0 }) => {
     const loadSignInStatus = async () => {
       try {
         console.log('[Profile] 开始加载签到状态...');
+
+        // 1. 优先检查本地存储
+        const todayStr = new Date().toISOString().split('T')[0];
+        const lastSignedDate = localStorage.getItem(STORAGE_KEYS.LAST_SIGN_IN_DATE_KEY);
+
+        if (lastSignedDate === todayStr) {
+          console.log('[Profile] 本地缓存显示今日已签到，跳过API请求');
+          setHasSignedToday(true);
+          return;
+        }
+
+        // 2. 本地无记录或日期不匹配，才请求API
         const res = await fetchSignInInfo(token);
         console.log('[Profile] 签到状态API响应:', res);
 
@@ -127,6 +140,11 @@ const Profile: React.FC<ProfileProps> = ({ onNavigate, unreadCount = 0 }) => {
           const hasSign = res.data.today_signed || false;
           console.log('[Profile] 今日是否已签到:', hasSign);
           setHasSignedToday(hasSign);
+
+          // 如果API确认已签到，更新本地存储
+          if (hasSign) {
+            localStorage.setItem(STORAGE_KEYS.LAST_SIGN_IN_DATE_KEY, todayStr);
+          }
         } else {
           console.warn('[Profile] 签到状态API返回异常:', res);
           // Default to false to show red dot (safer to show when uncertain)

@@ -22,6 +22,17 @@ import { useErrorHandler } from '../../hooks/useErrorHandler';
  */
 const extractPriceFromZone = (priceZone?: string): number => {
     if (!priceZone) return 0;
+    
+    // 处理带单位的情况，如 "1K区" -> 1000, "2K区" -> 2000
+    const upperZone = priceZone.toUpperCase();
+    if (upperZone.includes('K')) {
+        const match = upperZone.match(/(\d+)\s*K/i);
+        if (match) {
+            return Number(match[1]) * 1000;
+        }
+    }
+    
+    // 处理普通数字，如 "500元区" -> 500
     const match = priceZone.match(/(\d+)/);
     return match ? Number(match[1]) : 0;
 };

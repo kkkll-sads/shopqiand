@@ -72,16 +72,16 @@ const AssetHeaderCard: React.FC<AssetHeaderCardProps> = ({ userInfo, onNavigate 
   };
 
   const HelpIcon: React.FC<{ type: keyof typeof BALANCE_HELP_TITLES }> = ({ type }) => (
-    <button
-      type="button"
-      className="inline-flex items-center justify-center ml-0.5 p-0.5 rounded-full hover:bg-white/20 active:bg-white/30 transition-colors"
+    <span
+      role="button"
+      className="inline-flex items-center justify-center ml-0.5 p-0.5 rounded-full hover:bg-white/20 active:bg-white/30 transition-colors cursor-pointer"
       onClick={(e) => {
         e.stopPropagation();
         handleHelpClick(type);
       }}
     >
       <HelpCircle size={12} className="text-white/70" />
-    </button>
+    </span>
   );
 
   return (

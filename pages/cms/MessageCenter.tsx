@@ -573,7 +573,7 @@ const MessageCenter: React.FC<MessageCenterProps> = ({ onBack, onNavigate }) => 
           onNavigate({
             name: 'news-detail',
             id: String(message.sourceId),
-            from: { name: 'message-center' },
+            back: { name: 'message-center' },
           });
         }
         break;
@@ -582,7 +582,7 @@ const MessageCenter: React.FC<MessageCenterProps> = ({ onBack, onNavigate }) => 
           onNavigate({
             name: 'recharge-order-detail',
             orderId: String(message.sourceId),
-            back: { name: 'service-center:message' }
+            back: { name: 'message-center' }
           });
         }
         break;
@@ -594,12 +594,14 @@ const MessageCenter: React.FC<MessageCenterProps> = ({ onBack, onNavigate }) => 
         });
         break;
       case 'shop_order':
-        // 商城订单，跳转到订单列表（全部）
-        onNavigate({
-          name: 'order-list',
-          kind: 'points',
-          status: 0,
-        });
+        // 商城订单，跳转到订单详情页
+        if (message.sourceId) {
+          onNavigate({
+            name: 'order-detail',
+            orderId: String(message.sourceId),
+            back: { name: 'message-center' }
+          });
+        }
         break;
       default:
         // 默认行为

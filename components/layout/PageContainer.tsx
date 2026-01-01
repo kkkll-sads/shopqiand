@@ -78,7 +78,7 @@ const PageContainer: React.FC<PageContainerProps> = ({
     className = '',
 }) => {
     return (
-        <div className={`min-h-screen ${bgColor} pb-safe flex flex-col ${className}`}>
+        <div className={`min-h-screen-dynamic ${bgColor} pb-safe flex flex-col ${className}`}>
             {/* 顶部导航栏 */}
             <header className="bg-white px-4 py-3 flex items-center sticky top-0 z-30 shadow-sm">
                 {/* 返回按钮 */}

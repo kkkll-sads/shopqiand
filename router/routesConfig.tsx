@@ -1,9 +1,13 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { type Route } from './routes';
 import AnnouncementDetail from '../pages/cms/AnnouncementDetail';
+import { LoadingSpinner } from '../components/common';
+import { fetchAnnouncements } from '../services/api';
+import { extractData } from '../utils/apiHelpers';
 import ArtistDetail from '../pages/market/ArtistDetail';
 import OrderListPage from '../pages/market/OrderListPage';
 import OrderDetail from '../pages/market/OrderDetail';
+import CollectionOrderDetail from '../pages/market/CollectionOrderDetail';
 import Cashier from '../pages/market/Cashier';
 import ClaimDetail from '../pages/wallet/ClaimDetail';
 import Settings from '../pages/user/Settings';
@@ -28,6 +32,8 @@ import ExtensionWithdraw from '../pages/wallet/ExtensionWithdraw';
 import HashrateExchange from '../pages/wallet/HashrateExchange';
 import ConsignmentVoucher from '../pages/wallet/ConsignmentVoucher';
 import CumulativeRights from '../pages/wallet/CumulativeRights';
+import OrderFundDetail from '../pages/wallet/OrderFundDetail';
+import MoneyLogDetail from '../pages/wallet/MoneyLogDetail';
 import ClaimHistory from '../pages/wallet/ClaimHistory';
 import RechargeOrderDetail from '../pages/wallet/RechargeOrderDetail';
 import RechargeOrderList from '../pages/wallet/RechargeOrderList';
@@ -74,17 +80,139 @@ export interface RouteHelpers {
 type RouteRenderer = (route: Route, helpers: RouteHelpers) => React.ReactNode | null;
 
 /**
+ * 从 API 加载公告详情的组件
+ * 用于处理 newsList 中不包含的公告（如从消息中心点击的情况）
+ */
+const AnnouncementDetailLoader: React.FC<{ id: string; onBack: () => void }> = ({ id, onBack }) => {
+  const [loading, setLoading] = useState(true);
+  const [loadedNewsItem, setLoadedNewsItem] = useState<NewsItem | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const loadAnnouncement = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        
+        // 尝试从两种类型的公告中查找
+        const [normalRes, importantRes] = await Promise.all([
+          fetchAnnouncements({ page: 1, limit: 100, type: 'normal' }),
+          fetchAnnouncements({ page: 1, limit: 100, type: 'important' }),
+        ]);
+
+        const normalData = extractData(normalRes) as any;
+        const importantData = extractData(importantRes) as any;
+        const normalList = normalData?.data || normalData?.list || [];
+        const importantList = importantData?.data || importantData?.list || [];
+        
+        // 在所有公告中查找
+        const allAnnouncements = [...normalList, ...importantList];
+        const foundItem = allAnnouncements.find((item: any) => String(item.id) === id);
+        
+        if (foundItem) {
+          // 读取已读状态
+          const readIds: string[] = [];
+          try {
+            const stored = localStorage.getItem(STORAGE_KEYS.READ_NEWS_IDS_KEY);
+            if (stored) {
+              readIds.push(...JSON.parse(stored));
+            }
+          } catch {}
+          
+          const isRead = readIds.includes(String(foundItem.id));
+          
+          // 转换内容格式
+          let content = foundItem.content || '';
+          content = content
+            .replace(/<\/p>/gi, '\n\n')
+            .replace(/<br\s*\/?>/gi, '\n')
+            .replace(/<\/li>/gi, '\n')
+            .replace(/<\/h[1-6]>/gi, '\n\n');
+          content = content.replace(/<\/?[^>]+(>|$)/g, '');
+          
+          // 判断类型
+          const newsType: 'announcement' | 'dynamic' = foundItem.type === 'important' ? 'dynamic' : 'announcement';
+          
+          setLoadedNewsItem({
+            id: String(foundItem.id),
+            date: foundItem.createtime || '',
+            title: foundItem.title || '',
+            isUnread: !isRead,
+            type: newsType,
+            content,
+          });
+        } else {
+          setError('公告不存在');
+        }
+      } catch (err: any) {
+        console.error('加载公告详情失败:', err);
+        setError(err?.message || '加载失败');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadAnnouncement();
+  }, [id]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <LoadingSpinner text="加载中..." />
+      </div>
+    );
+  }
+
+  if (error || !loadedNewsItem) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center text-red-500">{error || '公告不存在'}</div>
+      </div>
+    );
+  }
+
+  return <AnnouncementDetail newsItem={loadedNewsItem} onBack={onBack} />;
+};
+
+/**
  * 路由对应组件映射（仅包含参数化、易出错的路由，其他走原有分支）
  */
 export const routeComponents: Partial<Record<Route['name'], RouteRenderer>> = {
   'news-detail': (route, helpers) => {
     const detailRoute = route as Extract<Route, { name: 'news-detail' }>;
     const newsItem = helpers.newsList.find((item) => item.id === detailRoute.id);
-    if (!newsItem) return null;
+    
+    // 如果找不到 newsItem，使用加载器组件从 API 加载
+    // 这样可以处理从消息中心点击的情况（newsList 可能不包含该公告）
+    if (!newsItem) {
+      return (
+        <AnnouncementDetailLoader
+          id={detailRoute.id}
+          onBack={() => {
+            // 如果路由中有 back 字段，使用 goBack() 会自动使用它
+            // 否则使用默认的 news 页面
+            if (detailRoute.back !== undefined) {
+              helpers.goBack();
+            } else {
+              helpers.navigateRoute({ name: 'news' });
+            }
+          }}
+        />
+      );
+    }
+    
     return (
       <AnnouncementDetail
         newsItem={newsItem}
-        onBack={() => helpers.goBack()}
+        onBack={() => {
+          // 如果路由中有 back 字段，使用 goBack() 会自动使用它
+          // 否则使用默认的 news 页面
+          if (detailRoute.back !== undefined) {
+            helpers.goBack();
+          } else {
+            helpers.navigateRoute({ name: 'news' });
+          }
+        }}
       />
     );
   },
@@ -110,13 +238,40 @@ export const routeComponents: Partial<Record<Route['name'], RouteRenderer>> = {
       onNavigate={(nextRoute) => helpers.navigateRoute(nextRoute)}
     />
   ),
-  'order-detail': (route, helpers) => (
-    <OrderDetail
-      orderId={(route as Extract<Route, { name: 'order-detail' }>).orderId}
-      onBack={() => helpers.goBack()}
-      onNavigate={(nextRoute) => helpers.navigateRoute(nextRoute)}
-    />
-  ),
+  'order-detail': (route, helpers) => {
+    const detailRoute = route as Extract<Route, { name: 'order-detail' }>;
+    return (
+      <OrderDetail
+        orderId={detailRoute.orderId}
+        onBack={() => {
+          // 如果路由中有 back 字段，使用 goBack() 会自动使用它
+          // 否则使用默认的订单列表页面
+          if (detailRoute.back !== undefined) {
+            helpers.goBack();
+          } else {
+            helpers.navigateRoute({ name: 'order-list', kind: 'product', status: 0 });
+          }
+        }}
+        onNavigate={(nextRoute) => helpers.navigateRoute(nextRoute)}
+      />
+    );
+  },
+  'collection-order-detail': (route, helpers) => {
+    const detailRoute = route as Extract<Route, { name: 'collection-order-detail' }>;
+    return (
+      <CollectionOrderDetail
+        id={detailRoute.id}
+        orderNo={detailRoute.orderNo}
+        onBack={() => {
+          if (detailRoute.back !== undefined) {
+            helpers.goBack();
+          } else {
+            helpers.navigateRoute({ name: 'order-list', kind: 'product', status: 0 });
+          }
+        }}
+      />
+    );
+  },
   cashier: (route, helpers) => (
     <Cashier
       orderId={(route as Extract<Route, { name: 'cashier' }>).orderId}
@@ -225,7 +380,7 @@ export const routeComponents: Partial<Record<Route['name'], RouteRenderer>> = {
     return (
       <MyCollectionDetail
         item={helpers.selectedCollectionItem}
-        onBack={() => helpers.goBack()}
+        onBack={() => helpers.navigateRoute({ name: 'my-collection' })}
         onNavigate={(nextRoute) => helpers.navigateRoute(nextRoute)}
         onSetSelectedItem={(item) => helpers.setSelectedCollectionItem(item)}
       />
@@ -305,7 +460,11 @@ export const routeComponents: Partial<Record<Route['name'], RouteRenderer>> = {
   },
   'balance-withdraw': (route, helpers) => {
     const payload = route as Extract<Route, { name: 'balance-withdraw' }>;
-    const back: Route | null = payload.source === 'profile' ? null : { name: 'asset-view' };
+    const back: Route | null = payload.source === 'profile' 
+      ? null 
+      : payload.source === 'sign-in'
+        ? { name: 'sign-in' }
+        : { name: 'asset-view' };
     return <BalanceWithdraw onBack={() => helpers.goBack()} onNavigate={(nextRoute) => helpers.navigateRoute(nextRoute)} />;
   },
   'service-recharge': (route, helpers) => {
@@ -325,7 +484,18 @@ export const routeComponents: Partial<Record<Route['name'], RouteRenderer>> = {
     return <HashrateExchange onBack={() => helpers.goBack()} onNavigate={(nextRoute) => helpers.navigateRoute(nextRoute)} />;
   },
   'consignment-voucher': (_route, helpers) => <ConsignmentVoucher onBack={() => helpers.goBack()} />,
-  'cumulative-rights': (_route, helpers) => <CumulativeRights onBack={() => helpers.goBack()} />,
+  'cumulative-rights': (_route, helpers) => <CumulativeRights onBack={() => helpers.goBack()} onNavigate={(nextRoute) => helpers.navigateRoute(nextRoute)} />,
+  'order-fund-detail': (_route, helpers) => <OrderFundDetail onBack={() => helpers.goBack()} />,
+  'money-log-detail': (route, helpers) => {
+    const detailRoute = route as Extract<Route, { name: 'money-log-detail' }>;
+    return (
+      <MoneyLogDetail
+        id={detailRoute.id}
+        flowNo={detailRoute.flowNo}
+        onBack={() => helpers.goBack()}
+      />
+    );
+  },
   'claim-history': (_route, helpers) => (
     <ClaimHistory
       onBack={() => helpers.goBack()}

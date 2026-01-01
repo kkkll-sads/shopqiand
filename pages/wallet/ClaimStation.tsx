@@ -53,7 +53,7 @@ const ClaimStation: React.FC<ClaimStationProps> = ({ onNavigate }) => {
       {/* Top Gradient Background */}
       <div className="absolute top-0 left-0 right-0 h-64 bg-gradient-to-b from-[#FFF5E6] to-gray-50 z-0 pointer-events-none" />
 
-      <div className="pt-safe pb-2 px-4 sticky top-0 z-20">
+      <div className="pt-safe pb-2 px-4 relative z-20">
         <div className="bg-white/80 backdrop-blur-md p-1 rounded-2xl flex relative shadow-sm border border-white/50">
           <button
             onClick={() => setActiveTab('apply')}
@@ -103,7 +103,7 @@ const ClaimStation: React.FC<ClaimStationProps> = ({ onNavigate }) => {
             </div>
           </>
         ) : (
-          <div className="animate-in fade-in slide-in-from-right-4 duration-300">
+          <div className="">
             <UnlockPanel
               userInfo={userInfo}
               unlockStatus={unlockStatus}
