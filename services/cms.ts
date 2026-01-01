@@ -1,0 +1,149 @@
+import { apiFetch, ApiResponse } from './networking';
+import { API_ENDPOINTS } from './config';
+
+// 通用单页内容类型
+export interface PageContent {
+    title?: string;
+    content?: string;
+}
+
+export async function fetchAboutUsPage(): Promise<ApiResponse<PageContent>> {
+    return apiFetch<PageContent>(`${API_ENDPOINTS.common.page}?type=about_us`, {
+        method: 'GET',
+    });
+}
+
+export async function fetchPrivacyPolicyPage(): Promise<ApiResponse<PageContent>> {
+    return apiFetch<PageContent>(`${API_ENDPOINTS.common.page}?type=privacy_policy`, {
+        method: 'GET',
+    });
+}
+
+export async function fetchUserAgreementPage(): Promise<ApiResponse<PageContent>> {
+    return apiFetch<PageContent>(`${API_ENDPOINTS.common.page}?type=user_agreement`, {
+        method: 'GET',
+    });
+}
+
+// 帮助中心
+export interface HelpCategoryItem {
+    id: number;
+    name: string;
+    code: string;
+}
+
+export interface HelpCategoryListData {
+    list: HelpCategoryItem[];
+}
+
+export async function fetchHelpCategories(): Promise<ApiResponse<HelpCategoryListData>> {
+    return apiFetch<HelpCategoryListData>(API_ENDPOINTS.help.categories, {
+        method: 'GET',
+    });
+}
+
+export interface HelpQuestionItem {
+    id: number;
+    title: string;
+    content: string;
+    category_id: number;
+}
+
+export interface HelpQuestionListData {
+    list: HelpQuestionItem[];
+}
+
+export interface FetchHelpQuestionsParams {
+    category_id: number | string;
+    category_code?: string;
+}
+
+export async function fetchHelpQuestions(params: FetchHelpQuestionsParams): Promise<ApiResponse<HelpQuestionListData>> {
+    const search = new URLSearchParams();
+    search.set('category_id', String(params.category_id));
+    if (params.category_code) search.set('category_code', params.category_code);
+
+    const path = `${API_ENDPOINTS.help.questions}?${search.toString()}`;
+    return apiFetch<HelpQuestionListData>(path, {
+        method: 'GET',
+    });
+}
+
+// 公告
+export interface AnnouncementItem {
+    id: number;
+    title: string;
+    content: string;
+    type: string;
+    type_text?: string;
+    status: string;
+    status_text?: string;
+    is_popup?: number;  // 是否弹出：1=弹出，0=不弹出
+    popup_delay?: number;  // 弹出延迟（秒）
+    sort?: number;
+    start_time?: string;
+    end_time?: string;
+    view_count?: number;
+    createtime: string;
+    updatetime?: string;
+    [key: string]: any;
+}
+
+export interface AnnouncementListData {
+    list: AnnouncementItem[];
+    total: number;
+    current_page: number;
+}
+
+export interface FetchAnnouncementsParams {
+    page?: number;
+    limit?: number;
+    type?: string;
+    title?: string;
+    is_popup?: number;  // 是否弹窗：1=弹窗公告，0=普通公告
+}
+
+export async function fetchAnnouncements(params: FetchAnnouncementsParams = {}): Promise<ApiResponse<AnnouncementListData>> {
+    const { page, limit, type = 'normal', title, is_popup } = params;
+    const search = new URLSearchParams();
+    if (page !== undefined) search.set('page', String(page));
+    if (limit !== undefined) search.set('limit', String(limit));
+    if (type) search.set('type', type);
+    if (title) search.set('title', title);
+    if (is_popup !== undefined) search.set('is_popup', String(is_popup));
+
+    const path = `${API_ENDPOINTS.announcement.list}?${search.toString()}`;
+    return apiFetch<AnnouncementListData>(path, {
+        method: 'GET',
+    });
+}
+
+// 轮播图
+export interface BannerApiItem {
+    id: number;
+    title: string;
+    image: string;
+    url?: string;
+    [key: string]: any;
+}
+
+export interface BannerListData {
+    list: BannerApiItem[];
+    total: number;
+}
+
+export interface FetchBannersParams {
+    page?: number;
+    limit?: number;
+}
+
+export async function fetchBanners(params: FetchBannersParams = {}): Promise<ApiResponse<BannerListData>> {
+    const search = new URLSearchParams();
+    if (params.page !== undefined) search.set('page', String(params.page));
+    if (params.limit !== undefined) search.set('limit', String(params.limit));
+
+    const path = `${API_ENDPOINTS.banner.list}?${search.toString()}`;
+    return apiFetch<BannerListData>(path, {
+        method: 'GET',
+    });
+}

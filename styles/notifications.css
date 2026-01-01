@@ -1,0 +1,325 @@
+/* Global Notification System - Orange Theme */
+
+:root {
+  /* Colors */
+  --gns-brand-orange: #FF8800;
+  --gns-brand-orange-tint: #FFF5EB;
+  /* Light orange bg */
+  --gns-error-coral: #FF6B6B;
+  --gns-error-bg: #FFF5F5;
+  --gns-success-green: #00C853;
+  --gns-warning-amber: #FFB300;
+  --gns-info-bluegray: #607D8B;
+
+  --gns-text-primary: #1F1F1F;
+  --gns-text-secondary: #757575;
+  --gns-border-light: #EFEFEF;
+  --gns-shadow-soft: 0px 8px 24px rgba(255, 136, 0, 0.12);
+  --gns-shadow-heavy: 0px 12px 32px rgba(0, 0, 0, 0.12);
+
+  --gns-bg-card: #FFFFFF;
+  --gns-radius: 16px;
+}
+
+/* --- Container --- */
+.gns-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 0;
+  /* Pass-through clicks */
+  z-index: 9999;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* --- Top Toast --- */
+.gns-toast-stack {
+  position: fixed;
+  top: max(env(safe-area-inset-top), 24px);
+  /* Fallback 24px + 8px dynamic handled in JS or margin */
+  left: 50%;
+  transform: translateX(-50%);
+  width: 92%;
+  max-width: 400px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  pointer-events: none;
+  /* Container passes clicks */
+}
+
+.gns-toast {
+  pointer-events: auto;
+  /* Active toast catches clicks */
+  background: var(--gns-bg-card);
+  border-radius: var(--gns-radius);
+  box-shadow: var(--gns-shadow-soft);
+  padding: 14px 16px;
+  width: 100%;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+
+  /* Animation */
+  animation: gns-slide-in 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+  transition: all 0.3s ease;
+  opacity: 0;
+  transform: translateY(-20px) scale(0.95);
+}
+
+.gns-toast.gns-leaving {
+  animation: gns-slide-out 0.2s ease forwards;
+}
+
+.gns-toast-icon {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.gns-toast-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-top: 1px;
+  /* Optical alignment with icon */
+}
+
+.gns-toast-title {
+  color: var(--gns-text-primary);
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.gns-toast-desc {
+  color: var(--gns-text-secondary);
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.4;
+}
+
+.gns-toast-close {
+  width: 20px;
+  height: 20px;
+  padding: 4px;
+  /* Hitbox padding */
+  box-sizing: content-box;
+  color: var(--gns-text-secondary);
+  opacity: 0.6;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+/* --- SnackBar --- */
+.gns-snackbar-container {
+  position: fixed;
+  bottom: max(env(safe-area-inset-bottom), 24px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: 92%;
+  max-width: 400px;
+  z-index: 10000;
+  pointer-events: none;
+}
+
+.gns-snackbar {
+  pointer-events: auto;
+  background: var(--gns-bg-card);
+  /* White card style as requested */
+  color: var(--gns-text-primary);
+  border-radius: var(--gns-radius);
+  box-shadow: var(--gns-shadow-heavy);
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+
+  animation: gns-slide-up 0.3s cubic-bezier(0.19, 1, 0.22, 1) forwards;
+}
+
+.gns-snackbar.gns-leaving {
+  animation: gns-fade-down 0.2s ease forwards;
+}
+
+.gns-snackbar-text {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.gns-snackbar-action {
+  background: var(--gns-brand-orange);
+  color: white;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+}
+
+/* --- Blocking Dialog --- */
+.gns-dialog-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(4px);
+  z-index: 10001;
+  /* Highest */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  animation: gns-fade-in 0.2s ease forwards;
+  pointer-events: auto;
+  /* Ensure overlay catches clicks */
+}
+
+.gns-dialog {
+  background: var(--gns-bg-card);
+  width: 80%;
+  max-width: 320px;
+  border-radius: 24px;
+  padding: 24px;
+  transform: scale(0.9);
+  opacity: 0;
+  animation: gns-scale-in 0.25s cubic-bezier(0.34, 1.56, 0.64, 1) forwards 0.1s;
+  /* Slight delay after overlay */
+  box-shadow: var(--gns-shadow-heavy);
+  text-align: center;
+  pointer-events: auto;
+  /* Ensure dialog and its buttons are clickable */
+}
+
+.gns-dialog-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--gns-text-primary);
+  margin-bottom: 8px;
+}
+
+.gns-dialog-desc {
+  font-size: 14px;
+  color: var(--gns-text-secondary);
+  margin-bottom: 24px;
+  line-height: 1.5;
+}
+
+.gns-dialog-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
+.gns-dialog-btn {
+  flex: 1;
+  padding: 10px 0;
+  border-radius: 99px;
+  font-size: 15px;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+}
+
+.gns-dialog-btn.primary {
+  background: var(--gns-brand-orange);
+  color: white;
+}
+
+.gns-dialog-btn.secondary {
+  background: transparent;
+  color: var(--gns-text-secondary);
+  border: 1px solid var(--gns-border-light);
+}
+
+/* --- Inline Field Error (Used manually in components) --- */
+.gns-input-error-border {
+  border-color: var(--gns-error-coral) !important;
+  background-color: var(--gns-error-bg) !important;
+}
+
+.gns-inline-error {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 4px;
+  color: var(--gns-error-coral);
+  font-size: 12px;
+  animation: gns-shake 0.4s ease-in-out;
+}
+
+/* --- Animations --- */
+@keyframes gns-slide-in {
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes gns-slide-out {
+  to {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.95);
+  }
+}
+
+@keyframes gns-slide-up {
+  from {
+    transform: translate(-50%, 100%);
+    opacity: 0;
+  }
+
+  to {
+    transform: translate(-50%, 0);
+    opacity: 1;
+  }
+}
+
+@keyframes gns-fade-down {
+  to {
+    transform: translate(-50%, 20px);
+    opacity: 0;
+  }
+}
+
+@keyframes gns-fade-in {
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes gns-scale-in {
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes gns-shake {
+
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+
+  25% {
+    transform: translateX(-4px);
+  }
+
+  75% {
+    transform: translateX(4px);
+  }
+}
