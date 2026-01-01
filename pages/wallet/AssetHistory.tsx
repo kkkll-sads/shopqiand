@@ -1,40 +1,57 @@
 
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Loader2, FileText, TrendingUp, TrendingDown, Wallet, CreditCard, Gift } from 'lucide-react';
+import { ArrowLeft, Filter, FileText } from 'lucide-react';
+import { FilterBar } from '../../components/FilterBar';
 import {
   getAllLog,
   AllLogItem,
   AUTH_TOKEN_KEY,
 } from '../../services/api';
 import { isSuccess, extractData } from '../../utils/apiHelpers';
+import { BALANCE_TYPE_OPTIONS, getBalanceTypeLabel } from '../../constants/balanceTypes';
 
 interface AssetHistoryProps {
   onBack: () => void;
 }
 
 const AssetHistory: React.FC<AssetHistoryProps> = ({ onBack }) => {
-  const [activeTab, setActiveTab] = useState<number>(0); // 0: 全部, 1: 可用余额, 2: 提现余额, 3: 服务费余额, 4: 消费金
+  // 筛选状态
+  const [filters, setFilters] = useState({
+    category: 'all',
+    flow: 'all',
+    time: 'all',
+  });
+
+  const categoryOptions = [...BALANCE_TYPE_OPTIONS];
+
+  const setCategory = (v: string) => setFilters(prev => ({ ...prev, category: v }));
+  const setFlow = (v: string) => setFilters(prev => ({ ...prev, flow: v }));
+  const setRange = (v: string) => setFilters(prev => ({ ...prev, time: v }));
+
+  // 数据状态
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
-
   const [allLogs, setAllLogs] = useState<AllLogItem[]>([]);
   const [page, setPage] = useState<number>(1);
   const [hasMore, setHasMore] = useState<boolean>(false);
 
-  const tabs = ['全部', '供应链专项金', '可调度收益', '确权金', '消费金'];
-
-  // Reset page when tab changes
+  // 重置并加载数据
   useEffect(() => {
     setPage(1);
     setAllLogs([]);
     setHasMore(false);
-  }, [activeTab]);
+    loadData(1, true);
+  }, [filters]);
 
-  useEffect(() => {
-    loadData();
-  }, [activeTab, page]);
+  // 加载更多
+  const handleLoadMore = () => {
+    if (!loading && hasMore) {
+      setPage(prev => prev + 1);
+      loadData(page + 1);
+    }
+  };
 
-  const loadData = async () => {
+  const loadData = async (pageNum: number, isRefresh = false) => {
     const token = localStorage.getItem(AUTH_TOKEN_KEY);
     if (!token) {
       setError('请先登录');
@@ -42,51 +59,58 @@ const AssetHistory: React.FC<AssetHistoryProps> = ({ onBack }) => {
     }
 
     setLoading(true);
-    setError(null);
+    if (isRefresh) setError(null);
 
     try {
-      // 根据 activeTab 确定 type 参数
-      const typeMap: Record<number, 'all' | 'balance_available' | 'withdrawable_money' | 'service_fee_balance' | 'score'> = {
-        0: 'all',
-        1: 'balance_available',
-        2: 'withdrawable_money',
-        3: 'service_fee_balance',
-        4: 'score',
-      };
+      // 构建时间参数
+      let startTime: number | undefined;
+      let endTime: number | undefined;
+      const now = Math.floor(Date.now() / 1000);
 
-      const type = typeMap[activeTab] || 'all';
-      console.log(`[AssetHistory] 当前tab: ${activeTab}, 请求type: ${type}`);
+      switch (filters.time) {
+        case 'today':
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+          startTime = Math.floor(today.getTime() / 1000);
+          endTime = now;
+          break;
+        case '7days':
+          startTime = now - 7 * 24 * 3600;
+          endTime = now;
+          break;
+        case '30days':
+          startTime = now - 30 * 24 * 3600;
+          endTime = now;
+          break;
+      }
 
-      const res = await getAllLog({ page, limit: 10, type, token });
-      console.log(`[AssetHistory] API响应:`, res);
+      const res = await getAllLog({
+        page: pageNum,
+        limit: 10,
+        type: filters.category,
+        flow_direction: filters.flow as 'in' | 'out' | 'all',
+        start_time: startTime,
+        end_time: endTime,
+        token
+      });
 
       const data = extractData(res);
       if (data) {
-        console.log(`[AssetHistory] 返回${data.list?.length || 0}条记录`);
-        // 打印前3条记录的type字段
-        data.list?.slice(0, 3).forEach((item, idx) => {
-          console.log(`[AssetHistory] 记录${idx + 1} - type: "${item.type}", amount: ${item.amount}, remark: ${item.remark || item.memo}`);
-        });
-
-        if (page === 1) {
+        if (pageNum === 1) {
           setAllLogs(data.list || []);
         } else {
           setAllLogs(prev => [...prev, ...(data.list || [])]);
         }
         setHasMore((data.list?.length || 0) >= 10 && (data.current_page || 1) * 10 < (data.total || 0));
       } else {
-        setError(res.msg || '获取明细失败');
+        if (isRefresh) setError(res.msg || '获取明细失败');
       }
     } catch (e: any) {
       console.error('[AssetHistory] 加载失败:', e);
-      setError(e?.message || '加载数据失败');
+      if (isRefresh) setError(e?.message || '加载数据失败');
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleTabChange = (idx: number) => {
-    setActiveTab(idx);
   };
 
   const formatTime = (timestamp: number | string | null): string => {
@@ -101,192 +125,143 @@ const AssetHistory: React.FC<AssetHistoryProps> = ({ onBack }) => {
     });
   };
 
-  const getTypeLabel = (type: AllLogItem['type'], fieldType?: string): string => {
-    // 优先使用 field_type 判断
-    if (fieldType === 'green_power') {
-      return '绿色算力';
-    }
-    const labels: Record<AllLogItem['type'], string> = {
-      balance_available: '供应链专项金',
-      withdrawable_money: '可调度收益',
-      service_fee_balance: '确权金',
-      score: '消费金',
-    };
-    // 如果 type 是 green_power，返回绿色算力
-    if (type === 'green_power') {
-      return '绿色算力';
-    }
-    return labels[type] || type;
-  };
-
-  const getTypeIcon = (type: AllLogItem['type']) => {
-    switch (type) {
-      case 'balance_available':
-        return <Wallet size={20} className="text-orange-600" />;
-      case 'withdrawable_money':
-        return <TrendingDown size={20} className="text-blue-600" />;
-      case 'service_fee_balance':
-        return <CreditCard size={20} className="text-purple-600" />;
-      case 'score':
-        return <Gift size={20} className="text-yellow-600" />;
-      default:
-        return <Wallet size={20} className="text-gray-600" />;
-    }
-  };
-
-  const getTypeBgColor = (type: AllLogItem['type']): string => {
-    switch (type) {
-      case 'balance_available':
-        return 'bg-orange-100';
-      case 'withdrawable_money':
-        return 'bg-blue-100';
-      case 'service_fee_balance':
-        return 'bg-purple-100';
-      case 'score':
-        return 'bg-yellow-100';
-      default:
-        return 'bg-gray-100';
-    }
+  const getTypeLabel = (type: string, fieldType?: string): string => {
+    // Use field_type if available for more precise identification
+    const typeToUse = fieldType || type;
+    return getBalanceTypeLabel(typeToUse);
   };
 
   const renderLogItem = (item: AllLogItem) => {
-    // 检测是否是绿色算力相关的记录
-    const isGreenPower = item.field_type === 'green_power' || 
-                         item.type === 'green_power' || 
-                         (item.remark && item.remark.includes('绿色算力'));
-    
+    const isGreenPower = item.field_type === 'green_power' || item.type === 'green_power';
     const isScore = item.type === 'score';
-    const displayAmount = isScore ? Math.abs(item.amount) : item.amount;
-    const displayBefore = isScore ? Math.abs(item.before_value) : item.before_value;
-    const displayAfter = isScore ? Math.abs(item.after_value) : item.after_value;
+    const amountVal = Number(item.amount);
+
+    // Determine direction based on balance change if available, otherwise fallback to amount sign
+    let isPositive = amountVal > 0;
+    if (item.before_value !== undefined && item.after_value !== undefined) {
+      isPositive = Number(item.after_value) > Number(item.before_value);
+    } else if (item.before_balance !== undefined && item.after_balance !== undefined) {
+      // Fallback for some API responses that use 'balance' instead of 'value'
+      isPositive = Number(item.after_balance) > Number(item.before_balance);
+    } else if (item.flow_direction) {
+      // Fallback to explicit flow direction if available
+      isPositive = item.flow_direction === 'in';
+    }
+
+    const typeLabel = getTypeLabel(item.type, item.field_type);
 
     return (
-      <div key={`log-${item.id}`} className="bg-white rounded-xl p-4 mb-3 border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
-        <div className="flex items-center gap-3">
-          {/* Icon */}
-          <div className={`w-10 h-10 rounded-full ${getTypeBgColor(item.type)} flex items-center justify-center flex-shrink-0`}>
-            {getTypeIcon(item.type)}
-          </div>
-
-          {/* Middle: Title & Time */}
-          <div className="flex-1 min-w-0">
-            <div className="text-sm font-bold text-gray-900 mb-1 truncate">
-              {item.remark || getTypeLabel(item.type, item.field_type)}
+      <div key={`log-${item.id}`} className="bg-white rounded-xl p-4 mb-3 border border-gray-100 shadow-sm relative">
+        <div className="flex justify-between items-start mb-2">
+          {/* 左侧：标题与标签 */}
+          <div className="flex-1 pr-4 min-w-0">
+            <div className="flex items-center gap-2 mb-1.5">
+              {/* Type Category Tag */}
+              <span className={`text-[10px] px-1.5 py-0.5 rounded flex-shrink-0 ${item.type === 'balance_available' ? 'bg-orange-50 text-orange-600' :
+                item.type === 'withdrawable_money' ? 'bg-blue-50 text-blue-600' :
+                  item.type === 'service_fee_balance' ? 'bg-purple-50 text-purple-600' :
+                    item.type === 'score' ? 'bg-yellow-50 text-yellow-600' :
+                      'bg-gray-100 text-gray-500'
+                }`}>
+                {typeLabel}
+              </span>
+              <span className="text-sm text-gray-700 font-medium truncate">
+                {item.memo || item.remark || '资金变动'}
+              </span>
             </div>
             <div className="text-xs text-gray-400">
-              {formatTime(item.create_time || item.createtime)}
+              {formatTime(item.createtime || item.create_time)}
             </div>
           </div>
 
-          {/* Right: Amount & Balance */}
+          {/* 右侧：金额 */}
           <div className="text-right flex-shrink-0">
-            <div className={`text-base font-bold mb-1 font-[DINAlternate-Bold,Roboto,sans-serif] ${item.amount >= 0 ? 'text-[#FF6B00]' : 'text-gray-900'}`}>
-              {item.amount >= 0 ? '+' : ''}{displayAmount.toFixed(isScore ? 0 : 2)}{isGreenPower ? '算力' : (isScore ? '' : '元')}
-            </div>
-            <div className="text-[11px] text-gray-400">
-              余额: {displayAfter.toFixed(isScore ? 0 : 2)}
+            <div className={`text-base font-bold font-[DINAlternate-Bold,Roboto,sans-serif] ${isPositive ? 'text-[#FF6B00]' : 'text-gray-900'}`}>
+              {isPositive ? '+' : ''}{Math.abs(amountVal).toFixed(2)}
+              <span className="text-xs font-normal ml-0.5 text-gray-400">
+                {isGreenPower ? '算力' : isScore ? '' : '元'}
+              </span>
             </div>
           </div>
         </div>
 
-        {/* Optional: Bottom details for clarity if needed, or keep compact. 
-            User request "Show balance change clearly" -> The '余额: xxx' above handles the current balance.
-            If user wants "Old -> New", we can add a small footer line or keep it compact.
-            The user example image showed "Service Fee Balance: 1323.00 -> 1446.00" at the bottom.
-            Let's add that specific footer style.
-        */}
-        <div className="mt-3 pt-2 border-t border-gray-50 flex justify-between items-center">
-          <span className="text-xs text-gray-400 bg-gray-50 px-2 py-0.5 rounded">
-            {getTypeLabel(item.type, item.field_type)}
+        {/* 底部：余额 */}
+        <div className="mt-2 pt-2 border-t border-gray-50 flex justify-end">
+          <span className="text-xs text-gray-400 flex items-center">
+            余额: {Number(item.before_value).toFixed(2)}
+            <span className="mx-1">→</span>
+            {Number(item.after_value || item.after_balance).toFixed(2)}
           </span>
-          <div className="text-xs text-gray-400">
-            {getTypeLabel(item.type, item.field_type)}余额: {displayBefore.toFixed(isScore ? 0 : 2)} → {displayAfter.toFixed(isScore ? 0 : 2)}
-          </div>
         </div>
       </div>
     );
-  };
-
-  const renderContent = () => {
-    if (loading && page === 1) {
-      return (
-        <div className="flex flex-col items-center justify-center py-12 text-gray-400">
-          <Loader2 size={32} className="animate-spin mb-4" />
-          <span className="text-xs">加载中...</span>
-        </div>
-      );
-    }
-
-    if (error) {
-      return (
-        <div className="flex flex-col items-center justify-center py-12 text-red-400">
-          <div className="w-16 h-16 mb-4 border-2 border-red-200 rounded-lg flex items-center justify-center">
-            <FileText size={32} className="opacity-50" />
-          </div>
-          <span className="text-xs">{error}</span>
-        </div>
-      );
-    }
-
-    if (allLogs.length === 0) {
-      return (
-        <div className="flex flex-col items-center justify-center py-12 text-gray-400">
-          <div className="w-16 h-16 mb-4 border-2 border-gray-200 rounded-lg flex items-center justify-center">
-            <FileText size={32} className="opacity-50" />
-          </div>
-          <span className="text-xs">暂无数据</span>
-        </div>
-      );
-    }
-
-    return (
-      <div>
-        {allLogs.map(renderLogItem)}
-        {hasMore && (
-          <button
-            onClick={() => setPage(prev => prev + 1)}
-            disabled={loading}
-            className="w-full py-2 text-sm text-orange-600 disabled:opacity-50"
-          >
-            {loading ? '加载中...' : '加载更多'}
-          </button>
-        )}
-      </div>
-    );
-
-    return null;
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-24">
-      <header className="bg-white px-4 py-3 flex items-center sticky top-0 z-10">
-        <button onClick={onBack} className="absolute left-4 p-1">
-          <ArrowLeft size={20} />
-        </button>
-        <h1 className="text-lg font-bold text-gray-800 w-full text-center">历史记录</h1>
-      </header>
-
-      <div className="p-4">
-        {/* Tabs */}
-        <div className="flex overflow-x-auto whitespace-nowrap bg-white p-1 rounded-full mb-4 no-scrollbar">
-          {tabs.map((tab, idx) => (
-            <button
-              key={idx}
-              onClick={() => handleTabChange(idx)}
-              className={`flex-none px-4 py-2 text-xs rounded-full transition-colors whitespace-nowrap ${idx === activeTab ? 'bg-orange-100 text-orange-600 font-bold' : 'text-gray-500'
-                }`}
-            >
-              {tab}
-            </button>
-          ))}
+    <div className="min-h-screen bg-gray-50 flex flex-col">
+      {/* Header */}
+      <header className="bg-white sticky top-0 z-30">
+        <div className="px-4 py-3 flex items-center relative border-b border-gray-100">
+          <button onClick={onBack} className="absolute left-4 p-1 z-10 text-gray-600">
+            <ArrowLeft size={20} />
+          </button>
+          <h1 className="text-lg font-bold text-gray-800 w-full text-center">历史记录</h1>
         </div>
 
-        {/* Content */}
-        {renderContent()}
+        <FilterBar
+          category={filters.category}
+          setCategory={setCategory}
+          flow={filters.flow}
+          setFlow={setFlow}
+          range={filters.time}
+          setRange={setRange}
+          categoryOptions={categoryOptions}
+        />
+      </header>
+
+      {/* Content List */}
+      <div className="flex-1 p-3">
+        {loading && page === 1 ? (
+          <div className="flex flex-col items-center justify-center py-20 text-gray-400">
+            <div className="animate-spin mb-2"><Filter size={24} className="opacity-20" /></div>
+            <span className="text-xs">加载中...</span>
+          </div>
+        ) : error ? (
+          <div className="flex flex-col items-center justify-center py-20 text-red-400">
+            <span className="text-xs">{error}</span>
+          </div>
+        ) : allLogs.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-20 text-gray-400">
+
+            <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-3">
+              <FileText size={24} className="text-gray-300" />
+            </div>
+            <span className="text-xs text-gray-400">暂无相关记录</span>
+          </div>
+        ) : (
+          <div className="space-y-3 pb-safe">
+            {allLogs.map(renderLogItem)}
+
+            {hasMore && (
+              <button
+                onClick={handleLoadMore}
+                disabled={loading}
+                className="w-full py-3 text-xs text-gray-400 text-center disabled:opacity-50"
+              >
+                {loading ? '加载中...' : '点击加载更多'}
+              </button>
+            )}
+
+            {!hasMore && allLogs.length > 5 && (
+              <div className="text-center py-4 text-xs text-gray-300">
+                - 到底了 -
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
 };
 
 export default AssetHistory;
-

@@ -17,7 +17,7 @@ const BottomNav: React.FC<BottomNavProps> = ({ activeTab, onTabChange }) => {
   ];
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white border-t border-gray-100 pb-safe pt-2 px-4 shadow-[0_-2px_10px_rgba(0,0,0,0.05)] z-50">
+    <div className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white border-t border-gray-100 pb-safe pt-2 px-4 shadow-[0_-2px_10px_rgba(0,0,0,0.05)] z-[999]">
       <div className="flex justify-between items-center pb-2">
         {navItems.map((item) => {
           const Icon = item.icon;

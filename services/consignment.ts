@@ -77,7 +77,13 @@ export async function consignCollectionItem(params: {
     id?: number;
     price: number;
     token?: string
-}): Promise<ApiResponse> {
+}): Promise<ApiResponse<{
+    coupon_used?: number;
+    coupon_remaining?: number;
+    waive_type?: string;
+    rollback_reason?: string;
+    [key: string]: any;
+}>> {
     const payload = new FormData();
     payload.append('user_collection_id', String(params.user_collection_id || params.id));
     payload.append('price', String(params.price));

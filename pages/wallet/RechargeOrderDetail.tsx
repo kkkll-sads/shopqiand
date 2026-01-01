@@ -141,7 +141,7 @@ const RechargeOrderDetail: React.FC<RechargeOrderDetailProps> = ({ orderId, onBa
                             <span className="text-sm text-gray-600">支付方式</span>
                         </div>
                         <span className="text-sm text-gray-800">
-                            {order.payment_type === 'online' ? '在线支付' : order.payment_type_text}
+                            {order.payment_type_text || (order.payment_type === 'online' ? '在线支付' : order.payment_type)}
                         </span>
                     </div>
 

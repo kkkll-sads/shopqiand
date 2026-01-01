@@ -11,3 +11,4 @@ export * from './consignment';
 export * from './rightsDeclaration';
 
 // Re-export all services
+export * from './shop';

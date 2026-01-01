@@ -3,15 +3,9 @@ export const API_PREFIX = '/api';
 
 // API 基础配置：
 // - 开发环境：使用 Vite 代理，走相对路径 /api
-// - 生产环境：优先使用环境变量 VITE_API_BASE_URL，其次使用当前域名
+// - 生产环境：优先使用环境变量 VITE_API_BASE_URL，其次降级到写死的线上地址
 
-// 动态获取当前域名，避免硬编码后端地址被攻击
-const getOrigin = () => {
-    if (typeof window !== 'undefined') {
-        return window.location.origin;
-    }
-    return '';
-};
+const DEFAULT_API_ORIGIN = 'http://47.76.239.170:8080';
 const rawEnv = (import.meta as any).env ?? {};
 
 const resolveApiBaseUrl = () => {
@@ -43,8 +37,7 @@ const resolveApiOrigin = () => {
         }
     }
 
-    // 使用 window.location.origin 自适应当前域名
-    return getOrigin();
+    return DEFAULT_API_ORIGIN;
 };
 
 // API 基础配置
@@ -54,31 +47,31 @@ export const API_ASSET_ORIGIN = resolveApiOrigin();
 export const normalizeAssetUrl = (raw?: string) => {
     if (!raw) return '';
 
-    // 如果是完整URL，检查是否需要转为相对路径
+    // 1. 处理旧的硬编码 IP (18.166.211.131)，替换为相对路径或当前 API Origin
+    if (raw.includes('18.166.211.131')) {
+        raw = raw.replace(/^https?:\/\/18\.166\.211\.131/, '');
+    }
+
+    // 2. 如果是完整URL
     if (raw.startsWith('http')) {
         try {
             const url = new URL(raw);
-            const currentOrigin = getOrigin();
+            const apiOrigin = new URL(API_ASSET_ORIGIN);
 
-            // 检查是否是当前域名或 API_ASSET_ORIGIN 配置的域名
-            // 使用 window.location.origin 自适应，无需硬编码任何 IP 地址
+            // 检查是否指向后端服务器 (包括 47.76.239.170:8080 或配置的 API_ASSET_ORIGIN)
+            // 或者是旧的 IP (虽然上面处理了，这里做个兜底)
+            // 或者是当前域名（说明后端返回了前端域名的完整URL，需要转为相对路径通过代理访问）
+            const isBackendServer =
+                url.host === apiOrigin.host ||
+                url.host === '47.76.239.170:8080' ||
+                url.host === '18.162.70.209:3005' ||
+                url.host === '18.166.211.131';
+
             const isCurrentDomain = typeof window !== 'undefined' &&
                 url.host === window.location.host;
 
-            const isConfiguredApi = currentOrigin && (() => {
-                try {
-                    return url.host === new URL(currentOrigin).host;
-                } catch {
-                    return false;
-                }
-            })();
-
-            // 兼容处理：后端返回的 URL 可能包含旧的服务器地址（18.x.x.x 格式）
-            // 这些地址需要转换为相对路径，通过 Nginx 代理访问
-            const isLegacyBackendUrl = /^18\.\d+\.\d+\.\d+/.test(url.hostname);
-
-            if (isCurrentDomain || isConfiguredApi || isLegacyBackendUrl) {
-                // 转换为相对路径，通过本地代理访问 (解决 Mixed Content 和跨域问题)
+            if (isBackendServer || isCurrentDomain) {
+                // 转换为相对路径，通过本地代理访问 (解决 Mixed Content 和 跨域问题)
                 const relativePath = url.pathname + url.search;
                 return relativePath.startsWith('/') ? relativePath : '/' + relativePath;
             }
@@ -242,6 +235,8 @@ export const API_ENDPOINTS = {
         detail: '/shopOrder/detail',
         /** 删除订单 */
         delete: '/shopOrder/delete',
+        /** 订单统计 */
+        statistics: '/shopOrder/statistics',
     },
     collectionSession: {
         /** 交易专场列表 */
@@ -266,6 +261,8 @@ export const API_ENDPOINTS = {
         cancelBid: '/collectionItem/cancelBid',
         /** 竞价购买藏品（进入撮合池） */
         bidBuy: '/collectionItem/bidBuy',
+        /** 我的藏品 (新接口) */
+        myCollection: '/collectionItem/myCollection',
         /** 获取购买记录列表 */
         purchaseRecords: '/collectionItem/purchaseRecords',
         /** 获取寄售商品列表 */
@@ -292,6 +289,10 @@ export const API_ENDPOINTS = {
         rightsDeliver: '/collectionItem/rightsDeliver',
         /** 盲盒预约记录列表 */
         reservations: '/collectionItem/reservations',
+        /** 预约记录详情 */
+        reservationDetail: '/collectionItem/reservationDetail',
+        /** 转为矿机 */
+        toMining: '/collectionItem/toMining',
     },
     artist: {
         /** 艺术家列表 */
@@ -314,6 +315,10 @@ export const API_ENDPOINTS = {
         records: '/SignIn/records',
         /** 获取提现进度 */
         progress: '/SignIn/progress',
+    },
+    userCollection: {
+        /** 用户藏品详情 */
+        detail: '/userCollection/detail',
     },
     team: {
         /** 获取推广卡信息 */

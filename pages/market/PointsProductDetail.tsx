@@ -157,7 +157,7 @@ const PointsProductDetail: React.FC<PointsProductDetailProps> = ({ product, onBa
                 setShowConfirmModal(false);
                 showToast('success', '购买成功');
                 setTimeout(() => {
-                    onNavigate({ name: 'order-list', kind: 'points', status: 0, back: { name: 'points-product-detail' } });
+                    onNavigate({ name: 'order-list', kind: 'points', status: 0 }, { replace: true });
                 }, 1500);
             } else {
                 showToast('error', '购买失败', extractError(response, '操作失败'));

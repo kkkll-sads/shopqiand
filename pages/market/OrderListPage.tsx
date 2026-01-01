@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { ArrowLeft } from 'lucide-react';
 import SubPageLayout from '../../components/SubPageLayout';
 import { LoadingSpinner, EmptyState, LazyImage } from '../../components/common';
 import { formatTime, formatAmount } from '../../utils/format';
@@ -107,16 +108,16 @@ const OrderListPage: React.FC<OrderListPageProps> = ({ category, initialTab, onB
 
           switch (activeTab) {
             case 0: // 待付款
-              response = await fetchPendingPayOrders({ page: 1, limit: 10, token });
+              response = await fetchPendingPayOrders({ page: 1, limit: 10, pay_type: 'score', token });
               break;
             case 1: // 待发货
-              response = await fetchPendingShipOrders({ page: 1, limit: 10, token });
+              response = await fetchPendingShipOrders({ page: 1, limit: 10, pay_type: 'score', token });
               break;
             case 2: // 待收货
-              response = await fetchPendingConfirmOrders({ page: 1, limit: 10, token });
+              response = await fetchPendingConfirmOrders({ page: 1, limit: 10, pay_type: 'score', token });
               break;
             case 3: // 已完成
-              response = await fetchCompletedOrders({ page: 1, limit: 10, token });
+              response = await fetchCompletedOrders({ page: 1, limit: 10, pay_type: 'score', token });
               break;
             default:
               response = { code: 1, data: { list: [], total: 0, page: 1, limit: 10 } };
@@ -699,6 +700,58 @@ const OrderListPage: React.FC<OrderListPageProps> = ({ category, initialTab, onB
   // All categories now use real API data
   // No more mock data needed
 
+  // 为消费金订单使用特殊的布局
+  if (category === 'points') {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-orange-50/30 to-gray-50 max-w-[480px] mx-auto">
+        {/* 顶部导航栏 - 使用浅橙色渐变 */}
+        <header className="bg-gradient-to-r from-[#fedab0] to-[#ffd9a8] text-gray-800 shadow-md sticky top-0 z-10">
+          <div className="flex items-center h-14 px-4">
+            <button 
+              className="p-2 -ml-2 hover:bg-white/30 rounded-full transition-colors" 
+              aria-label="返回"
+              onClick={onBack}
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </button>
+            <h1 className="flex-1 text-center pr-9 font-medium">消费金订单</h1>
+          </div>
+
+          {/* 标签页 - 优化样式 */}
+          <div className="flex bg-white/20 backdrop-blur-sm">
+            {config.tabs.map((tab, index) => (
+              <button
+                key={index}
+                onClick={() => setActiveTab(index)}
+                className={`flex-1 py-3.5 text-sm relative transition-all ${
+                  activeTab === index
+                    ? 'text-gray-800 font-medium'
+                    : 'text-gray-600'
+                }`}
+              >
+                {tab}
+                {activeTab === index && (
+                  <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-12 h-1 bg-white rounded-t-full shadow-md" />
+                )}
+              </button>
+            ))}
+          </div>
+        </header>
+
+        {/* 订单列表 */}
+        <div className="p-3 pb-4 space-y-3">
+          <PointDeliveryOrderList
+            category={category}
+            orders={orders}
+            loading={loading}
+            activeTab={activeTab}
+            onViewDetail={handleViewDetail}
+          />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <SubPageLayout title={config.title} onBack={onBack}>
       <OrderTabs tabs={config.tabs} activeTab={activeTab} onChange={setActiveTab} />
@@ -724,21 +777,12 @@ const OrderListPage: React.FC<OrderListPageProps> = ({ category, initialTab, onB
             formatOrderPrice={formatOrderPrice}
             onViewConsignmentDetail={handleViewConsignmentDetail}
           />
-        ) : category === 'points' || category === 'delivery' ? (
+        ) : category === 'delivery' ? (
           <PointDeliveryOrderList
             category={category}
             orders={orders}
             loading={loading}
             activeTab={activeTab}
-            formatOrderDate={(date) => formatOrderDate(date)}
-            formatOrderPrice={formatOrderPrice}
-            getOrderStatus={getOrderStatus}
-            getOrderImage={getOrderImage}
-            getOrderName={getOrderName}
-            getOrderQuantity={getOrderQuantity}
-            getOrderPrice={getOrderPrice}
-            onDelete={handleDeleteOrder}
-            onConfirmReceipt={handleConfirmReceipt}
             onViewDetail={handleViewDetail}
           />
         ) : (

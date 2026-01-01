@@ -122,19 +122,46 @@ export async function fetchCollectionItemDetail(id: number | string): Promise<Ap
 }
 
 /**
- * 获取我的藏品确权详情
- * API: GET /api/collectionItem/detail
+ * 用户藏品详情数据接口
+ * API: GET /api/userCollection/detail
+ */
+export interface UserCollectionDetailData {
+    object_type: 'user_collection';
+    user_collection_id: number;
+    item_id: number;
+    title: string;
+    image: string;
+    buy_price: number;         // 买入成本价
+    market_price: number;      // 当前市场价 (仅用于展示，禁止用于计算)
+    asset_code: string;        // 资产编号
+    hash: string;              // 唯一哈希（优先取确权哈希）
+    consignment_status: number; // 寄售状态
+    rights_status: string;     // 确权状态
+    [key: string]: any;        // 其他额外字段
+}
+
+/**
+ * 获取我的藏品详情
+ * API: GET /api/userCollection/detail
  * 
- * @param id - user_collection_id
- * @returns 返回藏品确权详情
+ * @param userCollectionId - 用户藏品ID (user_collection_id)
+ * @returns 返回用户藏品详细信息
+ */
+export async function fetchUserCollectionDetail(userCollectionId: number | string): Promise<ApiResponse<UserCollectionDetailData>> {
+    const search = new URLSearchParams();
+    search.set('user_collection_id', String(userCollectionId));
+
+    const path = `${API_ENDPOINTS.userCollection.detail}?${search.toString()}`;
+    return authedFetch<UserCollectionDetailData>(path, { method: 'GET' });
+}
+
+/**
+ * @deprecated 使用 fetchUserCollectionDetail 代替
+ * 此函数使用错误的 API 端点，保留仅为向后兼容
  */
 export async function fetchMyCollectionDetail(id: number | string): Promise<ApiResponse<any>> {
-    const search = new URLSearchParams();
-    search.set('id', String(id));
-    search.set('type', 'my');
-
-    const path = `${API_ENDPOINTS.collectionItem.detail}?${search.toString()}`;
-    return authedFetch<any>(path, { method: 'GET' });
+    console.warn('[DEPRECATED] fetchMyCollectionDetail 使用了错误的 API 端点，请使用 fetchUserCollectionDetail');
+    return fetchUserCollectionDetail(id);
 }
 
 /**
@@ -193,6 +220,26 @@ export async function fetchCollectionItemOriginalDetail(id: number | string): Pr
 }
 
 // buyCollectionItem 接口已移除
+
+/**
+ * 将藏品转为矿机
+ * API: POST /api/collectionItem/toMining
+ * 
+ * @param params - 参数
+ * @param params.user_collection_id - 用户藏品ID
+ * @param params.token - 用户登录Token
+ */
+export async function toMining(params: { user_collection_id: number; token?: string }): Promise<ApiResponse<any>> {
+    const token = params.token ?? getStoredToken();
+    const formData = new FormData();
+    formData.append('user_collection_id', String(params.user_collection_id));
+
+    return authedFetch<any>(API_ENDPOINTS.collectionItem.toMining, {
+        method: 'POST',
+        token,
+        body: formData,
+    });
+}
 
 
 // ============================================================================
@@ -362,7 +409,11 @@ export interface ReservationItem {
     product_id?: number;          // 商品ID（撮合后才有）
     item_title?: string;          // 商品标题
     item_image?: string;          // 商品图片
-    item_price?: number;          // 商品价格
+    item_price?: number;          // 商品价格（增值后，仅供参考，禁止用于计算）
+
+    // 订单快照金额（必须使用这些字段，禁止使用item_price计算）
+    actual_buy_price?: number;    // 实际购买价格（订单快照）
+    refund_diff?: number;         // 退还差价
 
     freeze_amount: number;        // 冻结金额
     power_used: number;           // 总消耗算力
@@ -436,6 +487,35 @@ export async function fetchReservations(params: FetchReservationsParams = {}): P
 }
 
 /**
+ * 预约记录详情数据接口
+ * API: GET /api/collectionItem/reservationDetail
+ */
+export interface ReservationDetailData extends ReservationItem {
+    // Extends all ReservationItem fields
+    // Additional detail fields can be added here if API returns more
+}
+
+/**
+ * 获取预约记录详情
+ * API: GET /api/collectionItem/reservationDetail
+ * 
+ * @param id - 预约记录ID
+ * @param token - 用户登录Token（可选，会自动从localStorage获取）
+ * @returns 返回预约记录详细信息
+ */
+export async function fetchReservationDetail(id: number | string, token?: string): Promise<ApiResponse<ReservationDetailData>> {
+    const authToken = token ?? getStoredToken();
+    const search = new URLSearchParams();
+    search.set('id', String(id));
+
+    const path = `${API_ENDPOINTS.collectionItem.reservationDetail}?${search.toString()}`;
+    return authedFetch<ReservationDetailData>(path, {
+        method: 'GET',
+        token: authToken,
+    });
+}
+
+/**
  * 盲盒预约参数接口（新模式，仅保留预约）
  */
 export interface BidBuyParams {
@@ -502,18 +582,44 @@ export async function bidBuy(params: BidBuyParams): Promise<ApiResponse<BidBuyRe
 // ============================================================================
 
 export interface MyCollectionItem {
-    id: number;                   // 订单 ID
-    user_collection_id: number;   // 核心 ID: 用户藏品记录 ID (详情接口使用)
-    item_id: number;              // 原始商品 ID
-    item_title: string;           // 藏品标题
-    item_image: string;           // 藏品预览图 URL
-    asset_code?: string;           // 确权编号
-    fingerprint?: string;          // MD5 存证指纹
-    buy_time?: number;             // 购买时间戳
-    buy_time_text?: string;        // 格式化购买时间
-    status_text: string;          // 持有状态描述
-    delivery_status: number;      // 提货状态 (0=未提货, 1=已提货)
-    consignment_status: number;   // 寄售状态 (0=未寄售, 1=寄售中, 2=已售出)
+    id: number;                   // 用户藏品ID
+    unique_id: string;            // 唯一标识ID
+    title: string;                // 藏品标题
+    image: string;                // 藏品图片
+    asset_code: string;           // 确权编号
+    md5: string;                  // MD5指纹
+    fingerprint: string;          // 指纹(同MD5)
+    price: number;                // 买入价格
+    market_price: number;         // 当前市场价
+    transaction_count: number;    // 交易次数
+    fail_count: number;           // 流拍次数
+    consignment_status: number;   // 寄售状态: 0=未寄售, 1=寄售中, 2=已售出
+
+    // Specially for status=sold
+    consignment_id?: number;
+    consignment_status_text?: string;
+    sold_price?: number;
+    service_fee?: number;
+    service_fee_paid_at_apply?: number | boolean;
+    settle_status?: number;
+    settle_time?: number;
+    sold_time?: number;
+
+    // Settlement Snapshot
+    settle_rule?: string;
+    is_legacy_snapshot?: number;
+    legacy_unlock_price_snapshot?: number;
+
+    principal_amount?: number;
+    profit_amount?: number;
+
+    payout_principal_withdrawable?: number;
+    payout_principal_consume?: number;
+    payout_profit_withdrawable?: number;
+    payout_profit_consume?: number;
+    payout_total_withdrawable?: number;
+    payout_total_consume?: number;
+
     [key: string]: any;
 }
 
@@ -561,14 +667,22 @@ export async function queryCollectionByCode(params: QueryByCodeParams): Promise<
     return authedFetch<CollectionItemDetail>(path, { method: 'GET' });
 }
 
-export async function getMyCollection(params: { page?: number; limit?: number; type?: string; token?: string } = {}): Promise<ApiResponse<{ list: MyCollectionItem[], total: number, has_more?: boolean, consignment_coupon?: number }>> {
+export async function getMyCollection(params: { page?: number; limit?: number; status?: string; token?: string } = {}): Promise<ApiResponse<{ list: MyCollectionItem[], total: number, has_more?: boolean, consignment_coupon?: number }>> {
     const token = params.token || localStorage.getItem(AUTH_TOKEN_KEY) || '';
     const search = new URLSearchParams();
-    if (params.page) search.set('page', String(params.page));
-    if (params.limit) search.set('limit', String(params.limit));
-    // 后端接口 /api/collectionItem/purchaseRecords 不支持 type 参数，前端进行过滤
+    search.set('page', String(params.page || 1));
+    search.set('limit', String(params.limit || 10));
+    if (params.status) {
+        search.set('status', params.status);
+    } else {
+        // Default behavior: user doc says default is 'holding'.
+        // However, existing usage might expect 'all' (e.g. AssetView).
+        // To be safe and compliant with new API, if not specified, we pass nothing (backend defaults) or valid value.
+        // Let's pass 'all' if not specified to maintain backward compatibility with views expecting everything.
+        search.set('status', 'all');
+    }
 
-    const path = `${API_ENDPOINTS.collectionItem.purchaseRecords}?${search.toString()}`;
+    const path = `${API_ENDPOINTS.collectionItem.myCollection}?${search.toString()}`;
     return authedFetch<{ list: MyCollectionItem[], total: number, has_more?: boolean, consignment_coupon?: number }>(path, {
         method: 'GET',
         token,

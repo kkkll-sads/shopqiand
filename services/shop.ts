@@ -162,14 +162,17 @@ export interface ShopOrderItem {
 export interface FetchShopOrderParams {
     page?: number;
     limit?: number;
+    pay_type?: string; // 'score' for points orders, 'balance' for regular orders
     token?: string;
 }
+
 
 export async function fetchPendingPayOrders(params: FetchShopOrderParams = {}): Promise<ApiResponse<{ list: ShopOrderItem[], total: number }>> {
     const token = params.token ?? getStoredToken();
     const search = new URLSearchParams();
     if (params.page) search.set('page', String(params.page));
     if (params.limit) search.set('limit', String(params.limit));
+    if (params.pay_type) search.set('pay_type', params.pay_type);
 
     const path = `${API_ENDPOINTS.shopOrder.pendingPay}?${search.toString()}`;
     return authedFetch<{ list: ShopOrderItem[], total: number }>(path, { method: 'GET', token });
@@ -180,6 +183,7 @@ export async function fetchPendingShipOrders(params: FetchShopOrderParams = {}):
     const search = new URLSearchParams();
     if (params.page) search.set('page', String(params.page));
     if (params.limit) search.set('limit', String(params.limit));
+    if (params.pay_type) search.set('pay_type', params.pay_type);
 
     const path = `${API_ENDPOINTS.shopOrder.pendingShip}?${search.toString()}`;
     return authedFetch<{ list: ShopOrderItem[], total: number }>(path, { method: 'GET', token });
@@ -190,6 +194,7 @@ export async function fetchPendingConfirmOrders(params: FetchShopOrderParams = {
     const search = new URLSearchParams();
     if (params.page) search.set('page', String(params.page));
     if (params.limit) search.set('limit', String(params.limit));
+    if (params.pay_type) search.set('pay_type', params.pay_type);
 
     const path = `${API_ENDPOINTS.shopOrder.pendingConfirm}?${search.toString()}`;
     return authedFetch<{ list: ShopOrderItem[], total: number }>(path, { method: 'GET', token });
@@ -200,6 +205,7 @@ export async function fetchCompletedOrders(params: FetchShopOrderParams = {}): P
     const search = new URLSearchParams();
     if (params.page) search.set('page', String(params.page));
     if (params.limit) search.set('limit', String(params.limit));
+    if (params.pay_type) search.set('pay_type', params.pay_type);
 
     const path = `${API_ENDPOINTS.shopOrder.completed}?${search.toString()}`;
     return authedFetch<{ list: ShopOrderItem[], total: number }>(path, { method: 'GET', token });
@@ -232,6 +238,24 @@ export async function deleteOrder(params: { id: number | string; token?: string 
 
     return authedFetch(API_ENDPOINTS.shopOrder.delete, {
         method: 'POST', body: payload, token
+    });
+}
+
+export interface ShopOrderStatistics {
+    all_count: number;
+    pending_count: number;
+    paid_count: number;
+    shipped_count: number;
+    completed_count: number;
+    cancelled_count: number;
+    refunded_count: number;
+}
+
+export async function fetchShopOrderStatistics(token?: string): Promise<ApiResponse<ShopOrderStatistics>> {
+    const t = token ?? getStoredToken();
+    return authedFetch<ShopOrderStatistics>(API_ENDPOINTS.shopOrder.statistics, {
+        method: 'GET',
+        token: t
     });
 }
 

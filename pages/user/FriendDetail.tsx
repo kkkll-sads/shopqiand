@@ -33,8 +33,7 @@ const FriendDetail: React.FC<FriendDetailProps> = ({ friend, id, onBack }) => {
         );
     }
 
-    const joinDate = friend.join_date || (friend.join_time ? formatTime(friend.join_time, 'YYYY-MM-DD') : '-');
-    const joinTime = friend.join_time ? formatTime(friend.join_time) : '-';
+    const joinDate = friend.join_date || (friend.register_time ? friend.register_time.split(' ')[0] : '') || (friend.join_time ? formatTime(friend.join_time, 'YYYY-MM-DD') : '-');
 
     return (
         <PageContainer title="好友详情" onBack={onBack}>
@@ -78,11 +77,6 @@ const FriendDetail: React.FC<FriendDetailProps> = ({ friend, id, onBack }) => {
                     <div className="px-5 py-4 border-b border-gray-50 flex items-center justify-between">
                         <span className="text-sm text-gray-500">加入日期</span>
                         <span className="text-sm font-medium text-gray-900">{joinDate}</span>
-                    </div>
-
-                    <div className="px-5 py-4 flex items-center justify-between">
-                        <span className="text-sm text-gray-500">注册时间</span>
-                        <span className="text-sm font-medium text-gray-900">{joinTime}</span>
                     </div>
                 </div>
             </div>

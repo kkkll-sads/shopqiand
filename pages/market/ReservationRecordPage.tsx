@@ -255,7 +255,11 @@ const ReservationRecordPage: React.FC<ReservationRecordPageProps> = ({ onBack, o
                     </div>
                 ) : (
                     records.map(record => (
-                        <div key={record.id} className="bg-white rounded-xl p-5 shadow-lg border border-gray-100 mb-4 hover:shadow-xl transition-shadow duration-200">
+                        <div
+                            key={record.id}
+                            className="bg-white rounded-xl p-5 shadow-lg border border-gray-100 mb-4 hover:shadow-xl transition-shadow duration-200 cursor-pointer active:scale-[0.99]"
+                            onClick={() => onNavigate({ name: 'reservation-detail', id: record.id, back: { name: 'reservation-record' } })}
+                        >
                             {/* Header: Status & Time */}
                             <div className="flex justify-between items-start mb-3 pb-3 border-b border-gray-50">
                                 <div className="text-xs text-gray-400">
@@ -287,10 +291,10 @@ const ReservationRecordPage: React.FC<ReservationRecordPageProps> = ({ onBack, o
                                     <span className="text-[10px] text-gray-500 flex items-center gap-1"><Wallet size={10} /> 冻结金额</span>
                                     <span className="text-xs font-bold text-red-600 font-mono">¥{Number(record.freeze_amount || 0).toLocaleString()}</span>
                                 </div>
-                                {record.status === ReservationStatus.APPROVED && record.item_price && (
+                                {record.status === ReservationStatus.APPROVED && record.actual_buy_price !== undefined && (
                                     <div className="flex justify-between items-center">
                                         <span className="text-[10px] text-gray-500 flex items-center gap-1">实际金额</span>
-                                        <span className="text-xs font-bold text-green-600 font-mono">¥{Number(record.item_price || 0).toLocaleString()}</span>
+                                        <span className="text-xs font-bold text-green-600 font-mono">¥{Number(record.actual_buy_price || 0).toLocaleString()}</span>
                                     </div>
                                 )}
                                 {record.status !== ReservationStatus.APPROVED && (
@@ -306,13 +310,13 @@ const ReservationRecordPage: React.FC<ReservationRecordPageProps> = ({ onBack, o
                                     </div>
                                 )}
                             </div>
-                            
-                            {/* 退款差价提示（仅已中签且有差价时显示） */}
-                            {record.status === ReservationStatus.APPROVED && record.item_price && Number(record.freeze_amount) > Number(record.item_price) && (
+
+                            {/* 退款差价提示（仅已中签且有差价时显示，使用API返回的refund_diff） */}
+                            {record.status === ReservationStatus.APPROVED && record.refund_diff !== undefined && Number(record.refund_diff) > 0 && (
                                 <div className="mb-3 p-2 bg-green-50 rounded-lg border border-green-100">
                                     <div className="flex items-center gap-2 text-xs text-green-700">
                                         <CheckCircle2 size={12} className="flex-shrink-0" />
-                                        <span>已退还差价：¥{(Number(record.freeze_amount) - Number(record.item_price)).toLocaleString()}</span>
+                                        <span>已退还差价：¥{Number(record.refund_diff).toLocaleString()}</span>
                                     </div>
                                 </div>
                             )}

@@ -39,12 +39,21 @@ export function useNewsReadState(initialNews: NewsItem[] = []) {
     setNewsList(next);
   }, []);
 
+  const refreshReadStatus = useCallback(() => {
+    const readIds = getStoredReadIds();
+    setNewsList((prev) => prev.map((item) => ({
+      ...item,
+      isUnread: item.isUnread && !readIds.includes(item.id),
+    })));
+  }, []);
+
   return {
     newsList,
     setNewsList,
     initWith,
     markAllRead,
     markReadById,
+    refreshReadStatus,
   };
 }
 

@@ -1,7 +1,23 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import BottomNav from './components/BottomNav';
 import { Tab, Product, NewsItem, LoginSuccessPayload } from './types';
-import { fetchAnnouncements, AnnouncementItem, fetchProfile, fetchRealNameStatus, MyCollectionItem } from './services/api';
+import {
+  fetchAnnouncements,
+  AnnouncementItem,
+  fetchProfile,
+  fetchRealNameStatus,
+  MyCollectionItem,
+  getMyOrderList,
+  getMyWithdrawList,
+  fetchPendingPayOrders,
+  fetchPendingShipOrders,
+  fetchPendingConfirmOrders,
+  RechargeOrderItem,
+  WithdrawOrderItem,
+  ShopOrderItem
+} from './services/api';
+import { extractData } from './utils/apiHelpers';
+import { RechargeOrderStatus, WithdrawOrderStatus } from './constants/statusEnums';
 import PopupAnnouncementModal from './components/common/PopupAnnouncementModal';
 import { STORAGE_KEYS } from './constants/storageKeys';
 import useAuth from './hooks/useAuth';
@@ -110,18 +126,55 @@ const AppContent: React.FC = () => {
   const { current: currentRoute, navigate, reset, goBack } = useNavigationStack(null);
   const subPage = useMemo(() => (currentRoute ? encodeRoute(currentRoute) : null), [currentRoute]);
 
+  // Debug: Global click listener
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      let targetInfo = '';
+      if (target) {
+        targetInfo = `<${target.tagName.toLowerCase()}${target.id ? ` id="${target.id}"` : ''}${target.className ? ` class="${target.className}"` : ''}>`;
+        if (target.innerText) {
+          targetInfo += ` [${target.innerText.replace(/\s+/g, ' ').slice(0, 30)}]`;
+        }
+      }
+
+      console.log(`[UserClick] ${targetInfo} at ${window.location.pathname}`, {
+        currentRoute: currentRoute?.name || 'null',
+        x: e.clientX,
+        y: e.clientY
+      });
+    };
+
+    window.addEventListener('click', handleClick);
+    return () => window.removeEventListener('click', handleClick);
+  }, [currentRoute]);
+
   // 明确定义 BottomNav 显示条件：仅当 currentRoute 为 null 时显示
   // 添加日志帮助调试导航栏消失问题
   const shouldShowBottomNav = useMemo(() => {
     const show = currentRoute === null;
     // Debug: 追踪导航栏显示状态变化
-    console.log('[BottomNav] currentRoute:', currentRoute?.name ?? 'null', '| shouldShow:', show);
+    console.log('[BottomNav] currentRoute:', currentRoute?.name ?? 'null', '| shouldShow:', show, '| Page Visibility:', document.visibilityState);
     return show;
   }, [currentRoute]);
 
+  // Debug: Log route changes
+  useEffect(() => {
+    console.log(`[RouteChanged] -> ${currentRoute?.name || 'Home/Tab'}`, currentRoute);
+  }, [currentRoute]);
+
+  // State for other unread messages (e.g. Recharge Orders)
+  const [extraUnreadCount, setExtraUnreadCount] = useState<number>(0);
+
   const [consignmentTicketCount, setConsignmentTicketCount] = useState<number>(0);
   // 新闻已读状态统一通过 hook 管理
-  const { newsList, initWith: initNews, markAllRead: markAllNewsRead, markReadById } = useNewsReadState([]);
+  const { newsList, initWith: initNews, markAllRead: markAllNewsRead, markReadById, refreshReadStatus } = useNewsReadState([]);
+
+  // 每次路由变化时，刷新消息已读状态（确保从消息中心返回时状态同步）
+  useEffect(() => {
+    refreshReadStatus();
+  }, [currentRoute, activeTab, refreshReadStatus]);
+
   // 弹窗公告队列状态（支持多个弹窗依次显示）
   const [popupQueue, setPopupQueue] = useState<AnnouncementItem[]>([]);
   const [showPopupAnnouncement, setShowPopupAnnouncement] = useState(false);
@@ -249,8 +302,8 @@ const AppContent: React.FC = () => {
 
   // 仅在用户登录且进入首页时加载公告
   useEffect(() => {
-    // 只有在用户已登录且在首页时才加载公告
-    if (!isLoggedIn || activeTab !== 'home') {
+    // 只有在用户已登录时才加载公告 (移除 activeTab 限制，以便在"我的"页面也能显示红点)
+    if (!isLoggedIn) {
       return;
     }
 
@@ -259,15 +312,96 @@ const AppContent: React.FC = () => {
         console.log('[公告] 开始加载公告数据...');
         const readIds = getReadNewsIds();
 
-        // 只请求弹窗公告（is_popup=1），同时请求平台公告（normal）和平台动态（important）类型
-        const [announcementRes, dynamicRes] = await Promise.all([
-          fetchAnnouncements({ page: 1, limit: 10, type: 'normal', is_popup: 1 }),
-          fetchAnnouncements({ page: 1, limit: 10, type: 'important', is_popup: 1 }),
+        // Check for unread messages (recharge, withdraw, shop orders)
+        const readMsgIds = readJSON<string[]>(STORAGE_KEYS.READ_MESSAGE_IDS_KEY, []) || [];
+
+        // Helper to fetch and count unread messages
+        const fetchAllUnreadCounts = async () => {
+          try {
+            let totalUnread = 0;
+
+            // 1. Recharge Orders
+            try {
+              const res = await getMyOrderList({ page: 1, limit: 5 });
+              const data = extractData(res) as any;
+              const list = data?.data || data?.list || [];
+              list.forEach((item: RechargeOrderItem) => {
+                const id = `recharge-${item.id}`;
+                if ([RechargeOrderStatus.PENDING, RechargeOrderStatus.APPROVED, RechargeOrderStatus.REJECTED].includes(item.status)) {
+                  if (!readMsgIds.includes(id)) totalUnread++;
+                }
+              });
+            } catch (e) { console.error('Failed to check recharge unread:', e); }
+
+            // 2. Withdraw Orders
+            try {
+              const res = await getMyWithdrawList({ page: 1, limit: 5 });
+              const data = extractData(res) as any;
+              const list = data?.data || data?.list || [];
+              list.forEach((item: WithdrawOrderItem) => {
+                const id = `withdraw-${item.id}`;
+                if ([WithdrawOrderStatus.PENDING, WithdrawOrderStatus.APPROVED, WithdrawOrderStatus.REJECTED].includes(item.status)) {
+                  if (!readMsgIds.includes(id)) totalUnread++;
+                }
+              });
+            } catch (e) { console.error('Failed to check withdraw unread:', e); }
+
+            // 3. Shop Orders (Pending Pay/Ship/Confirm)
+            try {
+              const [payRes, shipRes, confirmRes] = await Promise.all([
+                fetchPendingPayOrders({ page: 1, limit: 5 }),
+                fetchPendingShipOrders({ page: 1, limit: 5 }),
+                fetchPendingConfirmOrders({ page: 1, limit: 5 })
+              ]);
+
+              // Pay
+              const payList = (extractData(payRes) as any)?.list || [];
+              payList.forEach((item: ShopOrderItem) => {
+                if (!readMsgIds.includes(`shop-order-pay-${item.id}`)) totalUnread++;
+              });
+
+              // Ship
+              const shipList = (extractData(shipRes) as any)?.list || [];
+              shipList.forEach((item: ShopOrderItem) => {
+                if (!readMsgIds.includes(`shop-order-ship-${item.id}`)) totalUnread++;
+              });
+
+              // Confirm
+              const confirmList = (extractData(confirmRes) as any)?.list || [];
+              confirmList.forEach((item: ShopOrderItem) => {
+                if (!readMsgIds.includes(`shop-order-confirm-${item.id}`)) totalUnread++;
+              });
+
+            } catch (e) { console.error('Failed to check shop unread:', e); }
+
+            return totalUnread;
+          } catch (error) {
+            console.error('Error fetching unread counts:', error);
+            return 0;
+          }
+        };
+
+        const [announcementRes, dynamicRes, extraUnreadVal] = await Promise.all([
+          fetchAnnouncements({ page: 1, limit: 5, type: 'normal', is_popup: 1 }),
+          fetchAnnouncements({ page: 1, limit: 5, type: 'important', is_popup: 1 }),
+          fetchAllUnreadCounts(),
         ]);
+
+        // Update a new state for extra unread count
+        setConsignmentTicketCount(prev => {
+          // We reuse an existing state or add a new one? 
+          // Better to add a new state.
+          // But let's check what state is available. 
+          // Since I can't easily add a new state line outside this function without editing the whole file,
+          // I will use a ref or hack it? No, I should edit the state definition too.
+          return prev;
+        });
+        setExtraUnreadCount(extraUnreadVal);
 
         console.log('[公告] API响应:', {
           announcementRes,
           dynamicRes,
+          extraUnreadVal
         });
 
         const announcementList = announcementRes.data?.list ?? [];
@@ -413,7 +547,7 @@ const AppContent: React.FC = () => {
   useEffect(() => {
     if (currentRoute?.name === 'switch-to-market') {
       setActiveTab('market');
-      navigateRoute(null, { clearHistory: true });
+      navigateRoute(null, { replace: true });
     }
   }, [currentRoute, navigateRoute]);
 
@@ -672,7 +806,7 @@ const AppContent: React.FC = () => {
       case 'live':
         return <LivePage />;
       case 'profile':
-        return <ProfileEntry onNavigate={(route) => navigateRoute(route)} unreadCount={newsList.filter(n => n.isUnread).length} />;
+        return <ProfileEntry onNavigate={(route) => navigateRoute(route)} unreadCount={newsList.filter(n => n.isUnread).length + extraUnreadCount} />;
       default:
         return (
           <HomeEntry

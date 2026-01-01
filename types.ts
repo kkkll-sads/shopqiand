@@ -152,6 +152,9 @@ export interface TeamMember {
   mobile: string;
   join_time?: number;
   join_date?: string;
+  register_time?: string;
+  level?: number;
+  level_text?: string;
 }
 
 export interface TeamMembersListData {

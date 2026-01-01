@@ -30,6 +30,7 @@ import ConsignmentVoucher from '../pages/wallet/ConsignmentVoucher';
 import CumulativeRights from '../pages/wallet/CumulativeRights';
 import ClaimHistory from '../pages/wallet/ClaimHistory';
 import RechargeOrderDetail from '../pages/wallet/RechargeOrderDetail';
+import RechargeOrderList from '../pages/wallet/RechargeOrderList';
 import WithdrawOrderList from '../pages/wallet/WithdrawOrderList';
 import SignIn from '../pages/cms/SignIn';
 import MessageCenter from '../pages/cms/MessageCenter';
@@ -46,6 +47,8 @@ import UserAgreement from '../pages/cms/UserAgreement';
 import UserSurvey from '../pages/user/UserSurvey';
 import OnlineService from '../pages/cms/OnlineService';
 import SearchPage from '../pages/market/SearchPage';
+import ReservationRecordDetailPage from '../pages/market/ReservationRecordDetailPage';
+import ReservationRecordPage from '../pages/market/ReservationRecordPage';
 import { STORAGE_KEYS } from '../constants/storageKeys';
 import { writeStorage } from '../utils/storageAccess';
 import { type NewsItem, type Product } from '../types';
@@ -219,14 +222,12 @@ export const routeComponents: Partial<Record<Route['name'], RouteRenderer>> = {
   ),
   'my-collection-detail': (route, helpers) => {
     const payload = route as Extract<Route, { name: 'my-collection-detail' }>;
-    if (!helpers.selectedCollectionItem || String(helpers.selectedCollectionItem.id) !== payload.id) {
-      return null;
-    }
     return (
       <MyCollectionDetail
         item={helpers.selectedCollectionItem}
         onBack={() => helpers.goBack()}
         onNavigate={(nextRoute) => helpers.navigateRoute(nextRoute)}
+        onSetSelectedItem={(item) => helpers.setSelectedCollectionItem(item)}
       />
     );
   },
@@ -235,11 +236,12 @@ export const routeComponents: Partial<Record<Route['name'], RouteRenderer>> = {
     return (
       <MyCollection
         onBack={() => helpers.goBack()}
-        onItemSelect={(item) => {
-          helpers.setSelectedCollectionItem(item);
-          helpers.navigateRoute({ name: 'my-collection-detail', id: String(item.id) });
+        onItemSelect={() => {
+          // Do nothing - modal should handle item interaction
+          // Navigating here causes infinite loop
         }}
         initialConsignItemId={payload.id}
+        preSelectedItem={helpers.selectedCollectionItem}
       />
     );
   },
@@ -259,6 +261,23 @@ export const routeComponents: Partial<Record<Route['name'], RouteRenderer>> = {
     const payload = route as Extract<Route, { name: 'search' }>;
     return <SearchPage onBack={() => helpers.goBack()} onNavigate={(nextRoute) => helpers.navigateRoute(nextRoute)} initialCode={payload.code} />;
   },
+  'reservation-detail': (route, helpers) => {
+    const payload = route as Extract<Route, { name: 'reservation-detail' }>;
+    if (!payload.id) return null;
+    return (
+      <ReservationRecordDetailPage
+        reservationId={payload.id}
+        onBack={() => helpers.goBack()}
+        onNavigate={(nextRoute) => helpers.navigateRoute(nextRoute)}
+      />
+    );
+  },
+  'reservation-record': (route, helpers) => (
+    <ReservationRecordPage
+      onBack={() => helpers.goBack()}
+      onNavigate={(nextRoute) => helpers.navigateRoute(nextRoute)}
+    />
+  ),
   'about-us': (route, helpers) => (
     <AboutUs onBack={() => helpers.goBack()} />
   ),
@@ -318,6 +337,12 @@ export const routeComponents: Partial<Record<Route['name'], RouteRenderer>> = {
     <RechargeOrderDetail
       orderId={(route as Extract<Route, { name: 'recharge-order-detail' }>).orderId}
       onBack={() => helpers.goBack()}
+    />
+  ),
+  'recharge-order-list': (_route, helpers) => (
+    <RechargeOrderList
+      onBack={() => helpers.goBack()}
+      onNavigate={(nextRoute) => helpers.navigateRoute(nextRoute)}
     />
   ),
   'withdraw-order-list': (_route, helpers) => (

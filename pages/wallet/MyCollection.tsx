@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { FileText, ShoppingBag, ArrowRight, X, AlertCircle, CheckCircle } from 'lucide-react';
 import SubPageLayout from '../../components/SubPageLayout';
+import { formatAmount, formatTime } from '../../utils/format';
 import { LoadingSpinner, EmptyState, LazyImage } from '../../components/common';
 import {
   getMyCollection,
@@ -26,9 +27,10 @@ interface MyCollectionProps {
   onBack: () => void;
   onItemSelect?: (item: MyCollectionItem) => void;
   initialConsignItemId?: string | number;
+  preSelectedItem?: MyCollectionItem | null;
 }
 
-const MyCollection: React.FC<MyCollectionProps> = ({ onBack, onItemSelect, initialConsignItemId }) => {
+const MyCollection: React.FC<MyCollectionProps> = ({ onBack, onItemSelect, initialConsignItemId, preSelectedItem }) => {
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [myCollections, setMyCollections] = useState<MyCollectionItem[]>([]);
@@ -115,6 +117,16 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onBack, onItemSelect, initi
     }
   }, [initialConsignItemId, myCollections]);
 
+  // NEW: 如果通过 helpers.selectedCollectionItem 传入了预选项，立即打开寄售模态框
+  useEffect(() => {
+    if (!preSelectedItem) return;
+    // 立即打开弹窗，不需要等待数据加载
+    setSelectedItem(preSelectedItem);
+    setActionTab('consignment');
+    setActionError(null);
+    setShowActionModal(true);
+  }, [preSelectedItem]);
+
   const handleTabChange = (tab: CategoryTab) => {
     setActiveTab(tab);
     setPage(1);
@@ -140,7 +152,10 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onBack, onItemSelect, initi
           const filteredList = list.filter(item => {
             const dStatus = Number(item.delivery_status) || 0;
             if (activeTab === 'hold') {
-              return dStatus === DeliveryStatus.NOT_DELIVERED;
+              // 待售列表：未提货 (0) 且 未寄售 (0)
+              // 注意：consignment_status 可能为 undefined/null，视为 0
+              const cStatus = Number(item.consignment_status) || 0;
+              return dStatus === DeliveryStatus.NOT_DELIVERED && cStatus === 0;
             } else {
               return dStatus === DeliveryStatus.DELIVERED;
             }
@@ -158,13 +173,33 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onBack, onItemSelect, initi
         } else {
           setError(extractError(res, '获取我的藏品失败'));
         }
+      } else if (activeTab === 'sold') {
+        // Use the new status=sold param on myCollection API
+        const res = await getMyCollection({ page, token, status: 'sold' });
+
+        if (isSuccess(res) && res.data) {
+          const list = res.data.list || [];
+          if (page === 1) {
+            setMyCollections(list);
+          } else {
+            setMyCollections(prev => [...prev, ...list]);
+          }
+          setHasMore(list.length >= 10 && res.data.has_more !== false);
+        } else {
+          setError(extractError(res, '获取已售出列表失败'));
+        }
       } else {
-        // consign or sold tab
-        const statusMap = { 'consign': 1, 'sold': 2 };
+        // consign tab (still uses myConsignmentList for specifically Consignment focused view, OR could strictly use myCollection? 
+        // User doc says myCollection supports 'consigned'. But existing getMyConsignmentList might have specific fields.
+        // Let's keep consign tab as is for now unless user requested change there too.
+        // Wait, user doc for myCollection says: status: consigned=寄售中. 
+        // But MyCollection.tsx uses `getMyConsignmentList` which maps to `myConsignmentList` endpoint.
+        // Let's stick to existing logic for Consign tab to minimize risk, only change Sold tab as requested.
+
         const res = await getMyConsignmentList({
           page,
           token,
-          status: statusMap[activeTab as 'consign' | 'sold']
+          status: 1 // 1=consigning
         });
 
         if (isSuccess(res) && res.data) {
@@ -178,7 +213,7 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onBack, onItemSelect, initi
             item_image: (item as any).image || (item as any).item_image || '',
             price: String(item.consignment_price),
             status_text: item.status_text,
-            consignment_status: activeTab === 'consign' ? ConsignmentStatus.CONSIGNING : ConsignmentStatus.SOLD,
+            consignment_status: ConsignmentStatus.CONSIGNING,
             delivery_status: DeliveryStatus.NOT_DELIVERED,
           } as any)) as MyCollectionItem[];
 
@@ -344,8 +379,11 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onBack, onItemSelect, initi
         );
         setAvailableCouponCount(matched.length);
       } else {
-        // 如果无法从藏品获取场次信息，暂时显示总数或0
-        setAvailableCouponCount(coupons.length > 0 ? coupons.length : 0);
+        // 如果无法从藏品获取场次信息，默认显示所有可用券，或尝试从 API 获取详情
+        // 这里做宽松处理：显示所有券，但在提交时可能会校验失败（如果不匹配）
+        // 这样至少能显示出"有券"，避免 UI 显示为 0 误导用户
+        setAvailableCouponCount(coupons.length);
+        console.warn('[MyCollection] Item missing session/zone info, showing all coupons:', { itemSessionId, itemZoneId, total: coupons.length });
       }
     }).catch(err => {
       console.error('Fetch data failed', err);
@@ -706,7 +744,20 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onBack, onItemSelect, initi
       })
         .then((res) => {
           if (isSuccess(res)) {
-            showToast('success', '提交成功', extractError(res, '寄售申请已提交'));
+            const data = res.data || {};
+            // Prefer message, fallback to msg
+            let successDescription = res.message || res.msg || '寄售申请已提交';
+
+            // Append audit info if available
+            if (data.coupon_used) {
+              successDescription += ` (消耗寄售券 ${data.coupon_used} 张`;
+              if (data.coupon_remaining !== undefined) {
+                successDescription += `，剩余 ${data.coupon_remaining} 张`;
+              }
+              successDescription += ')';
+            }
+
+            showToast('success', '提交成功', successDescription);
             setShowActionModal(false);
             setSelectedItem(null);
             // Switch to consign tab to show the new status
@@ -732,17 +783,19 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onBack, onItemSelect, initi
 
     return (
       <div
+        key={item.id}
         className="bg-white rounded-lg p-4 mb-3 shadow-sm cursor-pointer active:bg-gray-50 transition-colors"
         onClick={() => handleItemClick(item)}
       >
         <div className="flex gap-3">
           <div className="w-20 h-20 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
             <img
-              src={normalizeAssetUrl(image) || undefined}
+              src={normalizeAssetUrl(image)}
               alt={title}
               className="w-full h-full object-cover"
               onError={(e) => {
-                (e.target as HTMLImageElement).src = 'https://via.placeholder.com/150';
+                // (e.target as HTMLImageElement).src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+                (e.target as HTMLImageElement).style.visibility = 'hidden';
               }}
             />
           </div>
@@ -782,8 +835,46 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onBack, onItemSelect, initi
                   }`}>
                   {item.status_text}
                 </div>
+              ) : activeTab === 'sold' || item.consignment_status === ConsignmentStatus.SOLD ? (
+                // Specially for Sold Items (from myCollection endpoint)
+                // Display sold price, time, and settlement status
+                <div className="flex flex-col w-full gap-1 mt-1">
+                  <div className="flex justify-between items-center bg-green-50 px-2 py-1.5 rounded-lg border border-green-100">
+                    <span className="text-xs font-medium text-green-700">已售出</span>
+                    <span className="text-sm font-bold text-green-700 font-[DINAlternate-Bold]">
+                      成交 ¥{formatAmount(item.sold_price || item.consignment_price || 0, { prefix: '', thousandSeparator: false })}
+                    </span>
+                  </div>
+
+                  {item.sold_time && (
+                    <div className="flex justify-between text-xs text-gray-400 px-1">
+                      <span>成交时间</span>
+                      <span>{formatTime(item.sold_time)}</span>
+                    </div>
+                  )}
+
+                  {/* Settlement Info if available */}
+                  {item.settle_status !== undefined && (
+                    <div className="flex justify-between text-xs px-1 mt-1 pt-1 border-t border-gray-100 border-dashed">
+                      <span className="text-gray-400">结算状态</span>
+                      <span className={`${(Number(item.settle_status) === 1 || Number(item.settle_status) === 0) ? 'text-green-600 font-medium' : 'text-orange-500'}`}>
+                        {(Number(item.settle_status) === 1 || Number(item.settle_status) === 0) ? '已结算' : '待结算'}
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Show Payout Snapshot if available (Profit) */}
+                  {(item.payout_profit_consume || item.payout_profit_withdrawable) ? (
+                    <div className="flex justify-between text-xs px-1">
+                      <span className="text-gray-400">利润收益</span>
+                      <span className="text-red-500 font-medium">
+                        +{formatAmount((Number(item.payout_profit_consume) + Number(item.payout_profit_withdrawable)), { prefix: '¥' })}
+                      </span>
+                    </div>
+                  ) : null}
+                </div>
               ) : (
-                /* 回退到原有的逻辑（如果没有 status_text 字段） */
+                /* 回退到原有的逻辑（如果没有 status_text 字段且不是新版已售出） */
                 item.consignment_status === ConsignmentStatus.SOLD ? (
                   <div className="text-xs px-2 py-1 rounded-full bg-green-50 text-green-600 border border-green-200">
                     已售出
@@ -876,11 +967,7 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onBack, onItemSelect, initi
             <EmptyState icon={<ShoppingBag size={48} className="text-gray-300" />} title="暂无藏品" description="您还没有任何藏品" />
           ) : (
             <>
-              {myCollections.map((item) => (
-                <React.Fragment key={item.id}>
-                  {renderCollectionItem(item)}
-                </React.Fragment>
-              ))}
+              {myCollections.map(renderCollectionItem)}
               {hasMore && (
                 <button
                   onClick={() => setPage(prev => prev + 1)}
@@ -926,7 +1013,8 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onBack, onItemSelect, initi
                         alt={selectedItem.item_title || selectedItem.title}
                         className="w-full h-full object-cover"
                         onError={(e) => {
-                          (e.target as HTMLImageElement).src = 'https://via.placeholder.com/150';
+                          // (e.target as HTMLImageElement).src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+                          (e.target as HTMLImageElement).style.visibility = 'hidden';
                         }}
                       />
                     </div>
@@ -942,16 +1030,20 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onBack, onItemSelect, initi
 
                   {/* 核心数据网格 */}
                   {(() => {
-                    const price = parseFloat(selectedItem.price || '0');
-                    const expectedProfit = price * 0.055;
-                    const expectedTotal = price * 1.055;
+                    // 价格处理：优先 check selectedItem.market_price -> price -> current_price -> original_price -> 0
+                    const rawPrice = selectedItem.market_price || selectedItem.price || selectedItem.current_price || selectedItem.original_price || '0';
+                    const price = parseFloat(String(rawPrice));
+                    const safePrice = isNaN(price) ? 0 : price;
+
+                    const expectedProfit = safePrice * 0.055;
+                    const expectedTotal = safePrice * 1.055;
 
                     return (
                       <div className="grid grid-cols-3 gap-2 pt-3 border-t border-dashed border-gray-100">
                         <div className="flex flex-col">
                           <span className="text-[10px] text-gray-400 mb-0.5">当前估值</span>
                           <span className="text-sm font-bold text-gray-900 font-[DINAlternate-Bold]">
-                            ¥{price.toFixed(2)}
+                            ¥{safePrice.toFixed(2)}
                           </span>
                         </div>
                         <div className="flex flex-col items-center border-l border-r border-gray-50">
@@ -1025,8 +1117,10 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onBack, onItemSelect, initi
 
                   <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 space-y-4">
                     {(() => {
-                      const price = parseFloat(selectedItem.price || '0');
-                      const serviceFee = price * 0.03;
+                      const rawPrice = selectedItem.market_price || selectedItem.price || selectedItem.current_price || selectedItem.original_price || '0';
+                      const safePrice = parseFloat(String(rawPrice)) || 0;
+
+                      const serviceFee = safePrice * 0.03;
                       const balance = parseFloat(userInfo?.service_fee_balance || '0');
                       const isBalanceEnough = balance >= serviceFee;
 

@@ -471,7 +471,7 @@ const TradingZone: React.FC<TradingZoneProps> = ({
                             {onNavigate && (
                                 <button
                                     type="button"
-                                    onClick={() => onNavigate({ name: 'reservation-record' })}
+                                    onClick={() => onNavigate({ name: 'reservation-record', back: { name: 'trading-zone' } })}
                                     className="flex items-center gap-1.5 bg-orange-50 text-orange-600 px-3 py-1.5 rounded-full text-xs font-bold border border-orange-100 active:scale-95 transition-transform"
                                 >
                                     <ClipboardList size={14} />

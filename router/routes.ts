@@ -43,6 +43,7 @@ export type RoutePayload =
   | { name: 'points-product-detail'; origin?: 'market' | 'artist' | 'trading-zone' | 'reservation-record' }
   | { name: 'reservation'; from?: RoutePayload | null }
   | { name: 'reservation-record' }
+  | { name: 'reservation-detail'; id: number | string }
   | { name: 'trading-zone' }
   | { name: 'trading-zone-items'; sessionId: string; sessionTitle?: string; sessionStartTime?: string; sessionEndTime?: string }
   | { name: 'artist-showcase' }
