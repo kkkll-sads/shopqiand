@@ -4,7 +4,7 @@ import react from '@vitejs/plugin-react';
 
 // 统一的后端前缀，前端代码里都以这个作为基础路径
 const API_PREFIX = '/api';
-const DEFAULT_API_TARGET = 'http://127.0.0.1/index.php';
+const DEFAULT_API_TARGET = 'http://127.0.0.1:8000/index.php';
 
 const resolveApiTarget = (raw?: string) => {
   const source = raw?.trim();
@@ -32,6 +32,8 @@ export default defineConfig(({ mode }) => {
       port: 5657,
       host: '0.0.0.0',
       allowedHosts: ['shu.gckot.cn', 'wap.dfahwk.cn', 'shu.fhsyi.cn', 'wap.bskhu.cn'],
+      // 配置 history API fallback，支持单页应用路由
+      historyApiFallback: true,
       // 配置代理解决 CORS 问题
       proxy: {
         [API_PREFIX]: {
@@ -65,6 +67,8 @@ export default defineConfig(({ mode }) => {
       port: 5657,
       host: '0.0.0.0',
       allowedHosts: ['shu.gckot.cn', 'wap.dfahwk.cn', 'shu.fhsyi.cn', 'wap.bskhu.cn'],
+      // 配置 history API fallback，支持单页应用路由
+      historyApiFallback: true,
     },
     plugins: [react()],
     define: {

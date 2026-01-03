@@ -62,8 +62,13 @@ const Register: React.FC<RegisterProps> = ({
   // 组件加载时从URL参数中读取邀请码
   useEffect(() => {
     const urlInviteCode = getInviteCodeFromUrl();
+    console.log('[Register] URL invite_code:', urlInviteCode);
+    console.log('[Register] Current URL:', typeof window !== 'undefined' ? window.location.href : 'SSR');
     if (urlInviteCode) {
+      console.log('[Register] Setting invite code from URL:', urlInviteCode);
       setInviteCode(urlInviteCode);
+    } else {
+      console.log('[Register] No invite code in URL, using default');
     }
   }, []);
 

@@ -80,14 +80,14 @@
   }
 }
 </script>
-  <script type="module" crossorigin src="/assets/index-Mtqc5CC0.js"></script>
+  <script type="module" crossorigin src="/assets/index-kCUhYSdH.js"></script>
   <link rel="modulepreload" crossorigin href="/assets/vendor-YRKd36Sg.js">
-  <link rel="modulepreload" crossorigin href="/assets/react-vendor-D-a-n2rB.js">
+  <link rel="modulepreload" crossorigin href="/assets/react-vendor-DM5dynjX.js">
   <link rel="modulepreload" crossorigin href="/assets/area-data-BVDNhPol.js">
   <link rel="stylesheet" crossorigin href="/assets/index-BcxitPqK.css">
 </head>
   <body>
-    <div id="root"></div>
+    <div id="root"></div>
     <script>
       // 禁用右键菜单
       document.addEventListener('contextmenu', function(e) {
@@ -190,10 +190,15 @@
         }
       }, false);
 
-      // 禁用复制事件
+      // 禁用复制事件（但允许特定页面进行复制）
       document.addEventListener('copy', function(e) {
-        e.preventDefault();
-        return false;
+        // 检查页面是否允许复制
+        const allowCopy = document.body.getAttribute('data-allow-copy') === 'true';
+
+        if (!allowCopy) {
+          e.preventDefault();
+          return false;
+        }
       }, false);
 
       // 禁用剪切事件

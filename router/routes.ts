@@ -307,6 +307,12 @@ export function decodeRoute(s: string): RoutePayload {
       return { name: 'switch-to-market' };
     case 'invite-friends':
       return { name: 'invite-friends' };
+    case 'register':
+      return { name: 'register' };
+    case 'privacy-policy':
+      return { name: 'privacy-policy', from: parts[1] || undefined };
+    case 'user-agreement':
+      return { name: 'user-agreement', from: parts[1] || undefined };
     default:
       // Fallback to login for safety
       return { name: 'login' };

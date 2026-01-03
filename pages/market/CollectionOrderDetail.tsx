@@ -22,9 +22,10 @@ interface CollectionOrderDetailProps {
   id?: number | string;
   orderNo?: string;
   onBack: () => void;
+  onNavigate?: (route: any) => void;
 }
 
-const CollectionOrderDetail: React.FC<CollectionOrderDetailProps> = ({ id, orderNo, onBack }) => {
+const CollectionOrderDetail: React.FC<CollectionOrderDetailProps> = ({ id, orderNo, onBack, onNavigate }) => {
   const { showToast } = useNotification();
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -292,6 +293,67 @@ const CollectionOrderDetail: React.FC<CollectionOrderDetailProps> = ({ id, order
           </div>
         </div>
       </div>
+
+      {/* Bottom Actions - 根据不同状态显示不同按钮 */}
+      {(() => {
+        const statusText = order.status_text || order.status || '';
+        const statusLower = statusText.toLowerCase();
+        
+        // 判断是否显示底部按钮栏
+        const showBottomActions = statusLower.includes('寄售中') || 
+                                  statusLower.includes('撮合中') || 
+                                  statusLower.includes('匹配中') ||
+                                  statusLower.includes('待支付') ||
+                                  statusLower.includes('待发货') ||
+                                  statusLower.includes('待收货');
+
+        if (!showBottomActions) return null;
+
+        // 根据状态显示不同的按钮文本和操作
+        let buttonText = '';
+        let buttonAction: (() => void) | null = null;
+        let buttonClass = 'flex-1 h-12 rounded-xl bg-gradient-to-r from-orange-500 to-orange-400 text-white hover:from-orange-600 hover:to-orange-500 font-semibold shadow-lg shadow-orange-500/30 transition-all active:scale-[0.98]';
+
+        if (statusLower.includes('寄售中') || statusLower.includes('撮合中') || statusLower.includes('匹配中')) {
+          buttonText = '撮合中';
+          buttonAction = () => {
+            // TODO: 跳转到撮合池页面
+            showToast('info', '撮合中', '订单正在撮合中，请稍候');
+          };
+        } else if (statusLower.includes('待支付')) {
+          buttonText = '立即支付';
+          buttonAction = () => {
+            // TODO: 跳转到支付页面
+            showToast('info', '支付功能', '支付功能开发中');
+          };
+        } else if (statusLower.includes('待发货')) {
+          buttonText = '查看发货';
+          buttonAction = () => {
+            showToast('info', '查看发货', '发货信息查看功能开发中');
+          };
+        } else if (statusLower.includes('待收货')) {
+          buttonText = '确认收货';
+          buttonAction = () => {
+            showToast('info', '确认收货', '确认收货功能开发中');
+          };
+        }
+
+        if (!buttonText) return null;
+
+        return (
+          <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] max-w-[480px] mx-auto safe-area-bottom">
+            <div className="p-4">
+              <button
+                onClick={buttonAction || undefined}
+                className={buttonClass}
+                disabled={!buttonAction}
+              >
+                {buttonText}
+              </button>
+            </div>
+          </div>
+        );
+      })()}
     </PageContainer>
   );
 };

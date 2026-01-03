@@ -5,17 +5,18 @@ import { payOrder, getOrderDetail, ShopOrderItem, fetchProfile } from '../../ser
 import { LoadingSpinner } from '../../components/common';
 import { Coins, CreditCard, ChevronLeft } from 'lucide-react';
 import { AUTH_TOKEN_KEY } from '../../constants/storageKeys';
-import { Route } from '../../router/routes';
+import { Route, RoutePayload } from '../../router/routes';
 // ✅ 引入统一 API 处理工具
 import { isSuccess, extractData, extractError } from '../../utils/apiHelpers';
 
 interface CashierProps {
     orderId: string;
+    backRoute?: RoutePayload | null;
     onBack: () => void;
     onNavigate: (route: Route) => void;
 }
 
-const Cashier: React.FC<CashierProps> = ({ orderId, onBack, onNavigate }) => {
+const Cashier: React.FC<CashierProps> = ({ orderId, backRoute, onBack, onNavigate }) => {
     const { showToast } = useNotification();
     const [order, setOrder] = useState<ShopOrderItem | null>(null);
     const [loading, setLoading] = useState(true);
@@ -73,11 +74,13 @@ const Cashier: React.FC<CashierProps> = ({ orderId, onBack, onNavigate }) => {
             // ✅ 使用统一判断
             if (isSuccess(res)) {
                 showToast('success', extractError(res, '支付成功'));
+                // 支付成功后跳转到订单列表，back参数使用收银台的back参数（通常是商品详情页面）
+                // 这样用户在订单列表点击返回时，会返回到商品详情页面，而不是收银台
                 onNavigate({
                     name: 'order-list',
                     kind: payType === 'score' ? 'points' : 'product',
                     status: 1,
-                    back: { name: 'cashier', orderId: String(orderId) },
+                    back: backRoute || null,
                 });
             } else {
                 showToast('error', '支付失败', extractError(res, '操作失败'));

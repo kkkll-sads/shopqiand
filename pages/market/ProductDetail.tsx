@@ -8,7 +8,7 @@ import {
   fetchShopProductDetail,
   CollectionItemDetailData,
   ShopProductDetailData,
-  buyShopOrder,
+  createOrder,
   bidBuy,
   AUTH_TOKEN_KEY,
 } from '../../services/api';
@@ -129,32 +129,53 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, onNaviga
         debugLog('productDetail.buy', '用户确认购买');
         try {
           setBuying(true);
-          debugLog('productDetail.buy', '调用 buyShopOrder', { productId: Number(product.id) });
-          const response = await buyShopOrder({
+          debugLog('productDetail.buy', '调用 createOrder', { productId: Number(product.id) });
+          const response = await createOrder({
             items: [{ product_id: Number(product.id), quantity: 1 }],
             pay_type: 'money',
             // address_id will be handled by service (using default if not provided)
           });
-          debugLog('productDetail.buy', 'buyShopOrder 响应', response);
-          bizLog('order.buy.shop.ui', { code: response.code, productId: product.id });
+          debugLog('productDetail.buy', 'createOrder 响应', response);
+          bizLog('order.create.shop.ui', { code: response.code, productId: product.id });
 
           // ✅ 使用统一判断
           if (isSuccess(response)) {
-            showToast('success', '购买成功', '订单已创建并支付成功');
-            // Navigate to order list or success page
-            onNavigate({ name: 'order-list', kind: isShopProduct ? 'points' : 'product', status: 0, back: { name: 'product-detail' } });
+            // 从响应中提取订单ID
+            let orderId: number | string | null = null;
+            if (response.data) {
+              if (typeof response.data === 'object' && 'order_id' in response.data) {
+                orderId = (response.data as any).order_id;
+              } else if (typeof response.data === 'object' && 'id' in response.data) {
+                orderId = (response.data as any).id;
+              }
+            }
+
+            if (orderId) {
+              // 订单创建成功，立即跳转到支付页面（不使用延迟，避免显示中间状态）
+              onNavigate({
+                name: 'cashier',
+                orderId: String(orderId),
+                back: { name: 'product-detail' }
+              });
+            } else {
+              // 如果没有订单ID，跳转到订单列表
+              showToast('success', '订单创建成功');
+              setTimeout(() => {
+                onNavigate({ name: 'order-list', kind: isShopProduct ? 'points' : 'product', status: 0, back: { name: 'product-detail' } });
+              }, 1500);
+            }
           } else {
             // ✅ 使用统一错误处理
             handleBuyError(response, {
-              toastTitle: '购买失败',
-              customMessage: '购买失败',
+              toastTitle: '订单创建失败',
+              customMessage: '订单创建失败',
               context: { productId: product.id }
             });
           }
         } catch (err: any) {
           // ✅ 使用统一错误处理
           handleBuyError(err, {
-            toastTitle: '购买失败',
+            toastTitle: '订单创建失败',
             customMessage: '系统错误',
             context: { productId: product.id }
           });

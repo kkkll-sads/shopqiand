@@ -555,12 +555,16 @@ const AppContent: React.FC = () => {
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const path = window.location.pathname;
-      // If URL path is /register, navigate to register page
-      if (path === '/register') {
-        navigateRoute('register');
+      const searchParams = window.location.search;
+      console.log('[URL Routing] Current path:', path, 'search:', searchParams, 'currentRoute:', currentRoute?.name);
+
+      // If URL path is /register and we're not already on register page, navigate to register page
+      if (path === '/register' && currentRoute?.name !== 'register') {
+        console.log('[URL Routing] Navigating to register page');
+        navigateRoute({ name: 'register' });
       }
     }
-  }, []); // Only run once on mount to handle direct URL access
+  }, [currentRoute]); // Depend on currentRoute to avoid duplicate navigation
 
   // Authentication Gate
   if (!isLoggedIn) {
@@ -618,6 +622,13 @@ const AppContent: React.FC = () => {
   }
 
   const renderContent = () => {
+    // 如果已登录用户访问注册页面，重定向到首页
+    if (currentRoute?.name === 'register') {
+      console.log('[App] 已登录用户访问注册页面，重定向到首页');
+      navigateRoute(null);
+      return null;
+    }
+
     // 页面访问控制：未实名用户只能访问首页和实名认证页面
     if (!isRealNameVerified) {
       // 允许未实名访问的子路由（用 Route 名称而非字符串前缀）

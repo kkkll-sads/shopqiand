@@ -134,6 +134,8 @@ const AssetHistory: React.FC<AssetHistoryProps> = ({ onBack }) => {
   const renderLogItem = (item: AllLogItem) => {
     const isGreenPower = item.field_type === 'green_power' || item.type === 'green_power';
     const isScore = item.type === 'score';
+    // 检查是否为签到记录
+    const isSignRecord = item.sign_record_id !== undefined || item.activity_name !== undefined;
     const amountVal = Number(item.amount);
 
     // Determine direction based on balance change if available, otherwise fallback to amount sign
@@ -166,11 +168,11 @@ const AssetHistory: React.FC<AssetHistoryProps> = ({ onBack }) => {
                 {typeLabel}
               </span>
               <span className="text-sm text-gray-700 font-medium truncate">
-                {item.memo || item.remark || '资金变动'}
+                {isSignRecord ? item.activity_name || '签到奖励' : (item.memo || item.remark || '资金变动')}
               </span>
             </div>
             <div className="text-xs text-gray-400">
-              {formatTime(item.createtime || item.create_time)}
+              {isSignRecord ? item.sign_date || formatTime(item.createtime || item.create_time) : formatTime(item.createtime || item.create_time)}
             </div>
           </div>
 

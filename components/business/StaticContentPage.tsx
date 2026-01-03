@@ -128,6 +128,7 @@ const StaticContentPage: React.FC<StaticContentPageProps> = ({
                 }
             } catch (e: any) {
                 if (cancelled) return;
+
                 console.error(`加载${defaultTitle}失败:`, e);
                 setError('网络异常，请检查网络后重试');
             } finally {

@@ -6,6 +6,7 @@ import { useNotification } from '../../context/NotificationContext';
 import { Route } from '../../router/routes';
 import { LoadingSpinner } from '../../components/common';
 import { isSuccess, extractData } from '../../utils/apiHelpers';
+import { ConsignmentStatus } from '../../constants/statusEnums';
 
 interface MyCollectionDetailProps {
     item: MyCollectionItem;
@@ -203,18 +204,6 @@ const MyCollectionDetail: React.FC<MyCollectionDetailProps> = ({ item: initialIt
                                 【{title}】
                             </h3>
 
-                            {/* Line 3: Holder */}
-                            <div className="text-base font-bold text-gray-600 tracking-wide relative z-10 mb-4">
-                                持有人：{(() => {
-                                    const name = userInfo?.real_name;
-                                    if (!name) return '未认证';
-                                    if (name.length <= 2) {
-                                        return name.charAt(0) + '*';
-                                    }
-                                    return name.charAt(0) + '*'.repeat(name.length - 2) + name.charAt(name.length - 1);
-                                })()}
-                            </div>
-
                             {/* Stamp */}
                             <div className="absolute -right-4 -bottom-6 w-32 h-32 opacity-[0.85] -rotate-12 mix-blend-multiply z-20 pointer-events-none filter contrast-125 brightness-90">
                                 <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
@@ -312,64 +301,81 @@ const MyCollectionDetail: React.FC<MyCollectionDetailProps> = ({ item: initialIt
                 </div>
             </div>
 
-            {/* Bottom Actions */}
-            <div className="fixed bottom-0 left-0 right-0 p-4 bg-white/90 backdrop-blur-md border-t border-gray-100 z-[9999] pointer-events-auto">
-                <div className="flex justify-between items-center mb-3 px-1">
-                    <span className="text-sm text-gray-500 font-medium">当前估值</span>
-                    <div className="text-right">
-                        <span className="text-lg font-bold text-gray-700 font-mono">¥{currentValuation}</span>
-                        <span className={`text-xs font-bold ml-2 px-1.5 py-0.5 rounded-full ${isPositive ? 'text-red-500 bg-red-50' : 'text-green-500 bg-green-50'}`}>{yieldText}</span>
+            {/* Bottom Actions - 已售出的藏品不显示 */}
+            {(() => {
+                // 判断是否已售出：检查多个条件
+                const consignmentStatus = Number(item.consignment_status);
+                const statusText = item.status_text || '';
+                const consignmentStatusText = item.consignment_status_text || '';
+                
+                // API注释说 2=已售出，枚举定义 SOLD=4，实际可能两者都有
+                const isSold = consignmentStatus === 2 || 
+                               consignmentStatus === ConsignmentStatus.SOLD || 
+                               consignmentStatusText === '已售出' || 
+                               consignmentStatusText.includes('已售出') ||
+                               statusText === '已售出' ||
+                               statusText.includes('已售出');
+                
+                return !isSold;
+            })() && (
+                <div className="fixed bottom-0 left-0 right-0 p-4 bg-white/90 backdrop-blur-md border-t border-gray-100 z-[9999] pointer-events-auto">
+                    <div className="flex justify-between items-center mb-3 px-1">
+                        <span className="text-sm text-gray-500 font-medium">当前估值</span>
+                        <div className="text-right">
+                            <span className="text-lg font-bold text-gray-700 font-mono">¥{currentValuation}</span>
+                            <span className={`text-xs font-bold ml-2 px-1.5 py-0.5 rounded-full ${isPositive ? 'text-red-500 bg-red-50' : 'text-green-500 bg-green-50'}`}>{yieldText}</span>
+                        </div>
+                    </div>
+
+                    <div className="flex items-center justify-between gap-3">
+                        <button
+                            onClick={() => {
+                                if (window.confirm('确认将此藏品转为矿机吗？转为矿机后将产生算力收益，但不可再进行寄售。')) {
+                                    const token = localStorage.getItem(AUTH_TOKEN_KEY);
+                                    if (!token) {
+                                        showToast('warning', '请登录');
+                                        return;
+                                    }
+                                    const collectionId = item?.user_collection_id || item?.id || initialItem?.user_collection_id || initialItem?.id;
+                                    if (!collectionId) {
+                                        showToast('error', '无法获取藏品ID');
+                                        return;
+                                    }
+
+                                    setActionLoading(true);
+                                    toMining({ user_collection_id: Number(collectionId), token })
+                                        .then(res => {
+                                            if (isSuccess(res)) {
+                                                showToast('success', '转换成功', '藏品已成功转为矿机');
+                                                setTimeout(() => onNavigate({ name: 'my-collection' }), 1000);
+                                            } else {
+                                                showToast('error', '转换失败', res.msg || '操作失败');
+                                            }
+                                        })
+                                        .catch(err => {
+                                            showToast('error', '转换失败', err.message || '系统错误');
+                                        })
+                                        .finally(() => {
+                                            setActionLoading(false);
+                                        });
+                                }
+                            }}
+                            className="flex-1 bg-gray-500 text-white hover:bg-gray-600 transition-colors py-3.5 rounded-lg font-bold flex items-center justify-center gap-2 shadow-lg shadow-gray-500/20 active:scale-[0.98] pointer-events-auto touch-manipulation">
+                            <Cpu size={18} />
+                            转为矿机(权益交割)
+                        </button>
+                        <button
+                            onClick={() => {
+                                setShowConsignmentModal(true);
+                                setActionError(null);
+                            }}
+                            className="flex-1 bg-[#8B0000] text-amber-100 hover:bg-[#A00000] transition-colors py-3.5 rounded-lg font-bold flex items-center justify-center gap-2 shadow-lg shadow-red-900/20 active:scale-[0.98] pointer-events-auto touch-manipulation">
+                            <Store size={18} />
+                            立即上架寄售
+                        </button>
                     </div>
                 </div>
-
-                <div className="flex items-center justify-between gap-3">
-                    <button
-                        onClick={() => {
-                            if (window.confirm('确认将此藏品转为矿机吗？转为矿机后将产生算力收益，但不可再进行寄售。')) {
-                                const token = localStorage.getItem(AUTH_TOKEN_KEY);
-                                if (!token) {
-                                    showToast('warning', '请登录');
-                                    return;
-                                }
-                                const collectionId = item?.user_collection_id || item?.id || initialItem?.user_collection_id || initialItem?.id;
-                                if (!collectionId) {
-                                    showToast('error', '无法获取藏品ID');
-                                    return;
-                                }
-
-                                setActionLoading(true);
-                                toMining({ user_collection_id: Number(collectionId), token })
-                                    .then(res => {
-                                        if (isSuccess(res)) {
-                                            showToast('success', '转换成功', '藏品已成功转为矿机');
-                                            setTimeout(() => onNavigate({ name: 'my-collection' }), 1000);
-                                        } else {
-                                            showToast('error', '转换失败', res.msg || '操作失败');
-                                        }
-                                    })
-                                    .catch(err => {
-                                        showToast('error', '转换失败', err.message || '系统错误');
-                                    })
-                                    .finally(() => {
-                                        setActionLoading(false);
-                                    });
-                            }
-                        }}
-                        className="flex-1 bg-gray-500 text-white hover:bg-gray-600 transition-colors py-3.5 rounded-lg font-bold flex items-center justify-center gap-2 shadow-lg shadow-gray-500/20 active:scale-[0.98] pointer-events-auto touch-manipulation">
-                        <Cpu size={18} />
-                        转为矿机(权益交割)
-                    </button>
-                    <button
-                        onClick={() => {
-                            setShowConsignmentModal(true);
-                            setActionError(null);
-                        }}
-                        className="flex-1 bg-[#8B0000] text-amber-100 hover:bg-[#A00000] transition-colors py-3.5 rounded-lg font-bold flex items-center justify-center gap-2 shadow-lg shadow-red-900/20 active:scale-[0.98] pointer-events-auto touch-manipulation">
-                        <Store size={18} />
-                        立即上架寄售
-                    </button>
-                </div>
-            </div>
+            )}
 
             {/* Consignment Modal */}
             {showConsignmentModal && (
@@ -426,8 +432,13 @@ const MyCollectionDetail: React.FC<MyCollectionDetailProps> = ({ item: initialIt
                                     const rawMarketPrice = item.market_price || '0';
                                     const safeMarketPrice = parseFloat(String(rawMarketPrice)) || 0;
 
+                                    // 优先使用API返回的expected_profit字段，否则计算得出
                                     let dynamicYieldStr = '0.0';
-                                    if (safeBuyPrice > 0) {
+                                    if (item.expected_profit !== undefined && item.expected_profit !== null) {
+                                        // 直接使用API返回的预期收益百分比
+                                        dynamicYieldStr = String(item.expected_profit);
+                                    } else if (safeBuyPrice > 0) {
+                                        // Fallback: 手动计算收益百分比
                                         dynamicYieldStr = ((safeMarketPrice - safeBuyPrice) / safeBuyPrice * 100).toFixed(1);
                                     }
                                     const isPos = parseFloat(dynamicYieldStr) >= 0;

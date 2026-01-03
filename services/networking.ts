@@ -9,6 +9,8 @@ export interface ApiFetchConfig {
     body?: BodyInit | null;
     /** 是否自动附带 ba-user-token */
     token?: string;
+    /** 是否禁用全局 NeedLoginError 处理（用于公开页面） */
+    disableNeedLoginHandler?: boolean;
 }
 
 // API 响应类型
@@ -48,7 +50,7 @@ const parseResponse = async (response: Response) => {
  */
 export async function apiFetch<T = any>(
     path: string,
-    { method = 'GET', headers = {}, body = null, token }: ApiFetchConfig = {},
+    { method = 'GET', headers = {}, body = null, token, disableNeedLoginHandler = false }: ApiFetchConfig = {},
 ): Promise<ApiResponse<T>> {
     const url = `${API_BASE_URL}${path}`;
 
@@ -89,8 +91,16 @@ export async function apiFetch<T = any>(
 
         // 处理 code 303：需要登录，抛出统一错误由上层决定跳转
         if (data.code === 303) {
+            const needLoginError = new NeedLoginError(data.msg || '请先登录');
+
+            // 如果启用了禁用全局处理器选项，抛出一个普通错误而不是 NeedLoginError
+            if (disableNeedLoginHandler) {
+                console.warn('公开页面遇到登录错误，抛出普通错误让上层处理');
+                throw new Error('公开页面访问失败：' + (data.msg || '请稍后重试'));
+            }
+
             console.warn('用户登录已失效（code 303），抛出 NeedLoginError 交由上层统一处理');
-            throw new NeedLoginError(data.msg || '请先登录');
+            throw needLoginError;
         }
 
         return data;

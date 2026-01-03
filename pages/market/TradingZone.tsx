@@ -370,12 +370,14 @@ const TradingZone: React.FC<TradingZoneProps> = ({
     const handleSessionSelect = (session: TradingSession) => {
         if (onNavigate) {
             // 通过路由导航，保持状态
+            // 设置back参数为trading-zone，这样从资产申购列表返回时会回到场次列表
             onNavigate({
                 name: 'trading-zone-items',
                 sessionId: session.id,
                 sessionTitle: session.title,
                 sessionStartTime: session.startTime,
                 sessionEndTime: session.endTime,
+                back: { name: 'trading-zone' },
             });
         } else {
             // 回退：直接加载（旧行为）

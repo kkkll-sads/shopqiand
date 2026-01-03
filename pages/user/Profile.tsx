@@ -1,6 +1,6 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { Settings, MessageSquare, ShieldCheck, CreditCard, MapPin, Users, UserCheck, HelpCircle, FileText, HeadphonesIcon, ChevronRight, Wallet, Receipt, Box, Gem, Sprout, Award, CalendarCheck, Newspaper, Leaf, ClipboardList } from 'lucide-react';
+import { Settings, MessageSquare, ShieldCheck, CreditCard, MapPin, Users, UserCheck, HelpCircle, FileText, HeadphonesIcon, ChevronRight, Wallet, Receipt, Box, Gem, Sprout, Award, CalendarCheck, Newspaper, Leaf, ClipboardList, Coins, Package, Truck, CheckCircle } from 'lucide-react';
 import { formatAmount } from '../../utils/format';
 import { AUTH_TOKEN_KEY, USER_INFO_KEY, fetchProfile, normalizeAssetUrl, fetchShopOrderStatistics, ShopOrderStatistics, fetchSignInInfo } from '../../services/api';
 import { STORAGE_KEYS } from '../../constants/storageKeys';
@@ -391,16 +391,14 @@ const Profile: React.FC<ProfileProps> = ({ onNavigate, unreadCount = 0 }) => {
               { label: '专项金充值', icon: Wallet, color: 'text-orange-600', bg: 'bg-orange-50', action: () => onNavigate({ name: 'balance-recharge', source: 'asset-view' }) },
               { label: '每日签到', icon: CalendarCheck, color: 'text-red-500', bg: 'bg-red-50', action: () => onNavigate({ name: 'sign-in' }) },
               { label: '收益提现', icon: Receipt, color: 'text-orange-500', bg: 'bg-orange-50', action: () => onNavigate({ name: 'balance-withdraw', source: 'asset-view' }) },
-
               { label: '消费金兑换', icon: CoinsIcon, color: 'text-yellow-600', bg: 'bg-yellow-50', action: () => onNavigate({ name: 'switch-to-market' }) },
-              { label: '消费金订单', icon: ClipboardList, color: 'text-emerald-500', bg: 'bg-emerald-50', action: () => onNavigate({ name: 'order-list', kind: 'points', status: 0 }), badge: (orderStats?.pending_count || 0) + (orderStats?.paid_count || 0) + (orderStats?.shipped_count || 0) },
             ].map((item, idx) => (
               <div key={idx} className="flex flex-col items-center cursor-pointer active:opacity-60 group" onClick={item.action}>
                 <div className={`w-11 h-11 rounded-2xl ${item.bg} flex items-center justify-center mb-2 transition-transform group-active:scale-95 relative`}>
                   <item.icon size={20} className={item.color} strokeWidth={2} />
-                  {item.badge && item.badge > 0 ? (
+                  {(item as any).badge && (item as any).badge > 0 ? (
                     <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] bg-red-500 rounded-full border-2 border-white flex items-center justify-center text-[10px] text-white px-1">
-                      {item.badge > 99 ? '99+' : item.badge}
+                      {(item as any).badge > 99 ? '99+' : (item as any).badge}
                     </span>
                   ) : null}
                   {item.label === '每日签到' && !hasSignedToday && (
@@ -429,6 +427,34 @@ const Profile: React.FC<ProfileProps> = ({ onNavigate, unreadCount = 0 }) => {
               <div key={idx} className="flex flex-col items-center cursor-pointer active:opacity-60 group" onClick={item.action}>
                 <div className={`w-11 h-11 rounded-2xl ${item.bg} flex items-center justify-center mb-2 transition-transform group-active:scale-95`}>
                   <item.icon size={20} className={item.color} strokeWidth={2} />
+                </div>
+                <span className="text-xs text-gray-600 font-medium">{item.label}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* 消费金订单 */}
+        <div className="bg-white rounded-2xl p-4 shadow-sm">
+          <div className="font-bold text-gray-800 text-sm mb-4 flex items-center gap-2">
+            <div className="w-1 h-4 bg-orange-500 rounded-full"></div>
+            消费金订单
+          </div>
+          <div className="grid grid-cols-4 gap-4">
+            {[
+              { label: '待付款', icon: Coins, color: 'text-orange-500', bg: 'bg-orange-50', action: () => onNavigate({ name: 'order-list', kind: 'points', status: 0 }), badge: orderStats?.pending_count || 0 },
+              { label: '待发货', icon: Package, color: 'text-blue-500', bg: 'bg-blue-50', action: () => onNavigate({ name: 'order-list', kind: 'points', status: 1 }), badge: orderStats?.paid_count || 0 },
+              { label: '待收货', icon: Truck, color: 'text-purple-500', bg: 'bg-purple-50', action: () => onNavigate({ name: 'order-list', kind: 'points', status: 2 }), badge: orderStats?.shipped_count || 0 },
+              { label: '已完成', icon: CheckCircle, color: 'text-green-500', bg: 'bg-green-50', action: () => onNavigate({ name: 'order-list', kind: 'points', status: 3 }), badge: orderStats?.completed_count || 0 },
+            ].map((item, idx) => (
+              <div key={idx} className="flex flex-col items-center cursor-pointer active:opacity-60 group" onClick={item.action}>
+                <div className={`w-11 h-11 rounded-2xl ${item.bg} flex items-center justify-center mb-2 transition-transform group-active:scale-95 relative`}>
+                  <item.icon size={20} className={item.color} strokeWidth={2} />
+                  {item.badge > 0 && (
+                    <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] bg-red-500 rounded-full border-2 border-white flex items-center justify-center text-[10px] text-white px-1">
+                      {item.badge > 99 ? '99+' : item.badge}
+                    </span>
+                  )}
                 </div>
                 <span className="text-xs text-gray-600 font-medium">{item.label}</span>
               </div>

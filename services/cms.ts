@@ -1,5 +1,6 @@
 import { apiFetch, ApiResponse } from './networking';
 import { API_ENDPOINTS } from './config';
+import { NeedLoginError } from '../utils/errors';
 
 // 通用单页内容类型
 export interface PageContent {
@@ -8,21 +9,57 @@ export interface PageContent {
 }
 
 export async function fetchAboutUsPage(): Promise<ApiResponse<PageContent>> {
-    return apiFetch<PageContent>(`${API_ENDPOINTS.common.page}?type=about_us`, {
-        method: 'GET',
-    });
+    try {
+        return await apiFetch<PageContent>(`${API_ENDPOINTS.common.page}?type=about_us`, {
+            method: 'GET',
+            token: '', // 公开页面，不传递token
+            disableNeedLoginHandler: true, // 禁用全局 NeedLoginError 处理
+        });
+    } catch (error: any) {
+        // 对于公开页面，如果遇到任何错误（包括登录错误），返回友好的错误响应
+        console.warn('公开页面 about_us 遇到错误，返回本地错误响应:', error.message);
+        return {
+            code: 500,
+            msg: '页面加载失败，请稍后重试',
+            data: null
+        } as ApiResponse<PageContent>;
+    }
 }
 
 export async function fetchPrivacyPolicyPage(): Promise<ApiResponse<PageContent>> {
-    return apiFetch<PageContent>(`${API_ENDPOINTS.common.page}?type=privacy_policy`, {
-        method: 'GET',
-    });
+    try {
+        return await apiFetch<PageContent>(`${API_ENDPOINTS.common.page}?type=privacy_policy`, {
+            method: 'GET',
+            token: '', // 公开页面，不传递token
+            disableNeedLoginHandler: true, // 禁用全局 NeedLoginError 处理
+        });
+    } catch (error: any) {
+        // 对于公开页面，如果遇到任何错误（包括登录错误），返回友好的错误响应
+        console.warn('公开页面 privacy_policy 遇到错误，返回本地错误响应:', error.message);
+        return {
+            code: 500,
+            msg: '页面加载失败，请稍后重试',
+            data: null
+        } as ApiResponse<PageContent>;
+    }
 }
 
 export async function fetchUserAgreementPage(): Promise<ApiResponse<PageContent>> {
-    return apiFetch<PageContent>(`${API_ENDPOINTS.common.page}?type=user_agreement`, {
-        method: 'GET',
-    });
+    try {
+        return await apiFetch<PageContent>(`${API_ENDPOINTS.common.page}?type=user_agreement`, {
+            method: 'GET',
+            token: '', // 公开页面，不传递token
+            disableNeedLoginHandler: true, // 禁用全局 NeedLoginError 处理
+        });
+    } catch (error: any) {
+        // 对于公开页面，如果遇到任何错误（包括登录错误），返回友好的错误响应
+        console.warn('公开页面 user_agreement 遇到错误，返回本地错误响应:', error.message);
+        return {
+            code: 500,
+            msg: '页面加载失败，请稍后重试',
+            data: null
+        } as ApiResponse<PageContent>;
+    }
 }
 
 // 帮助中心

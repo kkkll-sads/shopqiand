@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { LoadingSpinner, LazyImage } from '../../components/common';
 import { Product } from '../../types';
-import { fetchShopProductDetail, ShopProductDetailData, createOrder, buyShopOrder, fetchAddressList, AddressItem, fetchShopProductShare, ShopProductShareData } from '../../services/api';
+import { fetchShopProductDetail, ShopProductDetailData, createOrder, fetchAddressList, AddressItem, fetchShopProductShare, ShopProductShareData } from '../../services/api';
 import { useNotification } from '../../context/NotificationContext';
 import { AUTH_TOKEN_KEY } from '../../constants/storageKeys';
 import { Route } from '../../router/routes';
@@ -146,21 +146,42 @@ const PointsProductDetail: React.FC<PointsProductDetailProps> = ({ product, onBa
 
         try {
             setSubmitting(true);
-            // Call buyShopOrder instead of createOrder
-            const response = await buyShopOrder({
+            // 使用 createOrder 创建订单（不支付），然后跳转到支付页面
+            const response = await createOrder({
                 items: [{ product_id: Number(product.id), quantity: quantity }],
                 pay_type: isScoreProduct ? 'score' : 'money',
                 address_id: selectedAddress.id
             });
 
             if (isSuccess(response)) {
-                setShowConfirmModal(false);
-                showToast('success', '购买成功');
-                setTimeout(() => {
-                    onNavigate({ name: 'order-list', kind: 'points', status: 0 }, { replace: true });
-                }, 1500);
+                // 从响应中提取订单ID
+                let orderId: number | string | null = null;
+                if (response.data) {
+                    if (typeof response.data === 'object' && 'order_id' in response.data) {
+                        orderId = (response.data as any).order_id;
+                    } else if (typeof response.data === 'object' && 'id' in response.data) {
+                        orderId = (response.data as any).id;
+                    }
+                }
+
+                if (orderId) {
+                    // 订单创建成功，立即跳转到支付页面（不使用延迟，避免显示中间状态）
+                    setShowConfirmModal(false);
+                    onNavigate({ 
+                        name: 'cashier', 
+                        orderId: String(orderId),
+                        back: { name: 'points-product-detail' }
+                    });
+                } else {
+                    // 如果没有订单ID，跳转到订单列表
+                    setShowConfirmModal(false);
+                    showToast('success', '订单创建成功');
+                    setTimeout(() => {
+                        onNavigate({ name: 'order-list', kind: 'points', status: 0 }, { replace: true });
+                    }, 1500);
+                }
             } else {
-                showToast('error', '购买失败', extractError(response, '操作失败'));
+                showToast('error', '订单创建失败', extractError(response, '操作失败'));
             }
         } catch (err: any) {
             console.error('Create order failed', err);

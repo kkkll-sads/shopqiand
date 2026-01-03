@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { X, Minus, Plus, CheckCircle, CreditCard } from 'lucide-react';
 import { Product } from '../types';
-import { createOrder, buyShopOrder, payOrder, bidBuy, AUTH_TOKEN_KEY, ShopOrderItem } from '../services/api';
+import { createOrder, payOrder, bidBuy, AUTH_TOKEN_KEY, ShopOrderItem } from '../services/api';
 import { isSuccess, extractError } from '../utils/apiHelpers';
 
 interface ProductSpecSheetProps {
@@ -54,7 +54,7 @@ const ProductSpecSheet: React.FC<ProductSpecSheetProps> = ({ isOpen, onClose, pr
       }
 
       // 根据商品类型选择不同的接口和支付方式
-      // shop: 消费金商城，使用 buyShopOrder 接口（一步到位：创建订单并支付），使用消费金支付
+      // shop: 消费金商城，使用 createOrder 接口创建订单，然后跳转到支付页面
       // collection: 藏品商城，使用 buyCollectionItem 接口，使用余额支付
       let response;
 

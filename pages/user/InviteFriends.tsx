@@ -29,15 +29,27 @@ interface InviteFriendsProps {
 const InviteFriends: React.FC<InviteFriendsProps> = ({ onBack }) => {
     const { showToast } = useNotification();
     const [inviteCode, setInviteCode] = useState('');
+    const [inviteLink, setInviteLink] = useState('');
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+
+    // 临时启用复制功能
+    useEffect(() => {
+        // 标记当前页面允许复制
+        document.body.setAttribute('data-allow-copy', 'true');
+
+        return () => {
+            // 组件卸载时移除标记
+            document.body.removeAttribute('data-allow-copy');
+        };
+    }, []);
 
     /**
      * 根据邀请码构建注册链接
      */
     const buildInviteLink = (code: string) => {
         if (!code) return '';
-        const origin = typeof window !== 'undefined' ? window.location.origin : '';
+        const origin = 'http://172.20.10.2:5657';
         return `${origin}/register?invite_code=${encodeURIComponent(code)}`;
     };
 
@@ -55,6 +67,10 @@ const InviteFriends: React.FC<InviteFriendsProps> = ({ onBack }) => {
                 const response = await fetchPromotionCard(token);
                 if ((isSuccess(response) || response.code === 0) && response.data) {
                     setInviteCode(response.data.invite_code);
+                    const frontendLink = buildInviteLink(response.data.invite_code);
+                    console.log('后端返回的invite_link:', response.data.invite_link);
+                    console.log('前端构建的invite_link:', frontendLink);
+                    setInviteLink(frontendLink);
                 } else {
                     setError(extractError(response, '获取推广卡信息失败'));
                 }
@@ -69,30 +85,133 @@ const InviteFriends: React.FC<InviteFriendsProps> = ({ onBack }) => {
         loadPromotionCard();
     }, []);
 
-    const inviteLink = buildInviteLink(inviteCode);
-
     /**
      * 复制到剪贴板
      */
     const copyToClipboard = async (text: string, type: 'code' | 'link') => {
+        console.log('Attempting to copy:', { text: text.substring(0, 50) + '...', type });
+
+        if (!text || text.trim() === '') {
+            console.error('Copy failed: text is empty');
+            showToast('error', '内容为空，无法复制');
+            return false;
+        }
+
+        // 方法0: 如果是移动设备，优先使用原生分享API
+        if (navigator.share && type === 'link') {
+            try {
+                console.log('Using native share API');
+                await navigator.share({
+                    title: '邀请好友',
+                    text: '加入我们一起投资文创资产！',
+                    url: text,
+                });
+                console.log('Native share success');
+                showToast('success', '分享成功!');
+                return;
+            } catch (err: any) {
+                console.log('Native share cancelled or failed:', err);
+                // 用户取消分享，继续使用复制方法
+            }
+        }
+
+        // 方法1: 尝试使用现代 Clipboard API
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            try {
+                console.log('Using modern Clipboard API');
+
+                // 在某些浏览器中需要用户权限
+                if (navigator.permissions) {
+                    try {
+                        const permission = await navigator.permissions.query({ name: 'clipboard-write' as PermissionName });
+                        console.log('Clipboard permission:', permission.state);
+                        if (permission.state === 'denied') {
+                            console.warn('Clipboard permission denied');
+                        }
+                    } catch (permErr) {
+                        console.log('Could not check clipboard permission');
+                    }
+                }
+
+                await navigator.clipboard.writeText(text);
+                console.log('Modern clipboard API success');
+                showToast('success', `${type === 'code' ? '邀请码' : '链接'}已复制!`);
+                return;
+            } catch (err: any) {
+                console.warn('Modern clipboard API failed:', err);
+            }
+        } else {
+            console.warn('Modern clipboard API not available');
+        }
+
+        // 方法2: 降级方案 - 使用传统方法
         try {
-            await navigator.clipboard.writeText(text);
-            showToast('success', `${type === 'code' ? '邀请码' : '链接'}已复制!`);
-        } catch (err) {
-            console.error('Failed to copy:', err);
-            // 降级方案
+            console.log('Using fallback method');
+
+            // 创建隐藏的文本区域
             const textArea = document.createElement('textarea');
             textArea.value = text;
+            textArea.style.position = 'absolute';
+            textArea.style.left = '-9999px';
+            textArea.style.top = '-9999px';
+            textArea.style.width = '1px';
+            textArea.style.height = '1px';
+            textArea.style.opacity = '0';
+            textArea.style.border = 'none';
+            textArea.style.outline = 'none';
+            textArea.style.resize = 'none';
+            textArea.style.overflow = 'hidden';
+            textArea.setAttribute('readonly', '');
+
+            // 添加到 body
             document.body.appendChild(textArea);
+
+            // 确保元素在DOM中并可见
+            textArea.style.display = 'block';
+            textArea.focus({ preventScroll: true });
+
+            // 选择所有文本
             textArea.select();
-            try {
-                document.execCommand('copy');
-                showToast('success', `${type === 'code' ? '邀请码' : '链接'}已复制!`);
-            } catch (err) {
-                console.error('Fallback copy failed', err);
-                showToast('error', '复制失败，请手动复制');
+            textArea.setSelectionRange(0, text.length);
+
+            // 双重检查选择
+            if (textArea.selectionStart !== 0 || textArea.selectionEnd !== text.length) {
+                console.warn('Selection range incorrect, retrying');
+                textArea.setSelectionRange(0, text.length);
             }
+
+            // 执行复制
+            const successful = document.execCommand('copy');
+            console.log('execCommand result:', successful);
+
+            // 立即清理DOM
             document.body.removeChild(textArea);
+
+            if (successful) {
+                console.log('Fallback copy success');
+                // 验证复制是否成功
+                try {
+                    const pastedText = await navigator.clipboard.readText();
+                    if (pastedText === text) {
+                        console.log('Verification successful: text copied to clipboard');
+                        showToast('success', `${type === 'code' ? '邀请码' : '链接'}已复制!`);
+                        return;
+                    } else {
+                        console.warn('Verification failed: clipboard content differs');
+                    }
+                } catch (verifyErr) {
+                    console.log('Could not verify clipboard content, assuming success');
+                    // 如果无法验证，假设复制成功
+                    showToast('success', `${type === 'code' ? '邀请码' : '链接'}已复制!`);
+                    return;
+                }
+            }
+
+            // 如果execCommand失败或验证失败，显示手动复制界面
+            throw new Error('execCommand failed');
+        } catch (err: any) {
+            console.error('Fallback copy failed:', err);
+            showToast('error', '复制失败，请重试或手动复制');
         }
     };
 
@@ -165,6 +284,7 @@ const InviteFriends: React.FC<InviteFriendsProps> = ({ onBack }) => {
                 {/* 分享按钮 */}
                 <button
                     onClick={() => {
+                        console.log('Share button clicked, inviteLink:', inviteLink);
                         if (inviteLink) {
                             copyToClipboard(inviteLink, 'link');
                         } else {
@@ -176,7 +296,7 @@ const InviteFriends: React.FC<InviteFriendsProps> = ({ onBack }) => {
                     className="w-full max-w-xs bg-gradient-to-r from-orange-500 to-orange-600 text-white py-4 rounded-2xl font-bold text-lg shadow-lg shadow-orange-200 flex items-center justify-center gap-3 active:scale-95 transition-transform z-10 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                     <Share2 size={22} />
-                    <span>分享链接</span>
+                    <span>{navigator.share ? '分享' : '分享链接'}</span>
                 </button>
             </div>
         </PageContainer>

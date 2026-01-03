@@ -51,10 +51,10 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onBack, onItemSelect, initi
   const [activeTab, setActiveTab] = useState<CategoryTab>('hold');
 
   const tabs: { id: CategoryTab; label: string }[] = [
-    { id: 'hold', label: '待售' },
-    { id: 'consign', label: '寄售中' },
-    { id: 'sold', label: '已卖出' },
-    { id: 'dividend', label: '已转分红' },
+    { id: 'hold', label: '持仓中' },
+    { id: 'consign', label: '撮合中' },
+    { id: 'sold', label: '已流转' },
+    { id: 'dividend', label: '权益节点' },
   ];
 
   // 加载用户信息和寄售券数量

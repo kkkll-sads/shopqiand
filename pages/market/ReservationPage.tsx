@@ -48,8 +48,8 @@ const ReservationPage: React.FC<ReservationPageProps> = ({ product, onBack, onNa
     // 分区最高价（用于计算冻结金额）
     const [zoneMaxPrice, setZoneMaxPrice] = useState<number>(product.price);
 
-    // 基础算力需求（根据商品价格计算）
-    const baseHashrate = Math.ceil(product.price / 100);
+    // 基础算力需求（所有价格分区的基础算力都是5）
+    const baseHashrate = 5;
 
     // 额外算力（用户可调节）
     const totalRequiredHashrate = baseHashrate + extraHashrate;
@@ -336,15 +336,15 @@ const ReservationPage: React.FC<ReservationPageProps> = ({ product, onBack, onNa
                         {/* Stepper/Slider for extra hashrate */}
                         <div className="flex items-center gap-4 bg-gray-50 p-3 rounded-lg">
                             <button
-                                onClick={() => setExtraHashrate(Math.max(0, extraHashrate - 0.5))}
+                                onClick={() => setExtraHashrate(Math.max(0, extraHashrate - 1))}
                                 disabled={extraHashrate <= 0}
                                 className={`w-8 h-8 flex items-center justify-center bg-white rounded-full shadow font-bold transition-all ${extraHashrate <= 0 ? 'text-gray-300 cursor-not-allowed' : 'text-gray-600 active:scale-95'}`}
                             >-</button>
                             <div className="flex-1 text-center font-mono font-bold text-lg text-gray-900">
-                                {extraHashrate.toFixed(1)}
+                                {extraHashrate.toFixed(0)}
                             </div>
                             <button
-                                onClick={() => canIncreaseHashrate && setExtraHashrate(extraHashrate + 0.5)}
+                                onClick={() => canIncreaseHashrate && setExtraHashrate(extraHashrate + 1)}
                                 disabled={!canIncreaseHashrate}
                                 className={`w-8 h-8 flex items-center justify-center bg-white rounded-full shadow font-bold transition-all ${!canIncreaseHashrate ? 'text-gray-300 cursor-not-allowed' : 'text-orange-600 active:scale-95'}`}
                             >+</button>
@@ -428,7 +428,7 @@ const ReservationPage: React.FC<ReservationPageProps> = ({ product, onBack, onNa
                             <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
                                 <span className="text-gray-500 text-sm">消耗算力</span>
                                 <div className="text-right">
-                                    <div className="font-bold text-gray-900 font-mono">{totalRequiredHashrate.toFixed(1)}</div>
+                                    <div className="font-bold text-gray-900 font-mono">{totalRequiredHashrate.toFixed(0)}</div>
                                     <div className="text-[10px] text-gray-400">基础 {baseHashrate} + 加注 {extraHashrate}</div>
                                 </div>
                             </div>

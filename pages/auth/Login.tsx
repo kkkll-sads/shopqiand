@@ -58,6 +58,78 @@ const Login: React.FC<LoginProps> = ({
   const [loginType, setLoginType] = useState<'password' | 'code'>('password');
   const [countdown, setCountdown] = useState(0);
   const [rememberMe, setRememberMe] = useState(false);
+  const [bottomPadding, setBottomPadding] = useState(48); // 默认48px (pb-12)
+
+  /**
+   * 动态计算底部padding，避免被浏览器导航栏遮挡
+   */
+  useEffect(() => {
+    const calculateBottomPadding = () => {
+      // 基础padding 48px (pb-12)
+      const basePadding = 48;
+      
+      // 检测iOS安全区域（底部刘海区域）
+      const safeAreaBottomCSS = getComputedStyle(document.documentElement)
+        .getPropertyValue('env(safe-area-inset-bottom)');
+      let safeAreaBottom = 0;
+      if (safeAreaBottomCSS) {
+        safeAreaBottom = parseInt(safeAreaBottomCSS.replace('px', ''), 10) || 0;
+      }
+      
+      // 移动浏览器导航栏高度通常在50-80px之间，我们使用60px作为缓冲
+      const navigationBarBuffer = 60;
+      
+      // 计算最终padding：基础padding + 安全区域 + 导航栏缓冲
+      const calculatedPadding = basePadding + safeAreaBottom + navigationBarBuffer;
+      
+      setBottomPadding(calculatedPadding);
+    };
+
+    // 初始化计算
+    calculateBottomPadding();
+
+    // 监听窗口大小变化（包括浏览器导航栏显示/隐藏）
+    const handleResize = () => {
+      calculateBottomPadding();
+    };
+
+    // 监听滚动（移动浏览器在滚动时可能会显示/隐藏导航栏，改变视口高度）
+    let lastHeight = window.innerHeight;
+    let ticking = false;
+    const handleScroll = () => {
+      if (!ticking) {
+        window.requestAnimationFrame(() => {
+          const currentHeight = window.innerHeight;
+          // 如果视口高度发生变化（通常是因为导航栏显示/隐藏），重新计算
+          if (Math.abs(currentHeight - lastHeight) > 10) {
+            calculateBottomPadding();
+            lastHeight = currentHeight;
+          }
+          ticking = false;
+        });
+        ticking = true;
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    
+    // 监听屏幕旋转
+    const handleOrientationChange = () => {
+      setTimeout(calculateBottomPadding, 100);
+    };
+    window.addEventListener('orientationchange', handleOrientationChange);
+
+    // 定期检查（处理一些特殊情况）
+    const interval = setInterval(calculateBottomPadding, 500);
+
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      window.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('orientationchange', handleOrientationChange);
+      clearInterval(interval);
+    };
+  }, []);
 
   /**
    * 组件加载时，从 localStorage 读取已保存的账号密码
@@ -361,7 +433,10 @@ const Login: React.FC<LoginProps> = ({
       </div>
 
       {/* 注册链接 */}
-      <div className="mt-auto text-center pb-8 flex items-center justify-center gap-1 text-sm">
+      <div 
+        className="mt-auto text-center pb-safe flex items-center justify-center gap-1 text-sm"
+        style={{ paddingBottom: `${bottomPadding}px` }}
+      >
         <span className="text-gray-600">没有账户？</span>
         <button onClick={onNavigateRegister} className="text-blue-600 font-medium hover:text-blue-700">
           点击注册

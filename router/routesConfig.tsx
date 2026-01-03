@@ -269,16 +269,21 @@ export const routeComponents: Partial<Record<Route['name'], RouteRenderer>> = {
             helpers.navigateRoute({ name: 'order-list', kind: 'product', status: 0 });
           }
         }}
+        onNavigate={(nextRoute) => helpers.navigateRoute(nextRoute)}
       />
     );
   },
-  cashier: (route, helpers) => (
-    <Cashier
-      orderId={(route as Extract<Route, { name: 'cashier' }>).orderId}
-      onBack={() => helpers.goBack()}
-      onNavigate={(nextRoute) => helpers.navigateRoute(nextRoute)}
-    />
-  ),
+  cashier: (route, helpers) => {
+    const cashierRoute = route as Extract<Route, { name: 'cashier' }>;
+    return (
+      <Cashier
+        orderId={cashierRoute.orderId}
+        backRoute={cashierRoute.back}
+        onBack={() => helpers.goBack()}
+        onNavigate={(nextRoute) => helpers.navigateRoute(nextRoute)}
+      />
+    );
+  },
   'claim-detail': (route, helpers) => (
     <ClaimDetail
       id={(route as Extract<Route, { name: 'claim-detail' }>).id}

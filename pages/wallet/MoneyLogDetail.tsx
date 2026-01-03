@@ -151,7 +151,24 @@ const MoneyLogDetail: React.FC<MoneyLogDetailProps> = ({ id, flowNo, onBack }) =
             {detail.biz_type && (
               <div className="flex justify-between items-center py-2">
                 <span className="text-sm text-gray-600">业务类型</span>
-                <span className="text-sm text-gray-900">{detail.biz_type}</span>
+                <span className="text-sm text-gray-900">
+                  {(() => {
+                    const bizTypeMap: Record<string, string> = {
+                      sign_in: '签到',
+                      withdraw: '提现',
+                      deposit: '充值',
+                      transfer: '转账',
+                      payment: '支付',
+                      refund: '退款',
+                      reward: '奖励',
+                      purchase: '购买',
+                      sale: '销售',
+                      matching_official_seller: '官方卖家匹配',
+                      blind_box_diff_refund: '盲盒差价退款',
+                    };
+                    return bizTypeMap[detail.biz_type] || detail.biz_type;
+                  })()}
+                </span>
               </div>
             )}
 
@@ -219,14 +236,34 @@ const MoneyLogDetail: React.FC<MoneyLogDetailProps> = ({ id, flowNo, onBack }) =
               <h2 className="font-semibold text-gray-900 text-base">详细信息</h2>
             </div>
             <div className="space-y-2">
-              {Object.entries(detail.breakdown).map(([key, value]) => (
-                <div key={key} className="flex justify-between items-center py-1.5 text-sm">
-                  <span className="text-gray-600">{key}</span>
-                  <span className="text-gray-900 font-medium">
-                    {typeof value === 'object' ? JSON.stringify(value) : String(value)}
-                  </span>
-                </div>
-              ))}
+              {Object.entries(detail.breakdown).map(([key, value]) => {
+                // 字段名中文映射
+                const fieldNameMap: Record<string, string> = {
+                  sign_date: '签到日期',
+                  sign_record_id: '签到记录ID',
+                  reward_money: '奖励金额',
+                  activity_id: '活动ID',
+                  activity_name: '活动名称',
+                  reward_score: '奖励积分',
+                  reward_type: '奖励类型',
+                  referrer_reward: '推荐人奖励',
+                  daily_reward: '每日奖励',
+                  total_reward: '累计奖励',
+                  sign_days: '签到天数',
+                  streak: '连续签到天数',
+                };
+
+                const displayKey = fieldNameMap[key] || key;
+
+                return (
+                  <div key={key} className="flex justify-between items-center py-1.5 text-sm">
+                    <span className="text-gray-600">{displayKey}</span>
+                    <span className="text-gray-900 font-medium">
+                      {typeof value === 'object' ? JSON.stringify(value) : String(value)}
+                    </span>
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}
@@ -236,4 +273,6 @@ const MoneyLogDetail: React.FC<MoneyLogDetailProps> = ({ id, flowNo, onBack }) =
 };
 
 export default MoneyLogDetail;
+
+
 
