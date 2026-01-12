@@ -12,11 +12,11 @@ import React, { useState, useEffect } from 'react';
 import { Eye, EyeOff, User, Lock, Check, HeadphonesIcon } from 'lucide-react';
 import { login as loginApi, LoginParams } from '../../services/api';
 import { LoginSuccessPayload } from '../../types';
-import { isValidPhone } from '../../utils/validation';
 import { useNotification } from '../../context/NotificationContext';
 import { bizLog, debugLog, errorLog } from '../../utils/logger';
 import { isSuccess, extractError } from '../../utils/apiHelpers';
 import { useErrorHandler } from '../../hooks/useErrorHandler';
+import { sendSmsCode } from '../../services/common';
 
 // localStorage 存储键名
 const STORAGE_KEY_PHONE = 'login_remembered_phone';
@@ -180,37 +180,41 @@ const Login: React.FC<LoginProps> = ({
   /**
    * 发送验证码
    */
-  const handleSendCode = () => {
-    if (!phone) {
+  const handleSendCode = async () => {
+    // 只检查是否为空，具体格式验证由后端处理
+    if (!phone || !phone.trim()) {
       showToast('warning', '请输入手机号');
       return;
     }
-    const phoneValidation = isValidPhone(phone);
-    if (!phoneValidation.valid) {
-      showToast('warning', '手机号错误', phoneValidation.message);
-      return;
-    }
 
-    // 模拟发送验证码
-    setCountdown(60);
-    const timer = setInterval(() => {
-      setCountdown((prev) => {
-        if (prev <= 1) {
-          clearInterval(timer);
-          return 0;
-        }
-        return prev - 1;
+    try {
+      await sendSmsCode({
+        mobile: phone.trim(),
+        event: 'user_login' // 验证码登录场景使用 user_login
       });
-    }, 1000);
-
-    showToast('success', '验证码已发送', '请查收（模拟）');
+      showToast('success', '验证码已发送');
+      setCountdown(60);
+      const timer = setInterval(() => {
+        setCountdown((prev) => {
+          if (prev <= 1) {
+            clearInterval(timer);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    } catch (error: any) {
+      const msg = error.msg || error.message || '发送验证码失败';
+      showToast('error', '验证码发送失败', msg);
+    }
   };
 
   /**
    * 处理登录
    */
   const handleLogin = async () => {
-    if (!phone) {
+    // 只检查是否为空，具体格式验证由后端处理
+    if (!phone || !phone.trim()) {
       showToast('warning', '请输入手机号');
       return;
     }
@@ -230,26 +234,14 @@ const Login: React.FC<LoginProps> = ({
       return;
     }
 
-    // 使用验证工具函数
-    const phoneValidation = isValidPhone(phone);
-    if (!phoneValidation.valid) {
-      showToast('warning', '手机号错误', phoneValidation.message);
-      return;
-    }
-
     setLoading(true);
     try {
       const params: LoginParams = {
-        mobile: phone,
-        password: loginType === 'password' ? password : '', // 暂不支持验证码登录接口，需后端支持
+        mobile: phone.trim(),
+        password: loginType === 'password' ? password : undefined,
+        captcha: loginType === 'code' ? verifyCode : undefined,
+        keep: rememberMe ? 1 : 0, // 根据"记住密码"选项设置保持登录状态
       };
-
-      if (loginType === 'code') {
-        // 模拟验证码登录
-        showToast('info', '暂未支持', '验证码登录暂未对接后端API');
-        setLoading(false);
-        return;
-      }
 
       const response = await loginApi(params);
       debugLog('auth.login.page', '登录接口响应', response);
@@ -291,9 +283,7 @@ const Login: React.FC<LoginProps> = ({
         context: { phone, loginType }
       });
     } finally {
-      if (loginType !== 'code') {
-        setLoading(false);
-      }
+      setLoading(false);
     }
   };
 

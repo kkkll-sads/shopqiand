@@ -943,7 +943,7 @@ const AppContent: React.FC = () => {
         onNavigateToAuth={() => {
           setShowRealNameModal(false);
           setActiveTab('home');
-          navigateRoute('real-name-auth');
+          navigateRoute({ name: 'real-name-auth' });
         }}
         onBackToHome={() => {
           setShowRealNameModal(false);

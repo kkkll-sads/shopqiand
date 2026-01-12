@@ -13,7 +13,9 @@ export interface RegisterParams {
 
 export interface LoginParams {
     mobile: string;
-    password: string;
+    password?: string;
+    captcha?: string;
+    keep?: boolean | number; // 是否保持登录状态
 }
 
 /**
@@ -60,9 +62,27 @@ export async function register(params: RegisterParams): Promise<ApiResponse> {
 export async function login(params: LoginParams): Promise<ApiResponse> {
     try {
         const formData = new FormData();
-        formData.append('tab', 'login');
-        formData.append('username', params.mobile);
-        formData.append('password', params.password);
+        
+        if (params.captcha) {
+            // 验证码登录：使用 sms_login tab，使用 mobile 字段
+            formData.append('tab', 'sms_login');
+            formData.append('mobile', params.mobile);
+            formData.append('captcha', params.captcha);
+        } else if (params.password) {
+            // 密码登录：使用 login tab，使用 username 字段
+            formData.append('tab', 'login');
+            formData.append('username', params.mobile);
+            formData.append('password', params.password);
+        } else {
+            // 既没有验证码也没有密码，抛出错误
+            throw new Error('请提供密码或验证码');
+        }
+        
+        // 保持登录状态（如果提供）
+        if (params.keep !== undefined) {
+            const keepValue = typeof params.keep === 'boolean' ? (params.keep ? 1 : 0) : params.keep;
+            formData.append('keep', keepValue.toString());
+        }
 
         const data = await apiFetch(API_ENDPOINTS.auth.checkIn, {
             method: 'POST',

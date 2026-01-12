@@ -314,6 +314,8 @@ export function decodeRoute(s: string): RoutePayload {
       return { name: 'privacy-policy', from: parts[1] || undefined };
     case 'user-agreement':
       return { name: 'user-agreement', from: parts[1] || undefined };
+    case 'real-name-auth':
+      return { name: 'real-name-auth' };
     default:
       // Fallback to login for safety
       return { name: 'login' };

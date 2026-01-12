@@ -59,6 +59,9 @@ const BalanceRecharge: React.FC<BalanceRechargeProps> = ({ onBack, onNavigate, i
   const [availableAccounts, setAvailableAccounts] = useState<CompanyAccountItem[]>([]); // 可用账户队列
   const [currentAccountIndex, setCurrentAccountIndex] = useState(0); // 当前尝试的账户索引
 
+  // Warning Details State (警告详情展开/收起)
+  const [showWarningDetails, setShowWarningDetails] = useState(false);
+
   useEffect(() => {
     loadAccounts();
     loadUserBalance();
@@ -767,24 +770,24 @@ const BalanceRecharge: React.FC<BalanceRechargeProps> = ({ onBack, onNavigate, i
           </div>
 
           {/* Account Info Card */}
-          <div className="bg-white rounded-2xl p-5 shadow-xl shadow-orange-100/20 border border-gray-100 mb-6">
-            <div className="flex items-center gap-4 mb-5 pb-5 border-b border-gray-50">
-              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#FF6B35] to-[#FF9F2E] text-white flex items-center justify-center text-lg font-bold shadow-md shadow-orange-200">
+          <div className="bg-white rounded-2xl p-4 shadow-xl shadow-orange-100/20 border border-gray-100 mb-4">
+            <div className="flex items-center gap-3 mb-4 pb-4 border-b border-gray-50">
+              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#FF6B35] to-[#FF9F2E] text-white flex items-center justify-center text-base font-bold shadow-md shadow-orange-200">
                 {matchedAccount.account_name.charAt(0)}
               </div>
-              <div>
-                <div className="font-bold text-gray-900 text-lg">{matchedAccount.account_name}</div>
+              <div className="flex-1 min-w-0">
+                <div className="font-bold text-gray-900 text-base truncate">{matchedAccount.account_name}</div>
                 <div className="text-xs text-gray-500 mt-0.5">金牌承兑服务商 (UID: {matchedAccount.id})</div>
               </div>
             </div>
 
-            <div className="space-y-4">
-              <div className="bg-gray-50 p-3 rounded-xl border border-gray-100/50">
+            <div className="space-y-2.5">
+              <div className="bg-gray-50 p-2.5 rounded-xl border border-gray-100/50">
                 <span className="text-xs text-gray-500 block mb-1">收款账号</span>
-                <div className="flex items-center justify-between">
-                  <span className="text-lg font-bold text-gray-900 font-mono tracking-wide">{matchedAccount.account_number}</span>
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-base font-bold text-gray-900 font-mono tracking-wide truncate flex-1">{matchedAccount.account_number}</span>
                   <button
-                    className="text-[10px] bg-white border border-gray-200 px-2 py-1 rounded text-gray-600 active:bg-gray-50"
+                    className="text-[10px] bg-white border border-gray-200 px-2 py-1 rounded text-gray-600 active:bg-gray-50 shrink-0"
                     onClick={async () => {
                       const success = await copyToClipboard(matchedAccount.account_number);
                       if (success) {
@@ -799,9 +802,9 @@ const BalanceRecharge: React.FC<BalanceRechargeProps> = ({ onBack, onNavigate, i
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div className="bg-gray-50 p-3 rounded-xl border border-gray-100/50">
-                  <span className="text-xs text-gray-500 block mb-1">开户银行</span>
+              <div className="space-y-2.5">
+                <div className="bg-gray-50 p-2.5 rounded-xl border border-gray-100/50">
+                  <span className="text-xs text-gray-500 block mb-1">银行名称</span>
                   <div className="flex items-center justify-between gap-2">
                     <span className="text-sm font-bold text-gray-900 block truncate flex-1">{matchedAccount.bank_name || '支付平台'}</span>
                     <button
@@ -819,7 +822,28 @@ const BalanceRecharge: React.FC<BalanceRechargeProps> = ({ onBack, onNavigate, i
                     </button>
                   </div>
                 </div>
-                <div className="bg-gray-50 p-3 rounded-xl border border-gray-100/50">
+                {matchedAccount.bank_branch && (
+                  <div className="bg-gray-50 p-2.5 rounded-xl border border-gray-100/50">
+                    <span className="text-xs text-gray-500 block mb-1">开户行</span>
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-sm font-bold text-gray-900 block truncate flex-1">{matchedAccount.bank_branch}</span>
+                      <button
+                        className="text-[10px] bg-white border border-gray-200 px-2 py-1 rounded text-gray-600 active:bg-gray-50 shrink-0"
+                        onClick={async () => {
+                          const success = await copyToClipboard(matchedAccount.bank_branch || '');
+                          if (success) {
+                            showToast('success', '复制成功', '开户行已复制到剪贴板');
+                          } else {
+                            showToast('error', '复制失败', '请长按手动复制');
+                          }
+                        }}
+                      >
+                        复制
+                      </button>
+                    </div>
+                  </div>
+                )}
+                <div className="bg-gray-50 p-2.5 rounded-xl border border-gray-100/50">
                   <span className="text-xs text-gray-500 block mb-1">收款姓名</span>
                   <div className="flex items-center justify-between gap-2">
                     <span className="text-sm font-bold text-gray-900 block truncate flex-1">{matchedAccount.account_name}</span>
@@ -842,53 +866,51 @@ const BalanceRecharge: React.FC<BalanceRechargeProps> = ({ onBack, onNavigate, i
             </div>
           </div>
 
-          {/* Critical Warning - Do Not Save Payment Info */}
-          <div className="bg-gradient-to-r from-red-500 to-red-600 p-4 rounded-2xl mb-4 border-2 border-red-400 shadow-lg shadow-red-200 animate-in slide-in-from-top duration-500">
-            <div className="flex items-start gap-3 mb-3">
-              <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center flex-shrink-0 animate-pulse">
-                <AlertTriangle size={18} className="text-red-600" strokeWidth={3} />
+          {/* Combined Warning Section - Collapsible */}
+          <div className="bg-gradient-to-r from-red-500 to-red-600 rounded-2xl mb-4 border-2 border-red-400 shadow-lg shadow-red-200 overflow-hidden">
+            <div className="p-3.5">
+              <div className="flex items-center gap-2 mb-2">
+                <AlertTriangle size={16} className="text-white shrink-0" strokeWidth={3} />
+                <h3 className="text-white font-bold text-sm flex-1">重要提示</h3>
+                <button
+                  onClick={() => setShowWarningDetails(!showWarningDetails)}
+                  className="text-white/80 text-xs px-2 py-1 bg-white/10 rounded-md hover:bg-white/20 transition-colors"
+                >
+                  {showWarningDetails ? '收起' : '展开'}
+                </button>
               </div>
-              <div className="flex-1">
-                <h3 className="text-white font-bold text-sm mb-1 flex items-center gap-2">
-                  ⚠️ 重要提示
-                </h3>
-                <p className="text-white text-xs leading-relaxed">
-                  <span className="font-bold bg-white/20 px-1.5 py-0.5 rounded">切勿保存</span>
-                  收款人信息转账！
-                </p>
+              <p className="text-white text-xs leading-relaxed mb-2">
+                <span className="font-bold bg-white/20 px-1.5 py-0.5 rounded">切勿保存</span>
+                收款人信息转账！请务必使用本人账户转账，<span className="font-bold underline decoration-yellow-300 decoration-2">转账时不要备注任何信息</span>。
+              </p>
+            </div>
+            {showWarningDetails && (
+              <div className="bg-white/10 backdrop-blur-sm border-t border-white/20 p-3.5">
+                <ul className="text-white text-xs space-y-1.5">
+                  <li className="flex items-start gap-2">
+                    <span className="text-yellow-300 shrink-0 mt-0.5">●</span>
+                    <span>每次充值都需要<span className="font-bold underline decoration-yellow-300 decoration-2">重新获取</span>收款信息</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-yellow-300 shrink-0 mt-0.5">●</span>
+                    <span>收款账户为<span className="font-bold">动态分配</span>，使用旧信息将导致<span className="font-bold text-yellow-300">无法到账</span></span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-yellow-300 shrink-0 mt-0.5">●</span>
+                    <span>请勿备注、留言或保存收款人为常用联系人</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-yellow-300 shrink-0 mt-0.5">●</span>
+                    <span>转账完成后请截图上传</span>
+                  </li>
+                </ul>
               </div>
-            </div>
-            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3 border border-white/20">
-              <ul className="text-white text-xs space-y-1.5">
-                <li className="flex items-start gap-2">
-                  <span className="text-yellow-300 shrink-0 mt-0.5">●</span>
-                  <span>每次充值都需要<span className="font-bold underline decoration-yellow-300 decoration-2">重新获取</span>收款信息</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-yellow-300 shrink-0 mt-0.5">●</span>
-                  <span>收款账户为<span className="font-bold">动态分配</span>，使用旧信息将导致<span className="font-bold text-yellow-300">无法到账</span></span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-yellow-300 shrink-0 mt-0.5">●</span>
-                  <span>请勿备注、留言或保存收款人为常用联系人</span>
-                </li>
-              </ul>
-            </div>
-          </div>
-
-          {/* Warning - Transfer Notes */}
-          <div className="bg-orange-50 p-4 rounded-xl flex items-start gap-3 mb-6 border border-orange-200">
-            <AlertTriangle size={16} className="text-orange-600 shrink-0 mt-0.5" />
-            <p className="text-xs text-orange-700 leading-relaxed">
-              您正在委托授权服务商办理专项资金划拨业务，请务必使用本人账户转账，
-              <span className="font-bold underline decoration-orange-600 decoration-2 underline-offset-2">转账时请不要备注任何信息</span>
-              ，转账完成后截图上传
-            </p>
+            )}
           </div>
 
           {/* Image Upload Section */}
-          <div className="mb-6">
-            <label className="text-sm font-bold text-gray-900 mb-3 block flex items-center gap-2">
+          <div className="mb-4">
+            <label className="text-sm font-bold text-gray-900 mb-2 block flex items-center gap-2">
               <span className="w-1 h-4 bg-orange-500 rounded-full"></span>
               上传付款截图
             </label>
@@ -904,13 +926,13 @@ const BalanceRecharge: React.FC<BalanceRechargeProps> = ({ onBack, onNavigate, i
             {!imagePreview ? (
               <label
                 htmlFor="payment-screenshot"
-                className="flex flex-col items-center justify-center w-full h-40 border-2 border-dashed border-gray-300 rounded-2xl cursor-pointer hover:border-orange-500 hover:bg-orange-50/30 transition-all group bg-white"
+                className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 rounded-xl cursor-pointer hover:border-orange-500 hover:bg-orange-50/30 transition-all group bg-white"
               >
-                <div className="w-12 h-12 rounded-full bg-gray-50 flex items-center justify-center mb-3 group-hover:bg-orange-100 transition-colors">
-                  <Upload size={24} className="text-gray-400 group-hover:text-orange-500 transition-colors" />
+                <div className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center mb-2 group-hover:bg-orange-100 transition-colors">
+                  <Upload size={20} className="text-gray-400 group-hover:text-orange-500 transition-colors" />
                 </div>
-                <span className="text-sm font-medium text-gray-600 group-hover:text-orange-600">点击上传付款截图</span>
-                <span className="text-xs text-gray-400 mt-1">支持 JPG/PNG/GIF，最大5MB</span>
+                <span className="text-xs font-medium text-gray-600 group-hover:text-orange-600">点击上传付款截图</span>
+                <span className="text-[10px] text-gray-400 mt-0.5">支持 JPG/PNG/GIF，最大5MB</span>
               </label>
             ) : (
               <div className="relative group rounded-2xl overflow-hidden shadow-lg shadow-gray-200">
@@ -918,7 +940,7 @@ const BalanceRecharge: React.FC<BalanceRechargeProps> = ({ onBack, onNavigate, i
                 <img
                   src={imagePreview}
                   alt="付款截图"
-                  className="w-full h-auto max-h-[400px] object-contain bg-gray-900"
+                  className="w-full h-auto max-h-[300px] object-contain bg-gray-900"
                 />
                 <div className="absolute top-0 left-0 right-0 p-3 bg-gradient-to-b from-black/50 to-transparent flex justify-end opacity-0 group-hover:opacity-100 transition-opacity">
                   <button

@@ -960,38 +960,34 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onBack, onItemSelect, onNav
   return (
     <SubPageLayout title="我的藏品" onBack={onBack}>
       <div className="flex-1 overflow-hidden flex flex-col">
-        {/* Filter Dropdowns */}
-        {(sessionOptions.length > 1 || priceZoneOptions.length > 1) && (
-          <div className="bg-white px-4 py-3 border-b border-gray-100/80 flex gap-2 shrink-0">
-            {/* Session Filter */}
-            {sessionOptions.length > 1 && (
-              <select
-                value={selectedSession}
-                onChange={(e) => setSelectedSession(e.target.value)}
-                className="flex-1 px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-orange-200 focus:border-orange-400 transition-all"
-              >
-                <option value="all">全部场次</option>
-                {sessionOptions.filter(s => s !== 'all').map(session => (
-                  <option key={session} value={session}>{session}</option>
-                ))}
-              </select>
-            )}
+        {/* Filter Dropdowns - 始终显示，确保UI一致性和渲染稳定性 */}
+        <div className="bg-white px-4 py-3 border-b border-gray-100/80 flex gap-2 shrink-0">
+          {/* Session Filter - 始终显示 */}
+          <select
+            value={selectedSession}
+            onChange={(e) => setSelectedSession(e.target.value)}
+            className="flex-1 px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-orange-200 focus:border-orange-400 transition-all"
+            disabled={sessionOptions.length <= 1}
+          >
+            <option value="all">全部场次</option>
+            {sessionOptions.filter(s => s !== 'all').map(session => (
+              <option key={session} value={session}>{session}</option>
+            ))}
+          </select>
 
-            {/* Price Zone Filter */}
-            {priceZoneOptions.length > 1 && (
-              <select
-                value={selectedPriceZone}
-                onChange={(e) => setSelectedPriceZone(e.target.value)}
-                className="flex-1 px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-orange-200 focus:border-orange-400 transition-all"
-              >
-                <option value="all">全部价格分区</option>
-                {priceZoneOptions.filter(z => z !== 'all').map(zone => (
-                  <option key={zone} value={zone}>{zone}</option>
-                ))}
-              </select>
-            )}
-          </div>
-        )}
+          {/* Price Zone Filter - 始终显示 */}
+          <select
+            value={selectedPriceZone}
+            onChange={(e) => setSelectedPriceZone(e.target.value)}
+            className="flex-1 px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-orange-200 focus:border-orange-400 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled={priceZoneOptions.length <= 1}
+          >
+            <option value="all">全部价格分区</option>
+            {priceZoneOptions.filter(z => z !== 'all').map(zone => (
+              <option key={zone} value={zone}>{zone}</option>
+            ))}
+          </select>
+        </div>
 
         {/* Category Tabs */}
         <div className="bg-white px-4 pt-3 pb-2 border-b border-gray-100/80 flex justify-between items-center z-10 shrink-0">
