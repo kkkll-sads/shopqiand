@@ -124,6 +124,12 @@ const BalanceWithdraw: React.FC<BalanceWithdrawProps> = ({ onBack, onNavigate })
     if (!selectedAccount) {
       return handleSubmitError('请选择提现账户', { persist: true, showToast: false });
     }
+
+    // ✅ 新增：银行卡提现金额限制
+    if (selectedAccount.type === 'bank_card' && parseFloat(amount) < 100) {
+      return handleSubmitError('银行卡提现金额不得低于 100 元，建议使用支付宝或微信提现', { persist: true, showToast: false });
+    }
+
     clearSubmitError(); // ✅ 验证通过，清除错误
     setShowPasswordModal(true);
   };
@@ -221,7 +227,7 @@ const BalanceWithdraw: React.FC<BalanceWithdrawProps> = ({ onBack, onNavigate })
                   } else {
                     setAmount(val);
                   }
-                  setSubmitError(null);
+                  clearSubmitError();
                 }}
                 placeholder="0.00"
                 className="flex-1 text-4xl font-black text-gray-900 bg-transparent outline-none placeholder:text-gray-200 font-[DINAlternate-Bold]"
@@ -372,7 +378,7 @@ const BalanceWithdraw: React.FC<BalanceWithdrawProps> = ({ onBack, onNavigate })
               type="password"
               autoFocus
               value={payPassword}
-              onChange={(e) => { setPayPassword(e.target.value); setSubmitError(null); }}
+              onChange={(e) => { setPayPassword(e.target.value); clearSubmitError(); }}
               className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-center text-lg tracking-[8px] font-bold outline-none focus:border-orange-500 focus:bg-white transition-all mb-4"
               placeholder="••••••"
               maxLength={6}

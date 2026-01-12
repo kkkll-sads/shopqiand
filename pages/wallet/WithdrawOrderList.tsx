@@ -27,7 +27,7 @@ const WithdrawOrderList: React.FC<WithdrawOrderListProps> = ({ onBack, onNavigat
         { value: 0, label: '待审核' },
         { value: 1, label: '已通过' },
         { value: 2, label: '已拒绝' },
-        { value: 3, label: '已打款' },
+      
     ];
 
     // Reload when tab changes
@@ -137,7 +137,9 @@ const WithdrawOrderList: React.FC<WithdrawOrderListProps> = ({ onBack, onNavigat
             </div>
 
             <div className="flex-1 p-4 pb-safe space-y-3">
-                {orders.map(order => (
+                {orders
+                    .filter(order => activeTab === undefined || order.status === activeTab)
+                    .map(order => (
                     <div
                         key={order.id}
                         className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 cursor-pointer active:bg-gray-50 transition-colors"

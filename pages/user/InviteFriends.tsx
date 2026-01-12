@@ -67,10 +67,14 @@ const InviteFriends: React.FC<InviteFriendsProps> = ({ onBack }) => {
                 const response = await fetchPromotionCard(token);
                 if ((isSuccess(response) || response.code === 0) && response.data) {
                     setInviteCode(response.data.invite_code);
+                    const backendLink = response.data.invite_link;
                     const frontendLink = buildInviteLink(response.data.invite_code);
-                    console.log('后端返回的invite_link:', response.data.invite_link);
+                    console.log('后端返回的invite_link:', backendLink);
                     console.log('前端构建的invite_link:', frontendLink);
-                    setInviteLink(frontendLink);
+                    // 优先使用后端返回的链接，如果后端没有返回则使用前端构建的链接
+                    const finalLink = backendLink && backendLink.trim() ? backendLink : frontendLink;
+                    console.log('使用后端返回链接:', finalLink === backendLink);
+                    setInviteLink(finalLink);
                 } else {
                     setError(extractError(response, '获取推广卡信息失败'));
                 }

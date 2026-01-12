@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { ChevronLeft, Share2, Copy, Shield, FileText, Lock, Award, Gavel, TrendingUp, CreditCard, BadgeCheck } from 'lucide-react';
+import { ChevronLeft, Copy, Shield, FileText, Lock, Award, Gavel, TrendingUp, CreditCard, BadgeCheck } from 'lucide-react';
 import { LoadingSpinner, LazyImage } from '../../components/common';
 import { Product } from '../../types';
 import {
@@ -18,6 +18,18 @@ import { bizLog, debugLog } from '../../utils/logger';
 // ✅ 引入统一 API 处理工具
 import { isSuccess, extractData, extractError } from '../../utils/apiHelpers';
 import { useErrorHandler } from '../../hooks/useErrorHandler';
+
+// 全局预加载数据存储
+declare global {
+  var __preloadedReservationData: {
+    userInfo?: { availableHashrate: number; accountBalance: number };
+    sessionDetail?: any;
+    zoneMaxPrice?: number;
+    sessionId?: number | string;
+    zoneId?: number | string;
+    packageId?: number | string;
+  } | null;
+}
 
 /**
  * 从价格分区字符串中提取价格数字
@@ -45,9 +57,15 @@ interface ProductDetailProps {
   product: Product;
   onBack: () => void;
   onNavigate: (route: Route) => void;
+  /** 是否隐藏底部操作区域（申请确权按钮等），用于证书查询页面 */
+  hideActions?: boolean;
+  /** 预加载的详情数据，如果提供则不再请求 API */
+  initialData?: CollectionItemDetailData | ShopProductDetailData | null;
+  /** 更新选中产品信息的回调，用于申请确权时传递zone_id等信息 */
+  onProductUpdate?: (updatedProduct: Product) => void;
 }
 
-const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, onNavigate }) => {
+const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, onNavigate, hideActions = false, initialData = null, onProductUpdate }) => {
   const { showToast, showDialog } = useNotification();
 
   // ✅ 使用统一错误处理Hook（加载错误 - 持久化显示）
@@ -61,14 +79,21 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, onNaviga
   // ✅ 使用统一错误处理Hook（购买错误 - Toast模式）
   const { handleError: handleBuyError } = useErrorHandler({ showToast: true, persist: false });
 
-  const [detailData, setDetailData] = useState<CollectionItemDetailData | ShopProductDetailData | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [detailData, setDetailData] = useState<CollectionItemDetailData | ShopProductDetailData | null>(initialData);
+  const [loading, setLoading] = useState(!initialData); // 如果有初始数据，不需要加载
   const [buying, setBuying] = useState(false);
   const [collectionBuying, setCollectionBuying] = useState(false);
 
   const isShopProduct = product.productType === 'shop';
 
   useEffect(() => {
+    // 如果有初始数据，不需要请求 API
+    if (initialData) {
+      setDetailData(initialData);
+      setLoading(false);
+      return;
+    }
+
     const loadDetail = async () => {
       try {
         setLoading(true);
@@ -107,7 +132,7 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, onNaviga
     };
 
     loadDetail();
-  }, [product.id, isShopProduct]);
+  }, [product.id, isShopProduct, initialData]);
 
   const handleBuy = async () => {
     debugLog('productDetail.buy', '发起积分商品购买', {
@@ -304,7 +329,7 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, onNaviga
   });
 
   return (
-    <div className="min-h-screen bg-[#FDFBF7] text-gray-900 font-serif pb-24 relative overflow-hidden">
+    <div className={`min-h-screen bg-[#FDFBF7] text-gray-900 font-serif ${hideActions ? 'pb-6' : 'pb-24'} relative overflow-hidden`}>
       {/* Background Texture */}
       <div className="absolute inset-0 opacity-[0.03] pointer-events-none bg-[url('https://www.transparenttextures.com/patterns/cream-paper.png')]"></div>
 
@@ -314,9 +339,7 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, onNaviga
           <ChevronLeft size={24} />
         </button>
         <h1 className="text-lg font-bold text-gray-900">{isShopProduct ? '商品详情' : '数字权益证书'}</h1>
-        <button className="p-2 hover:bg-black/5 rounded-full text-gray-800">
-          <Share2 size={20} />
-        </button>
+        <div className="w-10" />
       </header>
 
       {/* Certificate Container */}
@@ -504,7 +527,43 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, onNaviga
               <div className="space-y-2">
                 <label className="block text-xs font-bold text-gray-400 uppercase mb-2 tracking-wider">On-chain Proof / 上链信息</label>
                 <div className="bg-gray-900 text-green-500 font-mono text-[10px] p-3 rounded break-all leading-relaxed relative group hover:bg-gray-800 transition-colors">
-                  <Copy size={12} className="absolute right-2 top-2 text-gray-500 group-hover:text-green-400" />
+                  {txHash && (
+                    <button
+                      onClick={() => {
+                        // 兼容非 HTTPS 环境
+                        const copyText = (text: string) => {
+                          if (navigator.clipboard && navigator.clipboard.writeText) {
+                            return navigator.clipboard.writeText(text);
+                          }
+                          // fallback: 使用传统方式
+                          const textarea = document.createElement('textarea');
+                          textarea.value = text;
+                          textarea.style.position = 'fixed';
+                          textarea.style.opacity = '0';
+                          document.body.appendChild(textarea);
+                          textarea.select();
+                          try {
+                            document.execCommand('copy');
+                            return Promise.resolve();
+                          } catch (e) {
+                            return Promise.reject(e);
+                          } finally {
+                            document.body.removeChild(textarea);
+                          }
+                        };
+                        
+                        copyText(txHash).then(() => {
+                          showToast('success', '复制成功', 'Tx Hash 已复制到剪贴板');
+                        }).catch(() => {
+                          showToast('error', '复制失败', '请手动复制');
+                        });
+                      }}
+                      className="absolute right-2 top-2 p-1 rounded hover:bg-white/10 transition-colors cursor-pointer"
+                      title="点击复制"
+                    >
+                      <Copy size={12} className="text-gray-500 group-hover:text-green-400" />
+                    </button>
+                  )}
                   <div className="flex items-center gap-2 mb-2 text-gray-500 font-sans font-bold">
                     <BadgeCheck size={12} />
                     <span className="uppercase">Tx Hash</span>
@@ -537,85 +596,133 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, onNaviga
         </div>
       </div>
 
-      {/* Bottom Action */}
-      <div className="fixed bottom-0 left-0 right-0 p-4 bg-white/90 backdrop-blur-md border-t border-gray-100 z-50">
+      {/* Bottom Action - 证书查询页面隐藏 */}
+      {!hideActions && (
+        <div className="fixed bottom-0 left-0 right-0 p-4 bg-white/90 backdrop-blur-md border-t border-gray-100 z-50">
 
-        {/* Market Heat Indicator - Only for Collection */}
-        {/* Frozen Amount & Hashrate Tip - Only for Collection */}
-        {!isShopProduct && (
-          <div className="flex justify-end mb-2">
-            <span className="text-[10px] text-gray-900 bg-white px-1 py-0.5">
-              本次申购需冻结：¥{displayPriceNum.toFixed(2)} | 消耗算力：1.0 GH/s
-            </span>
-          </div>
-        )}
-
-        <div className="flex items-center justify-between gap-4">
-          <div className="text-left">
-            <div className="flex flex-col">
-              <div className="text-xl font-bold text-gray-900 font-mono flex items-baseline leading-none">
-                {displayPriceStr}
-              </div>
-              {/* Expected Appreciation Label - Only for Collection */}
-              {!isShopProduct && (
-                <div className="flex items-center gap-1 mt-1">
-                  <TrendingUp size={10} className="text-red-500" />
-                  <span className="text-[10px] font-bold text-red-500 bg-red-50 px-1 py-0.5 rounded border border-red-100/50">
-                    预期增值 +4%~+6%
-                  </span>
-                </div>
-              )}
+          {/* Market Heat Indicator - Only for Collection */}
+          {/* Frozen Amount & Hashrate Tip - Only for Collection */}
+          {!isShopProduct && (
+            <div className="flex justify-end mb-2">
+              <span className="text-[10px] text-gray-900 bg-white px-1 py-0.5">
+                本次申购需冻结：¥{displayPriceNum.toFixed(2)} | 消耗算力：5
+              </span>
             </div>
+          )}
+
+          <div className="flex items-center justify-between gap-4">
+            <div className="text-left">
+              <div className="flex flex-col">
+                <div className="text-xl font-bold text-gray-900 font-mono flex items-baseline leading-none">
+                  {displayPriceStr}
+                </div>
+                {/* Expected Appreciation Label - Only for Collection */}
+                {!isShopProduct && (
+                  <div className="flex items-center gap-1 mt-1">
+                    <TrendingUp size={10} className="text-red-500" />
+                    <span className="text-[10px] font-bold text-red-500 bg-red-50 px-1 py-0.5 rounded border border-red-100/50">
+                      预期增值 +4%~+6%
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {(() => {
+              debugLog('productDetail.render', '渲染按钮区', {
+                isShopProduct,
+                consignmentId: product.consignmentId,
+                reservationId: product.reservationId,
+                productId: product.id,
+              });
+
+              if (isShopProduct) {
+                return (
+                  <button
+                    onClick={handleBuy}
+                    disabled={buying}
+                    className="flex-1 bg-[#EE4D2D] text-white hover:bg-[#D73211] transition-colors py-3.5 rounded-lg font-bold flex items-center justify-center gap-2 shadow-lg shadow-orange-900/20 active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed">
+                    {buying ? <LoadingSpinner size={18} color="white" /> : <CreditCard size={18} />}
+                    {buying ? '处理中...' : '立即购买'}
+                  </button>
+                );
+              } else if (product.reservationId) {
+                return (
+                  <button
+                    disabled
+                    className="flex-1 bg-gray-100 text-gray-400 border border-gray-200 cursor-not-allowed py-3.5 rounded-lg font-bold flex items-center justify-center gap-2">
+                    <Gavel size={18} />
+                    确权中
+                  </button>
+                );
+              } else {
+                return (
+                  <button
+                    onClick={() => {
+                      debugLog('productDetail.render', '点击申请确权', {
+                        id: product.id,
+                        title: product.title,
+                        consignmentId: product.consignmentId,
+                        reservationId: product.reservationId,
+                        detailData: detailData ? {
+                          session_id: (detailData as any).session_id,
+                          zone_id: (detailData as any).zone_id,
+                          package_id: (detailData as any).package_id,
+                        } : null,
+                      });
+
+                      // 更新selectedProduct以包含从详情数据中获取的zone_id等信息
+                      if (detailData && onProductUpdate) {
+                        const updatedProduct: Product = {
+                          ...product,
+                          sessionId: (detailData as any).session_id || (detailData as any).sessionId || product.sessionId,
+                          zoneId: (detailData as any).zone_id || (detailData as any).price_zone_id || product.zoneId,
+                        };
+                        onProductUpdate(updatedProduct);
+                      }
+
+                      // 直接设置zoneMaxPrice到全局预加载数据，避免金额跳跃
+                      if (detailData && !isShopProduct) {
+                        let zoneMaxPrice: number | undefined;
+
+                        // 从detailData中提取正确的分区价格
+                        if ((detailData as any).price_zone) {
+                          const parsedPrice = extractPriceFromZone((detailData as any).price_zone);
+                          if (parsedPrice > 0) {
+                            zoneMaxPrice = parsedPrice;
+                          }
+                        }
+
+                        if (!zoneMaxPrice) {
+                          zoneMaxPrice =
+                            (detailData as any).zone_max_price ??
+                            (detailData as any).zoneMaxPrice ??
+                            (detailData as any).max_price ??
+                            (detailData as any).maxPrice ??
+                            (detailData as any).price;
+                        }
+
+                        if (zoneMaxPrice) {
+                          // 初始化全局预加载数据结构
+                          if (!globalThis.__preloadedReservationData) {
+                            globalThis.__preloadedReservationData = {};
+                          }
+                          globalThis.__preloadedReservationData.zoneMaxPrice = zoneMaxPrice;
+                        }
+                      }
+
+                      onNavigate({ name: 'reservation', back: { name: 'product-detail' } });
+                    }}
+                    className="flex-1 bg-[#8B0000] text-amber-100 hover:bg-[#A00000] transition-colors py-3.5 rounded-lg font-bold flex items-center justify-center gap-2 shadow-lg shadow-red-900/20 active:scale-[0.98]">
+                    <Gavel size={18} />
+                    申请确权
+                  </button>
+                );
+              }
+            })()}
           </div>
-
-          {(() => {
-            debugLog('productDetail.render', '渲染按钮区', {
-              isShopProduct,
-              consignmentId: product.consignmentId,
-              reservationId: product.reservationId,
-              productId: product.id,
-            });
-
-            if (isShopProduct) {
-              return (
-                <button
-                  onClick={handleBuy}
-                  disabled={buying}
-                  className="flex-1 bg-[#EE4D2D] text-white hover:bg-[#D73211] transition-colors py-3.5 rounded-lg font-bold flex items-center justify-center gap-2 shadow-lg shadow-orange-900/20 active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed">
-                  {buying ? <LoadingSpinner size={18} color="white" /> : <CreditCard size={18} />}
-                  {buying ? '处理中...' : '立即购买'}
-                </button>
-              );
-            } else if (product.reservationId) {
-              return (
-                <button
-                  disabled
-                  className="flex-1 bg-gray-100 text-gray-400 border border-gray-200 cursor-not-allowed py-3.5 rounded-lg font-bold flex items-center justify-center gap-2">
-                  <Gavel size={18} />
-                  确权中
-                </button>
-              );
-            } else {
-              return (
-                <button
-                  onClick={() => {
-                    debugLog('productDetail.render', '点击申请确权', {
-                      id: product.id,
-                      title: product.title,
-                      consignmentId: product.consignmentId,
-                      reservationId: product.reservationId,
-                    });
-                    onNavigate({ name: 'reservation', back: { name: 'product-detail' } });
-                  }}
-                  className="flex-1 bg-[#8B0000] text-amber-100 hover:bg-[#A00000] transition-colors py-3.5 rounded-lg font-bold flex items-center justify-center gap-2 shadow-lg shadow-red-900/20 active:scale-[0.98]">
-                  <Gavel size={18} />
-                  申请确权
-                </button>
-              );
-            }
-          })()}
         </div>
-      </div>
+      )}
 
     </div>
   );

@@ -8,7 +8,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Package, Copy, Check, Calendar, Receipt, CheckCircle } from 'lucide-react';
+import { ArrowLeft, Clock, CreditCard, ShoppingBag, FileText, CheckCircle, XCircle, AlertCircle, ShieldCheck, Copy, Package, Calendar, Receipt, Check } from 'lucide-react';
 import PageContainer from '../../components/layout/PageContainer';
 import { LoadingSpinner, LazyImage } from '../../components/common';
 import { getCollectionOrderDetail, CollectionOrderDetailData } from '../../services/collection';
@@ -74,11 +74,37 @@ const CollectionOrderDetail: React.FC<CollectionOrderDetailProps> = ({ id, order
     }
   };
 
-  const copyOrderNo = (text: string) => {
-    navigator.clipboard.writeText(text);
-    setCopiedOrderNo(true);
-    showToast('success', '复制成功', '订单号已复制到剪贴板');
-    setTimeout(() => setCopiedOrderNo(false), 2000);
+  const copyOrderNo = async (text: string) => {
+    // 兼容非 HTTPS 环境
+    const copyText = (text: string) => {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        return navigator.clipboard.writeText(text);
+      }
+      // fallback: 使用传统方式
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      textarea.style.position = 'fixed';
+      textarea.style.opacity = '0';
+      document.body.appendChild(textarea);
+      textarea.select();
+      try {
+        document.execCommand('copy');
+        return Promise.resolve();
+      } catch (e) {
+        return Promise.reject(e);
+      } finally {
+        document.body.removeChild(textarea);
+      }
+    };
+    
+    try {
+      await copyText(text);
+      setCopiedOrderNo(true);
+      showToast('success', '复制成功', '订单号已复制到剪贴板');
+      setTimeout(() => setCopiedOrderNo(false), 2000);
+    } catch (error) {
+      showToast('error', '复制失败', '请手动复制');
+    }
   };
 
   const formatDateTime = (timestamp?: number): string => {
@@ -146,11 +172,10 @@ const CollectionOrderDetail: React.FC<CollectionOrderDetailProps> = ({ id, order
             {orderSteps.map((step, index) => (
               <div key={step.key} className="relative pb-8 last:pb-0 flex items-start">
                 {/* Node */}
-                <div className={`relative z-10 w-6 h-6 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all ${
-                  step.active
-                    ? 'bg-gradient-to-br from-orange-500 to-orange-400 border-orange-500 shadow-lg shadow-orange-500/30 scale-110'
-                    : 'bg-white border-gray-300'
-                }`}>
+                <div className={`relative z-10 w-6 h-6 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all ${step.active
+                  ? 'bg-gradient-to-br from-orange-500 to-orange-400 border-orange-500 shadow-lg shadow-orange-500/30 scale-110'
+                  : 'bg-white border-gray-300'
+                  }`}>
                   {step.active && (
                     <CheckCircle className="w-3.5 h-3.5 text-white font-bold" strokeWidth={3} />
                   )}
@@ -158,24 +183,21 @@ const CollectionOrderDetail: React.FC<CollectionOrderDetailProps> = ({ id, order
 
                 {/* Connection line */}
                 {index < orderSteps.length - 1 && (
-                  <div className={`absolute left-3 top-8 w-0.5 h-full transition-colors z-0 ${
-                    step.active
-                      ? 'bg-gradient-to-b from-orange-500 to-orange-300'
-                      : 'bg-gray-200'
-                  }`} />
+                  <div className={`absolute left-3 top-8 w-0.5 h-full transition-colors z-0 ${step.active
+                    ? 'bg-gradient-to-b from-orange-500 to-orange-300'
+                    : 'bg-gray-200'
+                    }`} />
                 )}
 
                 <div className="flex-1 pt-0.5 ml-4 min-w-0">
-                  <p className={`text-sm mb-1.5 transition-colors ${
-                    step.active
-                      ? 'text-gray-900 font-semibold'
-                      : 'text-gray-400'
-                  }`}>
+                  <p className={`text-sm mb-1.5 transition-colors ${step.active
+                    ? 'text-gray-900 font-semibold'
+                    : 'text-gray-400'
+                    }`}>
                     {step.label}
                   </p>
-                  <p className={`text-xs transition-colors ${
-                    step.active ? 'text-gray-600' : 'text-gray-400'
-                  }`}>
+                  <p className={`text-xs transition-colors ${step.active ? 'text-gray-600' : 'text-gray-400'
+                    }`}>
                     {step.time > 0 ? formatDateTime(step.time) : '等待中...'}
                   </p>
                 </div>
@@ -257,26 +279,114 @@ const CollectionOrderDetail: React.FC<CollectionOrderDetailProps> = ({ id, order
           <div className="space-y-4">
             {order.items && order.items.length > 0 ? (
               order.items.map((item) => (
-                <div key={item.id} className="flex gap-3 p-3 bg-gray-50 rounded-lg">
-                  <div className="w-16 h-16 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
-                    <LazyImage
-                      src={normalizeAssetUrl(item.item_image)}
-                      alt={item.item_title}
-                      className="w-full h-full object-cover"
-                    />
+                <div key={item.id} className="bg-gray-50 rounded-lg p-3 space-y-3">
+                  {/* 基本商品信息 */}
+                  <div className="flex gap-3">
+                    <div className="w-16 h-16 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
+                      <LazyImage
+                        src={normalizeAssetUrl(item.item_image)}
+                        alt={item.item_title}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-medium text-gray-900 mb-1 line-clamp-2">
+                        {item.item_title}
+                      </div>
+                      <div className="flex justify-between items-center text-xs text-gray-500">
+                        <span>成交价: {formatAmount(item.buy_price || item.price)}</span>
+                        <span>x{item.quantity}</span>
+                      </div>
+                      <div className="text-sm font-bold text-orange-600 mt-1">
+                        {formatAmount(item.subtotal)}
+                      </div>
+                    </div>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium text-gray-900 mb-1 line-clamp-2">
-                      {item.item_title}
+
+                  {/* 详细资产字段 (如果有) */}
+                  {(item.asset_code || item.hash || item.contract_no || item.session_title || item.mining_status !== undefined) && (
+                    <div className="border-t border-gray-200/50 pt-3 grid grid-cols-1 gap-y-2 text-xs">
+                      {item.asset_code && (
+                        <div className="flex justify-between">
+                          <span className="text-gray-500">资产编号</span>
+                          <span className="text-gray-900 font-mono">{item.asset_code}</span>
+                        </div>
+                      )}
+
+                      {item.contract_no && (
+                        <div className="flex justify-between">
+                          <span className="text-gray-500">合约编号</span>
+                          <span className="text-gray-900 font-mono">{item.contract_no}</span>
+                        </div>
+                      )}
+
+                      {item.hash && (
+                        <div className="flex justify-between items-center gap-2">
+                          <span className="text-gray-500 flex-shrink-0">链上哈希</span>
+                          <div className="flex items-center gap-1 min-w-0">
+                            <span className="text-gray-900 font-mono truncate max-w-[150px]" title={item.hash}>
+                              {item.hash}
+                            </span>
+                            <button
+                              onClick={() => copyOrderNo(item.hash)}
+                              className="text-gray-400 hover:text-gray-600"
+                            >
+                              <Copy size={10} />
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      {(item.session_title || item.session_start_time) && (
+                        <div className="flex justify-between">
+                          <span className="text-gray-500">交易场次</span>
+                          <div className="text-right">
+                            <div className="text-gray-900">{item.session_title || '未知场次'}</div>
+                            {(item.session_start_time || item.session_end_time) && (
+                              <div className="text-[10px] text-gray-400 scale-90 origin-right">
+                                {item.session_start_time}-{item.session_end_time}
+                                {item.is_trading_time !== undefined && (
+                                  <span className={`ml-1 ${item.is_trading_time ? 'text-green-500' : 'text-red-500'}`}>
+                                    ({item.is_trading_time ? '交易中' : '非交易时段'})
+                                  </span>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {item.mining_status !== undefined && (
+                        <div className="flex justify-between items-center">
+                          <span className="text-gray-500">产出状态</span>
+                          <span className={`px-1.5 py-0.5 rounded text-[10px] bg-green-50 text-green-600 border border-green-100`}>
+                            {item.mining_status === 1 ? '正在产出' : '未激活'}
+                          </span>
+                        </div>
+                      )}
+
+                      {item.mining_start_time && (
+                        <div className="flex justify-between">
+                          <span className="text-gray-500">开始时间</span>
+                          <span className="text-gray-700">{item.mining_start_time}</span>
+                        </div>
+                      )}
+
+                      {item.last_dividend_time && (
+                        <div className="flex justify-between">
+                          <span className="text-gray-500">上次结算</span>
+                          <span className="text-gray-700">{item.last_dividend_time}</span>
+                        </div>
+                      )}
+
+                      {item.expected_profit !== undefined && (
+                        <div className="flex justify-between">
+                          <span className="text-gray-500">预期收益</span>
+                          <span className="text-orange-600 font-bold">+{item.expected_profit}</span>
+                        </div>
+                      )}
                     </div>
-                    <div className="flex justify-between items-center text-xs text-gray-500">
-                      <span>单价: {formatAmount(item.price)}</span>
-                      <span>数量: {item.quantity}</span>
-                    </div>
-                    <div className="text-sm font-bold text-orange-600 mt-1">
-                      {formatAmount(item.subtotal)}
-                    </div>
-                  </div>
+                  )}
                 </div>
               ))
             ) : (
@@ -298,14 +408,14 @@ const CollectionOrderDetail: React.FC<CollectionOrderDetailProps> = ({ id, order
       {(() => {
         const statusText = order.status_text || order.status || '';
         const statusLower = statusText.toLowerCase();
-        
+
         // 判断是否显示底部按钮栏
-        const showBottomActions = statusLower.includes('寄售中') || 
-                                  statusLower.includes('撮合中') || 
-                                  statusLower.includes('匹配中') ||
-                                  statusLower.includes('待支付') ||
-                                  statusLower.includes('待发货') ||
-                                  statusLower.includes('待收货');
+        const showBottomActions = statusLower.includes('寄售中') ||
+          statusLower.includes('撮合中') ||
+          statusLower.includes('匹配中') ||
+          statusLower.includes('待支付') ||
+          statusLower.includes('待发货') ||
+          statusLower.includes('待收货');
 
         if (!showBottomActions) return null;
 

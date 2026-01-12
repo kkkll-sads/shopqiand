@@ -155,7 +155,7 @@ const MyFriends: React.FC<MyFriendsProps> = ({ onBack, onNavigate }) => {
                 : 'text-gray-500 hover:text-gray-700'
                 }`}
             >
-              直推好友
+              好友
             </button>
             <button
               onClick={() => setActiveTab('indirect')}
@@ -171,7 +171,7 @@ const MyFriends: React.FC<MyFriendsProps> = ({ onBack, onNavigate }) => {
 
         {/* 好友列表标题 */}
         <h3 className="text-sm font-bold text-gray-800 mb-3 pl-1">
-          {activeTab === 'direct' ? '直推列表' : '间推列表'} ({total})
+          {activeTab === 'direct' ? '好友列表' : '间推列表'} ({total})
         </h3>
 
         {/* 加载状态 */}

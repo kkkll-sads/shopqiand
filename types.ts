@@ -115,6 +115,8 @@ export interface UserInfo {
   real_name?: string;
   /** 实名认证状态 */
   real_name_status?: number;
+  /** 寄售券数量 */
+  consignment_coupon?: number;
 }
 
 export interface ProfileResponse {

@@ -10,11 +10,12 @@
 
 import React, { useState, useEffect } from 'react';
 import { ChevronLeft, XCircle, User, Lock, Smartphone, CreditCard, ShieldCheck, Check, Eye, EyeOff } from 'lucide-react';
-import { register, RegisterParams } from '../../services/api';
+import { register, RegisterParams, fetchAnnouncements, AnnouncementItem } from '../../services/api';
 import { sendSmsCode } from '../../services/common';
 import { isValidPhone } from '../../utils/validation';
 import { useNotification } from '../../context/NotificationContext';
 import { isSuccess, extractError } from '../../utils/apiHelpers';
+import PopupAnnouncementModal from '../../components/common/PopupAnnouncementModal';
 
 /**
  * Register 组件属性接口
@@ -46,7 +47,7 @@ const Register: React.FC<RegisterProps> = ({
     return urlParams.get('invite_code') || '';
   };
 
-  const [inviteCode, setInviteCode] = useState('DDD9A5');
+  const [inviteCode, setInviteCode] = useState('');
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [payPassword, setPayPassword] = useState('');
@@ -59,6 +60,10 @@ const Register: React.FC<RegisterProps> = ({
   const [showPassword, setShowPassword] = useState(false);
   const [showPayPassword, setShowPayPassword] = useState(false);
 
+  // 注册须知公告弹窗状态
+  const [showRegisterNotice, setShowRegisterNotice] = useState(false);
+  const [registerNoticeAnnouncement, setRegisterNoticeAnnouncement] = useState<AnnouncementItem | null>(null);
+
   // 组件加载时从URL参数中读取邀请码
   useEffect(() => {
     const urlInviteCode = getInviteCodeFromUrl();
@@ -70,6 +75,37 @@ const Register: React.FC<RegisterProps> = ({
     } else {
       console.log('[Register] No invite code in URL, using default');
     }
+  }, []);
+
+  // 加载注册须知公告
+  useEffect(() => {
+    const loadRegisterNotice = async () => {
+      try {
+        const response = await fetchAnnouncements({ page: 1, limit: 10, type: 'normal' });
+        if (isSuccess(response) && response.data?.list) {
+          // 查找标题包含"注册须知"的公告（即使后端返回的是不弹窗的，也强制弹窗）
+          const notice = response.data.list.find((item: AnnouncementItem) =>
+            item.title && item.title.includes('注册须知')
+          );
+
+          if (notice) {
+            // 检查今天是否已经关闭过该公告
+            const dismissedKey = `register_notice_dismissed_${notice.id}`;
+            const dismissedDate = localStorage.getItem(dismissedKey);
+            const today = new Date().toDateString();
+
+            if (dismissedDate !== today) {
+              setRegisterNoticeAnnouncement(notice);
+              setShowRegisterNotice(true);
+            }
+          }
+        }
+      } catch (error) {
+        console.error('加载注册须知失败:', error);
+      }
+    };
+
+    loadRegisterNotice();
   }, []);
 
   /**
@@ -330,6 +366,22 @@ const Register: React.FC<RegisterProps> = ({
       <div className="text-center pb-4 mt-auto">
         <button className="text-orange-600 text-sm font-medium">点击下载APP</button>
       </div>
+
+      {/* 注册须知公告弹窗 */}
+      <PopupAnnouncementModal
+        visible={showRegisterNotice}
+        announcement={registerNoticeAnnouncement}
+        onClose={() => {
+          setShowRegisterNotice(false);
+        }}
+        onDontShowToday={() => {
+          if (registerNoticeAnnouncement) {
+            const dismissedKey = `register_notice_dismissed_${registerNoticeAnnouncement.id}`;
+            const today = new Date().toDateString();
+            localStorage.setItem(dismissedKey, today);
+          }
+        }}
+      />
     </div>
   );
 };

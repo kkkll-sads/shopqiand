@@ -25,9 +25,10 @@ export type RoutePayload =
   | { name: 'agent-auth' }
   | { name: 'my-friends' }
   | { name: 'invite-friends' }
-  | { name: 'account-deletion' }
-  | { name: 'notification-settings' }
+  | { name: 'account-deletion'; from?: string }
+  | { name: 'notification-settings'; from?: string }
   | { name: 'user-survey' }
+  | { name: 'activity-center' }
   | { name: 'sign-in' }
   | { name: 'online-service' }
   | { name: 'help-center' }
@@ -37,12 +38,12 @@ export type RoutePayload =
   | { name: 'switch-to-market' }
   // 新闻/内容
   | { name: 'news'; activeTab?: 'announcement' | 'dynamic' }
-  | { name: 'news-detail'; id: string; from?: RoutePayload | null }
+  | { name: 'news-detail'; id: string; back?: RoutePayload | null }
   // 市场/订单
   | { name: 'product-detail'; origin?: 'market' | 'artist' | 'trading-zone' | 'reservation-record'; productType?: 'shop' | 'collection' }
   | { name: 'points-product-detail'; origin?: 'market' | 'artist' | 'trading-zone' | 'reservation-record' }
   | { name: 'reservation'; from?: RoutePayload | null }
-  | { name: 'reservation-record' }
+  | { name: 'reservation-record'; source?: string; sessionId?: string; zoneId?: string; sessionTitle?: string; sessionStartTime?: string; sessionEndTime?: string }
   | { name: 'reservation-detail'; id: number | string }
   | { name: 'trading-zone' }
   | { name: 'trading-zone-items'; sessionId: string; sessionTitle?: string; sessionStartTime?: string; sessionEndTime?: string }
@@ -247,9 +248,9 @@ export function decodeRoute(s: string): RoutePayload {
         case 'forgot-password':
           return { name: 'forgot-password' };
         case 'notification-settings':
-          return { name: 'notification-settings' };
+          return { name: 'notification-settings', from: 'settings' };
         case 'account-deletion':
-          return { name: 'account-deletion' };
+          return { name: 'account-deletion', from: 'settings' };
         case 'edit-profile':
           return { name: 'edit-profile' };
         case 'message':

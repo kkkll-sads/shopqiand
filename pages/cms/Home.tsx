@@ -246,18 +246,6 @@ const Home: React.FC<HomeProps> = ({ onNavigate, onSwitchTab, announcements = []
                   className="w-full h-full object-cover"
                   draggable={false}
                 />
-                <div className="absolute inset-0 bg-gradient-to-r from-black/40 to-transparent flex items-center p-4">
-                  <div className="text-white">
-                    {banner.tag && (
-                      <div className="bg-orange-500 text-xs inline-block px-2 py-0.5 rounded mb-2 backdrop-blur-sm bg-opacity-90">
-                        {banner.tag}
-                      </div>
-                    )}
-                    {banner.title && (
-                      <h2 className="font-bold text-xl shadow-black drop-shadow-md">{banner.title}</h2>
-                    )}
-                  </div>
-                </div>
               </div>
             ))}
           </div>
@@ -281,7 +269,7 @@ const Home: React.FC<HomeProps> = ({ onNavigate, onSwitchTab, announcements = []
             if (announcements.length) {
               const targetId = announcements[noticeIndex]?.id;
               if (targetId) {
-                onNavigate({ name: 'news-detail', id: targetId, from: { name: 'news' } });
+                onNavigate({ name: 'news-detail', id: targetId, back: null });
               }
             }
           }}
@@ -409,7 +397,7 @@ const Home: React.FC<HomeProps> = ({ onNavigate, onSwitchTab, announcements = []
                     <span className="text-gray-500">
                       冻结金额 <span className="text-red-600 font-bold">¥{Number(record.freeze_amount || 0).toLocaleString()}</span>
                     </span>
-                    <span className="text-gray-400">权重: {record.weight || 0}</span>
+                    <span className="text-gray-400">消耗算力: {record.power_used || 5}</span>
                   </div>
                 </div>
               );

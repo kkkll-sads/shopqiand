@@ -1,0 +1,277 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "字段映射配置",
+    "description": "前后端字段映射配置文件",
+    "version": "1.0.0",
+    "mappings": {
+        "user": {
+            "description": "用户信息字段映射",
+            "fields": {
+                "id": "id",
+                "username": "username",
+                "nickname": "nickname",
+                "email": "email",
+                "mobile": "mobile",
+                "avatar": "avatar",
+                "gender": "gender",
+                "birthday": "birthday",
+                "money": "totalAssets",
+                "balance_available": "availableBalance",
+                "service_fee_balance": "serviceFeeBalance",
+                "withdrawable_money": "withdrawableBalance",
+                "score": "consumptionPoints",
+                "green_power": "greenPower",
+                "pending_activation_gold": "pendingActivationGold",
+                "usdt": "usdt",
+                "last_login_time": "lastLoginTime",
+                "last_login_ip": "lastLoginIp",
+                "join_time": "joinTime",
+                "motto": "motto",
+                "draw_count": "drawCount",
+                "user_type": "userType",
+                "token": "token",
+                "refresh_token": "refreshToken",
+                "invite_code": "inviteCode",
+                "agent_review_status": "agentReviewStatus",
+                "real_name": "realName",
+                "real_name_status": "realNameStatus",
+                "consignment_coupon": "consignmentCoupon",
+                "legacy_frozen": "legacyFrozen"
+            },
+            "typeConversions": {
+                "money": "string->number",
+                "balance_available": "string->number",
+                "service_fee_balance": "string->number",
+                "withdrawable_money": "string->number",
+                "green_power": "string->number",
+                "pending_activation_gold": "string->number",
+                "last_login_time": "timestamp->date",
+                "join_time": "timestamp->date"
+            },
+            "requiredFields": [
+                "id",
+                "username",
+                "mobile",
+                "token"
+            ]
+        },
+        "collection": {
+            "description": "藏品信息字段映射",
+            "fields": {
+                "id": "id",
+                "title": "title",
+                "price": "price",
+                "image": "image",
+                "category": "category",
+                "session_id": "sessionId",
+                "zone_id": "zoneId",
+                "core_enterprise": "coreEnterprise",
+                "farmer_info": "farmerInfo",
+                "asset_code": "assetCode",
+                "tx_hash": "txHash",
+                "owner_id": "ownerId",
+                "supplier_name": "supplierName",
+                "consignment_id": "consignmentId",
+                "consignment_price": "consignmentPrice",
+                "stock": "stock",
+                "sales": "sales",
+                "package_id": "packageId",
+                "package_name": "packageName"
+            },
+            "typeConversions": {
+                "price": "string->number",
+                "consignment_price": "string->number"
+            },
+            "requiredFields": [
+                "id",
+                "title",
+                "price",
+                "image"
+            ]
+        },
+        "coupon": {
+            "description": "寄售券字段映射",
+            "fields": {
+                "id": "id",
+                "user_id": "userId",
+                "session_id": "sessionId",
+                "zone_id": "zoneId",
+                "price_zone": "priceZone",
+                "expire_time": "expireTime",
+                "status": "status",
+                "create_time": "createTime",
+                "update_time": "updateTime"
+            },
+            "typeConversions": {
+                "expire_time": "timestamp->date",
+                "create_time": "timestamp->date",
+                "update_time": "timestamp->date",
+                "status": "number->boolean"
+            },
+            "requiredFields": [
+                "id",
+                "user_id",
+                "session_id",
+                "zone_id"
+            ]
+        },
+        "order": {
+            "description": "订单信息字段映射",
+            "fields": {
+                "id": "id",
+                "order_no": "orderNo",
+                "product_name": "productName",
+                "product_image": "productImage",
+                "price": "price",
+                "quantity": "quantity",
+                "total_amount": "totalAmount",
+                "status": "status",
+                "pay_time": "payTime",
+                "create_time": "createTime",
+                "update_time": "updateTime"
+            },
+            "typeConversions": {
+                "price": "string->number",
+                "total_amount": "string->number",
+                "pay_time": "timestamp->date",
+                "create_time": "timestamp->date",
+                "update_time": "timestamp->date"
+            },
+            "requiredFields": [
+                "id",
+                "product_name",
+                "price",
+                "status"
+            ]
+        },
+        "reservation": {
+            "description": "交易预约字段映射",
+            "fields": {
+                "reservation_id": "reservationId",
+                "session_id": "sessionId",
+                "zone_id": "zoneId",
+                "freeze_amount": "freezeAmount",
+                "power_used": "powerUsed",
+                "weight": "weight",
+                "zone_name": "zoneName",
+                "product_id": "productId",
+                "match_order_id": "matchOrderId",
+                "match_time": "matchTime"
+            },
+            "typeConversions": {
+                "freeze_amount": "string->number",
+                "power_used": "string->number",
+                "match_time": "timestamp->date"
+            },
+            "requiredFields": [
+                "reservation_id",
+                "session_id",
+                "zone_id"
+            ]
+        },
+        "moneyLog": {
+            "description": "资金明细字段映射",
+            "fields": {
+                "id": "id",
+                "type": "type",
+                "field_type": "fieldType",
+                "amount": "amount",
+                "before_value": "beforeValue",
+                "after_value": "afterValue",
+                "remark": "remark",
+                "create_time": "createTime"
+            },
+            "typeConversions": {
+                "amount": "string->number",
+                "before_value": "string->number",
+                "after_value": "string->number",
+                "create_time": "timestamp->date"
+            },
+            "requiredFields": [
+                "id",
+                "type",
+                "amount"
+            ]
+        }
+    },
+    "fieldAliases": {
+        "userId": [
+            "user_id",
+            "uid",
+            "userid"
+        ],
+        "createTime": [
+            "create_time",
+            "createtime",
+            "created_at",
+            "createdAt"
+        ],
+        "updateTime": [
+            "update_time",
+            "updatetime",
+            "updated_at",
+            "updatedAt"
+        ],
+        "price": [
+            "price",
+            "amount",
+            "money"
+        ],
+        "image": [
+            "image",
+            "img",
+            "pic",
+            "picture",
+            "photo"
+        ]
+    },
+    "conversionRules": {
+        "timestamp->date": {
+            "description": "Unix时间戳(秒)转JavaScript Date对象",
+            "example": "1704067200 -> new Date(1704067200 * 1000)"
+        },
+        "string->number": {
+            "description": "字符串转数字",
+            "example": "'100.00' -> 100"
+        },
+        "number->boolean": {
+            "description": "数字转布尔值",
+            "example": "1 -> true, 0 -> false"
+        },
+        "string->array": {
+            "description": "JSON字符串或逗号分隔字符串转数组",
+            "example": "'[\"a\",\"b\"]' -> ['a', 'b'] or 'a,b' -> ['a', 'b']"
+        }
+    },
+    "statusEnums": {
+        "orderStatus": {
+            "pending_pay": "待付款",
+            "pending_ship": "待发货",
+            "pending_confirm": "待收货",
+            "completed": "已完成",
+            "cancelled": "已取消"
+        },
+        "consignmentStatus": {
+            "0": "未寄售",
+            "1": "寄售中",
+            "2": "已售出",
+            "3": "已取消"
+        },
+        "realNameStatus": {
+            "-1": "未申请",
+            "0": "待审核",
+            "1": "已通过",
+            "2": "已拒绝"
+        },
+        "agentReviewStatus": {
+            "-1": "未申请",
+            "0": "待审核",
+            "1": "已通过",
+            "2": "已拒绝"
+        },
+        "couponStatus": {
+            "0": "已使用",
+            "1": "可用"
+        }
+    }
+}

@@ -365,6 +365,7 @@ export interface SubmitRechargeOrderParams {
     payment_type?: string;
     payment_method?: 'online' | 'offline';
     remark?: string;
+    card_last_four?: string; // 付款银行卡后四位
     token?: string;
 }
 
@@ -385,6 +386,7 @@ export async function submitRechargeOrder(params: SubmitRechargeOrderParams): Pr
 
     if (params.remark) payload.append('remark', params.remark);
     if (params.payment_type) payload.append('payment_type', params.payment_type);
+    if (params.card_last_four) payload.append('user_remark', params.card_last_four);
 
     return authedFetch<{ order_id?: number; order_no?: string; pay_url?: string }>(API_ENDPOINTS.recharge.submitOrder, {
         method: 'POST',
@@ -392,6 +394,36 @@ export async function submitRechargeOrder(params: SubmitRechargeOrderParams): Pr
         token: params.token,
     });
 }
+
+/**
+ * 更新充值订单备注（用户支付反馈）
+ */
+export interface UpdateRechargeOrderRemarkParams {
+    order_id?: string | number;
+    order_no?: string;
+    user_remark: string; // 用户反馈信息
+    token?: string;
+}
+
+export async function updateRechargeOrderRemark(params: UpdateRechargeOrderRemarkParams): Promise<ApiResponse> {
+    const payload = new FormData();
+
+    // 优先使用 order_id，回退到 order_no
+    if (params.order_id) {
+        payload.append('order_id', String(params.order_id));
+    } else if (params.order_no) {
+        payload.append('order_no', String(params.order_no));
+    }
+
+    payload.append('user_remark', params.user_remark);
+
+    return authedFetch(API_ENDPOINTS.recharge.updateOrderRemark, {
+        method: 'POST',
+        body: payload,
+        token: params.token,
+    });
+}
+
 
 export interface SubmitWithdrawParams {
     payment_id?: string | number; // 用户收款账户 ID (兼容)
@@ -548,5 +580,35 @@ export async function getRechargeOrderDetail(id: number | string, token?: string
     return authedFetch<RechargeOrderDetail>(path, {
         method: 'GET',
         token,
+    });
+}
+
+// 余额划转相关
+export interface TransferIncomeToPurchaseParams {
+    amount: number | string;
+    remark?: string;
+    token?: string;
+}
+
+export interface TransferIncomeToPurchaseResponse {
+    transfer_amount: number;
+    remaining_withdrawable: number;
+    new_balance_available: number;
+}
+
+export async function transferIncomeToPurchase(params: TransferIncomeToPurchaseParams): Promise<ApiResponse<TransferIncomeToPurchaseResponse>> {
+    if (!params.amount || Number(params.amount) <= 0) {
+        throw new Error('请输入有效的划转金额');
+    }
+
+    const payload: Record<string, any> = {
+        amount: Number(params.amount),
+    };
+    if (params.remark) payload.remark = params.remark;
+
+    return authedFetch<TransferIncomeToPurchaseResponse>(API_ENDPOINTS.financeOrder.transferIncomeToPurchase, {
+        method: 'POST',
+        body: JSON.stringify(payload),
+        token: params.token,
     });
 }

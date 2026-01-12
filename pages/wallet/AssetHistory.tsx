@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Filter, FileText } from 'lucide-react';
+import { ArrowLeft, Filter, FileText, ChevronRight } from 'lucide-react';
 import { FilterBar } from '../../components/FilterBar';
 import {
   getAllLog,
@@ -9,12 +9,14 @@ import {
 } from '../../services/api';
 import { isSuccess, extractData } from '../../utils/apiHelpers';
 import { BALANCE_TYPE_OPTIONS, getBalanceTypeLabel } from '../../constants/balanceTypes';
+import { Route } from '../../router/routes';
 
 interface AssetHistoryProps {
   onBack: () => void;
+  onNavigate?: (route: Route) => void;
 }
 
-const AssetHistory: React.FC<AssetHistoryProps> = ({ onBack }) => {
+const AssetHistory: React.FC<AssetHistoryProps> = ({ onBack, onNavigate }) => {
   // 筛选状态
   const [filters, setFilters] = useState({
     category: 'all',
@@ -131,6 +133,17 @@ const AssetHistory: React.FC<AssetHistoryProps> = ({ onBack }) => {
     return getBalanceTypeLabel(typeToUse);
   };
 
+  const handleItemClick = (item: AllLogItem) => {
+    if (onNavigate) {
+      onNavigate({
+        name: 'money-log-detail',
+        id: item.id,
+        flowNo: item.flow_no,
+        back: { name: 'asset-history', type: filters.category, title: '历史记录' },
+      });
+    }
+  };
+
   const renderLogItem = (item: AllLogItem) => {
     const isGreenPower = item.field_type === 'green_power' || item.type === 'green_power';
     const isScore = item.type === 'score';
@@ -153,7 +166,11 @@ const AssetHistory: React.FC<AssetHistoryProps> = ({ onBack }) => {
     const typeLabel = getTypeLabel(item.type, item.field_type);
 
     return (
-      <div key={`log-${item.id}`} className="bg-white rounded-xl p-4 mb-3 border border-gray-100 shadow-sm relative">
+      <div 
+        key={`log-${item.id}`} 
+        className="bg-white rounded-xl p-4 mb-3 border border-gray-100 shadow-sm relative cursor-pointer active:bg-gray-50 transition-colors"
+        onClick={() => handleItemClick(item)}
+      >
         <div className="flex justify-between items-start mb-2">
           {/* 左侧：标题与标签 */}
           <div className="flex-1 pr-4 min-w-0">
@@ -176,14 +193,17 @@ const AssetHistory: React.FC<AssetHistoryProps> = ({ onBack }) => {
             </div>
           </div>
 
-          {/* 右侧：金额 */}
-          <div className="text-right flex-shrink-0">
-            <div className={`text-base font-bold font-[DINAlternate-Bold,Roboto,sans-serif] ${isPositive ? 'text-[#FF6B00]' : 'text-gray-900'}`}>
-              {isPositive ? '+' : ''}{Math.abs(amountVal).toFixed(2)}
-              <span className="text-xs font-normal ml-0.5 text-gray-400">
-                {isGreenPower ? '算力' : isScore ? '' : '元'}
-              </span>
+          {/* 右侧：金额和箭头 */}
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <div className="text-right">
+              <div className={`text-base font-bold font-[DINAlternate-Bold,Roboto,sans-serif] ${isPositive ? 'text-[#FF6B00]' : 'text-gray-900'}`}>
+                {isPositive ? '+' : ''}{Math.abs(amountVal).toFixed(2)}
+                <span className="text-xs font-normal ml-0.5 text-gray-400">
+                  {isGreenPower ? '算力' : isScore ? '' : '元'}
+                </span>
+              </div>
             </div>
+            <ChevronRight size={16} className="text-gray-300" />
           </div>
         </div>
 

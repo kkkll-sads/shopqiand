@@ -8,10 +8,10 @@ interface AssetActionsGridProps {
 
 const AssetActionsGrid: React.FC<AssetActionsGridProps> = ({ onNavigate }) => {
   const actions = [
-    { label: '申购专项金', icon: Wallet, route: { name: 'balance-recharge', source: 'asset-view' } as Route, color: 'text-orange-600' },
-    { label: '收益提现', icon: Receipt, route: { name: 'balance-withdraw', source: 'asset-view' } as Route, color: 'text-orange-600' },
-    { label: '算力补充', icon: Leaf, route: { name: 'hashrate-exchange', source: 'asset-view' } as Route, color: 'text-green-600' },
-    { label: '确权金划转', icon: CreditCard, route: { name: 'service-recharge', source: 'asset-view' } as Route, color: 'text-purple-600' },
+    { label: '申购专项金', icon: Wallet, route: { name: 'balance-recharge', source: 'asset-view', back: { name: 'asset-view' } } as Route, color: 'text-orange-600' },
+    { label: '收益提现', icon: Receipt, route: { name: 'balance-withdraw', source: 'asset-view', back: { name: 'asset-view' } } as Route, color: 'text-orange-600' },
+    { label: '算力补充', icon: Leaf, route: { name: 'hashrate-exchange', source: 'asset-view', back: { name: 'asset-view' } } as Route, color: 'text-green-600' },
+    { label: '确权金划转', icon: CreditCard, route: { name: 'service-recharge', source: 'asset-view', back: { name: 'asset-view' } } as Route, color: 'text-purple-600' },
   ];
 
   return (

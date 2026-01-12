@@ -81,7 +81,11 @@ export async function apiFetch<T = any>(
     try {
         const response = await fetch(url, {
             method,
-            headers: finalHeaders,
+            headers: {
+                ...finalHeaders,
+                'Cache-Control': 'no-cache',
+                'Pragma': 'no-cache',
+            },
             body,
             mode: 'cors',
             credentials: 'omit',

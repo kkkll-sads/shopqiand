@@ -241,6 +241,16 @@ export async function deleteOrder(params: { id: number | string; token?: string 
     });
 }
 
+export async function cancelOrder(params: { id: number | string; token?: string }): Promise<ApiResponse> {
+    const token = params.token ?? getStoredToken();
+    const payload = new FormData();
+    payload.append('order_id', String(params.id));
+
+    return authedFetch(API_ENDPOINTS.shopOrder.cancel, {
+        method: 'POST', body: payload, token
+    });
+}
+
 export interface ShopOrderStatistics {
     all_count: number;
     pending_count: number;

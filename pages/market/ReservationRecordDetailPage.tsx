@@ -211,19 +211,15 @@ const ReservationRecordDetailPage: React.FC<ReservationRecordDetailPageProps> = 
                         {record.base_hashrate_cost !== undefined && (
                             <div className="flex justify-between">
                                 <span className="text-gray-600">基础算力</span>
-                                <span className="font-medium text-gray-700">{record.base_hashrate_cost}</span>
+                                <span className="font-bold text-gray-900">{record.base_hashrate_cost}</span>
                             </div>
                         )}
                         {record.extra_hashrate_cost !== undefined && Number(record.extra_hashrate_cost) > 0 && (
                             <div className="flex justify-between">
                                 <span className="text-gray-600">额外算力</span>
-                                <span className="font-medium text-orange-600">+{record.extra_hashrate_cost}</span>
+                                <span className="font-medium text-green-600">+{record.extra_hashrate_cost}</span>
                             </div>
                         )}
-                        <div className="flex justify-between">
-                            <span className="text-gray-600">抽签权重</span>
-                            <span className="font-bold text-gray-900">{record.weight || 0}</span>
-                        </div>
                     </div>
                 </div>
 

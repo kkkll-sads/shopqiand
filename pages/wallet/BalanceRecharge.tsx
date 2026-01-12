@@ -1,13 +1,16 @@
 
 import React, { useEffect, useState } from 'react';
-import { ChevronLeft, Zap, Radar, CheckCircle, Shield, AlertTriangle, X, Wallet, CreditCard, Banknote, Upload, Image as ImageIcon } from 'lucide-react';
+import { ChevronLeft, Zap, Radar, CheckCircle, Shield, AlertTriangle, AlertCircle, X, Wallet, CreditCard, Banknote, Upload, Image as ImageIcon } from 'lucide-react';
 
-import { LoadingSpinner } from '../../components/common';
-import { fetchCompanyAccountList, CompanyAccountItem, submitRechargeOrder } from '../../services/api';
+import { LoadingSpinner, EmbeddedBrowser } from '../../components/common';
+import { fetchCompanyAccountList, CompanyAccountItem, submitRechargeOrder, transferIncomeToPurchase, updateRechargeOrderRemark } from '../../services/api';
+import { fetchProfile } from '../../services/user';
+import { getStoredToken } from '../../services/client';
 import { useNotification } from '../../context/NotificationContext';
 import { Route } from '../../router/routes';
 import { isSuccess, extractError } from '../../utils/apiHelpers';
 import { useErrorHandler } from '../../hooks/useErrorHandler';
+import { copyToClipboard } from '../../utils/clipboard';
 
 import RechargeOrderList from './RechargeOrderList'; // Import the new component
 import RechargeOrderDetail from './RechargeOrderDetail'; // Import the detail component
@@ -40,9 +43,44 @@ const BalanceRecharge: React.FC<BalanceRechargeProps> = ({ onBack, onNavigate, i
   const [loading, setLoading] = useState(false);
   const [availableMethods, setAvailableMethods] = useState<{ id: string; name: string; icon: string }[]>([]);
 
+  // Embedded Browser State
+  const [showPaymentBrowser, setShowPaymentBrowser] = useState(false);
+  const [paymentUrl, setPaymentUrl] = useState('');
+
+  // Transfer State
+  const [transferAmount, setTransferAmount] = useState<string>('');
+  const [transferring, setTransferring] = useState(false);
+  const [withdrawableBalance, setWithdrawableBalance] = useState<number>(0);
+  const transferRemark = '余额划转'; // Fixed remark
+
+  // Retry State (自动重试相关状态)
+  const [retryCount, setRetryCount] = useState(0); // 当前重试次数
+  const [maxRetries] = useState(3); // 最大重试次数
+  const [availableAccounts, setAvailableAccounts] = useState<CompanyAccountItem[]>([]); // 可用账户队列
+  const [currentAccountIndex, setCurrentAccountIndex] = useState(0); // 当前尝试的账户索引
+
   useEffect(() => {
     loadAccounts();
+    loadUserBalance();
   }, []);
+
+  // 当显示银行卡账户信息时，启用页面复制功能
+  useEffect(() => {
+    if (viewState === 'matched' && selectedMethod === 'bank_card') {
+      // 启用复制
+      document.body.setAttribute('data-allow-copy', 'true');
+      console.log('[BalanceRecharge] 已启用复制功能');
+    } else {
+      // 禁用复制
+      document.body.setAttribute('data-allow-copy', 'false');
+      console.log('[BalanceRecharge] 已禁用复制功能');
+    }
+
+    // 清理函数：组件卸载时恢复默认状态
+    return () => {
+      document.body.setAttribute('data-allow-copy', 'false');
+    };
+  }, [viewState, selectedMethod]);
 
   const loadAccounts = async () => {
     setLoading(true);
@@ -84,10 +122,38 @@ const BalanceRecharge: React.FC<BalanceRechargeProps> = ({ onBack, onNavigate, i
     }
   };
 
+  const loadUserBalance = async () => {
+    try {
+      const token = getStoredToken();
+      if (!token) {
+        // 用户未登录，跳过获取余额
+        return;
+      }
+
+      const res = await fetchProfile(token);
+      if (isSuccess(res)) {
+        const withdrawableMoney = Number(res.data.userInfo.withdrawable_money) || 0;
+        setWithdrawableBalance(withdrawableMoney);
+      }
+    } catch (err) {
+      // 静默失败，不显示错误提示，因为这不是核心功能
+      console.warn('Failed to load user balance:', err);
+    }
+  };
+
   // Image Upload State
   const [uploadedImage, setUploadedImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  // Confirmation Modal State (for bank card)
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [lastFourDigits, setLastFourDigits] = useState<string>('');
+
+  // Payment Result Confirmation Modal State (for WeChat/Alipay)
+  const [showPaymentResultModal, setShowPaymentResultModal] = useState(false);
+  const [paymentResultRemark, setPaymentResultRemark] = useState<string>('');
+  const [pendingOrderId, setPendingOrderId] = useState<string | null>(null);
 
   // Helper: Check if amount is within the range specified in remark (e.g., "100-2000")
   const isAmountInRange = (amount: number, rangeStr: string): boolean => {
@@ -107,42 +173,106 @@ const BalanceRecharge: React.FC<BalanceRechargeProps> = ({ onBack, onNavigate, i
     return true;
   };
 
-  const handleAutoSubmit = async (account: CompanyAccountItem, orderAmount: number) => {
+  const trySubmitWithAccount = async (accounts: CompanyAccountItem[], index: number) => {
+    // 检查是否已尝试所有账户
+    if (index >= accounts.length) {
+      showToast('error', '通道不可用', '所有支付通道暂时无法使用，请稍后重试');
+      setViewState('input');
+      return;
+    }
+
+    // 检查是否达到最大重试次数
+    if (index >= maxRetries) {
+      showToast('error', '重试失败', `已尝试 ${maxRetries} 个通道，请稍后重试或联系客服`);
+      setViewState('input');
+      return;
+    }
+
+    const selected = accounts[index];
+    setMatchedAccount(selected);
+
+    // ✅ 银行卡通道：直接显示收款账户信息页面，用户手动上传截图后提交
+    if (selectedMethod === 'bank_card') {
+      setViewState('matched');
+      return;
+    }
+
+    // 其他通道：尝试自动提交
     try {
       const response = await submitRechargeOrder({
-        company_account_id: account.id,
-        amount: orderAmount,
+        company_account_id: selected.id,
+        amount: Number(amount),
         payment_type: selectedMethod || undefined,
         payment_method: 'online',
       });
 
       if (isSuccess(response)) {
-        const { pay_url } = response.data || {};
+        const { pay_url, order_id, order_no } = response.data || {};
 
         if (pay_url) {
-          showToast('success', '订单创建成功', '正在前往支付...');
-          setTimeout(() => {
-            window.location.href = pay_url;
-          }, 1000);
+          showToast('success', '订单创建成功', '正在加载支付页面...');
+          setPaymentUrl(pay_url);
+          setShowPaymentBrowser(true);
+          // Store order ID for later update
+          setPendingOrderId(order_id || order_no || null);
         } else {
           // Fallback to manual view if no pay_url
           setViewState('matched');
         }
       } else {
-        handleError(response, {
+        // 失败：判断是否需要重试
+        const errorMsg = response.msg || '';
+
+        // 特定错误需要重试
+        const shouldRetry =
+          errorMsg.includes('获取支付链接失败') ||
+          errorMsg.includes('未获取到支付地址') ||
+          errorMsg.includes('Exception:') ||
+          errorMsg.includes('Stack trace:');
+
+        if (shouldRetry && index < accounts.length - 1 && index < maxRetries - 1) {
+          // 静默重试，不显示提示
+          const nextIndex = index + 1;
+          setRetryCount(nextIndex);
+          setCurrentAccountIndex(nextIndex);
+
+          // 延迟 500ms 后尝试下一个通道
+          setTimeout(() => {
+            trySubmitWithAccount(accounts, nextIndex);
+          }, 500);
+        } else {
+          // 不重试，显示错误
+          let friendlyMessage = errorMsg || '充值通道维护中';
+          if (shouldRetry) {
+            friendlyMessage = '当前支付通道暂时无法使用，请稍后重试或更换其他支付方式';
+          }
+
+          handleError(response, {
+            toastTitle: '创建订单失败',
+            customMessage: friendlyMessage,
+            context: { amount: Number(amount), accountId: selected.id }
+          });
+          setViewState('input');
+        }
+      }
+    } catch (error) {
+      // 网络错误：静默尝试下一个通道
+      if (index < accounts.length - 1 && index < maxRetries - 1) {
+        const nextIndex = index + 1;
+        setRetryCount(nextIndex);
+        setCurrentAccountIndex(nextIndex);
+
+        setTimeout(() => {
+          trySubmitWithAccount(accounts, nextIndex);
+        }, 500);
+      } else {
+        handleError(error, {
           toastTitle: '创建订单失败',
-          customMessage: response.msg || '充值通道维护中',
-          context: { amount: orderAmount, accountId: account.id }
+          customMessage: '网络错误，请重试',
+          context: { amount: Number(amount), accountId: selected.id }
         });
         setViewState('input');
       }
-    } catch (error) {
-      handleError(error, {
-        toastTitle: '创建订单失败',
-        customMessage: '网络错误，请重试',
-        context: { amount: orderAmount, accountId: account.id }
-      });
-      setViewState('input');
     }
   };
 
@@ -160,22 +290,59 @@ const BalanceRecharge: React.FC<BalanceRechargeProps> = ({ onBack, onNavigate, i
     setViewState('matching');
 
     setTimeout(async () => {
-      // 1. Filter by selected method type
-      // 2. Filter by amount range in remark
-      const validAccounts = allAccounts.filter(acc => {
+      // 筛选并排序账户
+      // 筛选并排序账户
+      const filteredAccounts = allAccounts.filter(acc => {
         const typeMatch = acc.type === selectedMethod;
         const rangeMatch = isAmountInRange(Number(amount), acc.remark);
         return typeMatch && rangeMatch;
       });
 
-      if (validAccounts.length > 0) {
-        // Randomly select one
-        const randomIndex = Math.floor(Math.random() * validAccounts.length);
-        const selected = validAccounts[randomIndex];
-        setMatchedAccount(selected);
+      // 预处理：先随机打乱 (Fisher-Yates Shuffle)
+      // 目的：当 sort 序号相同时，确保随机选择，而不是总是命中数据库 ID 较小的那一个
+      for (let i = filteredAccounts.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [filteredAccounts[i], filteredAccounts[j]] = [filteredAccounts[j], filteredAccounts[i]];
+      }
 
-        // Auto Submit
-        await handleAutoSubmit(selected, Number(amount));
+      // 排序逻辑：支付宝和微信第一次匹配排序高的，后续随机选择
+      let validAccounts = [...filteredAccounts];
+      if (selectedMethod === 'alipay' || selectedMethod === 'wechat') {
+        const hasMatchedKey = `HAS_MATCHED_${selectedMethod.toUpperCase()}`;
+        const hasMatched = sessionStorage.getItem(hasMatchedKey);
+
+        if (!hasMatched) {
+          // 第一次：按 sort 升序 (由于已预先 shuffle，相同 sort 的项相对顺序随机)
+          validAccounts.sort((a, b) => {
+            const sortA = typeof a.sort === 'number' ? a.sort : Number.MAX_SAFE_INTEGER;
+            const sortB = typeof b.sort === 'number' ? b.sort : Number.MAX_SAFE_INTEGER;
+            return sortA - sortB;
+          });
+          sessionStorage.setItem(hasMatchedKey, 'true');
+        } else {
+          // 后续：随机打乱 (Fisher-Yates Shuffle)
+          for (let i = validAccounts.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [validAccounts[i], validAccounts[j]] = [validAccounts[j], validAccounts[i]];
+          }
+        }
+      } else {
+        // 其他方式：保持按 sort 升序 (由于已预先 shuffle，相同 sort 的项相对顺序随机)
+        validAccounts.sort((a, b) => {
+          const sortA = typeof a.sort === 'number' ? a.sort : Number.MAX_SAFE_INTEGER;
+          const sortB = typeof b.sort === 'number' ? b.sort : Number.MAX_SAFE_INTEGER;
+          return sortA - sortB;
+        });
+      }
+
+      if (validAccounts.length > 0) {
+        // 保存可用账户列表
+        setAvailableAccounts(validAccounts);
+        setCurrentAccountIndex(0);
+        setRetryCount(0);
+
+        // 尝试第一个账户
+        await trySubmitWithAccount(validAccounts, 0);
       } else {
         showToast('error', '匹配失败', '当前金额暂无匹配通道，请调整金额重试');
         setViewState('input');
@@ -220,6 +387,12 @@ const BalanceRecharge: React.FC<BalanceRechargeProps> = ({ onBack, onNavigate, i
       return;
     }
 
+    // Validate last four digits for bank card payments
+    if (selectedMethod === 'bank_card' && lastFourDigits.length !== 4) {
+      showToast('warning', '请输入卡号', '请输入付款银行卡后四位号码');
+      return;
+    }
+
     setSubmitting(true);
     try {
       const response = await submitRechargeOrder({
@@ -227,6 +400,7 @@ const BalanceRecharge: React.FC<BalanceRechargeProps> = ({ onBack, onNavigate, i
         amount: Number(amount),
         payment_screenshot: uploadedImage,
         payment_type: selectedMethod || undefined,
+        card_last_four: selectedMethod === 'bank_card' ? lastFourDigits : undefined,
       });
 
       if (isSuccess(response)) {
@@ -238,6 +412,8 @@ const BalanceRecharge: React.FC<BalanceRechargeProps> = ({ onBack, onNavigate, i
         setUploadedImage(null);
         setImagePreview(null);
         setMatchedAccount(null);
+        setShowConfirmModal(false);
+        setLastFourDigits('');
         setViewState('input');
         onBack();
       } else {
@@ -265,6 +441,49 @@ const BalanceRecharge: React.FC<BalanceRechargeProps> = ({ onBack, onNavigate, i
     setMatchedAccount(null);
     setUploadedImage(null);
     setImagePreview(null);
+  };
+
+  const handleTransfer = async () => {
+    const numAmount = Number(transferAmount);
+    if (!transferAmount || isNaN(numAmount) || numAmount <= 0) {
+      showToast('warning', '输入有误', '请输入有效的划转金额');
+      return;
+    }
+
+    setTransferring(true);
+    try {
+      const response = await transferIncomeToPurchase({
+        amount: numAmount,
+        remark: transferRemark || '余额划转',
+      });
+
+      if (isSuccess(response)) {
+        const { transfer_amount, remaining_withdrawable, new_balance_available } = response.data;
+        showToast('success', '划转成功', `成功划转 ¥${transfer_amount} 到可用余额`);
+
+        // Update balance
+        setWithdrawableBalance(remaining_withdrawable);
+
+        // Reset form
+        setTransferAmount('');
+      } else {
+        // ✅ 使用统一错误处理
+        handleError(response, {
+          toastTitle: '划转失败',
+          customMessage: response.msg || '余额划转失败，请重试',
+          context: { amount: numAmount, remark: transferRemark }
+        });
+      }
+    } catch (error) {
+      // ✅ 使用统一错误处理
+      handleError(error, {
+        toastTitle: '划转失败',
+        customMessage: '网络错误，请重试',
+        context: { amount: numAmount, remark: transferRemark }
+      });
+    } finally {
+      setTransferring(false);
+    }
   };
 
   // Render Functions
@@ -331,6 +550,77 @@ const BalanceRecharge: React.FC<BalanceRechargeProps> = ({ onBack, onNavigate, i
           <p className="text-xs text-slate-400 mt-3 flex items-center gap-1">
             <Shield size={12} />
             资金由第三方银行全流程监管
+          </p>
+        </div>
+
+        {/* Transfer Section */}
+        <div className="bg-white rounded-[24px] p-6 shadow-xl shadow-blue-100/50 mb-4 border border-white">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <Wallet className="text-blue-500" size={20} />
+              <span className="text-sm font-bold text-gray-800">可提现余额划转</span>
+            </div>
+            <div className="text-right">
+              <p className="text-xs text-gray-500">可提现余额</p>
+              <p className="text-lg font-bold text-blue-600">¥{withdrawableBalance.toFixed(2)}</p>
+            </div>
+          </div>
+
+          <div className="flex items-end gap-2 border-b-2 border-blue-50 pb-2 mb-4">
+            <span className="text-3xl font-bold text-gray-900">¥</span>
+            <input
+              type="number"
+              value={transferAmount}
+              onChange={(e) => setTransferAmount(e.target.value)}
+              placeholder="0.00"
+              className="flex-1 w-full min-w-0 text-4xl font-bold bg-transparent border-none focus:ring-0 outline-none p-0 placeholder-gray-200"
+            />
+            {transferAmount && (
+              <button
+                onClick={() => setTransferAmount('')}
+                className="text-gray-400 hover:text-gray-600 p-1"
+              >
+                <X size={18} />
+              </button>
+            )}
+          </div>
+
+          {/* Display Transfer Amount */}
+          {transferAmount && (
+            <div className="mb-4 p-3 bg-blue-50 border border-blue-100 rounded-lg">
+              <p className="text-sm text-blue-700 font-medium">
+                划转金额：¥{Number(transferAmount).toFixed(2)}
+              </p>
+              <p className="text-xs text-blue-600 mt-1">
+                备注：{transferRemark}
+              </p>
+            </div>
+          )}
+
+          <button
+            onClick={handleTransfer}
+            disabled={!transferAmount || transferring}
+            className={`w-full py-3 rounded-xl font-bold text-base transition-all flex items-center justify-center gap-2 ${transferAmount && !transferring
+              ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg shadow-blue-200 active:scale-[0.98]'
+              : 'bg-gray-200 text-gray-400 cursor-not-allowed shadow-none'
+              }`}
+          >
+            {transferring ? (
+              <>
+                <LoadingSpinner className="w-5 h-5 border-white/20 border-t-white" />
+                划转中...
+              </>
+            ) : (
+              <>
+                <Zap size={18} fill="currentColor" />
+                立即划转到可用余额
+              </>
+            )}
+          </button>
+
+          <p className="text-xs text-slate-400 mt-3 flex items-center gap-1">
+            <Shield size={12} />
+            划转后资金可用于专项金申购
           </p>
         </div>
       </div>
@@ -495,9 +785,13 @@ const BalanceRecharge: React.FC<BalanceRechargeProps> = ({ onBack, onNavigate, i
                   <span className="text-lg font-bold text-gray-900 font-mono tracking-wide">{matchedAccount.account_number}</span>
                   <button
                     className="text-[10px] bg-white border border-gray-200 px-2 py-1 rounded text-gray-600 active:bg-gray-50"
-                    onClick={() => {
-                      navigator.clipboard.writeText(matchedAccount.account_number);
-                      showToast('success', '复制成功', '账号已复制到剪贴板');
+                    onClick={async () => {
+                      const success = await copyToClipboard(matchedAccount.account_number);
+                      if (success) {
+                        showToast('success', '复制成功', '账号已复制到剪贴板');
+                      } else {
+                        showToast('error', '复制失败', '请长按手动复制');
+                      }
                     }}
                   >
                     复制
@@ -508,23 +802,87 @@ const BalanceRecharge: React.FC<BalanceRechargeProps> = ({ onBack, onNavigate, i
               <div className="grid grid-cols-2 gap-3">
                 <div className="bg-gray-50 p-3 rounded-xl border border-gray-100/50">
                   <span className="text-xs text-gray-500 block mb-1">开户银行</span>
-                  <span className="text-sm font-bold text-gray-900 block truncate">{matchedAccount.bank_name || '支付平台'}</span>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-sm font-bold text-gray-900 block truncate flex-1">{matchedAccount.bank_name || '支付平台'}</span>
+                    <button
+                      className="text-[10px] bg-white border border-gray-200 px-2 py-1 rounded text-gray-600 active:bg-gray-50 shrink-0"
+                      onClick={async () => {
+                        const success = await copyToClipboard(matchedAccount.bank_name || '支付平台');
+                        if (success) {
+                          showToast('success', '复制成功', '银行名称已复制到剪贴板');
+                        } else {
+                          showToast('error', '复制失败', '请长按手动复制');
+                        }
+                      }}
+                    >
+                      复制
+                    </button>
+                  </div>
                 </div>
                 <div className="bg-gray-50 p-3 rounded-xl border border-gray-100/50">
                   <span className="text-xs text-gray-500 block mb-1">收款姓名</span>
-                  <span className="text-sm font-bold text-gray-900 block truncate">{matchedAccount.account_name}</span>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-sm font-bold text-gray-900 block truncate flex-1">{matchedAccount.account_name}</span>
+                    <button
+                      className="text-[10px] bg-white border border-gray-200 px-2 py-1 rounded text-gray-600 active:bg-gray-50 shrink-0"
+                      onClick={async () => {
+                        const success = await copyToClipboard(matchedAccount.account_name);
+                        if (success) {
+                          showToast('success', '复制成功', '姓名已复制到剪贴板');
+                        } else {
+                          showToast('error', '复制失败', '请长按手动复制');
+                        }
+                      }}
+                    >
+                      复制
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Warning */}
-          <div className="bg-red-50 p-4 rounded-xl flex items-start gap-3 mb-6 border border-red-100">
-            <AlertTriangle size={18} className="text-red-500 shrink-0 mt-0.5" />
-            <p className="text-xs text-red-600 leading-relaxed">
-              您正在委托授权服务商办理专项金划拨业务，请务必使用本人账户转账，
-              <span className="font-bold underline Decoration-red-500 decoration-2 underline-offset-2">备注您的UID</span>
-              ，否则将无法自动到账。
+          {/* Critical Warning - Do Not Save Payment Info */}
+          <div className="bg-gradient-to-r from-red-500 to-red-600 p-4 rounded-2xl mb-4 border-2 border-red-400 shadow-lg shadow-red-200 animate-in slide-in-from-top duration-500">
+            <div className="flex items-start gap-3 mb-3">
+              <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center flex-shrink-0 animate-pulse">
+                <AlertTriangle size={18} className="text-red-600" strokeWidth={3} />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-white font-bold text-sm mb-1 flex items-center gap-2">
+                  ⚠️ 重要提示
+                </h3>
+                <p className="text-white text-xs leading-relaxed">
+                  <span className="font-bold bg-white/20 px-1.5 py-0.5 rounded">切勿保存</span>
+                  收款人信息转账！
+                </p>
+              </div>
+            </div>
+            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3 border border-white/20">
+              <ul className="text-white text-xs space-y-1.5">
+                <li className="flex items-start gap-2">
+                  <span className="text-yellow-300 shrink-0 mt-0.5">●</span>
+                  <span>每次充值都需要<span className="font-bold underline decoration-yellow-300 decoration-2">重新获取</span>收款信息</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-yellow-300 shrink-0 mt-0.5">●</span>
+                  <span>收款账户为<span className="font-bold">动态分配</span>，使用旧信息将导致<span className="font-bold text-yellow-300">无法到账</span></span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-yellow-300 shrink-0 mt-0.5">●</span>
+                  <span>请勿备注、留言或保存收款人为常用联系人</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          {/* Warning - Transfer Notes */}
+          <div className="bg-orange-50 p-4 rounded-xl flex items-start gap-3 mb-6 border border-orange-200">
+            <AlertTriangle size={16} className="text-orange-600 shrink-0 mt-0.5" />
+            <p className="text-xs text-orange-700 leading-relaxed">
+              您正在委托授权服务商办理专项资金划拨业务，请务必使用本人账户转账，
+              <span className="font-bold underline decoration-orange-600 decoration-2 underline-offset-2">转账时请不要备注任何信息</span>
+              ，转账完成后截图上传
             </p>
           </div>
 
@@ -586,7 +944,13 @@ const BalanceRecharge: React.FC<BalanceRechargeProps> = ({ onBack, onNavigate, i
 
           {/* Submit Button */}
           <button
-            onClick={handleSubmitOrder}
+            onClick={() => {
+              if (!uploadedImage) {
+                showToast('warning', '请上传截图', '请先上传付款截图');
+                return;
+              }
+              setShowConfirmModal(true);
+            }}
             disabled={!uploadedImage || submitting}
             className={`w-full py-4 rounded-xl font-bold text-base transition-all shadow-lg flex items-center justify-center gap-2 mb-4 ${uploadedImage && !submitting
               ? 'bg-gradient-to-r from-[#FF6B35] to-[#FF9F2E] text-white shadow-orange-200 active:scale-[0.98]'
@@ -613,6 +977,73 @@ const BalanceRecharge: React.FC<BalanceRechargeProps> = ({ onBack, onNavigate, i
             取消并返回
           </button>
         </div>
+
+        {/* Confirmation Modal */}
+        {showConfirmModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm animate-in zoom-in duration-200">
+              <div className="p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-bold text-gray-900">确认提交</h3>
+                  <button
+                    onClick={() => {
+                      setShowConfirmModal(false);
+                      setLastFourDigits('');
+                    }}
+                    className="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors"
+                  >
+                    <X size={20} />
+                  </button>
+                </div>
+
+                <div className="mb-6">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    请输入付款银行卡后四位号码
+                    <span className="text-red-500 ml-1">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    maxLength={4}
+                    value={lastFourDigits}
+                    onChange={(e) => {
+                      const value = e.target.value.replace(/[^0-9]/g, '');
+                      setLastFourDigits(value);
+                    }}
+                    placeholder="请输入4位数字"
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-orange-500 focus:ring-0 outline-none text-center text-2xl font-mono tracking-widest"
+                  />
+                  <p className="text-xs text-gray-500 mt-2 text-center">
+                    为确保资金安全，请输入您付款银行卡的后四位号码
+                  </p>
+                </div>
+
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => {
+                      setShowConfirmModal(false);
+                      setLastFourDigits('');
+                    }}
+                    className="flex-1 py-3 px-4 rounded-xl bg-gray-100 text-gray-700 font-medium hover:bg-gray-200 transition-colors"
+                  >
+                    取消
+                  </button>
+                  <button
+                    onClick={handleSubmitOrder}
+                    disabled={lastFourDigits.length !== 4 || submitting}
+                    className={`flex-1 py-3 px-4 rounded-xl font-bold transition-all ${lastFourDigits.length === 4 && !submitting
+                      ? 'bg-gradient-to-r from-[#FF6B35] to-[#FF9F2E] text-white shadow-lg shadow-orange-200'
+                      : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                      }`}
+                  >
+                    {submitting ? '提交中...' : '确定'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     )
   );
@@ -643,6 +1074,123 @@ const BalanceRecharge: React.FC<BalanceRechargeProps> = ({ onBack, onNavigate, i
           orderId={selectedOrderId}
           onBack={() => setViewState('history')}
         />
+      )}
+
+      {/* Embedded Payment Browser */}
+      <EmbeddedBrowser
+        isOpen={showPaymentBrowser}
+        url={paymentUrl}
+        title="支付收银台"
+        onClose={() => {
+          setShowPaymentBrowser(false);
+          setPaymentUrl('');
+          // Show payment result confirmation modal
+          setShowPaymentResultModal(true);
+        }}
+      />
+
+      {/* Payment Result Confirmation Modal */}
+      {showPaymentResultModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm animate-in zoom-in duration-200">
+            <div className="p-6">
+              <div className="flex flex-col items-center mb-6">
+                <div className="w-16 h-16 rounded-full bg-orange-100 flex items-center justify-center mb-4">
+                  <AlertCircle size={32} className="text-orange-600" />
+                </div>
+                <h3 className="text-lg font-bold text-gray-900 mb-2">支付结果确认</h3>
+                <p className="text-sm text-gray-600 text-center">
+                  请确认您是否已完成支付？
+                </p>
+              </div>
+
+              <div className="flex flex-col gap-3">
+                <button
+                  onClick={async () => {
+                    const remark = '用户确认支付成功';
+                    setPaymentResultRemark(remark);
+                    setShowPaymentResultModal(false);
+
+                    // 调用 API 更新订单备注
+                    if (pendingOrderId) {
+                      try {
+                        const token = getStoredToken();
+                        await updateRechargeOrderRemark({
+                          order_id: pendingOrderId,
+                          user_remark: remark,
+                          token: token || undefined,
+                        });
+                      } catch (error) {
+                        console.error('Failed to update order remark:', error);
+                      }
+                    }
+
+                    showToast('success', '已记录', '支付状态已提交，请等待系统确认');
+                    setViewState('history');
+                  }}
+                  className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-green-500 to-green-600 text-white font-bold shadow-lg shadow-green-200 hover:shadow-xl transition-all">
+                  ✓ 支付成功
+                </button>
+                <button
+                  onClick={async () => {
+                    const remark = '用户反馈支付失败';
+                    setPaymentResultRemark(remark);
+                    setShowPaymentResultModal(false);
+
+                    // 调用 API 更新订单备注
+                    if (pendingOrderId) {
+                      try {
+                        const token = getStoredToken();
+                        await updateRechargeOrderRemark({
+                          order_id: pendingOrderId,
+                          user_remark: remark,
+                          token: token || undefined,
+                        });
+                      } catch (error) {
+                        console.error('Failed to update order remark:', error);
+                      }
+                    }
+
+                    showToast('info', '已记录', '支付未完成，您可以重新发起支付');
+                    setViewState('input');
+                    // Reset states
+                    setAmount('');
+                    setSelectedMethod(null);
+                    setPendingOrderId(null);
+                  }}
+                  className="w-full py-3 px-4 rounded-xl bg-gray-100 text-gray-700 font-medium hover:bg-gray-200 transition-colors">
+                  ✗ 支付失败/未完成
+                </button>
+                <button
+                  onClick={async () => {
+                    const remark = '用户反馈支付中';
+                    setPaymentResultRemark(remark);
+                    setShowPaymentResultModal(false);
+
+                    // 调用 API 更新订单备注
+                    if (pendingOrderId) {
+                      try {
+                        const token = getStoredToken();
+                        await updateRechargeOrderRemark({
+                          order_id: pendingOrderId,
+                          user_remark: remark,
+                          token: token || undefined,
+                        });
+                      } catch (error) {
+                        console.error('Failed to update order remark:', error);
+                      }
+                    }
+
+                    showToast('info', '已记录', '请稍后在订单列表中查看支付状态');
+                    setViewState('history');
+                  }}
+                  className="w-full py-3 px-4 rounded-xl border-2 border-gray-200 text-gray-600 font-medium hover:bg-gray-50 transition-colors">
+                  ⏱ 不确定/稍后查看
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

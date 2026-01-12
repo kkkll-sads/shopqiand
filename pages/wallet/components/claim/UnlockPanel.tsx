@@ -36,7 +36,7 @@ const UnlockPanel: React.FC<UnlockPanelProps> = ({ userInfo, unlockStatus, unloc
           <div className="flex items-start gap-2.5 bg-black/10 px-4 py-3 rounded-xl border border-white/10 backdrop-blur-sm">
             <AlertCircle size={16} className="text-white/90 shrink-0 mt-0.5" />
             <span className="text-xs text-white/90 leading-relaxed font-light">
-              完成下方任务即可解锁旧资产，解锁后确权金将转入可用余额。
+              完成下方任务即可解锁旧资产，解锁后发放权益资产包。
             </span>
           </div>
         </div>
@@ -69,7 +69,7 @@ const UnlockPanel: React.FC<UnlockPanelProps> = ({ userInfo, unlockStatus, unloc
                   {unlockStatus.unlockConditions?.transaction_count ? (
                     <span className="text-blue-600 font-medium">已完成 {unlockStatus.unlockConditions.transaction_count} 笔</span>
                   ) : (
-                    '需至少完成一笔任意交易'
+                    `需至少完成 ${unlockStatus.requiredTransactions || 1} 笔任意交易`
                   )}
                 </div>
               </div>
@@ -90,12 +90,12 @@ const UnlockPanel: React.FC<UnlockPanelProps> = ({ userInfo, unlockStatus, unloc
           </div>
 
           {/* 条件2：直推用户 */}
-          <div className={`group flex items-center justify-between p-4 rounded-2xl transition-all border ${unlockStatus.activeReferrals >= unlockStatus.referralTarget
+          <div className={`group flex items-center justify-between p-4 rounded-2xl transition-all border ${unlockStatus.activeReferrals >= (unlockStatus.requiredReferrals || unlockStatus.referralTarget)
             ? 'bg-[#F0FDF4] border-green-100/50'
             : 'bg-white border-gray-100 shadow-sm'
             }`}>
             <div className="flex items-center gap-4">
-              <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${unlockStatus.activeReferrals >= unlockStatus.referralTarget
+              <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${unlockStatus.activeReferrals >= (unlockStatus.requiredReferrals || unlockStatus.referralTarget)
                 ? 'bg-green-100 text-green-600'
                 : 'bg-gray-100 text-gray-400'
                 }`}>
@@ -104,24 +104,24 @@ const UnlockPanel: React.FC<UnlockPanelProps> = ({ userInfo, unlockStatus, unloc
               <div className="flex flex-col gap-0.5">
                 <div className="text-gray-800 font-bold text-sm">直推有效用户</div>
                 <div className="text-xs text-gray-500">
-                  <span className={unlockStatus.activeReferrals >= unlockStatus.referralTarget ? 'text-green-600 font-medium' : ''}>
+                  <span className={unlockStatus.activeReferrals >= (unlockStatus.requiredReferrals || unlockStatus.referralTarget) ? 'text-green-600 font-medium' : ''}>
                     {unlockStatus.activeReferrals}
                   </span>
                   <span className="mx-1">/</span>
-                  <span>{unlockStatus.referralTarget} (需有交易记录)</span>
+                  <span>{unlockStatus.requiredReferrals || unlockStatus.referralTarget} (需有交易记录)</span>
                 </div>
               </div>
             </div>
             <div>
               {unlockStatus.isLoading ? (
                 <div className="w-4 h-4 border-2 border-gray-200 border-t-green-500 rounded-full animate-spin"></div>
-              ) : unlockStatus.activeReferrals >= unlockStatus.referralTarget ? (
+              ) : unlockStatus.activeReferrals >= (unlockStatus.requiredReferrals || unlockStatus.referralTarget) ? (
                 <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center shadow-md shadow-green-200">
                   <Check size={14} className="text-white font-bold" />
                 </div>
               ) : (
                 <span className="text-xs font-bold text-gray-400 bg-gray-100 px-2 py-1 rounded-md">
-                  {unlockStatus.activeReferrals}/{unlockStatus.referralTarget}
+                  {unlockStatus.activeReferrals}/{unlockStatus.requiredReferrals || unlockStatus.referralTarget}
                 </span>
               )}
             </div>
@@ -142,7 +142,7 @@ const UnlockPanel: React.FC<UnlockPanelProps> = ({ userInfo, unlockStatus, unloc
             <div className="absolute top-0 right-0 w-8 h-8 bg-[#FFEDD5] rounded-bl-2xl -mr-4 -mt-4 group-hover:bg-orange-200 transition-colors"></div>
             <div className="text-[#E65100] font-bold text-[15px] mb-1.5 tracking-tight group-hover:scale-105 transition-transform">权益资产包</div>
             <div className="text-[10px] font-medium text-[#9A3412] bg-[#FFEDD5] px-2 py-0.5 rounded-full">
-              价值 ≈ ¥1000
+              价值 ≈ ¥{unlockStatus.rewardValue || 1000}
             </div>
           </div>
 

@@ -31,10 +31,10 @@ const RechargeOrderList: React.FC<RechargeOrderListProps> = ({ onBack, onNavigat
         loadOrders(1, true, activeTab);
     }, [activeTab]);
 
-    const loadOrders = async (pageNum: number, refresh = false, status?: number) => {
+    const loadOrders = async (pageNum: number, refresh = false, status?: number, silent = false) => {
         if (loadRef.current) return;
         loadRef.current = true;
-        setLoading(true);
+        if (!silent) setLoading(true);
 
         try {
             const res = await getMyRechargeOrders({ page: pageNum, limit: 20, status });
@@ -46,17 +46,31 @@ const RechargeOrderList: React.FC<RechargeOrderListProps> = ({ onBack, onNavigat
 
                 setOrders(prev => refresh ? list : [...prev, ...list]);
                 setHasMore(more);
-                setPage(pageNum);
+                // Only update page state if not a background refresh or if it's a genuine navigation
+                if (!silent || refresh) {
+                    setPage(pageNum);
+                }
             } else {
-                handleError(res, { toastTitle: '加载失败', customMessage: '获取订单列表失败' });
+                if (!silent) handleError(res, { toastTitle: '加载失败', customMessage: '获取订单列表失败' });
             }
         } catch (err) {
-            handleError(err, { toastTitle: '加载失败', customMessage: '网络错误' });
+            if (!silent) handleError(err, { toastTitle: '加载失败', customMessage: '网络错误' });
         } finally {
-            setLoading(false);
+            if (!silent) setLoading(false);
             loadRef.current = false;
         }
     };
+
+    // Auto-refresh interval (5 seconds)
+    useEffect(() => {
+        const interval = setInterval(() => {
+            // Only auto-refresh if on the first page to avoid disrupting scroll/pagination flow
+            if (page === 1) {
+                loadOrders(1, true, activeTab, true);
+            }
+        }, 5000);
+        return () => clearInterval(interval);
+    }, [activeTab, page]);
 
     const handleLoadMore = () => {
         if (!loading && hasMore) {

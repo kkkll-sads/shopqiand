@@ -12,10 +12,11 @@ import React, { useState, useEffect } from 'react';
 import { Receipt, FileText, ShoppingBag, Clock, Tag, Calendar } from 'lucide-react';
 import PageContainer from '../../components/layout/PageContainer';
 import { LoadingSpinner, EmptyState } from '../../components/common';
-import { AUTH_TOKEN_KEY } from '../../services/api';
+import { AUTH_TOKEN_KEY, fetchProfile } from '../../services/api';
 import { fetchConsignmentCoupons, ConsignmentCouponItem } from '../../services/consignment';
 import { formatTime } from '../../utils/format';
-import { isSuccess, extractError } from '../../utils/apiHelpers';
+import { isSuccess, extractError, extractData } from '../../utils/apiHelpers';
+import { UserInfo } from '../../types';
 
 /**
  * ConsignmentVoucher 组件属性接口
@@ -32,6 +33,7 @@ const ConsignmentVoucher: React.FC<ConsignmentVoucherProps> = ({ onBack }) => {
   const [error, setError] = useState<string | null>(null);
   const [coupons, setCoupons] = useState<ConsignmentCouponItem[]>([]);
   const [total, setTotal] = useState<number>(0);
+  const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
 
   // 加载数据
   useEffect(() => {
@@ -47,23 +49,32 @@ const ConsignmentVoucher: React.FC<ConsignmentVoucherProps> = ({ onBack }) => {
       setError(null);
 
       try {
-        // 使用新的寄售券接口获取列表
-        const response = await fetchConsignmentCoupons({
+        // 先获取用户信息，从中获取寄售券数量
+        const profileResponse = await fetchProfile(token);
+        const profileData = extractData(profileResponse);
+
+        if (profileData?.userInfo) {
+          setUserInfo(profileData.userInfo);
+          setTotal(profileData.userInfo.consignment_coupon || 0);
+        }
+
+        // 然后获取寄售券列表
+        const couponsResponse = await fetchConsignmentCoupons({
           page: 1,
           limit: 50,
           status: 1, // 只获取可用的
           token
         });
 
-        if (isSuccess(response) && response.data) {
-          setCoupons(response.data.list || []);
-          setTotal(response.data.total || 0);
+        if (isSuccess(couponsResponse) && couponsResponse.data) {
+          setCoupons(couponsResponse.data.list || []);
         } else {
-          setError(extractError(response, '获取寄售券信息失败'));
+          // 如果寄售券列表获取失败，不影响总数显示，只记录错误
+          console.error('获取寄售券列表失败:', extractError(couponsResponse));
         }
       } catch (err: any) {
-        console.error('Failed to load consignment coupons:', err);
-        setError(err?.message || '获取寄售券信息失败');
+        console.error('Failed to load data:', err);
+        setError(err?.message || '获取数据失败');
       } finally {
         setLoading(false);
       }

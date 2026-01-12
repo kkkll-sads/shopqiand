@@ -7,6 +7,18 @@ import { getStoredToken } from '../../services/client';
 import { Route } from '../../router/routes';
 import { isSuccess, extractData } from '../../utils/apiHelpers';
 
+// 全局预加载数据存储
+declare global {
+    var __preloadedReservationData: {
+        userInfo?: { availableHashrate: number; accountBalance: number };
+        sessionDetail?: any;
+        zoneMaxPrice?: number;
+        sessionId?: number | string;
+        zoneId?: number | string;
+        packageId?: number | string;
+    } | null;
+}
+
 /**
  * 从价格分区字符串中提取价格数字
  * @param priceZone - 价格分区字符串，如 "500元区" 或 "1K区"
@@ -14,7 +26,7 @@ import { isSuccess, extractData } from '../../utils/apiHelpers';
  */
 const extractPriceFromZone = (priceZone?: string): number => {
     if (!priceZone) return 0;
-    
+
     // 处理带单位的情况，如 "1K区" -> 1000, "2K区" -> 2000
     const upperZone = priceZone.toUpperCase();
     if (upperZone.includes('K')) {
@@ -23,7 +35,7 @@ const extractPriceFromZone = (priceZone?: string): number => {
             return Number(match[1]) * 1000;
         }
     }
-    
+
     // 处理普通数字，如 "500元区" -> 500
     const match = priceZone.match(/(\d+)/);
     return match ? Number(match[1]) : 0;
@@ -33,20 +45,42 @@ interface ReservationPageProps {
     product: Product;
     onBack: () => void;
     onNavigate: (route: Route, options?: { replace?: boolean }) => void;
+    preloadedUserInfo?: { availableHashrate: number; accountBalance: number } | null;
 }
 
-const ReservationPage: React.FC<ReservationPageProps> = ({ product, onBack, onNavigate }) => {
+const ReservationPage: React.FC<ReservationPageProps> = ({ product, onBack, onNavigate, preloadedUserInfo }) => {
     const { showToast } = useNotification();
     const [extraHashrate, setExtraHashrate] = useState(0);
     const [showConfirmModal, setShowConfirmModal] = useState(false);
     const [loading, setLoading] = useState(false);
+    const [userInfoLoading, setUserInfoLoading] = useState(true);
     // 新版预约需要后端提供的场次/分区/资产包，若入参缺失则尝试自动补全
-    const [sessionId, setSessionId] = useState<number | string | undefined>(product.sessionId);
-    const [zoneId, setZoneId] = useState<number | string | undefined>(product.zoneId);
-    const [packageId, setPackageId] = useState<number | string | undefined>((product as any).packageId ?? (product as any).package_id);
+    const [sessionId, setSessionId] = useState<number | string | undefined>(globalThis.__preloadedReservationData?.sessionId ?? product.sessionId);
+    const [zoneId, setZoneId] = useState<number | string | undefined>(globalThis.__preloadedReservationData?.zoneId ?? product.zoneId);
+    const [packageId, setPackageId] = useState<number | string | undefined>(globalThis.__preloadedReservationData?.packageId ?? (product as any).packageId ?? (product as any).package_id);
 
-    // 分区最高价（用于计算冻结金额）
-    const [zoneMaxPrice, setZoneMaxPrice] = useState<number>(product.price);
+    // 场次信息（用于返回导航）
+    const [sessionTitle, setSessionTitle] = useState<string | undefined>();
+    const [sessionStartTime, setSessionStartTime] = useState<string | undefined>();
+    const [sessionEndTime, setSessionEndTime] = useState<string | undefined>();
+
+    // 分区最高价（用于计算冻结金额）- 直接使用最准确的值
+    const getInitialZoneMaxPrice = (): number => {
+        // 1. 优先使用预加载数据（应该是最准确的）
+        if (globalThis.__preloadedReservationData?.zoneMaxPrice) {
+            return globalThis.__preloadedReservationData.zoneMaxPrice;
+        }
+
+        // 2. 如果没有预加载数据，使用产品价格
+        return Number(product.price);
+    };
+
+    const initialZoneMaxPrice = getInitialZoneMaxPrice();
+    const [zoneMaxPrice, setZoneMaxPrice] = useState<number>(initialZoneMaxPrice);
+    // 如果使用了预加载数据，标记为已更新，避免后续重复更新
+    const [hasUpdatedZoneMaxPrice, setHasUpdatedZoneMaxPrice] = useState<boolean>(
+        globalThis.__preloadedReservationData?.zoneMaxPrice !== undefined
+    );
 
     // 基础算力需求（所有价格分区的基础算力都是5）
     const baseHashrate = 5;
@@ -54,14 +88,14 @@ const ReservationPage: React.FC<ReservationPageProps> = ({ product, onBack, onNa
     // 额外算力（用户可调节）
     const totalRequiredHashrate = baseHashrate + extraHashrate;
 
-    // 当前用户持有算力（这里应该从API获取，暂时模拟）
-    const [availableHashrate, setAvailableHashrate] = useState(10);
+    // 当前用户持有算力（从API获取或预加载）
+    const [availableHashrate, setAvailableHashrate] = useState(preloadedUserInfo?.availableHashrate ?? 0);
 
     // 冻结金额计算（按场次分区的最高价冻结，撮合后退还差价）
     const frozenAmount = zoneMaxPrice;
 
-    // 账户余额（应该从API获取）
-    const [accountBalance, setAccountBalance] = useState(1000);
+    // 账户余额（应该从API获取或预加载）
+    const [accountBalance, setAccountBalance] = useState(preloadedUserInfo?.accountBalance ?? 0);
 
     // 检查算力是否充足
     const isHashrateSufficient = availableHashrate >= totalRequiredHashrate;
@@ -111,7 +145,7 @@ const ReservationPage: React.FC<ReservationPageProps> = ({ product, onBack, onNa
                         detailZoneMaxPrice = parsedPrice;
                     }
                 }
-                
+
                 // 如果从 price_zone 解析失败，回退到其他字段
                 if (!detailZoneMaxPrice) {
                     detailZoneMaxPrice =
@@ -128,13 +162,13 @@ const ReservationPage: React.FC<ReservationPageProps> = ({ product, onBack, onNa
                     data.packageId ??
                     data.package?.id;
 
-                console.log('[Reservation] Item detail fetched:', { 
-                    detailSessionId, 
-                    detailZoneId, 
-                    detailPackageId, 
+                console.log('[Reservation] Item detail fetched:', {
+                    detailSessionId,
+                    detailZoneId,
+                    detailPackageId,
                     priceZone: data.price_zone,
                     parsedPriceFromZone: data.price_zone ? extractPriceFromZone(data.price_zone) : null,
-                    detailZoneMaxPrice 
+                    detailZoneMaxPrice
                 });
 
                 // 2. 如果存在 price_zone 名称，或者没有 valid zone_id，都尝试通过 session detail 反查
@@ -144,6 +178,17 @@ const ReservationPage: React.FC<ReservationPageProps> = ({ product, onBack, onNa
                         console.log('[Reservation] Zone ID missing, fetching session details to map price_zone...');
                         const sessionRes = await fetchCollectionSessionDetail(Number(detailSessionId));
                         const sessionData = extractData(sessionRes);
+
+                        // 提取场次信息
+                        if (sessionData) {
+                            const detailSessionTitle = sessionData.title || sessionData.name;
+                            const detailSessionStartTime = sessionData.start_time || sessionData.startTime;
+                            const detailSessionEndTime = sessionData.end_time || sessionData.endTime;
+
+                            if (detailSessionTitle) setSessionTitle(detailSessionTitle);
+                            if (detailSessionStartTime) setSessionStartTime(detailSessionStartTime);
+                            if (detailSessionEndTime) setSessionEndTime(detailSessionEndTime);
+                        }
 
                         if (sessionData && sessionData.zones && Array.isArray(sessionData.zones)) {
                             // 尝试匹配逻辑
@@ -175,7 +220,11 @@ const ReservationPage: React.FC<ReservationPageProps> = ({ product, onBack, onNa
 
                 if (detailSessionId) setSessionId(detailSessionId);
                 if (detailZoneId && Number(detailZoneId) !== 0) setZoneId(detailZoneId);
-                if (detailZoneMaxPrice) setZoneMaxPrice(Number(detailZoneMaxPrice));
+                // 只有在还没有更新过zoneMaxPrice时才更新，避免金额跳跃
+                if (detailZoneMaxPrice && !hasUpdatedZoneMaxPrice) {
+                    setZoneMaxPrice(Number(detailZoneMaxPrice));
+                    setHasUpdatedZoneMaxPrice(true);
+                }
                 if (detailPackageId) setPackageId(detailPackageId);
 
                 return {
@@ -192,19 +241,45 @@ const ReservationPage: React.FC<ReservationPageProps> = ({ product, onBack, onNa
 
     // 如果缺少场次/分区/资产包，从详情接口补全
     useEffect(() => {
+        // 如果已经从预加载数据初始化了正确的值，跳过API调用
+        if (hasUpdatedZoneMaxPrice) {
+            return;
+        }
+
         if (sessionId && zoneId && packageId) return;
         if (!product?.id) return;
 
         fillSessionZoneFromDetail();
-    }, [product?.id, sessionId, zoneId, packageId]);
+    }, [product?.id, sessionId, zoneId, packageId, hasUpdatedZoneMaxPrice]);
 
     useEffect(() => {
+        // 如果已经有预加载的用户信息，直接标记为已加载
+        if (preloadedUserInfo) {
+            setUserInfoLoading(false);
+            return;
+        }
+
+        // 检查全局预加载数据
+        if (globalThis.__preloadedReservationData?.userInfo) {
+            console.log('[Reservation] 使用预加载的用户信息', globalThis.__preloadedReservationData.userInfo);
+            setAvailableHashrate(globalThis.__preloadedReservationData.userInfo.availableHashrate);
+            setAccountBalance(globalThis.__preloadedReservationData.userInfo.accountBalance);
+            setUserInfoLoading(false);
+            // 清理预加载数据中的用户信息，但保留其他数据（如分区信息）
+            if (globalThis.__preloadedReservationData) {
+                globalThis.__preloadedReservationData.userInfo = undefined;
+            }
+            return;
+        }
+
         // 获取用户信息（算力和余额）
         const loadUserInfo = async () => {
+            setUserInfoLoading(true);
             const token = getStoredToken();
             if (!token) {
                 // 用户未登录，使用默认值
                 console.log('用户未登录，使用默认算力和余额');
+                setUserInfoLoading(false);
                 return;
             }
 
@@ -219,11 +294,13 @@ const ReservationPage: React.FC<ReservationPageProps> = ({ product, onBack, onNa
                 console.error('获取用户信息失败:', error);
                 if (error?.name === 'NeedLoginError') return;
                 // 可以在这里设置错误状态或显示提示
+            } finally {
+                setUserInfoLoading(false);
             }
         };
 
         loadUserInfo();
-    }, []);
+    }, [preloadedUserInfo]);
 
     const handleReservation = () => {
         if (!isHashrateSufficient || !isFundSufficient) {
@@ -271,7 +348,15 @@ const ReservationPage: React.FC<ReservationPageProps> = ({ product, onBack, onNa
             if (Number(response.code) === 1) {
                 setShowConfirmModal(false);
                 showToast('success', '预约成功', response.msg || '预约成功');
-                onNavigate({ name: 'reservation-record' }, { replace: true });
+                onNavigate({
+                    name: 'reservation-record',
+                    source: 'reservation',
+                    sessionId: sessionId ? String(sessionId) : (product.sessionId ? String(product.sessionId) : undefined),
+                    zoneId: zoneId ? String(zoneId) : (product.zoneId ? String(product.zoneId) : undefined),
+                    sessionTitle: sessionTitle,
+                    sessionStartTime: sessionStartTime,
+                    sessionEndTime: sessionEndTime
+                }, { replace: true });
             } else {
                 // 失败时完全使用后端返回的 msg
                 showToast('error', '预约失败', response.msg || '预约失败');
@@ -311,7 +396,7 @@ const ReservationPage: React.FC<ReservationPageProps> = ({ product, onBack, onNa
                         </div>
                         <div className="flex items-baseline gap-1 mt-2">
                             <span className="text-xs text-gray-400">起购价</span>
-                            <span className="text-xl font-bold text-red-600 font-mono">¥{product.price.toLocaleString()}</span>
+                            <span className="text-xl font-bold text-red-600 font-mono">¥{zoneMaxPrice.toLocaleString()}</span>
                         </div>
                     </div>
                 </div>
@@ -354,11 +439,18 @@ const ReservationPage: React.FC<ReservationPageProps> = ({ product, onBack, onNa
                     <div className="border-t border-gray-100 pt-4">
                         <div className="flex justify-between items-center mb-2">
                             <span className="text-sm text-gray-500">当前持有绿色算力</span>
-                            <span className={`font-mono font-bold ${isHashrateSufficient ? 'text-gray-900' : 'text-red-500'}`}>
-                                {availableHashrate.toFixed(1)}
-                            </span>
+                            {userInfoLoading ? (
+                                <div className="flex items-center gap-2">
+                                    <div className="w-4 h-4 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin"></div>
+                                    <span className="text-sm text-gray-500">加载中...</span>
+                                </div>
+                            ) : (
+                                <span className={`font-mono font-bold ${isHashrateSufficient ? 'text-gray-900' : 'text-red-500'}`}>
+                                    {availableHashrate.toFixed(1)}
+                                </span>
+                            )}
                         </div>
-                        {!isHashrateSufficient && (
+                        {!userInfoLoading && !isHashrateSufficient && (
                             <div className="text-xs text-red-500 flex items-center justify-end gap-1">
                                 <AlertCircle size={12} />
                                 算力不足，请前往【我的-算力兑换】获取
@@ -380,9 +472,16 @@ const ReservationPage: React.FC<ReservationPageProps> = ({ product, onBack, onNa
                     </div>
                     <div className="flex justify-between items-center mb-2">
                         <span className="text-sm text-gray-500">当前专项金余额</span>
-                        <span className={`font-mono font-bold ${isFundSufficient ? 'text-gray-900' : 'text-red-500'}`}>
-                            ¥{accountBalance.toLocaleString()}
-                        </span>
+                        {userInfoLoading ? (
+                            <div className="flex items-center gap-2">
+                                <div className="w-4 h-4 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin"></div>
+                                <span className="text-sm text-gray-500">加载中...</span>
+                            </div>
+                        ) : (
+                            <span className={`font-mono font-bold ${isFundSufficient ? 'text-gray-900' : 'text-red-500'}`}>
+                                ¥{accountBalance.toLocaleString()}
+                            </span>
+                        )}
                     </div>
 
                     {/* 差价退还说明 */}
@@ -395,7 +494,7 @@ const ReservationPage: React.FC<ReservationPageProps> = ({ product, onBack, onNa
                         </div>
                     </div>
 
-                    {!isFundSufficient && (
+                    {!userInfoLoading && !isFundSufficient && (
                         <div className="text-xs text-red-500 flex items-center gap-1 mt-2">
                             <AlertCircle size={12} />
                             余额不足，请充值
@@ -407,13 +506,23 @@ const ReservationPage: React.FC<ReservationPageProps> = ({ product, onBack, onNa
             {/* Footer Action */}
             <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-gray-100 pb-safe">
                 <button
-                    onClick={(!isHashrateSufficient || !isFundSufficient) ? handleRecharge : handleReservation}
-                    className={`w-full py-3.5 rounded-xl font-bold text-lg flex items-center justify-center gap-2 shadow-lg transition-all active:scale-[0.98] ${isHashrateSufficient && isFundSufficient
-                        ? 'bg-[#8B0000] text-amber-50 shadow-red-900/20 hover:bg-[#A00000]'
-                        : 'bg-[#8B0000] text-white opacity-90'
+                    onClick={userInfoLoading ? undefined : ((!isHashrateSufficient || !isFundSufficient) ? handleRecharge : handleReservation)}
+                    disabled={userInfoLoading}
+                    className={`w-full py-3.5 rounded-xl font-bold text-lg flex items-center justify-center gap-2 shadow-lg transition-all active:scale-[0.98] ${userInfoLoading
+                            ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
+                            : isHashrateSufficient && isFundSufficient
+                                ? 'bg-[#8B0000] text-amber-50 shadow-red-900/20 hover:bg-[#A00000]'
+                                : 'bg-[#8B0000] text-white opacity-90'
                         }`}
                 >
-                    {!isHashrateSufficient ? '前往获取算力' : !isFundSufficient ? '前往充值专项金' : '确认预约'}
+                    {userInfoLoading ? (
+                        <>
+                            <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                            加载中...
+                        </>
+                    ) : (
+                        !isHashrateSufficient ? '前往获取算力' : !isFundSufficient ? '前往充值专项金' : '确认预约'
+                    )}
                 </button>
             </div>
 

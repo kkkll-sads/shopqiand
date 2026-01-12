@@ -195,7 +195,7 @@ const PasswordForm: React.FC<PasswordFormProps> = ({
         try {
             await sendSmsCode({
                 mobile: phone.trim(),
-                event: currentType === 'reset_pay_sms' ? 'reset_pay_password' : 'retrieve_password'
+                event: currentType === 'reset_pay_sms' ? 'reset_pay_password' : 'user_retrieve_pwd'
             });
             showToast('success', '验证码已发送');
             setCountdown(60);

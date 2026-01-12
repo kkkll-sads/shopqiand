@@ -51,11 +51,11 @@ const AnnouncementDetail: React.FC<AnnouncementDetailProps> = ({ newsItem, onBac
   const renderContent = (content?: string) => {
     if (!content) return <EmptyState title="暂无内容" />;
 
-    return content.split('\n\n').map((paragraph, index) => (
-      <p key={index} className="mb-4 leading-7 text-justify">
-        {paragraph}
-      </p>
-    ));
+    return (
+      <div className="whitespace-pre-wrap leading-relaxed text-justify">
+        {content}
+      </div>
+    );
   };
 
   // 根据类型显示不同的标题

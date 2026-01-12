@@ -14,11 +14,27 @@ interface ReservationRecordPageProps {
     onBack: () => void;
     onNavigate: (route: Route) => void;
     onProductSelect?: (product: Product) => void;
+    source?: string;
+    sessionId?: string;
+    zoneId?: string;
+    sessionTitle?: string;
+    sessionStartTime?: string;
+    sessionEndTime?: string;
 }
 
 const PAGE_SIZE = 10;
 
-const ReservationRecordPage: React.FC<ReservationRecordPageProps> = ({ onBack, onNavigate, onProductSelect }) => {
+const ReservationRecordPage: React.FC<ReservationRecordPageProps> = ({
+    onBack,
+    onNavigate,
+    onProductSelect,
+    source,
+    sessionId,
+    zoneId,
+    sessionTitle,
+    sessionStartTime,
+    sessionEndTime
+}) => {
     const [statusFilter, setStatusFilter] = useState<ReservationStatusType | undefined>(-1);
     const [records, setRecords] = useState<ReservationItem[]>([]);
     const [loading, setLoading] = useState(true);
@@ -185,7 +201,23 @@ const ReservationRecordPage: React.FC<ReservationRecordPageProps> = ({ onBack, o
     return (
         <div className="min-h-screen bg-gray-50 pb-20">
             <header className="bg-white px-4 py-3 flex items-center justify-between sticky top-0 z-10 shadow-sm border-b border-gray-100">
-                <button onClick={onBack} className="p-1 hover:bg-gray-100 rounded-full">
+                <button
+                    onClick={() => {
+                        // 如果是从预约页面跳转过来且有场次信息，返回时导航到TradingZone详情页
+                        if (source === 'reservation' && sessionId) {
+                            onNavigate({
+                                name: 'trading-zone-items',
+                                sessionId,
+                                sessionTitle,
+                                sessionStartTime,
+                                sessionEndTime
+                            });
+                        } else {
+                            onBack();
+                        }
+                    }}
+                    className="p-1 hover:bg-gray-100 rounded-full"
+                >
                     <ChevronLeft size={24} className="text-gray-700" />
                 </button>
                 <h1 className="text-lg font-bold text-gray-900">申购记录</h1>
@@ -297,18 +329,11 @@ const ReservationRecordPage: React.FC<ReservationRecordPageProps> = ({ onBack, o
                                         <span className="text-xs font-bold text-green-600 font-mono">¥{Number(record.actual_buy_price || 0).toLocaleString()}</span>
                                     </div>
                                 )}
-                                {record.status !== ReservationStatus.APPROVED && (
-                                    <div className="flex justify-between items-center">
-                                        <span className="text-[10px] text-gray-500 flex items-center gap-1"><Zap size={10} /> 权重</span>
-                                        <span className="text-xs font-bold text-gray-900 font-mono">{record.weight || 0}</span>
-                                    </div>
-                                )}
-                                {(record.power_used > 0) && (
-                                    <div className="flex justify-between items-center">
-                                        <span className="text-[10px] text-gray-500 flex items-center gap-1"><Zap size={10} /> 消耗算力</span>
-                                        <span className="text-xs font-bold text-gray-900 font-mono">{record.power_used}</span>
-                                    </div>
-                                )}
+                                {/* 消耗算力 */}
+                                <div className="flex justify-between items-center">
+                                    <span className="text-[10px] text-gray-500 flex items-center gap-1"><Zap size={10} /> 消耗算力</span>
+                                    <span className="text-xs font-bold text-gray-900 font-mono">{record.power_used || 5}</span>
+                                </div>
                             </div>
 
                             {/* 退款差价提示（仅已中签且有差价时显示，使用API返回的refund_diff） */}

@@ -177,17 +177,40 @@ export function useAssetTabs<T = any>(
       // 使用函数式更新来获取当前状态，避免依赖 tabStates
       setTabStates(prev => {
         const newMap = new Map(prev);
-        const currentState = newMap.get(tabId);
-        const newData = page === 1 ? list : [...(currentState?.data || []), ...list];
-        newMap.set(tabId, {
+        const existingState = newMap.get(tabId) as TabState<T> | undefined;
+        const defaultState: TabState<T> = {
+          data: [] as T[],
+          page: 1,
+          hasMore: false,
+          loading: false,
+          error: null,
+          initialized: false,
+        };
+        const currentState = existingState ?? defaultState;
+        
+        // 如果是第一页，直接使用新数据；否则合并并去重
+        let newData: T[];
+        if (page === 1) {
+          newData = list;
+        } else {
+          // 合并数据并去重（基于 id 字段）
+          const existingData = currentState.data || ([] as T[]);
+          const existingIds = new Set(existingData.map((item: any) => item?.id));
+          // 过滤掉已存在的记录
+          const uniqueNewItems = list.filter((item: any) => item?.id && !existingIds.has(item.id));
+          newData = [...existingData, ...uniqueNewItems] as T[];
+        }
+        
+        const updatedState: TabState<T> = {
           ...currentState,
-          data: newData as T[],
+          data: newData,
           page,
           hasMore,
           loading: false,
           error: null,
           initialized: true,
-        } as TabState<T>);
+        };
+        newMap.set(tabId, updatedState);
         return newMap;
       });
 

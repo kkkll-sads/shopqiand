@@ -225,7 +225,7 @@ export async function fetchCollectionItemOriginalDetail(id: number | string): Pr
 // buyCollectionItem 接口已移除
 
 /**
- * 将藏品转为矿机
+ * 将藏品升级为共识验证节点
  * API: POST /api/collectionItem/toMining
  * 
  * @param params - 参数
@@ -601,7 +601,8 @@ export interface MyCollectionItem {
     asset_code: string;           // 确权编号
     md5: string;                  // MD5指纹
     fingerprint: string;          // 指纹(同MD5)
-    price: number;                // 买入价格
+    price: number;                // 价格
+    buy_price?: number | string;  // 买入成本价（优先使用）
     market_price: number;         // 当前市场价
     transaction_count: number;    // 交易次数
     fail_count: number;           // 流拍次数

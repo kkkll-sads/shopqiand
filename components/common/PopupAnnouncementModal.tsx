@@ -70,7 +70,7 @@ const PopupAnnouncementModal: React.FC<PopupAnnouncementModalProps> = ({
                 {/* Content */}
                 <div className="px-4 py-3 max-h-[50vh] overflow-y-auto">
                     <div
-                        className="text-sm text-gray-600 leading-relaxed prose prose-sm max-w-none"
+                        className="text-sm text-gray-600 leading-relaxed prose prose-sm max-w-none whitespace-pre-wrap"
                         dangerouslySetInnerHTML={{ __html: announcement.content }}
                     />
                 </div>

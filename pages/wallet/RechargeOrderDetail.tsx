@@ -40,12 +40,57 @@ const RechargeOrderDetail: React.FC<RechargeOrderDetailProps> = ({ orderId, onBa
         }
     }, [orderId, showToast]);
 
-    const copyToClipboard = (text: string) => {
-        navigator.clipboard.writeText(text).then(() => {
-            showToast('success', '复制成功');
-        }).catch(() => {
-            showToast('error', '复制失败');
-        });
+    const copyToClipboard = async (text: string) => {
+        if (!text || text.trim() === '') {
+            showToast('error', '内容为空，无法复制');
+            return;
+        }
+
+        // 方法1: 尝试使用现代 Clipboard API
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            try {
+                await navigator.clipboard.writeText(text);
+                showToast('success', '复制成功');
+                return;
+            } catch (err: any) {
+                console.warn('Modern clipboard API failed:', err);
+            }
+        }
+
+        // 方法2: 降级方案 - 使用传统方法
+        try {
+            const textArea = document.createElement('textarea');
+            textArea.value = text;
+            textArea.style.position = 'absolute';
+            textArea.style.left = '-9999px';
+            textArea.style.top = '-9999px';
+            textArea.style.width = '1px';
+            textArea.style.height = '1px';
+            textArea.style.opacity = '0';
+            textArea.style.border = 'none';
+            textArea.style.outline = 'none';
+            textArea.style.resize = 'none';
+            textArea.style.overflow = 'hidden';
+            textArea.setAttribute('readonly', '');
+
+            document.body.appendChild(textArea);
+            textArea.style.display = 'block';
+            textArea.focus({ preventScroll: true });
+            textArea.select();
+            textArea.setSelectionRange(0, text.length);
+
+            const successful = document.execCommand('copy');
+            document.body.removeChild(textArea);
+
+            if (successful) {
+                showToast('success', '复制成功');
+                return;
+            }
+            throw new Error('execCommand failed');
+        } catch (err: any) {
+            console.error('Fallback copy failed:', err);
+            showToast('error', '复制失败', '请手动复制');
+        }
     };
 
     const getStatusConfig = (status: number) => {
@@ -91,7 +136,7 @@ const RechargeOrderDetail: React.FC<RechargeOrderDetailProps> = ({ orderId, onBa
                         <div className="text-white/90 text-sm">
                             {order.status === 0 && '您的充值申请正在审核中，请耐心等待'}
                             {order.status === 1 && '您的充值已到账，感谢您的使用'}
-                            {order.status === 2 && order.audit_remark ? `拒绝原因：${order.audit_remark}` : '您的充值申请未通过审核'}
+                            {order.status === 2 && (order.audit_remark ? `拒绝原因：${order.audit_remark}` : '您的充值申请未通过审核')}
                         </div>
                     </div>
                 </div>

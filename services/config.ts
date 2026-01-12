@@ -199,6 +199,8 @@ export const API_ENDPOINTS = {
         getMyWithdrawList: '/Recharge/getMyWithdrawList',
         /** 获取充值订单详情 */
         detail: '/Recharge/detail',
+        // 更新订单备注/用户反馈
+        updateOrderRemark: '/Recharge/updateOrderRemark',
     },
     common: {
         page: '/Common/page',
@@ -244,6 +246,8 @@ export const API_ENDPOINTS = {
         detail: '/shopOrder/detail',
         /** 删除订单 */
         delete: '/shopOrder/delete',
+        /** 取消订单 */
+        cancel: '/shopOrder/cancel',
         /** 订单统计 */
         statistics: '/shopOrder/statistics',
     },
@@ -302,7 +306,7 @@ export const API_ENDPOINTS = {
         reservationDetail: '/collectionItem/reservationDetail',
         /** 订单详情 */
         orderDetail: '/collectionItem/orderDetail',
-        /** 转为矿机 */
+        /** 升级为共识验证节点 */
         toMining: '/collectionItem/toMining',
     },
     artist: {
@@ -336,6 +340,14 @@ export const API_ENDPOINTS = {
         promotionCard: '/Team/promotionCard',
         /** 获取团队成员列表 */
         members: '/Team/members',
+    },
+    app: {
+        /** 检查应用版本更新 */
+        checkUpdate: '/AppVersion/checkUpdate',
+    },
+    financeOrder: {
+        /** 余额划转到可用余额 */
+        transferIncomeToPurchase: '/financeOrder/transferIncomeToPurchase',
     },
 } as const;
 

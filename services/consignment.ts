@@ -40,6 +40,7 @@ export interface ConsignmentCouponItem {
 export interface ConsignmentCouponListData {
     list: ConsignmentCouponItem[]; // 寄售券列表
     total: number;                 // 总记录数
+    available_count: number;       // 可用数量
     has_more?: boolean;            // 是否有更多
 }
 

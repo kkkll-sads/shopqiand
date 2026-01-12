@@ -50,7 +50,7 @@ const MessageCenter: React.FC<MessageCenterProps> = ({ onBack, onNavigate }) => 
   // 缓存键
   const CACHE_KEY = 'message_center_cache';
   const CACHE_TIMESTAMP_KEY = 'message_center_cache_timestamp';
-  const CACHE_DURATION = 5 * 60 * 1000; // 5分钟缓存有效期
+  const CACHE_DURATION = 0; // 禁用缓存，每次进入都刷新
 
   // 从本地存储读取已读消息ID列表
   const getReadMessageIds = (): string[] => {
@@ -587,11 +587,13 @@ const MessageCenter: React.FC<MessageCenterProps> = ({ onBack, onNavigate }) => 
         }
         break;
       case 'withdraw':
-        onNavigate({
-          name: 'balance-withdraw',
-          source: 'asset-view',
-          back: { name: 'service-center:message' }
-        });
+        if (message.sourceId) {
+          onNavigate({
+            name: 'withdraw-order-detail',
+            orderId: String(message.sourceId),
+            back: { name: 'message-center' }
+          });
+        }
         break;
       case 'shop_order':
         // 商城订单，跳转到订单详情页

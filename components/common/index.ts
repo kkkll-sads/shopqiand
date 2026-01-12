@@ -25,6 +25,9 @@ export { default as ConfirmModal } from './ConfirmModal';
 // 结果弹窗组件
 export { default as ResultModal } from './ResultModal';
 
+// 内嵌浏览器组件
+export * from './EmbeddedBrowser';
+
 // 卡片组件
 export { default as Card } from './Card';
 
@@ -48,3 +51,6 @@ export { default as BankPicker } from './BankPicker';
 
 // 实名认证提示弹窗组件
 export { default as RealNameRequiredModal } from './RealNameRequiredModal';
+
+// 版本更新提示弹窗组件
+export { default as UpdatePromptModal } from './UpdatePromptModal';

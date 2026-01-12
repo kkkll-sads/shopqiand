@@ -42,33 +42,22 @@ const AssetView: React.FC<AssetViewProps> = ({ onBack, onNavigate, onProductSele
   const [filterFlow, setFilterFlow] = useState('all');
   const [filterTime, setFilterTime] = useState('7days'); // Default to 7 days as per user example preference
 
-  const categoryOptions = [
-    ...BALANCE_TYPE_OPTIONS,
-    { label: '我的藏品', value: 'collection' }, // Added Collection option
-  ];
+  const categoryOptions = [...BALANCE_TYPE_OPTIONS];
 
   // Logic to sync Filter Category with Active Tab
   const handleCategoryChange = (val: string) => {
     setFilterCategory(val);
-    if (val === 'collection') {
-      tabs.setActiveTab(1);
-    } else {
-      tabs.setActiveTab(0);
-    }
   };
 
   // User Info
-  const [userInfo, setUserInfo] = useState<UserInfo | null>(() => {
-    try {
-      const cached = localStorage.getItem(USER_INFO_KEY);
-      return cached ? JSON.parse(cached) : null;
-    } catch (error) {
-      console.warn('解析本地用户信息失败:', error);
-      return null;
-    }
-  });
+  const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
 
   const [consignmentTicketCount, setConsignmentTicketCount] = useState<number>(0);
+
+  // 调试寄售券数量变化
+  useEffect(() => {
+    console.log('寄售券数量变化:', consignmentTicketCount);
+  }, [consignmentTicketCount]);
 
   // Tab Configs
   // Using useMemo to ensure configs update when filters change
@@ -115,24 +104,6 @@ const AssetView: React.FC<AssetViewProps> = ({ onBack, onNavigate, onProductSele
           list: data?.list || [],
           hasMore: (data?.list?.length || 0) >= 10,
         };
-      },
-    },
-    {
-      id: 1,
-      name: '我的藏品',
-      fetchData: ({ page, limit, token }) => getMyCollection({ page, token }),
-      parseData: (response) => {
-        const data = extractData(response) as any;
-        return {
-          list: data?.list || [],
-          hasMore: (data?.list?.length || 0) >= 10 && data?.has_more !== false,
-          extra: { consignment_coupon: data?.consignment_coupon },
-        };
-      },
-      handleExtra: (extra) => {
-        if (typeof extra.consignment_coupon === 'number') {
-          setConsignmentTicketCount(extra.consignment_coupon);
-        }
       },
     },
   ], [filterCategory, filterFlow, filterTime]);
@@ -186,24 +157,26 @@ const AssetView: React.FC<AssetViewProps> = ({ onBack, onNavigate, onProductSele
     }
   };
 
-  const tabNames = ['资金明细', '我的藏品'];
+  const tabNames = ['资金明细'];
 
   useEffect(() => {
     const loadUserInfo = async () => {
       const token = localStorage.getItem(AUTH_TOKEN_KEY);
       if (!token) return;
       try {
-        const cached = localStorage.getItem(USER_INFO_KEY);
-        if (cached) setUserInfo(JSON.parse(cached));
         const response = await fetchProfile(token);
         const profileData = extractData(response);
+        console.log('API响应数据:', profileData);
         if (profileData?.userInfo) {
+          console.log('用户信息:', profileData.userInfo);
+          console.log('API中的寄售券数量:', profileData.userInfo.consignment_coupon);
           setUserInfo(profileData.userInfo);
           localStorage.setItem(USER_INFO_KEY, JSON.stringify(profileData.userInfo));
+          // 从用户信息中获取寄售券数量
+          const couponCount = profileData.userInfo.consignment_coupon || 0;
+          console.log('设置寄售券数量为:', couponCount);
+          setConsignmentTicketCount(couponCount);
         }
-        const collectionRes = await getMyCollection({ page: 1, limit: 1, token });
-        const collectionData = extractData(collectionRes);
-        if (collectionData) setConsignmentTicketCount(collectionData.consignment_coupon ?? 0);
       } catch (err) {
         console.error('加载用户信息失败:', err);
       }

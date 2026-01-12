@@ -9,6 +9,11 @@ export const BALANCE_TYPE_LABELS: Record<string, string> = {
     green_power: '绿色算力',
     score: '消费金',
     pending_activation_gold: '待激活确权金',
+    /** @deprecated 已废弃，兼容旧版本，实际对应 withdrawable_money */
+    money: '可调度收益',
+    consignment_price: '寄售价格',
+    service_fee: '服务费',
+    service_fee_rate: '服务费率',
     all: '全部',
 } as const;
 

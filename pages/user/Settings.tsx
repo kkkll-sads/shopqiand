@@ -1,21 +1,24 @@
 /**
  * Settings - 设置页面
- * 
+ *
  * 使用 PageContainer、ListItem 组件重构
  * 使用 formatPhone 工具函数
- * 
+ * 集成版本检查功能
+ *
  * @author 树交所前端团队
- * @version 2.0.0
+ * @version 2.1.0
  */
 
-import React, { useMemo } from 'react';
-import { ChevronRight } from 'lucide-react';
+import React, { useMemo, useState } from 'react';
+import { ChevronRight, RefreshCw } from 'lucide-react';
 import PageContainer from '../../components/layout/PageContainer';
-import { ListItem } from '../../components/common';
-import { USER_INFO_KEY, normalizeAssetUrl } from '../../services/api';
+import { ListItem, UpdatePromptModal } from '../../components/common';
+import { USER_INFO_KEY, normalizeAssetUrl, checkAppUpdate } from '../../services/api';
 import { UserInfo } from '../../types';
 import { formatPhone } from '../../utils/format';
 import { Route } from '../../router/routes';
+import { AppVersionInfo } from '../../services/app';
+import { APP_VERSION } from '../../constants';
 
 /**
  * Settings 组件属性接口
@@ -30,6 +33,11 @@ interface SettingsProps {
  * Settings 设置页面组件
  */
 const Settings: React.FC<SettingsProps> = ({ onBack, onLogout, onNavigate }) => {
+  // 版本检查相关状态
+  const [isCheckingUpdate, setIsCheckingUpdate] = useState(false);
+  const [updateModalVisible, setUpdateModalVisible] = useState(false);
+  const [versionInfo, setVersionInfo] = useState<AppVersionInfo | null>(null);
+
   // 从本地存储获取用户信息
   const userInfo: UserInfo | null = useMemo(() => {
     try {
@@ -45,6 +53,59 @@ const Settings: React.FC<SettingsProps> = ({ onBack, onLogout, onNavigate }) => 
   const displayAvatarText = displayName.slice(0, 1).toUpperCase();
   const displayAvatarUrl = normalizeAssetUrl(userInfo?.avatar);
   const displayMobile = formatPhone(userInfo?.mobile);
+
+  /**
+   * 检查应用版本更新
+   */
+  const handleCheckUpdate = async () => {
+    if (isCheckingUpdate) return;
+
+    setIsCheckingUpdate(true);
+    try {
+      // 获取平台类型（这里简单判断为android，可根据实际情况调整）
+      const platform = 'android';
+      const currentVersion = APP_VERSION; // 当前版本号
+
+      const response = await checkAppUpdate({
+        platform,
+        current_version: currentVersion,
+      });
+
+      if (response.code === 1) {
+        const data = response.data;
+        if (data?.need_update && data?.data) {
+          // 发现新版本，显示更新提示
+          setVersionInfo(data.data);
+          setUpdateModalVisible(true);
+        } else {
+          // 已是最新版本，可以显示提示
+          console.log('已是最新版本');
+        }
+      } else {
+        console.error('检查更新失败:', response.message || response.msg);
+      }
+    } catch (error) {
+      console.error('检查更新出错:', error);
+    } finally {
+      setIsCheckingUpdate(false);
+    }
+  };
+
+  /**
+   * 处理更新模态框确认
+   */
+  const handleUpdateConfirm = () => {
+    setUpdateModalVisible(false);
+    setVersionInfo(null);
+  };
+
+  /**
+   * 处理更新模态框取消
+   */
+  const handleUpdateCancel = () => {
+    setUpdateModalVisible(false);
+    setVersionInfo(null);
+  };
 
   return (
     <PageContainer title="设置" onBack={onBack} bgColor="bg-gray-100" padding={false}>
@@ -92,11 +153,11 @@ const Settings: React.FC<SettingsProps> = ({ onBack, onLogout, onNavigate }) => 
         />
         <ListItem
           title="新消息通知"
-          onClick={() => onNavigate({ name: 'notification-settings' })}
+          onClick={() => onNavigate({ name: 'notification-settings', from: 'settings' })}
         />
         <ListItem
           title="账户注销"
-          onClick={() => onNavigate({ name: 'account-deletion' })}
+          onClick={() => onNavigate({ name: 'account-deletion', from: 'settings' })}
         />
       </div>
 
@@ -104,8 +165,16 @@ const Settings: React.FC<SettingsProps> = ({ onBack, onLogout, onNavigate }) => 
       <div className="mt-3 bg-white">
         <ListItem
           title="当前版本号"
-          extra={<span className="text-gray-400 text-xs">2.2.1</span>}
-          arrow={false}
+          extra={
+            <div className="flex items-center gap-2">
+              <span className="text-gray-400 text-xs">{APP_VERSION}</span>
+              {isCheckingUpdate && (
+                <RefreshCw size={14} className="text-gray-400 animate-spin" />
+              )}
+            </div>
+          }
+          onClick={handleCheckUpdate}
+          arrow={!isCheckingUpdate}
         />
         <ListItem
           title="隐私政策"
@@ -126,6 +195,14 @@ const Settings: React.FC<SettingsProps> = ({ onBack, onLogout, onNavigate }) => 
           退出登录
         </button>
       </div>
+
+      {/* 版本更新提示模态框 */}
+      <UpdatePromptModal
+        visible={updateModalVisible}
+        versionInfo={versionInfo!}
+        onCancel={handleUpdateCancel}
+        onConfirm={handleUpdateConfirm}
+      />
     </PageContainer>
   );
 };

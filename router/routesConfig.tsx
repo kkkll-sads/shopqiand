@@ -38,6 +38,7 @@ import ClaimHistory from '../pages/wallet/ClaimHistory';
 import RechargeOrderDetail from '../pages/wallet/RechargeOrderDetail';
 import RechargeOrderList from '../pages/wallet/RechargeOrderList';
 import WithdrawOrderList from '../pages/wallet/WithdrawOrderList';
+import WithdrawOrderDetail from '../pages/wallet/WithdrawOrderDetail';
 import SignIn from '../pages/cms/SignIn';
 import MessageCenter from '../pages/cms/MessageCenter';
 import News from '../pages/cms/News';
@@ -51,6 +52,7 @@ import AgentAuth from '../pages/user/AgentAuth';
 import HelpCenter from '../pages/cms/HelpCenter';
 import UserAgreement from '../pages/cms/UserAgreement';
 import UserSurvey from '../pages/user/UserSurvey';
+import ActivityCenter from '../pages/user/ActivityCenter';
 import OnlineService from '../pages/cms/OnlineService';
 import SearchPage from '../pages/market/SearchPage';
 import ReservationRecordDetailPage from '../pages/market/ReservationRecordDetailPage';
@@ -67,7 +69,7 @@ import { type MyCollectionItem } from '../services/api';
 export interface RouteHelpers {
   newsList: NewsItem[];
   navigateRoute: (route: Route | null) => void;
-  handleProductSelect: (product: Product, origin?: 'market' | 'artist' | 'trading-zone' | 'reservation-record') => void;
+  handleProductSelect: (product: Product, origin?: 'market' | 'artist' | 'trading-zone' | 'reservation-record', customBackRoute?: Route | null) => void;
   setProductDetailOrigin: (origin: 'market' | 'artist' | 'trading-zone' | 'reservation-record') => void;
   productDetailOrigin: 'market' | 'artist' | 'trading-zone' | 'reservation-record';
   handleLogout: () => void;
@@ -93,7 +95,7 @@ const AnnouncementDetailLoader: React.FC<{ id: string; onBack: () => void }> = (
       try {
         setLoading(true);
         setError(null);
-        
+
         // 尝试从两种类型的公告中查找
         const [normalRes, importantRes] = await Promise.all([
           fetchAnnouncements({ page: 1, limit: 100, type: 'normal' }),
@@ -104,11 +106,11 @@ const AnnouncementDetailLoader: React.FC<{ id: string; onBack: () => void }> = (
         const importantData = extractData(importantRes) as any;
         const normalList = normalData?.data || normalData?.list || [];
         const importantList = importantData?.data || importantData?.list || [];
-        
+
         // 在所有公告中查找
         const allAnnouncements = [...normalList, ...importantList];
         const foundItem = allAnnouncements.find((item: any) => String(item.id) === id);
-        
+
         if (foundItem) {
           // 读取已读状态
           const readIds: string[] = [];
@@ -117,10 +119,10 @@ const AnnouncementDetailLoader: React.FC<{ id: string; onBack: () => void }> = (
             if (stored) {
               readIds.push(...JSON.parse(stored));
             }
-          } catch {}
-          
+          } catch { }
+
           const isRead = readIds.includes(String(foundItem.id));
-          
+
           // 转换内容格式
           let content = foundItem.content || '';
           content = content
@@ -129,10 +131,10 @@ const AnnouncementDetailLoader: React.FC<{ id: string; onBack: () => void }> = (
             .replace(/<\/li>/gi, '\n')
             .replace(/<\/h[1-6]>/gi, '\n\n');
           content = content.replace(/<\/?[^>]+(>|$)/g, '');
-          
+
           // 判断类型
           const newsType: 'announcement' | 'dynamic' = foundItem.type === 'important' ? 'dynamic' : 'announcement';
-          
+
           setLoadedNewsItem({
             id: String(foundItem.id),
             date: foundItem.createtime || '',
@@ -181,7 +183,7 @@ export const routeComponents: Partial<Record<Route['name'], RouteRenderer>> = {
   'news-detail': (route, helpers) => {
     const detailRoute = route as Extract<Route, { name: 'news-detail' }>;
     const newsItem = helpers.newsList.find((item) => item.id === detailRoute.id);
-    
+
     // 如果找不到 newsItem，使用加载器组件从 API 加载
     // 这样可以处理从消息中心点击的情况（newsList 可能不包含该公告）
     if (!newsItem) {
@@ -200,7 +202,7 @@ export const routeComponents: Partial<Record<Route['name'], RouteRenderer>> = {
         />
       );
     }
-    
+
     return (
       <AnnouncementDetail
         newsItem={newsItem}
@@ -297,27 +299,67 @@ export const routeComponents: Partial<Record<Route['name'], RouteRenderer>> = {
       onNavigate={(nextRoute) => helpers.navigateRoute(nextRoute)}
     />
   ),
-  'reset-login-password': (route, helpers) => (
-    <ResetLoginPassword
-      onBack={() => helpers.goBack()}
-      onNavigateForgotPassword={() => helpers.navigateRoute({ name: 'forgot-password' })}
-    />
-  ),
-  'reset-pay-password': (route, helpers) => (
-    <ResetPayPassword
-      onBack={() => helpers.goBack()}
-      onNavigateForgotPassword={() => helpers.navigateRoute({ name: 'forgot-password' })}
-    />
-  ),
+  'reset-login-password': (route, helpers) => {
+    const resetLoginRoute = route as Extract<Route, { name: 'reset-login-password' }>;
+    return (
+      <ResetLoginPassword
+        onBack={() => {
+          if (resetLoginRoute.from === 'settings') {
+            helpers.navigateRoute({ name: 'settings' });
+          } else {
+            helpers.goBack();
+          }
+        }}
+        onNavigateForgotPassword={() => helpers.navigateRoute({ name: 'forgot-password' })}
+      />
+    );
+  },
+  'reset-pay-password': (route, helpers) => {
+    const resetPayRoute = route as Extract<Route, { name: 'reset-pay-password' }>;
+    return (
+      <ResetPayPassword
+        onBack={() => {
+          if (resetPayRoute.from === 'settings') {
+            helpers.navigateRoute({ name: 'settings' });
+          } else {
+            helpers.goBack();
+          }
+        }}
+        onNavigateForgotPassword={() => helpers.navigateRoute({ name: 'forgot-password' })}
+      />
+    );
+  },
   'forgot-password': (_route, helpers) => (
     <ForgotPassword onBack={() => helpers.goBack()} />
   ),
-  'notification-settings': (_route, helpers) => (
-    <NotificationSettings onBack={() => helpers.goBack()} />
-  ),
-  'account-deletion': (_route, helpers) => (
-    <AccountDeletion onBack={() => helpers.goBack()} />
-  ),
+  'notification-settings': (route, helpers) => {
+    const notificationRoute = route as Extract<Route, { name: 'notification-settings' }>;
+    return (
+      <NotificationSettings
+        onBack={() => {
+          if (notificationRoute.from === 'settings') {
+            helpers.navigateRoute({ name: 'settings' });
+          } else {
+            helpers.goBack();
+          }
+        }}
+      />
+    );
+  },
+  'account-deletion': (route, helpers) => {
+    const deletionRoute = route as Extract<Route, { name: 'account-deletion' }>;
+    return (
+      <AccountDeletion
+        onBack={() => {
+          if (deletionRoute.from === 'settings') {
+            helpers.navigateRoute({ name: 'settings' });
+          } else {
+            helpers.goBack();
+          }
+        }}
+      />
+    );
+  },
   'edit-profile': (_route, helpers) => (
     <EditProfile onBack={() => helpers.goBack()} onLogout={helpers.handleLogout} />
   ),
@@ -364,7 +406,7 @@ export const routeComponents: Partial<Record<Route['name'], RouteRenderer>> = {
           const targetTab = newsItem.type === 'announcement' ? 'announcement' : 'dynamics';
           writeStorage(STORAGE_KEYS.NEWS_ACTIVE_TAB_KEY, targetTab);
         }
-        helpers.navigateRoute({ name: 'news-detail', id });
+        helpers.navigateRoute({ name: 'news-detail', id, back: { name: 'news' } });
       }}
       onMarkAllRead={() => helpers.markAllNewsRead()}
       onBack={() => helpers.goBack()}
@@ -374,6 +416,7 @@ export const routeComponents: Partial<Record<Route['name'], RouteRenderer>> = {
   'my-collection': (_route, helpers) => (
     <MyCollection
       onBack={() => helpers.goBack()}
+      onNavigate={(nextRoute) => helpers.navigateRoute(nextRoute)}
       onItemSelect={(item) => {
         helpers.setSelectedCollectionItem(item);
         helpers.navigateRoute({ name: 'my-collection-detail', id: String(item.id) });
@@ -385,6 +428,7 @@ export const routeComponents: Partial<Record<Route['name'], RouteRenderer>> = {
     return (
       <MyCollectionDetail
         item={helpers.selectedCollectionItem}
+        id={payload.id}
         onBack={() => helpers.navigateRoute({ name: 'my-collection' })}
         onNavigate={(nextRoute) => helpers.navigateRoute(nextRoute)}
         onSetSelectedItem={(item) => helpers.setSelectedCollectionItem(item)}
@@ -396,6 +440,7 @@ export const routeComponents: Partial<Record<Route['name'], RouteRenderer>> = {
     return (
       <MyCollection
         onBack={() => helpers.goBack()}
+        onNavigate={(nextRoute) => helpers.navigateRoute(nextRoute)}
         onItemSelect={() => {
           // Do nothing - modal should handle item interaction
           // Navigating here causes infinite loop
@@ -412,10 +457,27 @@ export const routeComponents: Partial<Record<Route['name'], RouteRenderer>> = {
   ),
   'agent-auth': (_route, helpers) => <AgentAuth onBack={() => helpers.goBack()} />,
   'help-center': (_route, helpers) => <HelpCenter onBack={() => helpers.goBack()} />,
-  'user-agreement': (_route, helpers) => {
-    return <UserAgreement onBack={() => helpers.goBack()} />;
+  'user-agreement': (route, helpers) => {
+    const agreementRoute = route as Extract<Route, { name: 'user-agreement' }>;
+    return (
+      <UserAgreement
+        onBack={() => {
+          if (agreementRoute.from === 'settings') {
+            helpers.navigateRoute({ name: 'settings' });
+          } else {
+            helpers.goBack();
+          }
+        }}
+      />
+    );
   },
   'user-survey': (_route, helpers) => <UserSurvey onBack={() => helpers.goBack()} />,
+  'activity-center': (_route, helpers) => (
+    <ActivityCenter
+      onBack={() => helpers.goBack()}
+      onNavigate={(route) => helpers.navigateRoute(route)}
+    />
+  ),
   'online-service': (_route, helpers) => <OnlineService onBack={() => helpers.goBack()} />,
   'search': (route, helpers) => {
     const payload = route as Extract<Route, { name: 'search' }>;
@@ -432,18 +494,49 @@ export const routeComponents: Partial<Record<Route['name'], RouteRenderer>> = {
       />
     );
   },
-  'reservation-record': (route, helpers) => (
-    <ReservationRecordPage
-      onBack={() => helpers.goBack()}
-      onNavigate={(nextRoute) => helpers.navigateRoute(nextRoute)}
-    />
-  ),
-  'about-us': (route, helpers) => (
-    <AboutUs onBack={() => helpers.goBack()} />
-  ),
-  'privacy-policy': (route, helpers) => (
-    <PrivacyPolicy onBack={() => helpers.goBack()} />
-  ),
+  'reservation-record': (route, helpers) => {
+    const payload = route as Extract<Route, { name: 'reservation-record' }>;
+    return (
+      <ReservationRecordPage
+        onBack={() => helpers.goBack()}
+        onNavigate={(nextRoute) => helpers.navigateRoute(nextRoute)}
+        source={payload.source}
+        sessionId={payload.sessionId}
+        zoneId={payload.zoneId}
+        sessionTitle={payload.sessionTitle}
+        sessionStartTime={payload.sessionStartTime}
+        sessionEndTime={payload.sessionEndTime}
+      />
+    );
+  },
+  'about-us': (route, helpers) => {
+    const aboutUsRoute = route as Extract<Route, { name: 'about-us' }>;
+    return (
+      <AboutUs
+        onBack={() => {
+          if (aboutUsRoute.from === 'settings') {
+            helpers.navigateRoute({ name: 'settings' });
+          } else {
+            helpers.goBack();
+          }
+        }}
+      />
+    );
+  },
+  'privacy-policy': (route, helpers) => {
+    const privacyRoute = route as Extract<Route, { name: 'privacy-policy' }>;
+    return (
+      <PrivacyPolicy
+        onBack={() => {
+          if (privacyRoute.from === 'settings') {
+            helpers.navigateRoute({ name: 'settings' });
+          } else {
+            helpers.goBack();
+          }
+        }}
+      />
+    );
+  },
   'asset-view': (route, helpers) => (
     <AssetView
       initialTab={(route as Extract<Route, { name: 'asset-view' }>).tab ?? 0}
@@ -452,7 +545,12 @@ export const routeComponents: Partial<Record<Route['name'], RouteRenderer>> = {
       onProductSelect={(product) => helpers.handleProductSelect(product, 'market')}
     />
   ),
-  'asset-history': (_route, helpers) => <AssetHistory onBack={() => helpers.goBack()} />,
+  'asset-history': (_route, helpers) => (
+    <AssetHistory
+      onBack={() => helpers.goBack()}
+      onNavigate={(nextRoute) => helpers.navigateRoute(nextRoute)}
+    />
+  ),
   'balance-recharge': (route, helpers) => {
     const payload = route as Extract<Route, { name: 'balance-recharge' }>;
     const back: Route | null =
@@ -465,8 +563,8 @@ export const routeComponents: Partial<Record<Route['name'], RouteRenderer>> = {
   },
   'balance-withdraw': (route, helpers) => {
     const payload = route as Extract<Route, { name: 'balance-withdraw' }>;
-    const back: Route | null = payload.source === 'profile' 
-      ? null 
+    const back: Route | null = payload.source === 'profile'
+      ? null
       : payload.source === 'sign-in'
         ? { name: 'sign-in' }
         : { name: 'asset-view' };
@@ -530,6 +628,12 @@ export const routeComponents: Partial<Record<Route['name'], RouteRenderer>> = {
     <MessageCenter
       onBack={() => helpers.goBack()}
       onNavigate={(nextRoute) => helpers.navigateRoute(nextRoute)}
+    />
+  ),
+  'withdraw-order-detail': (route, helpers) => (
+    <WithdrawOrderDetail
+      orderId={(route as Extract<Route, { name: 'withdraw-order-detail' }>).orderId}
+      onBack={() => helpers.goBack()}
     />
   ),
 };

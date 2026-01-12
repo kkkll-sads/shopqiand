@@ -26,6 +26,7 @@ import {
     PageContent,
 } from '../../services/api';
 import { isSuccess, extractError } from '../../utils/apiHelpers';
+import { APP_VERSION } from '../../constants';
 
 /**
  * 页面类型枚举
@@ -174,7 +175,7 @@ const StaticContentPage: React.FC<StaticContentPageProps> = ({
                 {/* 版权信息 */}
                 <div className="mt-8 pt-4 border-t border-gray-100 text-center text-xs text-gray-400">
                     <p>Copyright © 2025 数权中心. All rights reserved.</p>
-                    <p className="mt-1">版本 v1.0.2</p>
+                    <p className="mt-1">版本 v{APP_VERSION}</p>
                 </div>
             </div>
         </SubPageLayout>

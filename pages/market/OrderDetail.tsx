@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Package, Phone, MapPin, Copy, Check, Truck, Calendar, Gift, CheckCircle } from 'lucide-react';
 import { LoadingSpinner, LazyImage } from '../../components/common';
 import { formatTime, formatAmount } from '../../utils/format';
-import { getOrderDetail, ShopOrderItem, confirmOrder, normalizeAssetUrl, payOrder } from '../../services/api';
+import { getOrderDetail, ShopOrderItem, confirmOrder, normalizeAssetUrl, payOrder, cancelOrder } from '../../services/api';
 import { useNotification } from '../../context/NotificationContext';
 import { AUTH_TOKEN_KEY } from '../../constants/storageKeys';
 import { Route } from '../../router/routes';
@@ -46,6 +46,15 @@ const OrderDetail: React.FC<OrderDetailProps> = ({ orderId, onBack, onNavigate }
             if (isSuccess(response) && response.data) {
                 setOrder(response.data);
             } else {
+                // 检查是否为订单不存在的情况
+                if (response.code === 0 && response.message === '订单不存在') {
+                    showToast('error', '订单不存在');
+                    // 延迟一下再跳转，让用户看到提示
+                    setTimeout(() => {
+                        onNavigate({ name: 'order-list' });
+                    }, 1500);
+                    return;
+                }
                 handleError(response, {
                     persist: true,
                     showToast: false,
@@ -133,10 +142,68 @@ const OrderDetail: React.FC<OrderDetailProps> = ({ orderId, onBack, onNavigate }
         });
     };
 
-    const copyOrderNo = (text: string) => {
-        navigator.clipboard.writeText(text);
-        setCopiedOrderNo(true);
-        setTimeout(() => setCopiedOrderNo(false), 2000);
+    const handleCancelOrder = async (id: number) => {
+        showDialog({
+            title: '取消订单',
+            description: '确定要取消此订单吗？取消后无法恢复。',
+            confirmText: '确定取消',
+            cancelText: '再想想',
+            onConfirm: async () => {
+                try {
+                    const token = localStorage.getItem(AUTH_TOKEN_KEY) || '';
+                    const response = await cancelOrder({ id, token });
+                    if (isSuccess(response)) {
+                        showToast('success', response.msg || '订单取消成功');
+                        loadOrder();
+                    } else {
+                        handleOperationError(response, {
+                            toastTitle: '取消失败',
+                            customMessage: '订单取消失败',
+                            context: { orderId: id }
+                        });
+                    }
+                } catch (error) {
+                    handleOperationError(error, {
+                        toastTitle: '取消失败',
+                        customMessage: '网络请求失败',
+                        context: { orderId: id }
+                    });
+                }
+            }
+        });
+    };
+
+    const copyOrderNo = async (text: string) => {
+        // 兼容非 HTTPS 环境
+        const copyText = (text: string) => {
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                return navigator.clipboard.writeText(text);
+            }
+            // fallback: 使用传统方式
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            textarea.style.position = 'fixed';
+            textarea.style.opacity = '0';
+            document.body.appendChild(textarea);
+            textarea.select();
+            try {
+                document.execCommand('copy');
+                return Promise.resolve();
+            } catch (e) {
+                return Promise.reject(e);
+            } finally {
+                document.body.removeChild(textarea);
+            }
+        };
+        
+        try {
+            await copyText(text);
+            setCopiedOrderNo(true);
+            showToast('success', '复制成功', '订单号已复制到剪贴板');
+            setTimeout(() => setCopiedOrderNo(false), 2000);
+        } catch (error) {
+            showToast('error', '复制失败', '请手动复制');
+        }
     };
 
     const formatDateTime = (timestamp: number) => {
@@ -311,12 +378,12 @@ const OrderDetail: React.FC<OrderDetailProps> = ({ orderId, onBack, onNavigate }
                                     {item.product_name}
                                 </p>
                                 <div className="flex items-end justify-between">
-                                    <div className="flex items-baseline gap-1.5">
-                                        <span className="text-lg font-bold text-gray-900">
+                                    <div className="flex items-baseline gap-1">
+                                        <span className="text-lg font-bold text-orange-600">
                                             {isScoreOrder ? item.score_price : `¥${formatAmount(item.price)}`}
                                         </span>
                                         {isScoreOrder && (
-                                            <span className="text-xs text-orange-600 bg-orange-50 px-1.5 py-0.5 rounded font-medium">
+                                            <span className="text-sm text-orange-500 font-medium">
                                                 消费金
                                             </span>
                                         )}
@@ -331,12 +398,12 @@ const OrderDetail: React.FC<OrderDetailProps> = ({ orderId, onBack, onNavigate }
                     <div className="mt-5 pt-5 border-t-2 border-gray-100">
                         <div className="flex items-center justify-between">
                             <span className="text-base text-gray-600 font-medium">合计</span>
-                            <div className="flex items-baseline gap-2">
-                                <span className="text-2xl font-bold text-gray-900">
+                            <div className="flex items-baseline gap-1">
+                                <span className="text-2xl font-bold text-orange-600">
                                     {isScoreOrder ? order.total_score : `¥${formatAmount(order.total_amount)}`}
                                 </span>
                                 {isScoreOrder && (
-                                    <span className="text-sm text-orange-600 bg-orange-50 px-2 py-1 rounded font-medium">
+                                    <span className="text-sm text-orange-500 font-medium">
                                         消费金
                                     </span>
                                 )}
@@ -413,11 +480,27 @@ const OrderDetail: React.FC<OrderDetailProps> = ({ orderId, onBack, onNavigate }
             <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] max-w-[480px] mx-auto safe-area-bottom">
                 <div className="p-4 flex gap-3">
                     {(order.status === ShopOrderPayStatus.UNPAID || order.status === 'pending' || String(order.status) === '0') && (
+                        <>
+                            <button
+                                onClick={() => handleCancelOrder(order.id)}
+                                className="flex-1 h-12 rounded-xl border-2 border-gray-300 text-gray-700 hover:border-gray-400 hover:bg-gray-50 font-semibold transition-all active:scale-[0.98]"
+                            >
+                                取消订单
+                            </button>
+                            <button
+                                onClick={() => handlePayOrder(order.id)}
+                                className="flex-1 h-12 rounded-xl bg-gradient-to-r from-orange-500 to-orange-400 text-white hover:from-orange-600 hover:to-orange-500 font-semibold shadow-lg shadow-orange-500/30 transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                立即支付
+                            </button>
+                        </>
+                    )}
+                    {(order.status === ShopOrderPayStatus.PAID || order.status === 'paid' || String(order.status) === '1') && (
                         <button
-                            onClick={() => handlePayOrder(order.id)}
-                            className="flex-1 h-12 rounded-xl bg-gradient-to-r from-orange-500 to-orange-400 text-white hover:from-orange-600 hover:to-orange-500 font-semibold shadow-lg shadow-orange-500/30 transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+                            onClick={() => handleCancelOrder(order.id)}
+                            className="flex-1 h-12 rounded-xl border-2 border-red-200 bg-red-50 text-red-600 hover:border-red-300 hover:bg-red-100 font-semibold transition-all active:scale-[0.98]"
                         >
-                            立即支付
+                            取消订单
                         </button>
                     )}
                     {(order.status === ShopOrderShippingStatus.SHIPPED || order.status === 'shipped' || String(order.status) === '2') && (

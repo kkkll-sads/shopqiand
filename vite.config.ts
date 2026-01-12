@@ -4,7 +4,10 @@ import react from '@vitejs/plugin-react';
 
 // 统一的后端前缀，前端代码里都以这个作为基础路径
 const API_PREFIX = '/api';
+
 const DEFAULT_API_TARGET = 'http://127.0.0.1:8000/index.php';
+// const DEFAULT_API_TARGET = 'http://18.162.70.209:3005/index.php';
+
 
 const resolveApiTarget = (raw?: string) => {
   const source = raw?.trim();

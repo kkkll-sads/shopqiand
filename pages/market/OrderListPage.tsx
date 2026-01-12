@@ -17,11 +17,13 @@ import {
   getConsignmentDetail,
   cancelConsignment,
   getPurchaseRecords,
+  getMyCollection,
   ShopOrderItem,
   ShopOrderItemDetail,
   MyConsignmentItem,
   PurchaseRecordItem,
   ConsignmentDetailData,
+  MyCollectionItem,
   AUTH_TOKEN_KEY,
   normalizeAssetUrl,
 } from '../../services/api';
@@ -201,41 +203,65 @@ const OrderListPage: React.FC<OrderListPageProps> = ({ category, initialTab, onB
     }
   }, [category, activeTab]);
 
-  // Fetch orders for transaction category (consignment)
+  // Fetch orders for transaction category (using myCollection API)
   useEffect(() => {
     if (category === 'transaction') {
       const loadConsignmentOrders = async () => {
         setLoading(true);
         try {
           const token = localStorage.getItem(AUTH_TOKEN_KEY) || '';
-          let status: number | undefined;
+          let status: string;
 
           switch (activeTab) {
-            case 0: // 待寄售 - 显示全部状态
-              status = 0;
+            case 0: // 待寄售
+              status = 'holding';
               break;
             case 1: // 寄售中
-              status = 1;
+              status = 'consigned';
               break;
-            case 2: // 寄售失败 - 对应已取消
-              status = 3;
+            case 2: // 寄售失败
+              status = 'failed';
               break;
             default:
-              status = 0;
+              status = 'holding';
           }
 
-          const response = await getMyConsignmentList({ page: 1, limit: 10, status, token });
+          const response = await getMyCollection({ page: 1, limit: 10, status, token });
 
           // ✅ 使用统一判断
           const data = extractData(response);
           if (data) {
-            const newOrders = data.list || [];
-            setConsignmentOrders(newOrders);
+            let newOrders = data.list || [];
+
+            // 待寄售标签：排除共识验证节点的藏品（mining_status === 1）
+            if (activeTab === 0) {
+              newOrders = newOrders.filter((item: MyCollectionItem) =>
+                Number(item.mining_status) !== 1
+              );
+            }
+
+            // 转换 MyCollectionItem 为 MyConsignmentItem 兼容格式
+            const convertedOrders = newOrders.map((item: MyCollectionItem) => ({
+              id: item.id,
+              item_id: item.id,
+              item_title: item.title,
+              item_image: item.image,
+              price: item.price,
+              market_price: item.market_price,
+              consignment_status: item.consignment_status,
+              consignment_status_text: item.consignment_status_text,
+              asset_code: item.asset_code,
+              sold_price: item.sold_price,
+              service_fee: item.service_fee,
+              fail_count: item.fail_count,
+              ...item,
+            }));
+            setConsignmentOrders(convertedOrders as any);
             setHasMore(data.has_more || false);
             setPage(1);
           }
         } catch (error) {
-          console.error('加载寄售订单失败:', error);
+          console.error('加载交易订单失败:', error);
         } finally {
           setLoading(false);
         }
@@ -718,8 +744,8 @@ const OrderListPage: React.FC<OrderListPageProps> = ({ category, initialTab, onB
         {/* 顶部导航栏 - 使用浅橙色渐变 */}
         <header className="bg-gradient-to-r from-[#fedab0] to-[#ffd9a8] text-gray-800 shadow-md sticky top-0 z-10">
           <div className="flex items-center h-14 px-4">
-            <button 
-              className="p-2 -ml-2 hover:bg-white/30 rounded-full transition-colors" 
+            <button
+              className="p-2 -ml-2 hover:bg-white/30 rounded-full transition-colors"
               aria-label="返回"
               onClick={onBack}
             >
@@ -734,11 +760,10 @@ const OrderListPage: React.FC<OrderListPageProps> = ({ category, initialTab, onB
               <button
                 key={index}
                 onClick={() => setActiveTab(index)}
-                className={`flex-1 py-3.5 text-sm relative transition-all ${
-                  activeTab === index
-                    ? 'text-gray-800 font-medium'
-                    : 'text-gray-600'
-                }`}
+                className={`flex-1 py-3.5 text-sm relative transition-all ${activeTab === index
+                  ? 'text-gray-800 font-medium'
+                  : 'text-gray-600'
+                  }`}
               >
                 {tab}
                 {activeTab === index && (

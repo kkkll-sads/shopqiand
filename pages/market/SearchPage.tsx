@@ -131,6 +131,8 @@ const SearchPage: React.FC<SearchPageProps> = ({ onBack, onNavigate, initialCode
                     setSearchResult(null);
                 }}
                 onNavigate={onNavigate}
+                hideActions={true}
+                initialData={searchResult as any}
             />
         );
     }

@@ -3,6 +3,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Clock, Globe, Database, Zap, Cpu, Activity, Lock, ArrowRight, ArrowLeft, Layers, Gem, Crown, Coins, TrendingUp, ClipboardList } from 'lucide-react';
 import PageContainer from '../../components/layout/PageContainer';
 import { LoadingSpinner, LazyImage } from '../../components/common';
+import PopupAnnouncementModal from '../../components/common/PopupAnnouncementModal';
 import { Product } from '../../types';
 import { Route } from '../../router/routes';
 import {
@@ -11,31 +12,12 @@ import {
     fetchCollectionItemsBySession,
     CollectionSessionItem,
     CollectionItem,
+    fetchAnnouncements,
+    AnnouncementItem,
 } from '../../services/api';
 import { isSuccess, extractError } from '../../utils/apiHelpers';
 import { useErrorHandler } from '../../hooks/useErrorHandler';
 
-/**
- * 从价格分区字符串中提取价格数字
- * @param priceZone - 价格分区字符串，如 "1000元区"
- * @returns 提取的价格数字，如果提取失败返回 0
- */
-const extractPriceFromZone = (priceZone?: string): number => {
-    if (!priceZone) return 0;
-    
-    // 处理带单位的情况，如 "1K区" -> 1000, "2K区" -> 2000
-    const upperZone = priceZone.toUpperCase();
-    if (upperZone.includes('K')) {
-        const match = upperZone.match(/(\d+)\s*K/i);
-        if (match) {
-            return Number(match[1]) * 1000;
-        }
-    }
-    
-    // 处理普通数字，如 "500元区" -> 500
-    const match = priceZone.match(/(\d+)/);
-    return match ? Number(match[1]) : 0;
-};
 
 interface TradingZoneProps {
     onBack: () => void;
@@ -149,6 +131,10 @@ const buildPoolConfig = (session?: TradingSession | null) => {
         ...preset,
         name: session?.title || preset.name,
         subName: session ? `${session.startTime} - ${session.endTime}` : preset.subName,
+        // 使用API返回的动态数据覆盖预设值
+        roi: (session as any)?.roi || preset.roi,
+        quota: (session as any)?.quota || preset.quota,
+        code: (session as any)?.code || preset.code,
     };
 };
 
@@ -185,9 +171,17 @@ const TradingZone: React.FC<TradingZoneProps> = ({
     const [tradingItems, setTradingItems] = useState<TradingDisplayItem[]>([]);
     const [itemsLoading, setItemsLoading] = useState(false);
     const [activePriceZone, setActivePriceZone] = useState<string>('all');
+    const [navigating, setNavigating] = useState(false);
 
     // 使用ref追踪加载状态，防止重复调用
     const loadingSessionRef = useRef<string | null>(null);
+
+    // 缓存会话状态，避免每次渲染重新计算
+    const sessionStatusesRef = useRef<Map<string, { status: 'active' | 'waiting' | 'ended'; target: Date | null }>>(new Map());
+
+    // 公告弹窗状态
+    const [showTradeNotice, setShowTradeNotice] = useState(false);
+    const [tradeNoticeAnnouncement, setTradeNoticeAnnouncement] = useState<AnnouncementItem | null>(null);
 
     // 内部函数：加载场次商品（不触发导航）
     const loadSessionItems = useCallback(async (session: TradingSession) => {
@@ -222,9 +216,8 @@ const TradingZone: React.FC<TradingZoneProps> = ({
                         source = 'consignment';
                     }
 
-                    // 价格计算：优先使用 price_zone 分区价格
-                    const zonePriceValue = extractPriceFromZone(item.price_zone);
-                    const displayPrice = zonePriceValue > 0 ? zonePriceValue : Number(item.min_price || item.price || 0);
+                    // 价格计算：直接使用 API 返回的价格
+                    const displayPrice = Number(item.price || item.min_price || 0);
 
                     // 总可用数量
                     const totalAvailable = item.total_available ?? ((item.official_stock || 0) + (item.consignment_count || 0));
@@ -303,6 +296,8 @@ const TradingZone: React.FC<TradingZoneProps> = ({
                         startTime: item.start_time,
                         endTime: item.end_time,
                         isActive: !!(item as any)?.is_active,
+                        // 保留API返回的其他字段用于动态配置
+                        ...(item as any),
                     }));
                     setSessions(sessionList);
 
@@ -347,8 +342,43 @@ const TradingZone: React.FC<TradingZoneProps> = ({
     }, [initialSessionId, initialSessionTitle, initialSessionStartTime, initialSessionEndTime, loadSessionItems]);
 
     useEffect(() => {
-        const timer = setInterval(() => setNow(new Date()), 1000);
+        const timer = setInterval(() => {
+            setNow(new Date());
+            // 每秒清空会话状态缓存，确保状态及时更新
+            sessionStatusesRef.current.clear();
+        }, 1000);
         return () => clearInterval(timer);
+    }, []);
+
+    // 加载交易须知公告
+    useEffect(() => {
+        const loadTradeNotice = async () => {
+            try {
+                const response = await fetchAnnouncements({ page: 1, limit: 10, type: 'normal' });
+                if (isSuccess(response) && response.data?.list) {
+                    // 查找标题包含"交易须知"的公告
+                    const notice = response.data.list.find((item: AnnouncementItem) =>
+                        item.title && item.title.includes('交易须知')
+                    );
+
+                    if (notice) {
+                        // 检查今天是否已经关闭过该公告
+                        const dismissedKey = `trade_notice_dismissed_${notice.id}`;
+                        const dismissedDate = localStorage.getItem(dismissedKey);
+                        const today = new Date().toDateString();
+
+                        if (dismissedDate !== today) {
+                            setTradeNoticeAnnouncement(notice);
+                            setShowTradeNotice(true);
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('加载交易须知失败:', error);
+            }
+        };
+
+        loadTradeNotice();
     }, []);
 
     const handleBack = () => {
@@ -366,47 +396,54 @@ const TradingZone: React.FC<TradingZoneProps> = ({
         }
     };
 
-    // 外部点击场次时的处理：导航到 trading-zone-items 路由
-    const handleSessionSelect = (session: TradingSession) => {
-        if (onNavigate) {
-            // 通过路由导航，保持状态
-            // 设置back参数为trading-zone，这样从资产申购列表返回时会回到场次列表
-            onNavigate({
-                name: 'trading-zone-items',
-                sessionId: session.id,
-                sessionTitle: session.title,
-                sessionStartTime: session.startTime,
-                sessionEndTime: session.endTime,
-                back: { name: 'trading-zone' },
-            });
-        } else {
-            // 回退：直接加载（旧行为）
-            loadSessionItems(session);
+    // 外部点击场次时的处理：直接在组件内切换到详情页，避免路由跳转导致的卡顿
+    const handleSessionSelect = useCallback(async (session: TradingSession) => {
+        if (navigating) return; // 防止重复点击
+
+        setNavigating(true);
+        try {
+            // 直接设置选中的场次并加载商品数据，避免路由跳转
+            setSelectedSession(session);
+            await loadSessionItems(session);
+        } finally {
+            // 短暂延迟后重置导航状态，避免快速重复点击
+            setTimeout(() => setNavigating(false), 500);
         }
-    };
+    }, [navigating, loadSessionItems]);
 
     const getSessionStatus = (session: TradingSession) => {
+        // 检查缓存
+        const cached = sessionStatusesRef.current.get(session.id);
+        if (cached) {
+            return cached;
+        }
+
         const [startH, startM] = session.startTime.split(':').map(Number);
         const [endH, endM] = session.endTime.split(':').map(Number);
         const startDate = new Date(now); startDate.setHours(startH, startM, 0, 0);
         const endDate = new Date(now); endDate.setHours(endH, endM, 0, 0);
 
+        let status: 'active' | 'waiting' | 'ended';
+        let target: Date | null = null;
+
         // 时间优先：超过结束时间立刻关闭入口
         if (now >= endDate) {
-            return { status: 'ended' as const, target: null };
+            status = 'ended';
+        } else if (session.isActive || (now >= startDate && now < endDate)) {
+            // 活跃中：后端 isActive 或者在时间窗口内
+            status = 'active';
+            target = endDate;
+        } else if (now < startDate) {
+            // 等待中
+            status = 'waiting';
+            target = startDate;
+        } else {
+            status = 'ended';
         }
 
-        // 活跃中：后端 isActive 或者在时间窗口内
-        if (session.isActive || (now >= startDate && now < endDate)) {
-            return { status: 'active' as const, target: endDate };
-        }
-
-        // 等待中
-        if (now < startDate) {
-            return { status: 'waiting' as const, target: startDate };
-        }
-
-        return { status: 'ended' as const, target: null };
+        const result = { status, target };
+        sessionStatusesRef.current.set(session.id, result);
+        return result;
     };
 
     const formatDuration = (ms: number) => {
@@ -570,7 +607,17 @@ const TradingZone: React.FC<TradingZoneProps> = ({
                                             };
 
                                             console.log('Product data to pass:', productData);
-                                            onProductSelect && onProductSelect(productData as Product);
+
+                                            // 如果当前在详情页（有 selectedSession），传递自定义返回路由回到该详情页
+                                            const customBackRoute = selectedSession ? {
+                                                name: 'trading-zone-items' as const,
+                                                sessionId: selectedSession.id,
+                                                sessionTitle: selectedSession.title,
+                                                sessionStartTime: selectedSession.startTime,
+                                                sessionEndTime: selectedSession.endTime,
+                                            } : undefined;
+
+                                            onProductSelect && onProductSelect(productData as Product, 'trading-zone', customBackRoute);
                                         }}
                                     >
                                         <div className="aspect-square bg-gray-50 relative overflow-hidden">
@@ -588,8 +635,7 @@ const TradingZone: React.FC<TradingZoneProps> = ({
                                             </div>
                                             <div className="flex justify-between items-center">
                                                 <div className="text-red-500 font-extrabold text-base flex items-baseline gap-0.5">
-                                                    <span className="text-xs">¥</span>
-                                                    <span>{item.price.toLocaleString()}</span>
+                                                    <span>{item.price_zone}</span>
                                                 </div>
                                                 <button type="button" className="bg-gradient-to-r from-orange-500 to-red-500 text-white text-xs font-bold px-4 py-1.5 rounded-full shadow-md shadow-orange-200 active:scale-95 transition-transform">
                                                     申购
@@ -704,21 +750,42 @@ const TradingZone: React.FC<TradingZoneProps> = ({
                                 <button
                                     type="button"
                                     onClick={() => status === 'active' && handleSessionSelect(session)}
-                                    disabled={status !== 'active'}
+                                    disabled={status !== 'active' || navigating}
                                     className={`w-full h-12 rounded-xl text-sm font-bold flex items-center justify-center gap-2 shadow-lg transition-all active:scale-[0.98]
-                           ${status === 'active'
+                           ${status === 'active' && !navigating
                                             ? `${config.buttonClass} text-white`
                                             : 'bg-gray-100 text-gray-400 border border-gray-200 shadow-none cursor-not-allowed'
                                         }`}
                                 >
-                                    {status === 'active' ? '立即抢购 · ACCESS' : status === 'waiting' ? '即将开始 · COMING SOON' : '本场结束 · CLOSED'}
-                                    {status === 'active' && <ArrowRight size={16} />}
+                                    {navigating
+                                        ? '跳转中...'
+                                        : status === 'active'
+                                            ? '立即抢购 · ACCESS'
+                                            : status === 'waiting'
+                                                ? '即将开始 · COMING SOON'
+                                                : '本场结束 · CLOSED'
+                                    }
+                                    {status === 'active' && !navigating && <ArrowRight size={16} />}
                                 </button>
                             </div>
                         </div>
                     );
                 })}
             </div>
+
+            {/* 交易须知弹窗 */}
+            <PopupAnnouncementModal
+                visible={showTradeNotice}
+                announcement={tradeNoticeAnnouncement}
+                onClose={() => setShowTradeNotice(false)}
+                onDontShowToday={() => {
+                    if (tradeNoticeAnnouncement) {
+                        const dismissedKey = `trade_notice_dismissed_${tradeNoticeAnnouncement.id}`;
+                        const today = new Date().toDateString();
+                        localStorage.setItem(dismissedKey, today);
+                    }
+                }}
+            />
         </div>
     );
 };

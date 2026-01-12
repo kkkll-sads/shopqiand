@@ -11,6 +11,7 @@
 
 import React from 'react';
 import { AlertCircle } from 'lucide-react';
+import { STORAGE_KEYS } from '../../constants/storageKeys';
 
 interface RealNameRequiredModalProps {
     /** 是否显示弹窗 */
@@ -76,6 +77,22 @@ const RealNameRequiredModal: React.FC<RealNameRequiredModalProps> = ({
                         className="w-full bg-gray-100 text-gray-700 py-3.5 rounded-full font-medium text-base active:scale-95 transition-transform"
                     >
                         返回首页
+                    </button>
+                    <button
+                        onClick={() => {
+                            // 使用统一的 Key 清除本地存储
+                            localStorage.removeItem(STORAGE_KEYS.AUTH_TOKEN_KEY);
+                            localStorage.removeItem(STORAGE_KEYS.USER_INFO_KEY);
+                            localStorage.removeItem(STORAGE_KEYS.AUTH_KEY);
+                            localStorage.removeItem(STORAGE_KEYS.REAL_NAME_STATUS_KEY);
+                            localStorage.removeItem(STORAGE_KEYS.REAL_NAME_KEY);
+
+                            // 刷新页面跳转到登录
+                            window.location.href = '/login';
+                        }}
+                        className="w-full text-gray-400 text-sm py-2"
+                    >
+                        退出登录
                     </button>
                 </div>
             </div>

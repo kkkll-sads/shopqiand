@@ -65,7 +65,6 @@ export {
   ShopOrderPayStatus,
   ShopOrderShippingStatus,
   ReservationStatus,
-  CollectionStatus,
 } from './statusEnums';
 
 // ============================================================================
@@ -198,11 +197,12 @@ export const PAY_TYPE_LABELS: Record<string, string> = {
   [PayType.ALIPAY]: '支付宝',
   [PayType.WECHAT]: '微信支付',
   [PayType.BANK_CARD]: '银行卡',
+  // 同时支持字符串键访问（向后兼容）
   balance: '余额支付',
   alipay: '支付宝',
   wechat: '微信支付',
   bank_card: '银行卡',
-} as const;
+};
 
 // ============================================================================
 // 账户类型映射
@@ -265,6 +265,9 @@ export const BIZ_TYPE_LABELS: Record<string, string> = {
   consignment: '寄售',
   consignment_sale: '寄售出售',
   consignment_fee: '寄售手续费',
+  consignment_price: '寄售价格',
+  service_fee: '服务费',
+  service_fee_rate: '服务费率',
   delivery: '提货',
   sign_in: '签到奖励',
   invite: '邀请奖励',
@@ -285,6 +288,8 @@ export const ACCOUNT_TYPE_LABELS: Record<string, string> = {
   green_power: '绿色算力',
   score: '消费金',
   pending_activation_gold: '待激活确权金',
+  /** @deprecated 已废弃，兼容旧版本，实际对应 withdrawable_money */
+  money: '可调度收益',
 } as const;
 
 // ============================================================================

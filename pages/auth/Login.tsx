@@ -9,7 +9,7 @@
 
 
 import React, { useState, useEffect } from 'react';
-import { Eye, EyeOff, User, Lock, Check } from 'lucide-react';
+import { Eye, EyeOff, User, Lock, Check, HeadphonesIcon } from 'lucide-react';
 import { login as loginApi, LoginParams } from '../../services/api';
 import { LoginSuccessPayload } from '../../types';
 import { isValidPhone } from '../../utils/validation';
@@ -32,6 +32,7 @@ interface LoginProps {
   onNavigateUserAgreement: () => void;
   onNavigatePrivacyPolicy: () => void;
   onNavigateForgotPassword: () => void;
+  onNavigateOnlineService: () => void;
 }
 
 /**
@@ -43,6 +44,7 @@ const Login: React.FC<LoginProps> = ({
   onNavigateUserAgreement,
   onNavigatePrivacyPolicy,
   onNavigateForgotPassword,
+  onNavigateOnlineService,
 }) => {
   const { showToast } = useNotification();
 
@@ -67,7 +69,7 @@ const Login: React.FC<LoginProps> = ({
     const calculateBottomPadding = () => {
       // 基础padding 48px (pb-12)
       const basePadding = 48;
-      
+
       // 检测iOS安全区域（底部刘海区域）
       const safeAreaBottomCSS = getComputedStyle(document.documentElement)
         .getPropertyValue('env(safe-area-inset-bottom)');
@@ -75,13 +77,13 @@ const Login: React.FC<LoginProps> = ({
       if (safeAreaBottomCSS) {
         safeAreaBottom = parseInt(safeAreaBottomCSS.replace('px', ''), 10) || 0;
       }
-      
+
       // 移动浏览器导航栏高度通常在50-80px之间，我们使用60px作为缓冲
       const navigationBarBuffer = 60;
-      
+
       // 计算最终padding：基础padding + 安全区域 + 导航栏缓冲
       const calculatedPadding = basePadding + safeAreaBottom + navigationBarBuffer;
-      
+
       setBottomPadding(calculatedPadding);
     };
 
@@ -113,7 +115,7 @@ const Login: React.FC<LoginProps> = ({
 
     window.addEventListener('resize', handleResize);
     window.addEventListener('scroll', handleScroll, { passive: true });
-    
+
     // 监听屏幕旋转
     const handleOrientationChange = () => {
       setTimeout(calculateBottomPadding, 100);
@@ -296,7 +298,17 @@ const Login: React.FC<LoginProps> = ({
   };
 
   return (
-    <div className="min-h-screen flex flex-col px-8 pt-20 pb-safe bg-gradient-to-br from-[#FFD6A5] via-[#FFC3A0] to-[#FFDEE9]">
+    <div className="min-h-screen flex flex-col px-8 pt-20 pb-safe bg-gradient-to-br from-[#FFD6A5] via-[#FFC3A0] to-[#FFDEE9] relative">
+      {/* 顶部客服入口 */}
+      <button
+        onClick={onNavigateOnlineService}
+        className="absolute top-6 right-6 p-2 rounded-full bg-white/30 backdrop-blur-md border border-white/50 text-gray-700 active:scale-95 transition-all shadow-sm z-10"
+      >
+        <div className="flex items-center gap-1">
+          <HeadphonesIcon size={18} />
+          <span className="text-sm font-medium">客服</span>
+        </div>
+      </button>
       {/* 标题 */}
       <div className="mb-10">
         <h1 className="text-4xl font-bold text-gray-800 mb-2">Hello!</h1>
@@ -389,8 +401,8 @@ const Login: React.FC<LoginProps> = ({
         <label className="flex items-center text-gray-700 gap-2 cursor-pointer select-none">
           <div
             className={`w-4 h-4 border rounded flex items-center justify-center transition-colors cursor-pointer ${rememberMe
-                ? 'bg-orange-400 border-orange-400'
-                : 'border-orange-400 bg-transparent'
+              ? 'bg-orange-400 border-orange-400'
+              : 'border-orange-400 bg-transparent'
               }`}
             onClick={() => setRememberMe(!rememberMe)}
           >
@@ -433,7 +445,7 @@ const Login: React.FC<LoginProps> = ({
       </div>
 
       {/* 注册链接 */}
-      <div 
+      <div
         className="mt-auto text-center pb-safe flex items-center justify-center gap-1 text-sm"
         style={{ paddingBottom: `${bottomPadding}px` }}
       >

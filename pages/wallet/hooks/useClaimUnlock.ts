@@ -21,6 +21,10 @@ export type UnlockStatusState = {
   alreadyUnlocked?: boolean;
   unlockedCount?: number;
   availableQuota?: number;
+  // 配置化字段
+  requiredTransactions?: number; // 所需交易次数
+  requiredReferrals?: number; // 所需直推用户数
+  rewardValue?: number; // 奖励价值
 };
 
 type UseClaimUnlockParams = {
@@ -36,9 +40,12 @@ export const useClaimUnlock = ({ showToast, userInfo, setUserInfo }: UseClaimUnl
   const [unlockStatus, setUnlockStatus] = useState<UnlockStatusState>({
     hasSelfTrade: false,
     activeReferrals: 0,
-    referralTarget: 3,
+    referralTarget: 3, // 默认值，后续会从后端更新
     canUnlock: false,
     isLoading: true,
+    requiredTransactions: 1, // 默认值
+    requiredReferrals: 3, // 默认值
+    rewardValue: 1000, // 默认值
   });
   const [unlockLoading, setUnlockLoading] = useState(false);
 
@@ -58,7 +65,7 @@ export const useClaimUnlock = ({ showToast, userInfo, setUserInfo }: UseClaimUnl
         setUnlockStatus({
           hasSelfTrade: conditions.has_transaction,
           activeReferrals: conditions.qualified_referrals,
-          referralTarget: 3,
+          referralTarget: (data as any).required_referrals || 3, // 从后端读取配置
           canUnlock: conditions.is_qualified,
           isLoading: false,
           unlockConditions: conditions,
@@ -68,6 +75,9 @@ export const useClaimUnlock = ({ showToast, userInfo, setUserInfo }: UseClaimUnl
           alreadyUnlocked: data.unlock_status === 1,
           unlockedCount: data.unlocked_count || 0,
           availableQuota: data.available_quota || 0,
+          requiredTransactions: (data as any).required_transactions || 1, // 从后端读取配置
+          requiredReferrals: (data as any).required_referrals || 3, // 从后端读取配置
+          rewardValue: (data as any).reward_value || 1000, // 从后端读取配置
         });
       } else {
         setUnlockStatus((prev) => ({
@@ -86,13 +96,20 @@ export const useClaimUnlock = ({ showToast, userInfo, setUserInfo }: UseClaimUnl
 
   const handleUnlockLegacy = useCallback(async () => {
     // Priority check using the current_gold returned by the check API
-    const currentBalance = unlockStatus.currentGold ?? Number(userInfo?.confirm_rights_gold || 0);
-    const requiredAmount = unlockStatus.requiredGold || 1000;
+    const currentBalance = unlockStatus.currentGold ?? Number(userInfo?.confirm_rights_gold);
+    const requiredAmount = unlockStatus.requiredGold;
 
-    if (currentBalance < requiredAmount) {
-      showToast('warning', '余额不足', `待激活确权金不足 ${requiredAmount}`);
+
+    if (requiredAmount === undefined) {
+      showToast('error', '配置错误', '无法获取所需确权金数量');
       return;
     }
+
+    if (currentBalance === undefined) {
+      showToast('error', '状态错误', '无法获取当前确权金余额');
+      return;
+    }
+
     if (!unlockStatus.canUnlock) {
       showToast('warning', '条件未满足', '请先满足解锁条件');
       return;

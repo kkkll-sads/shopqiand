@@ -222,10 +222,19 @@ export function useRealNameAuth(): UseRealNameAuthReturn {
    * 状态：SUBMITTING - 提交实名认证
    */
   useEffect(() => {
+    console.log('🔄 SUBMITTING 状态检查:', {
+      state,
+      hasAuthToken: !!context.authToken,
+      authToken: context.authToken
+    });
+
     if (state === RealNameState.SUBMITTING && context.authToken) {
+      console.log('✅ 条件满足，调用 submitRealNameWithAuthToken');
       submitRealNameWithAuthToken();
+    } else {
+      console.log('⏳ 条件不满足，等待中...');
     }
-  }, [state]);
+  }, [state, context.authToken]);
 
   /**
    * 加载实名认证状态
@@ -251,7 +260,7 @@ export function useRealNameAuth(): UseRealNameAuthReturn {
       }
 
       // 根据认证状态分发到不同状态
-      if (data.real_name_status === RealNameStatus.VERIFIED) {
+      if (data.real_name_status === RealNameStatus.APPROVED) {
         send(RealNameEvent.LOAD_SUCCESS_VERIFIED, {
           status: data,
           realName: data.real_name || '',
@@ -323,8 +332,17 @@ export function useRealNameAuth(): UseRealNameAuthReturn {
         return;
       }
 
-      if (result.status === 1) {
+      // 检查核身结果：status == 1（通过）且 faceMatched == 1（人脸比对成功）
+      console.log('🔍 核身结果检查:', {
+        status: result.status,
+        faceMatched: result.faceMatched,
+        reasonTypeDesc: result.reasonTypeDesc,
+        statusDesc: result.statusDesc
+      });
+
+      if (result.status === 1 && result.faceMatched === 1) {
         // 核身通过
+        console.log('✅ 核身验证通过，准备提交实名认证');
         send(RealNameEvent.VERIFY_SUCCESS);
       } else {
         // 核身不通过
@@ -346,10 +364,25 @@ export function useRealNameAuth(): UseRealNameAuthReturn {
    * 使用authToken提交实名认证
    */
   const submitRealNameWithAuthToken = async () => {
+    console.log('🚀 submitRealNameWithAuthToken 被调用');
     const token = localStorage.getItem(AUTH_TOKEN_KEY) || '';
-    if (!token || !context.authToken) {
+
+    // 前端必须传递 auth_token
+    if (!context.authToken) {
+      const errorMsg = 'auth_token 参数缺失，请重新进行人脸核身验证';
+      console.error('❌ submitRealNameWithAuthToken:', errorMsg);
+      showToast('error', '提交失败', errorMsg);
       send(RealNameEvent.SUBMIT_ERROR, {
-        error: '缺少必要参数',
+        error: errorMsg,
+      });
+      return;
+    }
+
+    if (!token) {
+      const errorMsg = '用户登录信息缺失，请重新登录';
+      showToast('error', '提交失败', errorMsg);
+      send(RealNameEvent.SUBMIT_ERROR, {
+        error: errorMsg,
       });
       return;
     }

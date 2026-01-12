@@ -8,15 +8,17 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { FileText, Calendar, Hash, Package, Receipt, TrendingUp, TrendingDown } from 'lucide-react';
+import { FileText, Calendar, Hash, Package, Receipt, TrendingUp, TrendingDown, Copy, Check } from 'lucide-react';
 import PageContainer from '../../components/layout/PageContainer';
 import { LoadingSpinner, LazyImage } from '../../components/common';
 import { getMoneyLogDetail, MoneyLogDetailData } from '../../services/wallet';
 import { isSuccess, extractData, extractError } from '../../utils/apiHelpers';
+import { useNotification } from '../../context/NotificationContext';
 import { formatAmount, formatTime } from '../../utils/format';
 import { getBalanceTypeLabel } from '../../constants/balanceTypes';
 import { AUTH_TOKEN_KEY } from '../../constants/storageKeys';
 import { normalizeAssetUrl } from '../../services/config';
+import { BizTypeMap, BizType } from '../../constants/statusEnums';
 
 interface MoneyLogDetailProps {
   id?: number | string;
@@ -25,9 +27,71 @@ interface MoneyLogDetailProps {
 }
 
 const MoneyLogDetail: React.FC<MoneyLogDetailProps> = ({ id, flowNo, onBack }) => {
+  const { showToast } = useNotification();
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [detail, setDetail] = useState<MoneyLogDetailData | null>(null);
+  const [copiedFlowNo, setCopiedFlowNo] = useState<boolean>(false);
+
+  // HTTP环境下的复制方案 - 只使用 execCommand
+  const handleCopyFlowNo = (text: string) => {
+    if (!text || text === '-') return;
+
+    try {
+      // 创建 textarea 元素
+      const textArea = document.createElement('textarea');
+      textArea.value = text;
+
+      // 关键：放在可见区域内，但使其透明
+      textArea.style.cssText = `
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        width: 2em;
+        height: 2em;
+        padding: 0;
+        border: none;
+        outline: none;
+        box-shadow: none;
+        background: transparent;
+        color: transparent;
+        z-index: -1;
+      `;
+      textArea.setAttribute('readonly', '');
+      textArea.setAttribute('contenteditable', 'true');
+
+      document.body.appendChild(textArea);
+
+      // iOS Safari 需要特殊处理
+      const range = document.createRange();
+      range.selectNodeContents(textArea);
+
+      const selection = window.getSelection();
+      if (selection) {
+        selection.removeAllRanges();
+        selection.addRange(range);
+      }
+
+      textArea.setSelectionRange(0, text.length);
+
+      // 执行复制
+      const success = document.execCommand('copy');
+
+      // 清理
+      document.body.removeChild(textArea);
+
+      if (success) {
+        setCopiedFlowNo(true);
+        showToast('success', '复制成功');
+        setTimeout(() => setCopiedFlowNo(false), 2000);
+      } else {
+        showToast('error', '复制失败', '请长按流水号手动复制');
+      }
+    } catch (err) {
+      console.error('Copy failed:', err);
+      showToast('error', '复制失败', '请长按流水号手动复制');
+    }
+  };
 
   useEffect(() => {
     loadDetail();
@@ -127,7 +191,18 @@ const MoneyLogDetail: React.FC<MoneyLogDetailProps> = ({ id, flowNo, onBack }) =
                 <Hash className="w-4 h-4 text-gray-400" />
                 <span className="text-sm">流水号</span>
               </div>
-              <span className="text-sm font-mono text-gray-900">{detail.flow_no || '-'}</span>
+              <button
+                onClick={() => handleCopyFlowNo(detail.flow_no || '')}
+                className="flex items-center gap-1.5 text-sm font-mono text-gray-900 hover:text-blue-600 active:scale-95 transition-all px-2 py-1 -mr-2 rounded-md hover:bg-blue-50"
+                title="点击复制"
+              >
+                <span>{detail.flow_no || '-'}</span>
+                {copiedFlowNo ? (
+                  <Check className="w-3.5 h-3.5 text-green-500" />
+                ) : (
+                  <Copy className="w-3.5 h-3.5 text-gray-400" />
+                )}
+              </button>
             </div>
 
             {detail.batch_no && (
@@ -152,22 +227,7 @@ const MoneyLogDetail: React.FC<MoneyLogDetailProps> = ({ id, flowNo, onBack }) =
               <div className="flex justify-between items-center py-2">
                 <span className="text-sm text-gray-600">业务类型</span>
                 <span className="text-sm text-gray-900">
-                  {(() => {
-                    const bizTypeMap: Record<string, string> = {
-                      sign_in: '签到',
-                      withdraw: '提现',
-                      deposit: '充值',
-                      transfer: '转账',
-                      payment: '支付',
-                      refund: '退款',
-                      reward: '奖励',
-                      purchase: '购买',
-                      sale: '销售',
-                      matching_official_seller: '官方卖家匹配',
-                      blind_box_diff_refund: '盲盒差价退款',
-                    };
-                    return bizTypeMap[detail.biz_type] || detail.biz_type;
-                  })()}
+                  {BizTypeMap[detail.biz_type as BizType] || detail.biz_type}
                 </span>
               </div>
             )}
@@ -239,18 +299,44 @@ const MoneyLogDetail: React.FC<MoneyLogDetailProps> = ({ id, flowNo, onBack }) =
               {Object.entries(detail.breakdown).map(([key, value]) => {
                 // 字段名中文映射
                 const fieldNameMap: Record<string, string> = {
+                  // 签到相关
                   sign_date: '签到日期',
                   sign_record_id: '签到记录ID',
+                  sign_days: '签到天数',
+                  streak: '连续签到天数',
+                  // 奖励相关
                   reward_money: '奖励金额',
-                  activity_id: '活动ID',
-                  activity_name: '活动名称',
                   reward_score: '奖励积分',
                   reward_type: '奖励类型',
                   referrer_reward: '推荐人奖励',
                   daily_reward: '每日奖励',
                   total_reward: '累计奖励',
-                  sign_days: '签到天数',
-                  streak: '连续签到天数',
+                  // 活动相关
+                  activity_id: '活动ID',
+                  activity_name: '活动名称',
+                  // 消费金兑换绿色算力
+                  score_consumed: '消费金消耗',
+                  green_power_gained: '获得绿色算力',
+                  exchange_rate: '兑换比例',
+                  // 确权金充值
+                  recharge_amount: '充值金额',
+                  service_fee: '服务费',
+                  service_fee_rate: '服务费率',
+                  actual_amount: '实际到账',
+                  // 寄售相关
+                  consign_price: '寄售价格',
+                  consignment_price: '寄售价格',
+                  platform_fee: '平台手续费',
+                  seller_income: '卖家收入',
+                  buyer_paid: '买家支付',
+                  // 撮合相关
+                  match_price: '撮合价格',
+                  match_quantity: '撮合数量',
+                  commission: '佣金',
+                  // 其他
+                  order_no: '订单号',
+                  collection_id: '藏品ID',
+                  collection_name: '藏品名称',
                 };
 
                 const displayKey = fieldNameMap[key] || key;
@@ -273,6 +359,7 @@ const MoneyLogDetail: React.FC<MoneyLogDetailProps> = ({ id, flowNo, onBack }) =
 };
 
 export default MoneyLogDetail;
+
 
 
 

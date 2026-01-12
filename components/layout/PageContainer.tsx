@@ -77,8 +77,25 @@ const PageContainer: React.FC<PageContainerProps> = ({
     footer,
     className = '',
 }) => {
+    const scrollRef = React.useRef<HTMLDivElement>(null);
+
+    // 每次页面重新渲染或挂载时，滚动到顶部
+    React.useEffect(() => {
+        // 使用 setTimeout 确保在渲染完成后执行滚动重置
+        // 解决某些情况下（如路由切换动画、数据加载）导致的滚动位置不正确问题
+        const timer = setTimeout(() => {
+            if (scrollRef.current) {
+                scrollRef.current.scrollTop = 0;
+            }
+            // 同时尝试重置 window 滚动，以防万一
+            window.scrollTo(0, 0);
+        }, 0);
+
+        return () => clearTimeout(timer);
+    }, [title]); // 当标题变化（通常意味着路由变化）时重置滚动
+
     return (
-        <div className={`min-h-screen-dynamic ${bgColor} pb-safe flex flex-col ${className}`}>
+        <div className={`h-screen ${bgColor} pb-safe flex flex-col overflow-hidden ${className}`}>
             {/* 顶部导航栏 */}
             <header className="bg-white px-4 py-3 flex items-center sticky top-0 z-30 shadow-sm">
                 {/* 返回按钮 */}
@@ -105,15 +122,20 @@ const PageContainer: React.FC<PageContainerProps> = ({
                 )}
             </header>
 
-            {/* 内容区域 */}
-            <div className={`flex-1 ${padding ? 'p-4' : ''}`}>
+            {/* 内容区域 - 撑满剩余空间，可滚动 */}
+            <div
+                ref={scrollRef}
+                className={`flex-1 flex flex-col ${bgColor} ${padding ? 'p-4' : ''} overflow-y-auto`}
+            >
                 {/* 加载状态 */}
                 {loading ? (
-                    <div className="flex items-center justify-center py-20">
+                    <div className="flex-1 flex items-center justify-center">
                         <LoadingSpinner text={loadingText} />
                     </div>
                 ) : (
-                    children
+                    <div className="flex-1 flex flex-col">
+                        {children}
+                    </div>
                 )}
             </div>
 

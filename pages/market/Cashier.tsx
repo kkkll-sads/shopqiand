@@ -118,8 +118,13 @@ const Cashier: React.FC<CashierProps> = ({ orderId, backRoute, onBack, onNavigat
             <div className="p-6">
                 <div className="text-center mb-8">
                     <div className="text-sm text-gray-500 mb-2">订单号：{order.order_no}</div>
-                    <div className="text-4xl font-bold text-gray-900 font-mono">
-                        {amount} <span className="text-sm font-normal text-gray-500">{isScore ? '消费金' : '元'}</span>
+                    <div className="flex items-baseline justify-center gap-1">
+                        <div className="text-2xl font-bold text-orange-600 font-mono">
+                            {amount}
+                        </div>
+                        <span className="text-sm text-orange-500 font-medium">
+                            {isScore ? '消费金' : '元'}
+                        </span>
                     </div>
                 </div>
 

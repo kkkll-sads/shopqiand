@@ -288,22 +288,36 @@ export interface SubmitRealNameParams {
     id_card?: string;
     id_card_front?: string;
     id_card_back?: string;
-    auth_token?: string; // H5人脸核身返回的token
+    auth_token: string; // H5人脸核身返回的token，必须传递
     token?: string;
 }
 
 export async function submitRealName(params: SubmitRealNameParams): Promise<ApiResponse<{ real_name_status?: number }>> {
     const token = params.token ?? getStoredToken();
+
+    // 前端必须传递 auth_token
+    if (!params.auth_token) {
+        throw new Error('auth_token 参数是必需的，请进行人脸核身验证后重试');
+    }
+
     const payload = new FormData();
 
-    if (params.auth_token) {
-        payload.append('auth_token', params.auth_token);
-    } else {
-        if (params.real_name) payload.append('real_name', params.real_name);
-        if (params.id_card) payload.append('id_card', params.id_card);
-        if (params.id_card_front) payload.append('id_card_front', params.id_card_front);
-        if (params.id_card_back) payload.append('id_card_back', params.id_card_back);
-    }
+    // 使用 auth_token 模式（H5人脸核身）
+    payload.append('auth_token', params.auth_token);
+
+    return authedFetch(API_ENDPOINTS.user.submitRealName, {
+        method: 'POST',
+        body: payload,
+        token,
+    });
+}
+
+export async function submitRealNameNew(token: string): Promise<ApiResponse<{ real_name_status?: number }>> {
+
+    const payload = new FormData();
+
+    // 使用 auth_token 模式（H5人脸核身）
+    payload.append('auth_token', token);
 
     return authedFetch(API_ENDPOINTS.user.submitRealName, {
         method: 'POST',

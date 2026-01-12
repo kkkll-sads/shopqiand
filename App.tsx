@@ -14,7 +14,8 @@ import {
   fetchPendingConfirmOrders,
   RechargeOrderItem,
   WithdrawOrderItem,
-  ShopOrderItem
+  ShopOrderItem,
+  submitRealNameNew,
 } from './services/api';
 import { extractData } from './utils/apiHelpers';
 import { RechargeOrderStatus, WithdrawOrderStatus } from './constants/statusEnums';
@@ -183,6 +184,9 @@ const AppContent: React.FC = () => {
   // 追踪上一次的路由，用于智能刷新实名状态
   const prevRouteNameRef = useRef<string | null | undefined>(null);
 
+  // 预加载用户信息状态（用于reservation页面预加载）
+  const [preloadedUserInfo, setPreloadedUserInfo] = useState<{ availableHashrate: number; accountBalance: number } | null>(null);
+
   const navigateRoute = useCallback(
     (route: Route | string | null, options?: { replace?: boolean; back?: Route | null; clearHistory?: boolean }) => {
       navigate(route, { replace: options?.replace, back: options?.back, clearHistory: options?.clearHistory });
@@ -226,6 +230,33 @@ const AppContent: React.FC = () => {
     // 更新 ref
     prevRouteNameRef.current = currentRouteName;
   }, [currentRoute?.name, isLoggedIn, refreshRealNameStatus]);
+
+  // 预加载用户信息：当进入reservation页面时预加载算力和余额
+  useEffect(() => {
+    const loadPreloadedUserInfo = async () => {
+      if (currentRoute?.name === 'reservation' && isLoggedIn && !preloadedUserInfo) {
+        try {
+          console.log('[预加载] 开始预加载用户信息...');
+          const token = readStorage(STORAGE_KEYS.AUTH_TOKEN_KEY);
+          if (token) {
+            const response = await fetchProfile(token);
+            if (isSuccess(response)) {
+              const userInfo = response.data.userInfo;
+              setPreloadedUserInfo({
+                availableHashrate: Number(userInfo.green_power) || 0,
+                accountBalance: Number(userInfo.balance_available) || 0,
+              });
+              console.log('[预加载] 用户信息预加载完成');
+            }
+          }
+        } catch (error) {
+          console.error('[预加载] 预加载用户信息失败:', error);
+        }
+      }
+    };
+
+    loadPreloadedUserInfo();
+  }, [currentRoute?.name, isLoggedIn, preloadedUserInfo]);
 
   // 将公告接口返回的数据转换为前端使用的 NewsItem 结构
   const mapAnnouncementToNewsItem = (item: AnnouncementItem, readIds: string[], newsType: 'announcement' | 'dynamic'): NewsItem => {
@@ -300,6 +331,84 @@ const AppContent: React.FC = () => {
     verifyLoginStatus();
   }, []); // 只在组件挂载时执行一次
 
+  // 提取为 useCallback 以便在路由变化时调用
+  const fetchAllUnreadCounts = useCallback(async () => {
+    try {
+      if (!isLoggedIn) return 0;
+
+      const readMsgIds = readJSON<string[]>(STORAGE_KEYS.READ_MESSAGE_IDS_KEY, []) || [];
+      let totalUnread = 0;
+
+      // 1. Recharge Orders
+      try {
+        const res = await getMyOrderList({ page: 1, limit: 5 });
+        const data = extractData(res) as any;
+        const list = data?.data || data?.list || [];
+        list.forEach((item: RechargeOrderItem) => {
+          const id = `recharge-${item.id}`;
+          if ([RechargeOrderStatus.PENDING, RechargeOrderStatus.APPROVED, RechargeOrderStatus.REJECTED].includes(item.status)) {
+            if (!readMsgIds.includes(id)) totalUnread++;
+          }
+        });
+      } catch (e) { console.error('Failed to check recharge unread:', e); }
+
+      // 2. Withdraw Orders
+      try {
+        const res = await getMyWithdrawList({ page: 1, limit: 5 });
+        const data = extractData(res) as any;
+        const list = data?.data || data?.list || [];
+        list.forEach((item: WithdrawOrderItem) => {
+          const id = `withdraw-${item.id}`;
+          if ([WithdrawOrderStatus.PENDING, WithdrawOrderStatus.APPROVED, WithdrawOrderStatus.REJECTED].includes(item.status)) {
+            if (!readMsgIds.includes(id)) totalUnread++;
+          }
+        });
+      } catch (e) { console.error('Failed to check withdraw unread:', e); }
+
+      // 3. Shop Orders (Pending Pay/Ship/Confirm)
+      try {
+        const [payRes, shipRes, confirmRes] = await Promise.all([
+          fetchPendingPayOrders({ page: 1, limit: 5 }),
+          fetchPendingShipOrders({ page: 1, limit: 5 }),
+          fetchPendingConfirmOrders({ page: 1, limit: 5 })
+        ]);
+
+        // Pay
+        const payList = (extractData(payRes) as any)?.list || [];
+        payList.forEach((item: ShopOrderItem) => {
+          if (!readMsgIds.includes(`shop-order-pay-${item.id}`)) totalUnread++;
+        });
+
+        // Ship
+        const shipList = (extractData(shipRes) as any)?.list || [];
+        shipList.forEach((item: ShopOrderItem) => {
+          if (!readMsgIds.includes(`shop-order-ship-${item.id}`)) totalUnread++;
+        });
+
+        // Confirm
+        const confirmList = (extractData(confirmRes) as any)?.list || [];
+        confirmList.forEach((item: ShopOrderItem) => {
+          if (!readMsgIds.includes(`shop-order-confirm-${item.id}`)) totalUnread++;
+        });
+
+      } catch (e) { console.error('Failed to check shop unread:', e); }
+
+      return totalUnread;
+    } catch (error) {
+      console.error('Error fetching unread counts:', error);
+      return 0;
+    }
+  }, [isLoggedIn]);
+
+  // 每次路由变化时，刷新消息已读状态（确保从消息中心返回时状态同步）
+  useEffect(() => {
+    refreshReadStatus();
+    // 同时也刷新其他消息的未读状态（如充值、提现等）
+    fetchAllUnreadCounts().then(count => {
+      setExtraUnreadCount(count);
+    });
+  }, [currentRoute, activeTab, refreshReadStatus, fetchAllUnreadCounts]);
+
   // 仅在用户登录且进入首页时加载公告
   useEffect(() => {
     // 只有在用户已登录时才加载公告 (移除 activeTab 限制，以便在"我的"页面也能显示红点)
@@ -312,96 +421,17 @@ const AppContent: React.FC = () => {
         console.log('[公告] 开始加载公告数据...');
         const readIds = getReadNewsIds();
 
-        // Check for unread messages (recharge, withdraw, shop orders)
-        const readMsgIds = readJSON<string[]>(STORAGE_KEYS.READ_MESSAGE_IDS_KEY, []) || [];
-
-        // Helper to fetch and count unread messages
-        const fetchAllUnreadCounts = async () => {
-          try {
-            let totalUnread = 0;
-
-            // 1. Recharge Orders
-            try {
-              const res = await getMyOrderList({ page: 1, limit: 5 });
-              const data = extractData(res) as any;
-              const list = data?.data || data?.list || [];
-              list.forEach((item: RechargeOrderItem) => {
-                const id = `recharge-${item.id}`;
-                if ([RechargeOrderStatus.PENDING, RechargeOrderStatus.APPROVED, RechargeOrderStatus.REJECTED].includes(item.status)) {
-                  if (!readMsgIds.includes(id)) totalUnread++;
-                }
-              });
-            } catch (e) { console.error('Failed to check recharge unread:', e); }
-
-            // 2. Withdraw Orders
-            try {
-              const res = await getMyWithdrawList({ page: 1, limit: 5 });
-              const data = extractData(res) as any;
-              const list = data?.data || data?.list || [];
-              list.forEach((item: WithdrawOrderItem) => {
-                const id = `withdraw-${item.id}`;
-                if ([WithdrawOrderStatus.PENDING, WithdrawOrderStatus.APPROVED, WithdrawOrderStatus.REJECTED].includes(item.status)) {
-                  if (!readMsgIds.includes(id)) totalUnread++;
-                }
-              });
-            } catch (e) { console.error('Failed to check withdraw unread:', e); }
-
-            // 3. Shop Orders (Pending Pay/Ship/Confirm)
-            try {
-              const [payRes, shipRes, confirmRes] = await Promise.all([
-                fetchPendingPayOrders({ page: 1, limit: 5 }),
-                fetchPendingShipOrders({ page: 1, limit: 5 }),
-                fetchPendingConfirmOrders({ page: 1, limit: 5 })
-              ]);
-
-              // Pay
-              const payList = (extractData(payRes) as any)?.list || [];
-              payList.forEach((item: ShopOrderItem) => {
-                if (!readMsgIds.includes(`shop-order-pay-${item.id}`)) totalUnread++;
-              });
-
-              // Ship
-              const shipList = (extractData(shipRes) as any)?.list || [];
-              shipList.forEach((item: ShopOrderItem) => {
-                if (!readMsgIds.includes(`shop-order-ship-${item.id}`)) totalUnread++;
-              });
-
-              // Confirm
-              const confirmList = (extractData(confirmRes) as any)?.list || [];
-              confirmList.forEach((item: ShopOrderItem) => {
-                if (!readMsgIds.includes(`shop-order-confirm-${item.id}`)) totalUnread++;
-              });
-
-            } catch (e) { console.error('Failed to check shop unread:', e); }
-
-            return totalUnread;
-          } catch (error) {
-            console.error('Error fetching unread counts:', error);
-            return 0;
-          }
-        };
-
-        const [announcementRes, dynamicRes, extraUnreadVal] = await Promise.all([
+        const [announcementRes, dynamicRes] = await Promise.all([
           fetchAnnouncements({ page: 1, limit: 5, type: 'normal', is_popup: 1 }),
           fetchAnnouncements({ page: 1, limit: 5, type: 'important', is_popup: 1 }),
-          fetchAllUnreadCounts(),
+          // 移除 fetchAllUnreadCounts() - 已在 Line 404-410 的 useEffect 中处理
         ]);
 
-        // Update a new state for extra unread count
-        setConsignmentTicketCount(prev => {
-          // We reuse an existing state or add a new one? 
-          // Better to add a new state.
-          // But let's check what state is available. 
-          // Since I can't easily add a new state line outside this function without editing the whole file,
-          // I will use a ref or hack it? No, I should edit the state definition too.
-          return prev;
-        });
-        setExtraUnreadCount(extraUnreadVal);
+        // extraUnreadCount 已在另一个 useEffect 中更新，无需在此处设置
 
         console.log('[公告] API响应:', {
           announcementRes,
           dynamicRes,
-          extraUnreadVal
         });
 
         const announcementList = announcementRes.data?.list ?? [];
@@ -465,6 +495,12 @@ const AppContent: React.FC = () => {
           console.log('[公告] 过滤后待显示的弹窗数量:', validPopups.length);
 
           if (validPopups.length > 0) {
+            // 检查是否已有弹窗正在显示，如果是则不重新显示
+            if (showPopupAnnouncement && popupQueue.length > 0) {
+              console.log('[公告] 当前已有弹窗显示，跳过新弹窗');
+              return;
+            }
+
             // 获取第一个公告的延迟时间
             const firstDelay = Number(validPopups[0].popup_delay) || 0;
             console.log(`[公告] 将在 ${firstDelay}ms 后开始显示 ${validPopups.length} 个弹窗`);
@@ -486,7 +522,7 @@ const AppContent: React.FC = () => {
     };
 
     loadAnnouncements();
-  }, [isLoggedIn, activeTab]); // 只在登录状态或tab变化时触发
+  }, [isLoggedIn]); // 只在登录状态变化时触发，避免tab切换时重复显示弹窗
 
   const handleLogin = (payload?: LoginSuccessPayload) => {
     debugLog('auth.login', '开始执行登录', payload);
@@ -520,14 +556,40 @@ const AppContent: React.FC = () => {
   };
 
   // Helper to navigate to product detail
-  const handleProductSelect = (product: Product, origin: 'market' | 'artist' | 'trading-zone' | 'reservation-record' = 'market') => {
+  const handleProductSelect = (
+    product: Product,
+    origin: 'market' | 'artist' | 'trading-zone' | 'reservation-record' = 'market',
+    customBackRoute?: Route | null
+  ) => {
     setSelectedProduct(product);
     setProductDetailOrigin(origin);
 
+    // 根据来源设置正确的返回路由
+    const getBackRoute = (): Route | null => {
+      // 如果提供了自定义返回路由，优先使用
+      if (customBackRoute !== undefined) {
+        return customBackRoute;
+      }
+
+      switch (origin) {
+        case 'artist':
+          return { name: 'artist-showcase' };
+        case 'trading-zone':
+          return { name: 'trading-zone' };
+        case 'reservation-record':
+          return { name: 'reservation-record' };
+        case 'market':
+        default:
+          return null; // 返回 null 会回到市场 tab 页
+      }
+    };
+
+    const backRoute = getBackRoute();
+
     if (product.productType === 'shop') {
-      navigateRoute({ name: 'points-product-detail' });
+      navigateRoute({ name: 'points-product-detail', back: backRoute });
     } else {
-      navigateRoute({ name: 'product-detail' });
+      navigateRoute({ name: 'product-detail', back: backRoute });
     }
   };
 
@@ -565,6 +627,15 @@ const AppContent: React.FC = () => {
       }
     }
   }, [currentRoute]); // Depend on currentRoute to avoid duplicate navigation
+
+  useEffect(() => {
+    console.log('[AuthToken] 检测到 URL 中是否携带 authToken');
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get('authToken') || params.get('authtoken') || params.get('auth_token');
+    if (!token) return;
+    submitRealNameNew(token);
+  }, []);
 
   // Authentication Gate
   if (!isLoggedIn) {
@@ -610,6 +681,13 @@ const AppContent: React.FC = () => {
         />
       );
     }
+    if (currentRoute?.name === 'online-service') {
+      return (
+        <OnlineService
+          onBack={() => navigateRoute(null)}
+        />
+      );
+    }
     return (
       <Login
         onLogin={handleLogin}
@@ -617,6 +695,7 @@ const AppContent: React.FC = () => {
         onNavigateUserAgreement={() => navigateRoute({ name: 'user-agreement' })}
         onNavigatePrivacyPolicy={() => navigateRoute({ name: 'privacy-policy' })}
         onNavigateForgotPassword={() => navigateRoute({ name: 'forgot-password' })}
+        onNavigateOnlineService={() => navigateRoute({ name: 'online-service' })}
       />
     );
   }
@@ -707,6 +786,7 @@ const AppContent: React.FC = () => {
             setProductDetailOrigin('market'); // Reset to default
           }}
           onNavigate={(route) => navigateRoute(route)} // 兼容旧字符串
+          onProductUpdate={(updatedProduct) => setSelectedProduct(updatedProduct)}
         />
       );
     }
@@ -717,6 +797,7 @@ const AppContent: React.FC = () => {
           product={selectedProduct}
           onBack={() => goBack()}
           onNavigate={(route, options) => navigateRoute(route, options)} // 兼容旧字符串
+          preloadedUserInfo={preloadedUserInfo}
         />
       );
     }

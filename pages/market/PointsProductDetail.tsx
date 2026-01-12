@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { LoadingSpinner, LazyImage } from '../../components/common';
 import { Product } from '../../types';
-import { fetchShopProductDetail, ShopProductDetailData, createOrder, fetchAddressList, AddressItem, fetchShopProductShare, ShopProductShareData } from '../../services/api';
+import { fetchShopProductDetail, ShopProductDetailData, createOrder, fetchAddressList, AddressItem } from '../../services/api';
 import { useNotification } from '../../context/NotificationContext';
 import { AUTH_TOKEN_KEY } from '../../constants/storageKeys';
 import { Route } from '../../router/routes';
-import { Share2, Copy, X, Check } from 'lucide-react';
+import { Copy, X, Check } from 'lucide-react';
 import { isSuccess, extractError } from '../../utils/apiHelpers';
 
 interface PointsProductDetailProps {
@@ -19,11 +19,6 @@ const PointsProductDetail: React.FC<PointsProductDetailProps> = ({ product, onBa
     const [detailData, setDetailData] = useState<ShopProductDetailData | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-
-    // Share State
-    const [showShareModal, setShowShareModal] = useState(false);
-    const [shareData, setShareData] = useState<ShopProductShareData | null>(null);
-    const [loadingShare, setLoadingShare] = useState(false);
 
     // Purchase & Address State
     const [submitting, setSubmitting] = useState(false);
@@ -75,32 +70,6 @@ const PointsProductDetail: React.FC<PointsProductDetailProps> = ({ product, onBa
         }
     };
 
-    const handleShareClick = async () => {
-        try {
-            setLoadingShare(true);
-            const response = await fetchShopProductShare(product.id);
-            if (isSuccess(response) && response.data) {
-                setShareData(response.data);
-                setShowShareModal(true);
-            } else {
-                showToast('error', extractError(response, '获取分享信息失败'));
-            }
-        } catch (e) {
-            showToast('error', '网络请求失败');
-        } finally {
-            setLoadingShare(false);
-        }
-    };
-
-    const handleCopyLink = () => {
-        if (shareData?.share_url) {
-            navigator.clipboard.writeText(shareData.share_url).then(() => {
-                showToast('success', '链接已复制');
-            }).catch(() => {
-                showToast('error', '复制失败');
-            });
-        }
-    };
 
     const isScoreProduct = !!detailData?.score_price;
     const maxStock = detailData?.stock || 0;
@@ -206,17 +175,7 @@ const PointsProductDetail: React.FC<PointsProductDetailProps> = ({ product, onBa
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6" /></svg>
                 </button>
                 <h1 className="text-lg font-bold text-gray-900">消费金商品详情</h1>
-                <button
-                    onClick={handleShareClick}
-                    disabled={loadingShare}
-                    className="p-2 -mr-2 hover:bg-gray-100 rounded-full text-gray-800 transition-colors"
-                >
-                    {loadingShare ? (
-                        <LoadingSpinner size={20} color="gray" />
-                    ) : (
-                        <Share2 size={20} />
-                    )}
-                </button>
+                <div className="w-10" />
             </header>
 
             {/* Product Image */}
@@ -293,49 +252,6 @@ const PointsProductDetail: React.FC<PointsProductDetailProps> = ({ product, onBa
                     {isScoreProduct ? '立即兑换' : '立即购买'}
                 </button>
             </div>
-
-            {/* Share Modal */}
-            {showShareModal && shareData && (
-                <div className="fixed inset-0 z-[70] bg-black/60 backdrop-blur-sm flex items-end justify-center animate-in fade-in" onClick={() => setShowShareModal(false)}>
-                    <div className="bg-white w-full rounded-t-[32px] p-6 pb-safe animate-in slide-in-from-bottom duration-300 relative" onClick={e => e.stopPropagation()}>
-                        <div className="flex justify-between items-center mb-6">
-                            <h3 className="text-lg font-bold text-gray-900">分享商品</h3>
-                            <button onClick={() => setShowShareModal(false)} className="text-gray-400 p-2 -mr-2">
-                                <X size={24} />
-                            </button>
-                        </div>
-
-                        <div className="bg-gray-50 rounded-2xl p-4 mb-6 flex items-start gap-4">
-                            <div className="w-20 h-20 bg-white rounded-lg overflow-hidden shrink-0 border border-gray-100">
-                                <img src={shareData.share_image || shareData.product.thumbnail} className="w-full h-full object-cover" alt="" />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                                <div className="text-sm font-bold text-gray-900 mb-1 line-clamp-2">{shareData.share_title}</div>
-                                <div className="text-xs text-gray-500 mb-2 line-clamp-2">{shareData.share_desc}</div>
-                            </div>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-4">
-                            <button
-                                onClick={handleCopyLink}
-                                className="flex flex-col items-center justify-center gap-2 p-4 bg-orange-50 rounded-2xl active:scale-[0.98] transition-transform"
-                            >
-                                <div className="w-12 h-12 bg-orange-100 text-orange-600 rounded-full flex items-center justify-center">
-                                    <Copy size={24} />
-                                </div>
-                                <span className="text-sm font-medium text-gray-700">复制链接</span>
-                            </button>
-                            {/* More share options can be added here later */}
-                        </div>
-
-                        <div className="mt-6 pt-4 border-t border-gray-100">
-                            <div className="text-xs text-center text-gray-400">
-                                分享码: {shareData.share_code}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            )}
 
             {/* Spec / Quantity Modal */}
             {showSpecModal && (

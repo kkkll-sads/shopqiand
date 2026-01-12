@@ -1,6 +1,6 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { Settings, MessageSquare, ShieldCheck, CreditCard, MapPin, Users, UserCheck, HelpCircle, FileText, HeadphonesIcon, ChevronRight, Wallet, Receipt, Box, Gem, Sprout, Award, CalendarCheck, Newspaper, Leaf, ClipboardList, Coins, Package, Truck, CheckCircle } from 'lucide-react';
+import { ChevronRight, Settings, MessageSquare, ShieldCheck, CreditCard, MapPin, Users, UserCheck, HelpCircle, FileText, HeadphonesIcon, Newspaper, Gift, Wallet, Receipt, Box, Gem, Sprout, Award, CalendarCheck, Leaf, ClipboardList, Coins, Package, Truck, CheckCircle } from 'lucide-react';
 import { formatAmount } from '../../utils/format';
 import { AUTH_TOKEN_KEY, USER_INFO_KEY, fetchProfile, normalizeAssetUrl, fetchShopOrderStatistics, ShopOrderStatistics, fetchSignInInfo } from '../../services/api';
 import { STORAGE_KEYS } from '../../constants/storageKeys';
@@ -180,7 +180,15 @@ const Profile: React.FC<ProfileProps> = ({ onNavigate, unreadCount = 0 }) => {
   }, []);
 
 
-  const { realName } = useAuth();
+  const { realName, logout } = useAuth();
+
+  const handleLogout = () => {
+    logout();
+    // 稍微延迟一下跳转，让状态更新
+    setTimeout(() => {
+      onNavigate({ name: 'sign-in' });
+    }, 50);
+  };
   const displayName = realName || userInfo?.nickname || userInfo?.username || '用户';
   const displayAvatarText = displayName.slice(0, 1).toUpperCase();
   const displayAvatarUrl = normalizeAssetUrl(userInfo?.avatar);
@@ -423,6 +431,7 @@ const Profile: React.FC<ProfileProps> = ({ onNavigate, unreadCount = 0 }) => {
               { label: '累计权益', icon: ShieldCheck, color: 'text-green-600', bg: 'bg-green-50', action: () => onNavigate({ name: 'cumulative-rights' }) },
               { label: '寄售券', icon: Receipt, color: 'text-pink-600', bg: 'bg-pink-50', action: () => onNavigate({ name: 'consignment-voucher' }) },
               { label: '我的藏品', icon: Box, color: 'text-indigo-600', bg: 'bg-indigo-50', action: () => onNavigate({ name: 'my-collection' }) },
+              { label: '交易订单', icon: ClipboardList, color: 'text-blue-600', bg: 'bg-blue-50', action: () => onNavigate({ name: 'order-list', kind: 'transaction', status: 0 }) },
             ].map((item, idx) => (
               <div key={idx} className="flex flex-col items-center cursor-pointer active:opacity-60 group" onClick={item.action}>
                 <div className={`w-11 h-11 rounded-2xl ${item.bg} flex items-center justify-center mb-2 transition-transform group-active:scale-95`}>
@@ -478,6 +487,7 @@ const Profile: React.FC<ProfileProps> = ({ onNavigate, unreadCount = 0 }) => {
               { label: '帮助中心', icon: HelpCircle, action: () => onNavigate({ name: 'help-center' }) },
               { label: '规则协议', icon: FileText, action: () => onNavigate({ name: 'user-agreement' }) },
               { label: '用户问卷', icon: FileText, action: () => onNavigate({ name: 'user-survey' }) },
+              { label: '活动中心', icon: Gift, action: () => onNavigate({ name: 'activity-center' }) },
               { label: '在线客服', icon: HeadphonesIcon, action: () => onNavigate({ name: 'online-service' }) },
               { label: '平台资讯', icon: Newspaper, action: () => onNavigate({ name: 'news' }) },
             ].map((item, idx) => (
@@ -490,6 +500,7 @@ const Profile: React.FC<ProfileProps> = ({ onNavigate, unreadCount = 0 }) => {
             ))}
           </div>
         </div>
+
       </div>
     </div >
   );
