@@ -711,7 +711,13 @@ const AppContent: React.FC = () => {
     // 页面访问控制：未实名用户只能访问首页和实名认证页面
     if (!isRealNameVerified) {
       // 允许未实名访问的子路由（用 Route 名称而非字符串前缀）
-      const allowedRouteNames: Array<Route['name'] | null> = [null, 'real-name-auth'];
+      // 包括公开路由：在线客服、帮助中心等
+      const allowedRouteNames: Array<Route['name'] | null> = [
+        null, 
+        'real-name-auth',
+        'online-service', // 在线客服是公开路由，允许未实名访问
+        'help-center', // 帮助中心是公开路由，允许未实名访问
+      ];
 
       // 检查是否在尝试访问非首页的 tab
       const isNavigatingToRestrictedTab = activeTab !== 'home' && !subPage;

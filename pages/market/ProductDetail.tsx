@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { ChevronLeft, Copy, Shield, FileText, Lock, Award, Gavel, TrendingUp, CreditCard, BadgeCheck } from 'lucide-react';
 import { LoadingSpinner, LazyImage } from '../../components/common';
+import PopupAnnouncementModal from '../../components/common/PopupAnnouncementModal';
 import { Product } from '../../types';
 import {
   fetchCollectionItemDetail,
@@ -11,6 +12,8 @@ import {
   createOrder,
   bidBuy,
   AUTH_TOKEN_KEY,
+  fetchAnnouncements,
+  AnnouncementItem,
 } from '../../services/api';
 import { useNotification } from '../../context/NotificationContext';
 import { Route } from '../../router/routes';
@@ -84,6 +87,10 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, onNaviga
   const [buying, setBuying] = useState(false);
   const [collectionBuying, setCollectionBuying] = useState(false);
 
+  // 交易须知公告弹窗状态
+  const [showTradingNotice, setShowTradingNotice] = useState(false);
+  const [tradingNoticeAnnouncement, setTradingNoticeAnnouncement] = useState<AnnouncementItem | null>(null);
+
   const isShopProduct = product.productType === 'shop';
 
   useEffect(() => {
@@ -133,6 +140,37 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, onNaviga
 
     loadDetail();
   }, [product.id, isShopProduct, initialData]);
+
+  // 加载交易须知公告
+  useEffect(() => {
+    const loadTradingNotice = async () => {
+      try {
+        const response = await fetchAnnouncements({ page: 1, limit: 10, type: 'normal' });
+        if (isSuccess(response) && response.data?.list) {
+          // 查找标题包含"交易须知"的公告（即使后端返回的是不弹窗的，也强制弹窗）
+          const notice = response.data.list.find((item: AnnouncementItem) =>
+            item.title && item.title.includes('交易须知')
+          );
+
+          if (notice) {
+            // 检查今天是否已经关闭过该公告
+            const dismissedKey = `trading_notice_dismissed_${notice.id}`;
+            const dismissedDate = localStorage.getItem(dismissedKey);
+            const today = new Date().toDateString();
+
+            if (dismissedDate !== today) {
+              setTradingNoticeAnnouncement(notice);
+              setShowTradingNotice(true);
+            }
+          }
+        }
+      } catch (error) {
+        console.error('加载交易须知失败:', error);
+      }
+    };
+
+    loadTradingNotice();
+  }, []);
 
   const handleBuy = async () => {
     debugLog('productDetail.buy', '发起积分商品购买', {
@@ -724,6 +762,21 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, onNaviga
         </div>
       )}
 
+      {/* 交易须知公告弹窗 */}
+      <PopupAnnouncementModal
+        visible={showTradingNotice}
+        announcement={tradingNoticeAnnouncement}
+        onClose={() => {
+          setShowTradingNotice(false);
+        }}
+        onDontShowToday={() => {
+          if (tradingNoticeAnnouncement) {
+            const dismissedKey = `trading_notice_dismissed_${tradingNoticeAnnouncement.id}`;
+            const today = new Date().toDateString();
+            localStorage.setItem(dismissedKey, today);
+          }
+        }}
+      />
     </div>
   );
 };
