@@ -451,6 +451,7 @@ export interface FetchTeamMembersParams {
     page_size?: number; // Alias for limit
     level?: 1 | 2;
     token?: string;
+    keyword?: string; // 搜索关键词
 }
 
 export async function fetchTeamMembers(
@@ -463,6 +464,7 @@ export async function fetchTeamMembers(
     const limit = params.limit || params.page_size;
     if (limit) search.set('limit', String(limit));
     if (params.level) search.set('level', String(params.level));
+    if (params.keyword) search.set('keyword', String(params.keyword));
 
     const path = `${API_ENDPOINTS.team.members}?${search.toString()}`;
     return authedFetch<TeamMembersListData>(path, {

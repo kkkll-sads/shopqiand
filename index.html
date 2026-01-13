@@ -99,9 +99,9 @@
     // 禁用长按菜单和选择文本（移动端）
     let touchStartTime = 0;
     document.addEventListener('touchstart', function (e) {
-      // 禁用多点触控
+      // 禁用多点触控（仅在事件可取消时阻止）
       if (e.touches.length > 1) {
-        e.preventDefault();
+        if (e.cancelable) e.preventDefault();
       }
       // 记录触摸开始时间
       touchStartTime = Date.now();
@@ -115,14 +115,14 @@
 
       // 禁用双击缩放（300ms内的两次点击）
       if (now - lastTouchEnd <= 300) {
-        e.preventDefault();
+        if (e.cancelable) e.preventDefault();
         return false;
       }
       lastTouchEnd = now;
 
       // 如果长按超过500ms，阻止默认行为
       if (touchDuration > 500) {
-        e.preventDefault();
+        if (e.cancelable) e.preventDefault();
         // 清除可能已选中的文本
         if (window.getSelection) {
           window.getSelection().removeAllRanges();
