@@ -253,10 +253,10 @@ const ReservationPage: React.FC<ReservationPageProps> = ({ product, onBack, onNa
     }, [product?.id, sessionId, zoneId, packageId, hasUpdatedZoneMaxPrice]);
 
     useEffect(() => {
-        // 如果已经有预加载的用户信息，直接标记为已加载
+        // 如果有预加载的用户信息，先使用预加载数据（快速显示），然后请求最新数据
         if (preloadedUserInfo) {
-            setUserInfoLoading(false);
-            return;
+            setAvailableHashrate(preloadedUserInfo.availableHashrate);
+            setAccountBalance(preloadedUserInfo.accountBalance);
         }
 
         // 检查全局预加载数据
@@ -264,15 +264,13 @@ const ReservationPage: React.FC<ReservationPageProps> = ({ product, onBack, onNa
             console.log('[Reservation] 使用预加载的用户信息', globalThis.__preloadedReservationData.userInfo);
             setAvailableHashrate(globalThis.__preloadedReservationData.userInfo.availableHashrate);
             setAccountBalance(globalThis.__preloadedReservationData.userInfo.accountBalance);
-            setUserInfoLoading(false);
             // 清理预加载数据中的用户信息，但保留其他数据（如分区信息）
             if (globalThis.__preloadedReservationData) {
                 globalThis.__preloadedReservationData.userInfo = undefined;
             }
-            return;
         }
 
-        // 获取用户信息（算力和余额）
+        // 始终发送请求获取最新的用户信息（算力和余额）
         const loadUserInfo = async () => {
             setUserInfoLoading(true);
             const token = getStoredToken();
@@ -286,13 +284,21 @@ const ReservationPage: React.FC<ReservationPageProps> = ({ product, onBack, onNa
             try {
                 const response = await fetchProfile(token);
                 if (isSuccess(response)) {
-                    // 设置真实的算力和余额
-                    setAvailableHashrate(Number(response.data.userInfo.green_power) || 0);
-                    setAccountBalance(Number(response.data.userInfo.balance_available) || 0);
+                    // 设置最新的算力和余额
+                    const latestHashrate = Number(response.data.userInfo.green_power) || 0;
+                    const latestBalance = Number(response.data.userInfo.balance_available) || 0;
+                    setAvailableHashrate(latestHashrate);
+                    setAccountBalance(latestBalance);
+                    console.log('[Reservation] 用户信息已更新:', { latestHashrate, latestBalance });
+                } else {
+                    console.warn('[Reservation] 获取用户信息失败:', response.msg || '未知错误');
                 }
             } catch (error: any) {
                 console.error('获取用户信息失败:', error);
-                if (error?.name === 'NeedLoginError') return;
+                if (error?.name === 'NeedLoginError') {
+                    setUserInfoLoading(false);
+                    return;
+                }
                 // 可以在这里设置错误状态或显示提示
             } finally {
                 setUserInfoLoading(false);

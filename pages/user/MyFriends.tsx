@@ -42,6 +42,38 @@ const MyFriends: React.FC<MyFriendsProps> = ({ onBack, onNavigate }) => {
   const [activeTab, setActiveTab] = useState<'direct' | 'indirect'>('direct');
   const containerRef = useRef<HTMLDivElement>(null);
 
+  // 获取滚动容器
+  const getScrollContainer = useCallback(() => {
+    return containerRef.current?.parentElement?.parentElement as HTMLElement;
+  }, []);
+
+  // 自动滚动到底部的函数
+  const scrollToBottom = useCallback(() => {
+    const scrollContainer = getScrollContainer();
+    if (!scrollContainer) {
+      return;
+    }
+
+    // 使用 setTimeout 确保DOM已更新
+    setTimeout(() => {
+      // 留出一些空间，让用户可以继续滚动触发下一次加载
+      const scrollBuffer = 300; // 留出300px的空间，确保大于检测阈值
+      const newScrollTop = Math.max(0, scrollContainer.scrollHeight - scrollContainer.clientHeight - scrollBuffer);
+
+
+      scrollContainer.scrollTop = newScrollTop;
+
+      // 再次检查滚动是否成功
+      setTimeout(() => {
+        const actualScrollTop = scrollContainer.scrollTop;
+        if (Math.abs(actualScrollTop - newScrollTop) > 10) {
+          scrollContainer.scrollTop = newScrollTop;
+          scrollContainer.scrollTo({ top: newScrollTop, behavior: 'smooth' });
+        }
+      }, 50);
+    }, 100);
+  }, [getScrollContainer]);
+
   // 加载好友列表
   const loadTeamMembers = useCallback(async (pageNum: number, append: boolean = false) => {
     try {
@@ -54,12 +86,22 @@ const MyFriends: React.FC<MyFriendsProps> = ({ onBack, onNavigate }) => {
 
       const level = activeTab === 'direct' ? 1 : 2;
       const response = await fetchTeamMembers({ page: pageNum, page_size: PAGE_SIZE, level });
+
+
       if ((isSuccess(response) || response.code === 0) && response.data) {
         const newList = response.data.list || [];
         const totalCount = response.data.total || 0;
 
+
         if (append) {
-          setFriends(prev => [...prev, ...newList]);
+          setFriends(prev => {
+            const updated = [...prev, ...newList];
+            return updated;
+          });
+          // 追加数据后自动滚动到底部
+          setTimeout(() => {
+            scrollToBottom();
+          }, 150);
         } else {
           setFriends(newList);
         }
@@ -70,25 +112,63 @@ const MyFriends: React.FC<MyFriendsProps> = ({ onBack, onNavigate }) => {
         setError(extractError(response, '获取好友列表失败'));
       }
     } catch (err: any) {
-      console.error('加载好友列表失败:', err);
       setError(err.message || '获取好友列表失败，请稍后重试');
     } finally {
       setLoading(false);
       setLoadingMore(false);
     }
-  }, [activeTab]);
+  }, [activeTab, scrollToBottom]);
+
+  // 滑动加载更多
+  const handleScroll = useCallback(() => {
+    const scrollContainer = getScrollContainer();
+    if (!scrollContainer || loadingMore || !hasMore) return;
+
+    const { scrollTop, scrollHeight, clientHeight } = scrollContainer;
+    // 当距离底部200px时就开始加载，给用户更多滚动空间
+    if (scrollTop + clientHeight >= scrollHeight - 200) {
+      loadTeamMembers(page + 1, true);
+    }
+  }, [getScrollContainer, loadingMore, hasMore, page, loadTeamMembers]);
 
   useEffect(() => {
     loadTeamMembers(1, false);
   }, [loadTeamMembers]);
 
-  // 滑动加载更多
-  const handleScroll = useCallback(() => {
-    if (!containerRef.current || loadingMore || !hasMore) return;
+
+  // 动态添加滚动事件监听器
+  useEffect(() => {
+    const scrollContainer = containerRef.current?.parentElement?.parentElement;
+    if (!scrollContainer) return;
+
+    const handleScrollEvent = () => handleScroll();
+    scrollContainer.addEventListener('scroll', handleScrollEvent);
+
+    return () => {
+      scrollContainer.removeEventListener('scroll', handleScrollEvent);
+    };
+  }, [handleScroll]);
+
+
+  /**
+   * 格式化日期
 
     const { scrollTop, scrollHeight, clientHeight } = containerRef.current;
-    if (scrollTop + clientHeight >= scrollHeight - 100) {
+    // 优先使用 register_time 字段 (API 返回)
+    if (friend.register_time) return friend.register_time;
+
+    // 其次使用 join_date 字段
+    if (friend.join_date) return friend.join_date;
+
+    // 尝试使用 join_time 时间戳
+    if (friend.join_time) {
+      return formatTime(friend.join_time, 'YYYY-MM-DD');
+    }
+
+    // 尝试使用其他可能的时间字段
       loadTeamMembers(page + 1, true);
+    if (anyFriend.create_time) {
+      return formatTime(anyFriend.create_time, 'YYYY-MM-DD');
     }
   }, [loadingMore, hasMore, page, loadTeamMembers]);
 
@@ -130,8 +210,7 @@ const MyFriends: React.FC<MyFriendsProps> = ({ onBack, onNavigate }) => {
     <PageContainer title="我的好友" onBack={onBack}>
       <div
         ref={containerRef}
-        onScroll={handleScroll}
-        className="h-full overflow-y-auto"
+        className="flex-1"
       >
         {/* 邀请好友入口 */}
         <ListItem
@@ -155,7 +234,7 @@ const MyFriends: React.FC<MyFriendsProps> = ({ onBack, onNavigate }) => {
                 : 'text-gray-500 hover:text-gray-700'
                 }`}
             >
-              好友
+              直推好友
             </button>
             <button
               onClick={() => setActiveTab('indirect')}
@@ -171,8 +250,9 @@ const MyFriends: React.FC<MyFriendsProps> = ({ onBack, onNavigate }) => {
 
         {/* 好友列表标题 */}
         <h3 className="text-sm font-bold text-gray-800 mb-3 pl-1">
-          {activeTab === 'direct' ? '好友列表' : '间推列表'} ({total})
+          {activeTab === 'direct' ? '直推列表' : '间推列表'} ({total})
         </h3>
+
 
         {/* 加载状态 */}
         {loading && <LoadingSpinner text="加载中..." />}
@@ -190,9 +270,12 @@ const MyFriends: React.FC<MyFriendsProps> = ({ onBack, onNavigate }) => {
         {/* 好友列表 */}
         {!loading && !error && friends.length > 0 && (
           <div className="space-y-3 pb-4">
-            {friends.map((friend) => (
+            {friends.map((friend, index) => {
+              // 生成唯一的key
+              const key = `${friend.id}-${index}-${activeTab}`;
+              return (
               <div
-                key={friend.id}
+                key={key}
                 className="bg-white p-3 rounded-xl shadow-sm flex items-center gap-3"
               >
                 <img
@@ -216,13 +299,14 @@ const MyFriends: React.FC<MyFriendsProps> = ({ onBack, onNavigate }) => {
                   </div>
                 </div>
                 <button
-                  onClick={() => onNavigate?.({ name: 'friend-detail', id: String(friend.id), friend })}
+                  onClick={() => onNavigate?.({ name: 'friend-detail', id: String(friend.id), friend, back: { name: 'my-friends' } })}
                   className="text-xs bg-gray-100 text-gray-600 px-3 py-1.5 rounded-full"
                 >
                   查看
                 </button>
               </div>
-            ))}
+              );
+            })}
 
             {/* 加载更多指示器 */}
             {loadingMore && (
@@ -246,3 +330,4 @@ const MyFriends: React.FC<MyFriendsProps> = ({ onBack, onNavigate }) => {
 };
 
 export default MyFriends;
+
