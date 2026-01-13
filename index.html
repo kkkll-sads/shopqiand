@@ -90,6 +90,36 @@
   <div id="root"></div>
   <script type="module" src="/index.tsx"></script>
   <script>
+    // 全局错误处理：捕获 browser API 未定义的错误（通常来自浏览器扩展或第三方脚本）
+    window.addEventListener('error', function(event) {
+      // 忽略来自第三方脚本的 browser API 错误
+      if (event.message && (
+        event.message.includes('browser is not defined') ||
+        event.message.includes('chrome is not defined') ||
+        event.filename && (
+          event.filename.includes('myContent.js') ||
+          event.filename.includes('pagehelper.js') ||
+          event.filename.includes('content_script')
+        )
+      )) {
+        // 这些错误通常来自浏览器扩展或第三方脚本，不影响应用功能
+        console.warn('[全局错误处理] 捕获到浏览器扩展/第三方脚本错误:', event.filename || event.message);
+        event.preventDefault(); // 阻止错误冒泡
+        return true;
+      }
+    }, true);
+
+    // 捕获未处理的 Promise 拒绝
+    window.addEventListener('unhandledrejection', function(event) {
+      if (event.reason && event.reason.message && (
+        event.reason.message.includes('browser is not defined') ||
+        event.reason.message.includes('chrome is not defined')
+      )) {
+        console.warn('[全局错误处理] 捕获到未处理的 Promise 拒绝（浏览器扩展）:', event.reason);
+        event.preventDefault(); // 阻止错误冒泡
+      }
+    });
+
     // 禁用右键菜单
     document.addEventListener('contextmenu', function (e) {
       e.preventDefault();
