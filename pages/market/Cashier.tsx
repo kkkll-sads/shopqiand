@@ -22,7 +22,7 @@ const Cashier: React.FC<CashierProps> = ({ orderId, backRoute, onBack, onNavigat
     const [loading, setLoading] = useState(true);
     const [paying, setPaying] = useState(false);
     const [payType, setPayType] = useState<'money' | 'score'>('money');
-    const [userBalance, setUserBalance] = useState<{ score: number; money: string }>({ score: 0, money: '0.00' });
+    const [userBalance, setUserBalance] = useState<{ score: number; balance_available: string }>({ score: 0, balance_available: '0.00' });
 
     useEffect(() => {
         loadData();
@@ -44,7 +44,7 @@ const Cashier: React.FC<CashierProps> = ({ orderId, backRoute, onBack, onNavigat
             if (orderData) {
                 setOrder(orderData);
                 if (orderData.pay_type) {
-                    setPayType(orderData.pay_type as 'money' | 'score');
+                    setPayType(orderData.pay_type as 'money' | 'score' | 'combined');
                 }
             } else {
                 showToast('error', '获取订单失败', extractError(orderRes, '无法加载订单信息'));
@@ -52,10 +52,23 @@ const Cashier: React.FC<CashierProps> = ({ orderId, backRoute, onBack, onNavigat
 
             const profileData = extractData(profileRes);
             if (profileData?.userInfo) {
-                setUserBalance({
+                // 优先使用订单API返回的余额信息
+                const finalBalance = {
                     score: profileData.userInfo.score,
-                    money: profileData.userInfo.money
-                });
+                    balance_available: profileData.userInfo.money
+                };
+
+                // 如果订单数据存在，覆盖余额信息
+                if (orderData) {
+                    if (orderData.score !== undefined && orderData.score !== null) {
+                        finalBalance.score = Number(orderData.score);
+                    }
+                    if (orderData.balance_available !== undefined && orderData.balance_available !== null) {
+                        finalBalance.balance_available = String(orderData.balance_available);
+                    }
+                }
+
+                setUserBalance(finalBalance);
             }
         } catch (e) {
             console.error('Load cashier data failed', e);
@@ -97,12 +110,15 @@ const Cashier: React.FC<CashierProps> = ({ orderId, backRoute, onBack, onNavigat
     if (!order) return <div className="min-h-screen flex items-center justify-center bg-gray-50 text-gray-500">订单不存在</div>;
 
     const isScore = payType === 'score';
-    const amount = isScore ? order.total_score : order.total_amount;
+    const isCombined = payType === 'combined';
+
+    // Calculate total amounts from order items
+    const totalAmount = order.items?.reduce((sum, item) => sum + (Number(item.price) || 0), 0) || 0;
+    const totalScoreAmount = order.items?.reduce((sum, item) => sum + (Number(item.score_price) || 0), 0) || 0;
 
     // Dynamic Theme Colors
-    const themeColor = isScore ? 'orange' : 'blue';
-    const btnBgClass = isScore ? 'bg-orange-600 shadow-orange-200' : 'bg-blue-600 shadow-blue-200';
-    const iconBgClass = isScore ? 'bg-orange-100 text-orange-600' : 'bg-blue-100 text-blue-600';
+    const themeColor = isScore ? 'orange' : isCombined ? 'purple' : 'blue';
+    const btnBgClass = isScore ? 'bg-orange-600 shadow-orange-200' : isCombined ? 'bg-purple-600 shadow-purple-200' : 'bg-blue-600 shadow-blue-200';
 
     return (
         <div className="min-h-screen bg-gray-50 pb-safe">
@@ -119,43 +135,81 @@ const Cashier: React.FC<CashierProps> = ({ orderId, backRoute, onBack, onNavigat
                 <div className="text-center mb-8">
                     <div className="text-sm text-gray-500 mb-2">订单号：{order.order_no}</div>
                     <div className="flex items-baseline justify-center gap-1">
-                        <div className="text-2xl font-bold text-orange-600 font-mono">
-                            {amount}
-                        </div>
-                        <span className="text-sm text-orange-500 font-medium">
-                            {isScore ? '消费金' : '元'}
-                        </span>
+                        {totalAmount > 0 ? (
+                            <>
+                                <div className="text-2xl font-bold text-orange-600 font-mono">
+                                    ¥{String(totalAmount)}
+                                </div>
+                                {totalScoreAmount > 0 && (
+                                    <span className="text-2xl font-bold text-orange-600 font-mono ml-2">
+                                        +{totalScoreAmount}消费金
+                                    </span>
+                                )}
+                            </>
+                        ) : (
+                            totalScoreAmount > 0 && (
+                                <div className="text-2xl font-bold text-orange-600 font-mono">
+                                    {totalScoreAmount}消费金
+                                </div>
+                            )
+                        )}
                     </div>
                 </div>
 
                 <div className="space-y-4">
                     {/* Payment Method */}
-                    {isScore ? (
-                        <div className="bg-white rounded-xl p-4 flex items-center justify-between shadow-sm border border-orange-100 ring-1 ring-orange-100">
+                    {isCombined ? (
+                        <div className="bg-white rounded-xl p-4 flex items-center justify-between shadow-sm border border-purple-100 ring-1 ring-purple-100">
                             <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center text-orange-600">
-                                    <Coins size={20} />
+                                <div className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center text-purple-600">
+                                    <div className="flex gap-1">
+                                        <Coins size={16} />
+                                        <CreditCard size={16} />
+                                    </div>
                                 </div>
                                 <div>
-                                    <div className="font-bold text-gray-900">消费金支付</div>
-                                    <div className="text-xs text-gray-500">当前余额: {userBalance.score} 消费金</div>
+                                    <div className="font-bold text-gray-900">组合支付</div>
+                                    <div className="text-xs text-gray-500">
+                                        ¥{totalAmount} + {totalScoreAmount}消费金
+                                    </div>
+                                    <div className="text-xs text-gray-400 mt-1">
+                                        余额: ¥{userBalance.balance_available} | 消费金: {Math.floor(Number(userBalance.score))}
+                                    </div>
                                 </div>
                             </div>
-                            <div className="w-5 h-5 rounded-full border-[5px] border-orange-500 bg-white"></div>
+                            <div className="w-5 h-5 rounded-full border-[5px] border-purple-500 bg-white"></div>
                         </div>
                     ) : (
-                        <div className="bg-white rounded-xl p-4 flex items-center justify-between shadow-sm border border-blue-100 ring-1 ring-blue-100">
-                            <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">
-                                    <CreditCard size={20} />
+                        <>
+                            {totalScoreAmount > 0 && (
+                                <div className="bg-white rounded-xl p-4 flex items-center justify-between shadow-sm border border-orange-100 ring-1 ring-orange-100">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center text-orange-600">
+                                            <Coins size={20} />
+                                        </div>
+                                        <div>
+                                            <div className="font-bold text-gray-900">消费金支付</div>
+                                            <div className="text-xs text-gray-500">当前余额: {userBalance.score} 消费金</div>
+                                        </div>
+                                    </div>
+                                    <div className="w-5 h-5 rounded-full border-[5px] border-orange-500 bg-white"></div>
                                 </div>
-                                <div>
-                                    <div className="font-bold text-gray-900">余额支付</div>
-                                    <div className="text-xs text-gray-500">当前余额: ¥{userBalance.money}</div>
+                            )}
+                            {totalAmount > 0 && (
+                                <div className="bg-white rounded-xl p-4 flex items-center justify-between shadow-sm border border-blue-100 ring-1 ring-blue-100">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">
+                                            <CreditCard size={20} />
+                                        </div>
+                                        <div>
+                                            <div className="font-bold text-gray-900">余额支付</div>
+                                            <div className="text-xs text-gzray-500">当前余额: ¥{userBalance.balance_available}</div>
+                                        </div>
+                                    </div>
+                                    <div className="w-5 h-5 rounded-full border-[5px] border-blue-600 bg-white"></div>
                                 </div>
-                            </div>
-                            <div className="w-5 h-5 rounded-full border-[5px] border-blue-600 bg-white"></div>
-                        </div>
+                            )}
+                        </>
                     )}
                 </div>
 

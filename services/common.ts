@@ -2,6 +2,7 @@ import { ApiResponse } from './networking';
 import { API_ENDPOINTS } from './config';
 // 统一的带 token 请求封装，减少重复从 localStorage 取 token
 import { authedFetch } from './client';
+import { debugLog, errorLog } from '../utils/logger';
 
 export interface UploadFileData {
     suffix?: string;
@@ -140,4 +141,35 @@ export async function sendSmsCode(params: SendSmsParams, token?: string): Promis
     }
 
     return response;
+}
+
+/**
+ * 广告视频配置数据
+ */
+export interface LiveVideoConfigData {
+    video_url: string;
+    title: string;
+    description: string;
+}
+
+/**
+ * 获取直播广告视频配置（公共接口，无需token）
+ */
+export async function fetchLiveVideoConfig(): Promise<ApiResponse<LiveVideoConfigData>> {
+    try {
+        // 直接请求，不使用API_BASE_URL前缀，通过Vite代理处理
+        const response = await fetch(API_ENDPOINTS.liveVideo.config, {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json',
+            },
+        });
+
+        const data = await response.json();
+        debugLog('api.liveVideo.config.raw', data);
+        return data;
+    } catch (error: any) {
+        errorLog('api.liveVideo.config', '获取广告视频配置失败', error);
+        throw error;
+    }
 }

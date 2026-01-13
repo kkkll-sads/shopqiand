@@ -116,7 +116,7 @@ const PointOrderCard: React.FC<PointOrderCardProps> = ({
                     <div className="inline-flex items-center gap-1 bg-gradient-to-r from-[#fedab0]/60 to-[#ffd9a8]/50 px-2.5 py-1 rounded-lg">
                       <Gift className="w-3.5 h-3.5 text-gray-700" />
                       <span className="text-xs text-gray-700 font-medium">
-                        积分兑换
+                        消费金兑换
                       </span>
                     </div>
                     {item.quantity > 1 && (
@@ -128,13 +128,23 @@ const PointOrderCard: React.FC<PointOrderCardProps> = ({
                   
                   {/* 底部价格和按钮 */}
                   <div className="flex items-center justify-between">
-                    <div className="flex items-baseline gap-1">
-                      <span className="text-xl font-bold text-orange-600">
-                        {item.subtotal_score || item.score_price || 0}
-                      </span>
-                      <span className="text-xs text-orange-500 font-medium">
-                        消费金
-                      </span>
+                    <div className="text-red-500 font-bold text-base leading-none">
+                      {item.price > 0 ? (
+                        <>
+                          <span className="text-xs">¥</span>{String(item.price)}
+                          {item.score_price && item.score_price > 0 && (
+                            <span className="text-sm">
+                              +{item.score_price}消费金
+                            </span>
+                          )}
+                        </>
+                      ) : (
+                        item.score_price && item.score_price > 0 && (
+                          <span className="text-sm">
+                            {item.score_price}消费金
+                          </span>
+                        )
+                      )}
                     </div>
                     <button
                       onClick={(e) => {
@@ -173,15 +183,27 @@ const PointOrderCard: React.FC<PointOrderCardProps> = ({
               <p className="text-sm leading-relaxed line-clamp-2 mb-2 text-gray-800">
                 {order.product_name || '商品'}
               </p>
-              <div className="flex items-baseline gap-1">
-                <span className="text-xl font-bold text-orange-600">
-                  {typeof order.total_score === 'string'
-                    ? parseFloat(order.total_score)
-                    : (order.total_score || 0)}
-                </span>
-                <span className="text-xs text-orange-500 font-medium">
-                  消费金
-                </span>
+              <div className="text-red-500 font-bold text-base leading-none">
+                {order.total_amount > 0 ? (
+                  <>
+                    <span className="text-xs">¥</span>{String(order.total_amount)}
+                    {order.total_score && order.total_score > 0 && (
+                      <span className="text-sm">
+                        +{typeof order.total_score === 'string'
+                          ? parseFloat(order.total_score)
+                          : order.total_score}消费金
+                      </span>
+                    )}
+                  </>
+                ) : (
+                  order.total_score && order.total_score > 0 && (
+                    <span className="text-sm">
+                      {typeof order.total_score === 'string'
+                        ? parseFloat(order.total_score)
+                        : order.total_score}消费金
+                    </span>
+                  )
+                )}
               </div>
             </div>
           </div>

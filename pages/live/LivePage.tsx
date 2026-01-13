@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { PlayCircle, Radio } from 'lucide-react';
-import { fetchProfile } from '../../services/api';
+import { PlayCircle, Radio, Video } from 'lucide-react';
+import { fetchProfile } from '../../services/user';
+import { fetchLiveVideoConfig } from '../../services/common';
 import { getStoredToken } from '../../services/client';
 import { isSuccess, extractData } from '../../utils/apiHelpers';
 import { LoadingSpinner, EmbeddedBrowser } from '../../components/common';
@@ -11,6 +12,13 @@ const LivePage: React.FC = () => {
     const [liveUrl, setLiveUrl] = useState<string | null>(null);
     const [loading, setLoading] = useState<boolean>(true);
     const [showLiveBrowser, setShowLiveBrowser] = useState<boolean>(false);
+    const [videoConfig, setVideoConfig] = useState<{
+        video_url: string;
+        title: string;
+        description: string;
+    } | null>(null);
+    const [videoLoading, setVideoLoading] = useState<boolean>(false);
+    const [showVideoBrowser, setShowVideoBrowser] = useState<boolean>(false);
     const { handleError } = useErrorHandler();
 
     const tabs = [
@@ -18,38 +26,55 @@ const LivePage: React.FC = () => {
         { id: 'replay', label: '回放', icon: PlayCircle },
     ];
 
-    useEffect(() => {
-        const loadLiveUrl = async () => {
-            const token = getStoredToken();
-            if (!token) {
-                handleError('未登录，请先登录', { showToast: true });
-                setLoading(false);
-                return;
-            }
+    const loadLiveUrl = async () => {
+        const token = getStoredToken();
+        if (!token) {
+            handleError('未登录，请先登录', { showToast: true });
+            setLoading(false);
+            return;
+        }
 
-            try {
-                setLoading(true);
-                const response = await fetchProfile(token);
+        try {
+            setLoading(true);
+            const response = await fetchProfile(token);
 
-                if (isSuccess(response) && response.data) {
-                    const data = extractData(response);
-                    if (data?.liveUrl) {
-                        setLiveUrl(data.liveUrl);
-                    } else {
-                        handleError('直播间URL不存在', { showToast: true });
-                    }
+            if (isSuccess(response) && response.data) {
+                const data = extractData(response);
+                if (data?.liveUrl) {
+                    setLiveUrl(data.liveUrl);
                 } else {
-                    handleError(response, { showToast: true, customMessage: '获取直播间信息失败' });
+                    handleError('直播间URL不存在', { showToast: true });
                 }
-            } catch (error: any) {
-                handleError(error, { showToast: true, customMessage: '加载直播间失败' });
-            } finally {
-                setLoading(false);
+            } else {
+                handleError(response, { showToast: true, customMessage: '获取直播间信息失败' });
             }
-        };
+        } catch (error: any) {
+            handleError(error, { showToast: true, customMessage: '加载直播间失败' });
+        } finally {
+            setLoading(false);
+        }
+    };
 
+    const loadVideoConfig = async () => {
+        try {
+            setVideoLoading(true);
+            const response = await fetchLiveVideoConfig();
+
+            if (isSuccess(response) && response.data) {
+                setVideoConfig(response.data);
+            }
+        } catch (error: any) {
+            // 广告视频获取失败不影响直播功能，不显示错误提示
+            console.warn('获取广告视频配置失败:', error);
+        } finally {
+            setVideoLoading(false);
+        }
+    };
+
+    useEffect(() => {
         if (activeTab === 'live') {
             loadLiveUrl();
+            loadVideoConfig();
         }
     }, [activeTab, handleError]);
 
@@ -82,7 +107,42 @@ const LivePage: React.FC = () => {
             {/* Content */}
             <div className="flex-1 overflow-y-auto p-3 pb-safe">
                 {activeTab === 'live' && (
-                    <div className="w-full">
+                    <div className="w-full space-y-4">
+                        {/* 广告视频卡片 */}
+                        {videoConfig && (
+                            <div
+                                onClick={() => setShowVideoBrowser(true)}
+                                className="bg-white rounded-xl overflow-hidden shadow-lg active:scale-[0.98] transition-transform cursor-pointer"
+                            >
+                                {/* 视频封面区域 */}
+                                <div className="relative bg-gradient-to-br from-blue-500 to-purple-500 aspect-video flex items-center justify-center">
+                                    {/* 渐变背景 */}
+                                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
+
+                                    {/* Video Badge */}
+                                    <div className="absolute top-4 left-4 z-10 flex items-center gap-1 bg-blue-600/90 backdrop-blur-sm px-3 py-1 rounded-full text-sm text-white font-medium">
+                                        <Video size={14} />
+                                        广告视频
+                                    </div>
+
+                                    {/* 播放按钮 */}
+                                    <div className="relative z-10 flex flex-col items-center gap-3">
+                                        <div className="w-20 h-20 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center shadow-xl">
+                                            <PlayCircle size={40} className="text-blue-600 ml-1" fill="currentColor" />
+                                        </div>
+                                        <span className="text-white text-lg font-semibold drop-shadow-lg">点击观看广告</span>
+                                    </div>
+                                </div>
+
+                                {/* 卡片信息 */}
+                                <div className="p-4">
+                                    <h3 className="text-lg font-bold text-gray-900 mb-2">{videoConfig.title}</h3>
+                                    <p className="text-sm text-gray-500">{videoConfig.description}</p>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* 直播卡片 */}
                         {loading ? (
                             <div className="flex items-center justify-center py-20">
                                 <LoadingSpinner text="加载中..." />
@@ -153,6 +213,14 @@ const LivePage: React.FC = () => {
                 url={liveUrl || ''}
                 title="直播间"
                 onClose={() => setShowLiveBrowser(false)}
+            />
+
+            {/* Embedded Video Browser */}
+            <EmbeddedBrowser
+                isOpen={showVideoBrowser}
+                url={videoConfig?.video_url || ''}
+                title={videoConfig?.title || '广告视频'}
+                onClose={() => setShowVideoBrowser(false)}
             />
         </div>
     );

@@ -164,8 +164,8 @@ const PointsProductDetail: React.FC<PointsProductDetailProps> = ({ product, onBa
     if (error) return <div className="min-h-screen flex items-center justify-center bg-gray-50 text-gray-500">{error}</div>;
 
     const displayPrice = detailData?.score_price || detailData?.price || 0;
-    const totalPrice = (Number(displayPrice) * quantity).toFixed(2);
-    const totalScore = (Number(displayPrice) * quantity);
+    const totalPrice = detailData?.price ? (Number(detailData.price) * quantity).toFixed(2) : '0.00';
+    const totalScore = detailData?.score_price ? (Number(detailData.score_price) * quantity) : 0;
 
     return (
         <div className="min-h-screen bg-gray-50 pb-24 relative">
@@ -190,14 +190,23 @@ const PointsProductDetail: React.FC<PointsProductDetailProps> = ({ product, onBa
             {/* Product Info */}
             <div className="bg-white p-4 mb-2">
                 <div className="flex items-baseline gap-1 mb-2">
-                    <div className="text-2xl font-bold text-orange-600 font-mono">
-                        {isScoreProduct ? '' : '¥'}{displayPrice}
-                    </div>
-                    <span className="text-sm text-orange-500 font-medium">
-                        {isScoreProduct ? '消费金' : '元'}
-                    </span>
-                    {detailData?.price && isScoreProduct && (
-                        <span className="text-xs text-gray-400 line-through ml-2">¥{detailData.price}</span>
+                    {detailData?.price > 0 ? (
+                        <>
+                            <div className="text-2xl font-bold text-orange-600 font-mono">
+                                ¥{String(detailData.price)}
+                                {detailData?.score_price && detailData.score_price > 0 && (
+                                    <span className="text-2xl text-orange-600 font-bold font-mono ml-2">
+                                        +{detailData.score_price}消费金
+                                    </span>
+                                )}
+                            </div>
+                        </>
+                    ) : (
+                        detailData?.score_price && detailData.score_price > 0 && (
+                            <div className="text-2xl font-bold text-orange-600 font-mono">
+                                {detailData.score_price}消费金
+                            </div>
+                        )
                     )}
                 </div>
 
@@ -263,8 +272,22 @@ const PointsProductDetail: React.FC<PointsProductDetailProps> = ({ product, onBa
                             </div>
                             <div className="flex-1 pt-1">
                                 <div className="text-xl font-bold text-orange-600 mb-1 font-mono">
-                                    {isScoreProduct ? '' : '¥'}{displayPrice}
-                                    <span className="text-xs font-normal ml-1">{isScoreProduct ? '消费金' : '元'}</span>
+                                    {detailData?.price > 0 ? (
+                                        <>
+                                            ¥{String(detailData.price)}
+                                            {detailData?.score_price && detailData.score_price > 0 && (
+                                                <span className="text-xl font-bold text-orange-600 font-mono ml-2">
+                                                    +{detailData.score_price}消费金
+                                                </span>
+                                            )}
+                                        </>
+                                    ) : (
+                                        detailData?.score_price && detailData.score_price > 0 && (
+                                            <span className="text-xl font-bold text-orange-600 font-mono">
+                                                {detailData.score_price}消费金
+                                            </span>
+                                        )
+                                    )}
                                 </div>
                                 <div className="text-xs text-gray-500">库存: {maxStock} 件</div>
                                 <div className="text-sm text-gray-900 mt-1 font-medium">已选: {quantity} 件</div>
@@ -362,7 +385,22 @@ const PointsProductDetail: React.FC<PointsProductDetailProps> = ({ product, onBa
                                     <div className="text-xs text-gray-500 bg-gray-50 self-start px-2 py-0.5 rounded mt-1">默认规格</div>
                                     <div className="flex justify-between items-end mt-2">
                                         <div className="font-mono font-bold text-orange-600 text-lg">
-                                            {isScoreProduct ? '' : '¥'}{displayPrice}
+                                            {detailData?.price > 0 ? (
+                                                <>
+                                                    ¥{String(detailData.price)}
+                                                    {detailData?.score_price && detailData.score_price > 0 && (
+                                                        <span className="font-mono font-bold text-orange-600 text-lg ml-2">
+                                                            +{detailData.score_price}消费金
+                                                        </span>
+                                                    )}
+                                                </>
+                                            ) : (
+                                                detailData?.score_price && detailData.score_price > 0 && (
+                                                    <span className="font-mono font-bold text-orange-600 text-lg">
+                                                        {detailData.score_price}消费金
+                                                    </span>
+                                                )
+                                            )}
                                             <span className="text-xs text-gray-500 font-normal ml-1">x {quantity}</span>
                                         </div>
                                     </div>
@@ -387,7 +425,22 @@ const PointsProductDetail: React.FC<PointsProductDetailProps> = ({ product, onBa
                             <div className="mt-3 flex justify-end items-center gap-2">
                                 <span className="text-sm text-gray-600">共 {quantity} 件，小计：</span>
                                 <span className="text-lg font-bold text-orange-600 font-mono">
-                                    {isScoreProduct ? `${totalScore} 消费金` : `¥${totalPrice}`}
+                                    {detailData?.price > 0 ? (
+                                        <>
+                                            ¥{totalPrice}
+                                            {detailData?.score_price && detailData.score_price > 0 && (
+                                                <span className="text-lg font-bold text-orange-600 font-mono ml-2">
+                                                    +{totalScore}消费金
+                                                </span>
+                                            )}
+                                        </>
+                                    ) : (
+                                        detailData?.score_price && detailData.score_price > 0 && (
+                                            <span className="text-lg font-bold text-orange-600 font-mono">
+                                                {totalScore}消费金
+                                            </span>
+                                        )
+                                    )}
                                 </span>
                             </div>
                         </div>
@@ -398,7 +451,22 @@ const PointsProductDetail: React.FC<PointsProductDetailProps> = ({ product, onBa
                         <div className="flex items-center gap-1">
                             <span className="text-sm text-gray-600">合计:</span>
                             <span className="text-xl font-bold text-orange-600 font-mono">
-                                {isScoreProduct ? `${totalScore} 消费金` : `¥${totalPrice}`}
+                                {detailData?.price > 0 ? (
+                                    <>
+                                        ¥{totalPrice}
+                                        {detailData?.score_price && detailData.score_price > 0 && (
+                                            <span className="text-xl font-bold text-orange-600 font-mono ml-2">
+                                                +{totalScore}消费金
+                                            </span>
+                                        )}
+                                    </>
+                                ) : (
+                                    detailData?.score_price && detailData.score_price > 0 && (
+                                        <span className="text-xl font-bold text-orange-600 font-mono">
+                                            {totalScore}消费金
+                                        </span>
+                                    )
+                                )}
                             </span>
                         </div>
                         <button

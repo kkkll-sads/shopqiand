@@ -16,6 +16,9 @@ import {
   USER_INFO_KEY,
   normalizeAssetUrl,
   fetchConsignmentCoupons,
+  getBatchConsignableList,
+  batchConsign,
+  BatchConsignableListData,
 } from '../../services/api';
 
 import { UserInfo } from '../../types';
@@ -64,6 +67,11 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onBack, onItemSelect, onNav
   const [selectedSession, setSelectedSession] = useState<string>('all');
   const [selectedPriceZone, setSelectedPriceZone] = useState<string>('all');
 
+  // 批量寄售状态
+  const [batchConsignableData, setBatchConsignableData] = useState<BatchConsignableListData | null>(null);
+  const [batchConsignLoading, setBatchConsignLoading] = useState<boolean>(false);
+  const [checkingBatchConsignable, setCheckingBatchConsignable] = useState<boolean>(false);
+
   // 加载用户信息和寄售券数量
   useEffect(() => {
     const loadUserInfo = async () => {
@@ -107,6 +115,19 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onBack, onItemSelect, onNav
     setMyCollections([]);
   };
 
+  // Helper function to deduplicate collections by unique ID
+  const deduplicateCollections = (collections: MyCollectionItem[]): MyCollectionItem[] => {
+    const seen = new Set<string>();
+    return collections.filter(item => {
+      const uniqueKey = item.id || item.user_collection_id || item.item_id;
+      if (seen.has(String(uniqueKey))) {
+        return false;
+      }
+      seen.add(String(uniqueKey));
+      return true;
+    });
+  };
+
   const loadData = useCallback(async () => {
     const token = localStorage.getItem(AUTH_TOKEN_KEY);
     if (!token) {
@@ -120,7 +141,7 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onBack, onItemSelect, onNav
 
     try {
       if (activeTab === 'hold' || activeTab === 'dividend') {
-        const res = await getMyCollection({ page, token });
+        const res = await getMyCollection({ page, token, status: 'holding' });
         if (isSuccess(res) && res.data) {
           const list = res.data.list || [];
           const filteredList = list.filter(item => {
@@ -138,10 +159,20 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onBack, onItemSelect, onNav
             }
           });
 
+          console.log('API返回数据:', list.length, '个藏品');
+          console.log('过滤后数据:', filteredList.length, '个藏品');
+          console.log('当前标签页:', activeTab);
+
           if (page === 1) {
-            setMyCollections(filteredList);
+            const deduplicated = deduplicateCollections(filteredList);
+            console.log('去重后数据:', deduplicated.length, '个藏品');
+            setMyCollections(deduplicated);
           } else {
-            setMyCollections(prev => [...prev, ...filteredList]);
+            setMyCollections(prev => {
+              const combined = deduplicateCollections([...prev, ...filteredList]);
+              console.log('合并去重后数据:', combined.length, '个藏品');
+              return combined;
+            });
           }
           setHasMore(list.length >= 10 && res.data.has_more !== false);
           if (typeof (res.data as any).consignment_coupon === 'number') {
@@ -157,17 +188,17 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onBack, onItemSelect, onNav
         if (isSuccess(res) && res.data) {
           const list = res.data.list || [];
           if (page === 1) {
-            setMyCollections(list);
+            setMyCollections(deduplicateCollections(list));
           } else {
-            setMyCollections(prev => [...prev, ...list]);
+            setMyCollections(prev => deduplicateCollections([...prev, ...list]));
           }
           setHasMore(list.length >= 10 && res.data.has_more !== false);
         } else {
           setError(extractError(res, '获取已售出列表失败'));
         }
       } else if (activeTab === 'consign') {
-        // 使用 getMyCollection 接口获取所有藏品，然后在客户端过滤出寄售中的藏品
-        const res = await getMyCollection({ page, token });
+        // 使用 status=consigned 参数获取寄售中的藏品
+        const res = await getMyCollection({ page, token, status: 'consigned' });
 
         if (isSuccess(res) && res.data) {
           const list = res.data.list || [];
@@ -183,9 +214,9 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onBack, onItemSelect, onNav
           });
 
           if (page === 1) {
-            setMyCollections(filteredList);
+            setMyCollections(deduplicateCollections(filteredList));
           } else {
-            setMyCollections(prev => [...prev, ...filteredList]);
+            setMyCollections(prev => deduplicateCollections([...prev, ...filteredList]));
           }
           setHasMore(list.length >= 10 && res.data.has_more !== false);
           if (typeof (res.data as any).consignment_coupon === 'number') {
@@ -205,6 +236,28 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onBack, onItemSelect, onNav
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  // 获取批量寄售可寄售藏品列表
+  useEffect(() => {
+    const loadBatchConsignableList = async () => {
+      const token = localStorage.getItem(AUTH_TOKEN_KEY);
+      if (!token) return;
+
+      setCheckingBatchConsignable(true);
+      try {
+        const response = await getBatchConsignableList(token);
+        if (isSuccess(response) && response.data) {
+          setBatchConsignableData(response.data);
+        }
+      } catch (error) {
+        console.error('获取批量寄售列表失败:', error);
+      } finally {
+        setCheckingBatchConsignable(false);
+      }
+    };
+
+    loadBatchConsignableList();
+  }, []);
 
   // 动态生成筛选选项
   const sessionOptions = useMemo(() => {
@@ -226,7 +279,10 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onBack, onItemSelect, onNav
 
   // 应用筛选器
   const filteredCollections = useMemo(() => {
-    return myCollections.filter(item => {
+    console.log('myCollections长度:', myCollections.length);
+    console.log('筛选条件 - 场次:', selectedSession, '价格分区:', selectedPriceZone);
+
+    const filtered = myCollections.filter(item => {
       // 场次筛选
       if (selectedSession !== 'all' && item.session_title !== selectedSession) {
         return false;
@@ -242,6 +298,9 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onBack, onItemSelect, onNav
 
       return true;
     });
+
+    console.log('filteredCollections长度:', filtered.length);
+    return filtered;
   }, [myCollections, selectedSession, selectedPriceZone]);
 
   // 如果父级要求初始打开寄售弹窗（通过 initialConsignItemId），在数据加载后自动打开对应项的寄售页
@@ -821,6 +880,82 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onBack, onItemSelect, onNav
     }
   };
 
+  // 批量寄售处理函数
+  const handleBatchConsign = async () => {
+    if (!batchConsignableData || batchConsignableData.items.length === 0) {
+      showToast('warning', '提示', '暂无可寄售的藏品');
+      return;
+    }
+
+    const token = localStorage.getItem(AUTH_TOKEN_KEY);
+    if (!token) {
+      showToast('warning', '请登录', '请先登录后再进行操作');
+      return;
+    }
+
+    setBatchConsignLoading(true);
+    try {
+      const consignments = batchConsignableData.items.map(item => ({
+        user_collection_id: item.user_collection_id
+      }));
+
+      const response = await batchConsign({
+        consignments,
+        token
+      });
+
+      if (isSuccess(response) && response.data) {
+        const { total_count, success_count, failure_count, results, failure_summary, note } = response.data;
+
+        // 重新获取批量寄售列表和我的藏品列表
+        const batchResponse = await getBatchConsignableList(token);
+        if (isSuccess(batchResponse) && batchResponse.data) {
+          setBatchConsignableData(batchResponse.data);
+        }
+
+        // 重新加载我的藏品列表
+        loadData();
+
+        // 显示结果
+        if (failure_count === 0) {
+          showToast('success', '批量寄售成功', `成功寄售 ${success_count} 个藏品`);
+        } else {
+          // 处理失败详情
+          let failureMessages = '';
+
+          if (results && results.length > 0) {
+            // 有详细结果时显示详细错误信息
+            failureMessages = results
+              .filter(r => !r.success)
+              .map(r => `藏品ID ${r.user_collection_id}: ${r.message}`)
+              .join('\n');
+          } else if (failure_summary) {
+            // 只有汇总信息时显示汇总
+            failureMessages = Object.entries(failure_summary)
+              .map(([reason, count]) => `${reason}: ${count} 个`)
+              .join('\n');
+          }
+
+          const description = `总计: ${total_count} 个\n成功: ${success_count} 个\n失败: ${failure_count} 个\n\n失败详情:\n${failureMessages}`;
+
+          showDialog({
+            title: '批量寄售完成',
+            description: note ? `${description}\n\n${note}` : description,
+            confirmText: '确定',
+            cancelText: null
+          });
+        }
+      } else {
+        showToast('error', '', extractError(response, '批量寄售失败'));
+      }
+    } catch (error) {
+      console.error('批量寄售错误:', error);
+      showToast('error', '批量寄售失败', '网络错误，请稍后重试');
+    } finally {
+      setBatchConsignLoading(false);
+    }
+  };
+
   const renderCollectionItem = (item: MyCollectionItem) => {
     if (!item) return null;
     const title = item.item_title || item.title || '未命名藏品';
@@ -1007,6 +1142,34 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onBack, onItemSelect, onNav
             </button>
           ))}
         </div>
+
+        {/* 批量寄售按钮 */}
+        {batchConsignableData && batchConsignableData.items.length > 0 && batchConsignableData.stats.is_in_trading_time && (
+          <div className="bg-white px-4 py-3 border-b border-gray-100/80">
+            <button
+              onClick={handleBatchConsign}
+              disabled={batchConsignLoading || checkingBatchConsignable}
+              className="w-full py-3 px-4 bg-gradient-to-r from-orange-500 to-orange-600 text-white font-semibold rounded-xl shadow-lg shadow-orange-200 hover:shadow-xl disabled:opacity-50 disabled:shadow-none disabled:cursor-not-allowed transition-all duration-200 active:scale-[0.98] flex items-center justify-center gap-2"
+            >
+              {batchConsignLoading ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  <span>批量寄售中...</span>
+                </>
+              ) : (
+                <>
+                  <span>⚡ 一键批量寄售</span>
+                  <span className="text-sm bg-white/20 px-2 py-0.5 rounded-full">
+                    {batchConsignableData.available_now_count || batchConsignableData.stats.available_collections} 个可寄售
+                  </span>
+                </>
+              )}
+            </button>
+            <div className="text-xs text-gray-500 text-center mt-2">
+              当前时间: {batchConsignableData.stats.current_time} • 活跃场次: {batchConsignableData.stats.active_sessions}
+            </div>
+          </div>
+        )}
 
         <div className="flex-1 overflow-y-auto p-4 pb-6 bg-gradient-to-b from-gray-50/50 to-white">
           {loading && page === 1 ? (

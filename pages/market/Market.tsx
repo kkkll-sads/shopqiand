@@ -54,11 +54,13 @@ const Market: React.FC<MarketProps> = ({ onProductSelect }) => {
     title: item.name,
     // 暂无艺术家字段，用分类占位，避免界面空白
     artist: item.category || '消费金商品',
-    // 使用消费金价格为主，若没有则退回现金价
-    price: item.score_price || item.price || 0,
+    // 人民币价格
+    price: item.price || 0,
     image: normalizeAssetUrl(item.thumbnail),
     category: item.category || '其他',
     productType: 'shop', // 标记为消费金商城商品
+    // 消费金价格（整数）
+    score_price: item.score_price,
   });
 
   // 加载分类列表（只在首次加载时执行）
@@ -272,8 +274,22 @@ const Market: React.FC<MarketProps> = ({ onProductSelect }) => {
                     </div>
                   </div>
                   <div className="text-red-500 font-bold text-base leading-none pt-1">
-                    <span className="text-xs mr-0.5">¥</span>{product.price.toFixed(2)}
-                    <span className="text-[10px] font-normal text-gray-400 ml-1">消费金</span>
+                    {product.price > 0 ? (
+                      <>
+                        <span className="text-xs">¥</span>{String(product.price)}
+                        {product.score_price && product.score_price > 0 && (
+                          <span className="text-sm">
+                            +{product.score_price}消费金
+                          </span>
+                        )}
+                      </>
+                    ) : (
+                      product.score_price && product.score_price > 0 && (
+                        <span className="text-sm">
+                          {product.score_price}消费金
+                        </span>
+                      )
+                    )}
                   </div>
                 </div>
               </div>

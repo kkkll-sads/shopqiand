@@ -308,6 +308,10 @@ export const API_ENDPOINTS = {
         orderDetail: '/collectionItem/orderDetail',
         /** 升级为共识验证节点 */
         toMining: '/collectionItem/toMining',
+        /** 获取可批量寄售的藏品列表 */
+        batchConsignableList: '/collectionItem/batchConsignableList',
+        /** 执行批量寄售 */
+        batchConsign: '/collectionItem/batchConsign',
     },
     artist: {
         /** 艺术家列表 */
@@ -348,6 +352,10 @@ export const API_ENDPOINTS = {
     financeOrder: {
         /** 余额划转到可用余额 */
         transferIncomeToPurchase: '/financeOrder/transferIncomeToPurchase',
+    },
+    liveVideo: {
+        /** 获取直播广告视频配置 */
+        config: '/index.php/api/liveVideo/config',
     },
 } as const;
 

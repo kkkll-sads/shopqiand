@@ -378,14 +378,22 @@ const OrderDetail: React.FC<OrderDetailProps> = ({ orderId, onBack, onNavigate }
                                     {item.product_name}
                                 </p>
                                 <div className="flex items-end justify-between">
-                                    <div className="flex items-baseline gap-1">
-                                        <span className="text-lg font-bold text-orange-600">
-                                            {isScoreOrder ? item.score_price : `¥${formatAmount(item.price)}`}
-                                        </span>
-                                        {isScoreOrder && (
-                                            <span className="text-sm text-orange-500 font-medium">
-                                                消费金
-                                            </span>
+                                    <div className="text-red-500 font-bold text-base leading-none">
+                                        {item.price > 0 ? (
+                                            <>
+                                                <span className="text-xs">¥</span>{formatAmount(item.price)}
+                                                {item.score_price && item.score_price > 0 && (
+                                                    <span className="text-sm">
+                                                        +{item.score_price}消费金
+                                                    </span>
+                                                )}
+                                            </>
+                                        ) : (
+                                            item.score_price && item.score_price > 0 && (
+                                                <span className="text-sm">
+                                                    {item.score_price}消费金
+                                                </span>
+                                            )
                                         )}
                                     </div>
                                     <span className="text-sm text-gray-500 bg-gray-50 px-2 py-1 rounded">x{item.quantity}</span>
@@ -398,14 +406,26 @@ const OrderDetail: React.FC<OrderDetailProps> = ({ orderId, onBack, onNavigate }
                     <div className="mt-5 pt-5 border-t-2 border-gray-100">
                         <div className="flex items-center justify-between">
                             <span className="text-base text-gray-600 font-medium">合计</span>
-                            <div className="flex items-baseline gap-1">
-                                <span className="text-2xl font-bold text-orange-600">
-                                    {isScoreOrder ? order.total_score : `¥${formatAmount(order.total_amount)}`}
-                                </span>
-                                {isScoreOrder && (
-                                    <span className="text-sm text-orange-500 font-medium">
-                                        消费金
-                                    </span>
+                            <div className="text-red-500 font-bold text-base leading-none">
+                                {order.total_amount > 0 ? (
+                                    <>
+                                        <span className="text-xs">¥</span>{formatAmount(order.total_amount)}
+                                        {order.total_score && order.total_score > 0 && (
+                                            <span className="text-sm">
+                                                +{typeof order.total_score === 'string'
+                                                    ? parseFloat(order.total_score)
+                                                    : order.total_score}消费金
+                                            </span>
+                                        )}
+                                    </>
+                                ) : (
+                                    order.total_score && order.total_score > 0 && (
+                                        <span className="text-sm">
+                                            {typeof order.total_score === 'string'
+                                                ? parseFloat(order.total_score)
+                                                : order.total_score}消费金
+                                        </span>
+                                    )
                                 )}
                             </div>
                         </div>

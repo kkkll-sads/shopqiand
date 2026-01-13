@@ -19,6 +19,8 @@ export interface Product {
   sessionId?: number | string;
   /** 价格分区ID (用于盲盒预约) */
   zoneId?: number | string;
+  /** 消费金价格（整数） */
+  score_price?: number;
 }
 
 export interface Artist {
