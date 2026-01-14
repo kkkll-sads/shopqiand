@@ -42,32 +42,9 @@ const MyFriends: React.FC<MyFriendsProps> = ({ onBack, onNavigate }) => {
   const [activeTab, setActiveTab] = useState<'direct' | 'indirect'>('direct');
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // 获取滚动容器 - 尝试多种方式找到正确的滚动容器
+  // 获取滚动容器
   const getScrollContainer = useCallback(() => {
-    // 方法1: 通过 containerRef 的父元素查找（PageContainer的内容区域）
-    let scrollContainer = containerRef.current?.closest('.overflow-y-auto') as HTMLElement;
-    
-    // 方法2: 如果找不到，尝试查找父级元素
-    if (!scrollContainer) {
-      scrollContainer = containerRef.current?.parentElement?.parentElement as HTMLElement;
-    }
-    
-    // 方法3: 如果还是找不到，尝试查找具有 overflow-y-auto 或 overflow-y-scroll 的元素
-    if (!scrollContainer || scrollContainer.scrollHeight <= scrollContainer.clientHeight) {
-      const allElements = document.querySelectorAll('*');
-      for (const el of allElements) {
-        const style = window.getComputedStyle(el);
-        if ((style.overflowY === 'auto' || style.overflowY === 'scroll') && el.contains(containerRef.current)) {
-          const htmlEl = el as HTMLElement;
-          if (htmlEl.scrollHeight > htmlEl.clientHeight) {
-            scrollContainer = htmlEl;
-            break;
-          }
-        }
-      }
-    }
-    
-    return scrollContainer;
+    return containerRef.current?.parentElement?.parentElement as HTMLElement;
   }, []);
 
   // 自动滚动到底部的函数
@@ -144,54 +121,56 @@ const MyFriends: React.FC<MyFriendsProps> = ({ onBack, onNavigate }) => {
 
   // 滑动加载更多
   const handleScroll = useCallback(() => {
-    if (loadingMore || !hasMore) return;
-    
     const scrollContainer = getScrollContainer();
-    if (!scrollContainer) return;
+    if (!scrollContainer || loadingMore || !hasMore) return;
 
-    let scrollTop: number;
-    let scrollHeight: number;
-    let clientHeight: number;
-
-    // 获取滚动位置信息
-    const el = scrollContainer as HTMLElement;
-    scrollTop = el.scrollTop;
-    scrollHeight = el.scrollHeight;
-    clientHeight = el.clientHeight;
-
+    const { scrollTop, scrollHeight, clientHeight } = scrollContainer;
     // 当距离底部200px时就开始加载，给用户更多滚动空间
     if (scrollTop + clientHeight >= scrollHeight - 200) {
       loadTeamMembers(page + 1, true);
     }
   }, [getScrollContainer, loadingMore, hasMore, page, loadTeamMembers]);
 
-  // 切换tab时重置状态并重新加载
   useEffect(() => {
-    setPage(1);
-    setFriends([]);
-    setHasMore(true);
-    setError(null);
-    setLoading(true);
     loadTeamMembers(1, false);
-  }, [activeTab]);
+  }, [loadTeamMembers]);
 
-  // 初始加载（仅在组件挂载时）
-  useEffect(() => {
-    // 初始加载已在 activeTab 的 useEffect 中处理，这里不需要重复加载
-  }, []);
 
   // 动态添加滚动事件监听器
   useEffect(() => {
-    const scrollContainer = getScrollContainer();
+    const scrollContainer = containerRef.current?.parentElement?.parentElement;
     if (!scrollContainer) return;
 
     const handleScrollEvent = () => handleScroll();
-    scrollContainer.addEventListener('scroll', handleScrollEvent, { passive: true });
+    scrollContainer.addEventListener('scroll', handleScrollEvent);
 
     return () => {
       scrollContainer.removeEventListener('scroll', handleScrollEvent);
     };
-  }, [handleScroll, getScrollContainer]);
+  }, [handleScroll]);
+
+
+  /**
+   * 格式化日期
+
+    const { scrollTop, scrollHeight, clientHeight } = containerRef.current;
+    // 优先使用 register_time 字段 (API 返回)
+    if (friend.register_time) return friend.register_time;
+
+    // 其次使用 join_date 字段
+    if (friend.join_date) return friend.join_date;
+
+    // 尝试使用 join_time 时间戳
+    if (friend.join_time) {
+      return formatTime(friend.join_time, 'YYYY-MM-DD');
+    }
+
+    // 尝试使用其他可能的时间字段
+      loadTeamMembers(page + 1, true);
+    if (anyFriend.create_time) {
+      return formatTime(anyFriend.create_time, 'YYYY-MM-DD');
+    }
+  }, [loadingMore, hasMore, page, loadTeamMembers]);
 
   /**
    * 格式化日期
@@ -304,7 +283,7 @@ const MyFriends: React.FC<MyFriendsProps> = ({ onBack, onNavigate }) => {
                     normalizeAssetUrl(friend.avatar) ||
                     '/static/images/avatar.png'
                   }
-                  alt={friend.username || friend.nickname || '用户'}
+                  alt={friend.nickname || friend.username}
                   className="w-10 h-10 rounded-full object-cover"
                   onError={(e) => {
                     const target = e.target as HTMLImageElement;
@@ -313,7 +292,7 @@ const MyFriends: React.FC<MyFriendsProps> = ({ onBack, onNavigate }) => {
                 />
                 <div className="flex-1">
                   <div className="text-sm font-medium text-gray-800">
-                    {friend.username || friend.nickname || '用户'}
+                    {friend.nickname || friend.username}
                   </div>
                   <div className="text-xs text-gray-400">
                     加入时间: {formatDate(friend)}
@@ -328,17 +307,6 @@ const MyFriends: React.FC<MyFriendsProps> = ({ onBack, onNavigate }) => {
               </div>
               );
             })}
-
-            {/* 加载更多按钮 */}
-            {!loadingMore && hasMore && friends.length > 0 && (
-              <button
-                onClick={() => loadTeamMembers(page + 1, true)}
-                disabled={loadingMore}
-                className="w-full mt-4 py-3 text-sm font-medium text-gray-700 bg-white border-2 border-gray-200 rounded-xl hover:border-orange-300 hover:text-orange-600 hover:bg-orange-50/50 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-sm hover:shadow-md active:scale-[0.98]"
-              >
-                加载更多
-              </button>
-            )}
 
             {/* 加载更多指示器 */}
             {loadingMore && (

@@ -526,6 +526,7 @@ export interface BidBuyParams {
     zone_id: number | string;         // 价格分区ID（必填，如1=500元区）
     package_id: number | string;      // 资产包ID（必填）
     extra_hashrate?: number;          // 额外加注算力（可选，默认0，用于增加权重）
+    quantity?: number;                // 申购数量（可选，默认1，最大100）
     token?: string;                   // 用户登录Token
 }
 
@@ -533,10 +534,16 @@ export interface BidBuyParams {
  * 盲盒预约返回数据接口
  */
 export interface BidBuyResult {
-    reservation_id?: number;          // 预约记录ID
-    freeze_amount?: number;           // 冻结金额（分区最高价）
-    power_used?: number;              // 消耗的算力
-    weight?: number;                  // 获得的权重
+    reservation_id?: number;          // 预约记录ID（单个）
+    reservation_ids?: number[];       // 预约记录ID列表（批量）
+    quantity?: number;                // 申购数量
+    freeze_amount?: number;           // 冻结金额（单个）
+    total_freeze_amount?: number;     // 总冻结金额
+    power_used?: number;              // 消耗的算力（单个）
+    total_power_used?: number;        // 总消耗算力
+    single_freeze_amount?: number;    // 单个冻结金额
+    single_power_used?: number;       // 单个消耗算力
+    weight?: number;                  // 获得的权重（每个）
     zone_name?: string;               // 分区名称
     package_id?: number;              // 资产包ID
     package_name?: string;            // 资产包名称
@@ -573,6 +580,12 @@ export async function bidBuy(params: BidBuyParams): Promise<ApiResponse<BidBuyRe
         throw new Error('额外算力不能小于0');
     }
     formData.append('extra_hashrate', String(extraHashrate));
+    
+    const quantity = params.quantity ?? 1;
+    if (quantity < 1 || quantity > 100) {
+        throw new Error('申购数量必须在1-100之间');
+    }
+    formData.append('quantity', String(quantity));
 
     const response = await authedFetch<BidBuyResult>(API_ENDPOINTS.collectionItem.bidBuy, {
         method: 'POST',
