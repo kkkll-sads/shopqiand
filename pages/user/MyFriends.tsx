@@ -1,11 +1,11 @@
 /**
- * MyFriends - 我的好友页面
+ * MyFriends - 我的好友页面（新路由系统版）
  * 
- * 使用 PageContainer、LoadingSpinner、EmptyState 组件重构
- * 使用 formatTime 工具函数
+ * ✅ 已迁移：使用 usePageNavigation 替代 Props
  * 
  * @author 树交所前端团队
- * @version 2.1.0
+ * @version 3.0.0（新路由版）
+ * @refactored 2026-01-14
  */
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
@@ -13,25 +13,18 @@ import { UserPlus, Loader2 } from 'lucide-react';
 import PageContainer from '../../components/layout/PageContainer';
 import { LoadingSpinner, EmptyState, ListItem } from '../../components/common';
 import { fetchTeamMembers, normalizeAssetUrl } from '../../services/api';
-import { Route } from '../../router/routes';
 import { TeamMember } from '../../types';
 import { formatTime } from '../../utils/format';
 import { isSuccess, extractError } from '../../utils/apiHelpers';
+import { usePageNavigation } from '../../src/hooks/usePageNavigation';
 
 const PAGE_SIZE = 10;
 
 /**
- * MyFriends 组件属性接口
- */
-interface MyFriendsProps {
-  onBack: () => void;
-  onNavigate?: (route: Route) => void;
-}
-
-/**
  * MyFriends 我的好友页面组件
  */
-const MyFriends: React.FC<MyFriendsProps> = ({ onBack, onNavigate }) => {
+const MyFriends: React.FC = () => {
+  const { goBack, navigateTo } = usePageNavigation();
   const [friends, setFriends] = useState<TeamMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -228,7 +221,7 @@ const MyFriends: React.FC<MyFriendsProps> = ({ onBack, onNavigate }) => {
   };
 
   return (
-    <PageContainer title="我的好友" onBack={onBack}>
+    <PageContainer title="我的好友" onBack={goBack}>
       <div
         ref={containerRef}
         className="flex-1"

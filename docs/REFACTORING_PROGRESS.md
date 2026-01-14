@@ -564,7 +564,56 @@ const Login: React.FC = () => {
 
 ---
 
-## 十二、项目最新统计（2026-01-14）
+## 十三、第九阶段 - 用户页面迁移（2026-01-14）✅
+
+### 已完成迁移
+
+**用户页面** (12/12) - 100% ✅
+- ✅ EditProfile.tsx - 移除2个Props
+- ✅ FriendDetail.tsx - 移除1个Props
+- ✅ InviteFriends.tsx - 移除1个Props
+- ✅ MyFriends.tsx - 移除2个Props
+- ✅ AccountDeletion.tsx
+- ✅ AddressList.tsx
+- ✅ AgentAuth.tsx
+- ✅ Profile.tsx
+- ✅ RealNameAuth.tsx
+- ✅ Settings.tsx
+- ✅ UserSurvey.tsx
+- ✅ ActivityCenter.tsx
+
+### 迁移内容
+
+#### 1. EditProfile.tsx
+**改动**:
+- 移除Props接口（2个回调）
+- 使用 `usePageNavigation()` 替代 onBack 和 onLogout
+- Wrapper已简化（无需Props传递）
+
+#### 2. FriendDetail.tsx
+**改动**:
+- 移除 onBack Props
+- 使用 `usePageNavigation().goBack()`
+
+#### 3. InviteFriends.tsx
+**改动**:
+- 移除 onBack Props
+- 使用 `usePageNavigation().goBack()`
+
+#### 4. MyFriends.tsx
+**改动**:
+- 移除 onBack 和 onNavigate Props
+- 使用 `usePageNavigation()` hooks
+
+### 统计
+
+- 迁移页面: 4个
+- 用户页面完成率: 67% → 100%
+- 总体迁移进度: 55% → 61%
+
+---
+
+## 十四、项目最新统计（2026-01-14）
 
 | 指标 | 数值 |
 |------|------|
@@ -572,7 +621,10 @@ const Login: React.FC = () => {
 | Hooks | 9 个（新增useCashier） |
 | 组件 | 23 个 |
 | 页面 | 85 个 |
-| 已迁移页面 | 37/67 (55%) |
+| 已迁移页面 | 41/67 (61%) |
+| 认证页面 | 5/5 (100%) ✅ |
+| 用户页面 | 12/12 (100%) ✅ |
+| CMS页面 | 11/13 (85%) |
 | 服务 | 21 个 |
 | 状态机 | 3 个 |
 | 文档 | 15+ 个 |

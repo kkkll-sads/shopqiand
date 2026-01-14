@@ -1,12 +1,12 @@
 /**
- * EditProfile - 编辑资料页面
+ * EditProfile - 编辑资料页面（新路由系统版）
  * 
- * 使用 PageContainer 布局组件重构
+ * ✅ 已迁移：使用 usePageNavigation 替代 Props
  * 
  * @author 树交所前端团队
- * @version 2.0.0
+ * @version 3.0.0（新路由版）
+ * @refactored 2026-01-14
  */
-
 
 import React, { useMemo, useRef, useState } from 'react';
 import { ChevronRight } from 'lucide-react';
@@ -14,19 +14,13 @@ import PageContainer from '../../components/layout/PageContainer';
 import { AUTH_TOKEN_KEY, USER_INFO_KEY, uploadImage, updateAvatar, updateNickname } from '../../services/api';
 import { UserInfo } from '../../types';
 import { useNotification } from '../../context/NotificationContext';
-
-/**
- * EditProfile 组件属性接口
- */
-interface EditProfileProps {
-  onBack: () => void;
-  onLogout: () => void;
-}
+import { usePageNavigation } from '../../src/hooks/usePageNavigation';
 
 /**
  * EditProfile 编辑资料页面组件
  */
-const EditProfile: React.FC<EditProfileProps> = ({ onBack, onLogout }) => {
+const EditProfile: React.FC = () => {
+  const { goBack, onLogout } = usePageNavigation();
   const { showToast } = useNotification();
   // 从本地存储获取用户信息
   const cachedUser: UserInfo | null = useMemo(() => {
@@ -54,7 +48,7 @@ const EditProfile: React.FC<EditProfileProps> = ({ onBack, onLogout }) => {
    */
   const handleSave = async () => {
     if (!userInfo) {
-      onBack();
+      goBack();
       return;
     }
 
@@ -75,7 +69,7 @@ const EditProfile: React.FC<EditProfileProps> = ({ onBack, onLogout }) => {
       setUserInfo(updated);
       localStorage.setItem(USER_INFO_KEY, JSON.stringify(updated));
       showToast('success', res?.msg || '保存成功');
-      onBack();
+      goBack();
     } catch (error: any) {
       console.error('昵称更新失败:', error);
       showToast('error', '保存失败', error?.message || '昵称保存失败，请稍后重试');
@@ -152,7 +146,7 @@ const EditProfile: React.FC<EditProfileProps> = ({ onBack, onLogout }) => {
   };
 
   return (
-    <PageContainer title="编辑资料" onBack={onBack} bgColor="bg-gray-100" padding={false}>
+    <PageContainer title="编辑资料" onBack={goBack} bgColor="bg-gray-100" padding={false}>
       {/* 表单区域 */}
       <div className="bg-white mt-2 px-4">
         {/* 头像行 */}

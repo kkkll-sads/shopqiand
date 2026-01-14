@@ -1,17 +1,17 @@
 # 页面路由迁移状态
 
-## 迁移进度: 约 37/67 页面 (55%)
+## 迁移进度: 41/67 页面 (61%)
 
 ## 已完成迁移的页面
 
-### 认证页面 (5个) ✅ **全部完成**
+### 认证页面 (5/5) ✅ **100%**
 - ✅ Login.tsx
 - ✅ Register.tsx
 - ✅ ForgotPassword.tsx
 - ✅ ResetLoginPassword.tsx
 - ✅ ResetPayPassword.tsx
 
-### CMS页面 (11个)
+### CMS页面 (11/13) - 85%
 - ✅ AboutUs.tsx
 - ✅ HelpCenter.tsx
 - ✅ Home.tsx
@@ -21,10 +21,14 @@
 - ✅ SignIn.tsx
 - ✅ UserAgreement.tsx
 
-### 用户页面 (8个)
+### 用户页面 (12/12) ✅ **100%**
 - ✅ AccountDeletion.tsx
 - ✅ AddressList.tsx
 - ✅ AgentAuth.tsx
+- ✅ EditProfile.tsx
+- ✅ FriendDetail.tsx
+- ✅ InviteFriends.tsx
+- ✅ MyFriends.tsx
 - ✅ Profile.tsx
 - ✅ RealNameAuth.tsx
 - ✅ Settings.tsx
@@ -54,7 +58,7 @@
 - ✅ OrderFundDetail.tsx
 - ✅ ServiceRecharge.tsx
 
-## 待迁移的页面 (约 30个)
+## 待迁移的页面 (26个)
 
 ### CMS页面 (2个)
 - AnnouncementDetail.tsx
@@ -73,12 +77,6 @@
 - ReservationRecordDetailPage.tsx
 - ReservationRecordPage.tsx
 - SearchPage.tsx
-
-### 用户页面 (4个)
-- EditProfile.tsx
-- FriendDetail.tsx
-- InviteFriends.tsx
-- MyFriends.tsx
 
 ### 钱包页面 (10个)
 - AssetView.tsx
