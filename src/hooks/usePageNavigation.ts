@@ -60,9 +60,10 @@ const routePaths: Record<string, string | ((params?: any) => string)> = {
   'order-list': (p) => `/orders/${p?.kind || 'product'}/${p?.status || 0}`,
   'order-detail': (p) => `/order/${p?.orderId || ''}`,
   cashier: (p) => `/cashier/${p?.orderId || ''}`,
+  'switch-to-market': '/market', // 切换到市场Tab
 
   // 钱包/资产
-  'asset-view': '/asset-view',
+  'asset-view': (p) => (p?.tab !== undefined ? `/asset-view?tab=${p.tab}` : '/asset-view'),
   'asset-history': (p) => `/asset-history/${p?.type || ''}`,
   'balance-recharge': '/balance-recharge',
   'balance-withdraw': '/balance-withdraw',
@@ -92,16 +93,39 @@ export function usePageNavigation() {
 
   /**
    * 通过路由名称导航
+   * 支持两种调用方式：
+   * 1. navigateTo('route-name', { param: 'value' })
+   * 2. navigateTo({ name: 'route-name', param: 'value' })
    */
   const navigateTo = useCallback(
-    (routeName: string, params?: Record<string, any>, options?: NavigateOptions) => {
+    (
+      routeNameOrObject: string | { name: string; [key: string]: any },
+      params?: Record<string, any>,
+      options?: NavigateOptions
+    ) => {
+      // 处理对象格式
+      let routeName: string;
+      let routeParams: Record<string, any> = {};
+
+      if (typeof routeNameOrObject === 'object' && routeNameOrObject !== null) {
+        const { name, ...rest } = routeNameOrObject;
+        routeName = name;
+        routeParams = rest;
+      } else if (typeof routeNameOrObject === 'string') {
+        routeName = routeNameOrObject;
+        routeParams = params || {};
+      } else {
+        console.warn(`未知路由格式: ${routeNameOrObject}`);
+        return;
+      }
+
       const pathOrFn = routePaths[routeName];
       if (!pathOrFn) {
         console.warn(`未知路由: ${routeName}`);
         return;
       }
 
-      const path = typeof pathOrFn === 'function' ? pathOrFn(params) : pathOrFn;
+      const path = typeof pathOrFn === 'function' ? pathOrFn(routeParams) : pathOrFn;
       navigate(path, options);
     },
     [navigate]

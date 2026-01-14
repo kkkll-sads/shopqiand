@@ -377,7 +377,7 @@ const Profile: React.FC<{ unreadCount?: number }> = ({ unreadCount = 0 }) => {
               {/* Row 1, Col 2: Consumer Points */}
               <div
                 className="flex flex-col items-end cursor-pointer active:opacity-70 transition-opacity"
-                onClick={() => navigateTo('switch-to-market')}
+                onClick={() => navigateTo({ name: 'switch-to-market' })}
               >
                 <div className="text-xs text-gray-400 mb-1">消费金</div>
                 <div className="text-[15px] font-bold text-gray-800 font-[DINAlternate-Bold,Roboto,sans-serif] leading-tight">
