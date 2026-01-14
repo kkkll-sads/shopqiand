@@ -1,41 +1,42 @@
 /**
- * Register - 注册页面
- * 
- * 使用 isValidPhone 验证函数重构
- * 
+ * Register - 注册页面（新路由系统版）
+ *
+ * ✅ 已迁移：使用 usePageNavigation 替代 Props
+ * ✅ 已迁移：使用 useAuthStore 管理登录状态
+ *
  * @author 树交所前端团队
- * @version 2.0.0
+ * @version 3.0.0（新路由版）
+ * @refactored 2026-01-14
  */
 
-
 import React, { useState, useEffect } from 'react';
-import { ChevronLeft, XCircle, User, Lock, Smartphone, CreditCard, ShieldCheck, Check, Eye, EyeOff } from 'lucide-react';
+import {
+  ChevronLeft,
+  XCircle,
+  User,
+  Lock,
+  Smartphone,
+  CreditCard,
+  ShieldCheck,
+  Check,
+  Eye,
+  EyeOff,
+} from 'lucide-react';
 import { register, RegisterParams, fetchAnnouncements, AnnouncementItem } from '../../services/api';
 import { sendSmsCode } from '../../services/common';
 import { isValidPhone } from '../../utils/validation';
 import { useNotification } from '../../context/NotificationContext';
 import { isSuccess, extractError } from '../../utils/apiHelpers';
 import PopupAnnouncementModal from '../../components/common/PopupAnnouncementModal';
-
-/**
- * Register 组件属性接口
- */
-interface RegisterProps {
-  onBack: () => void;
-  onRegisterSuccess: (loginPayload?: { token: string; userInfo: any }) => void;
-  onNavigateUserAgreement: () => void;
-  onNavigatePrivacyPolicy: () => void;
-}
+import { usePageNavigation } from '../../src/hooks/usePageNavigation';
+import { useAuthStore } from '../../src/stores/authStore';
 
 /**
  * Register 注册页面组件
  */
-const Register: React.FC<RegisterProps> = ({
-  onBack,
-  onRegisterSuccess,
-  onNavigateUserAgreement,
-  onNavigatePrivacyPolicy,
-}) => {
+const Register: React.FC = () => {
+  const { goBack, navigateTo } = usePageNavigation();
+  const { login: loginToStore } = useAuthStore();
   const { showToast } = useNotification();
 
   /**
@@ -62,13 +63,17 @@ const Register: React.FC<RegisterProps> = ({
 
   // 注册须知公告弹窗状态
   const [showRegisterNotice, setShowRegisterNotice] = useState(false);
-  const [registerNoticeAnnouncement, setRegisterNoticeAnnouncement] = useState<AnnouncementItem | null>(null);
+  const [registerNoticeAnnouncement, setRegisterNoticeAnnouncement] =
+    useState<AnnouncementItem | null>(null);
 
   // 组件加载时从URL参数中读取邀请码
   useEffect(() => {
     const urlInviteCode = getInviteCodeFromUrl();
     console.log('[Register] URL invite_code:', urlInviteCode);
-    console.log('[Register] Current URL:', typeof window !== 'undefined' ? window.location.href : 'SSR');
+    console.log(
+      '[Register] Current URL:',
+      typeof window !== 'undefined' ? window.location.href : 'SSR'
+    );
     if (urlInviteCode) {
       console.log('[Register] Setting invite code from URL:', urlInviteCode);
       setInviteCode(urlInviteCode);
@@ -84,8 +89,8 @@ const Register: React.FC<RegisterProps> = ({
         const response = await fetchAnnouncements({ page: 1, limit: 10, type: 'normal' });
         if (isSuccess(response) && response.data?.list) {
           // 查找标题包含"注册须知"的公告（即使后端返回的是不弹窗的，也强制弹窗）
-          const notice = response.data.list.find((item: AnnouncementItem) =>
-            item.title && item.title.includes('注册须知')
+          const notice = response.data.list.find(
+            (item: AnnouncementItem) => item.title && item.title.includes('注册须知')
           );
 
           if (notice) {
@@ -121,7 +126,7 @@ const Register: React.FC<RegisterProps> = ({
     try {
       await sendSmsCode({
         mobile: phone,
-        event: 'register'
+        event: 'register',
       });
       showToast('success', '验证码已发送');
       setCountdown(60);
@@ -191,22 +196,22 @@ const Register: React.FC<RegisterProps> = ({
 
         if (!token) {
           showToast('warning', '注册成功', '但未获取到登录凭证，请手动登录');
-          onRegisterSuccess();
+          navigateTo({ name: 'login' });
           return;
         }
 
         showToast('success', '注册成功', '正在自动登录...');
 
-        // 注册成功后自动登录
-        const loginPayload = {
-          token: token,
-          userInfo: userInfo,
-        };
+        // ✅ 使用 Zustand store 管理登录状态
+        loginToStore({
+          token,
+          userInfo,
+        });
 
-        console.log('准备自动登录，loginPayload:', loginPayload);
+        console.log('自动登录成功，跳转到首页');
 
-        // 传递登录信息给父组件
-        onRegisterSuccess(loginPayload);
+        // ✅ 注册成功后跳转到首页
+        navigateTo({ name: 'home' });
       } else {
         const errorMsg = extractError(response, '注册失败，请稍后重试');
         showToast('error', '注册失败', errorMsg);
@@ -229,7 +234,7 @@ const Register: React.FC<RegisterProps> = ({
     <div className="min-h-screen flex flex-col px-6 pt-8 pb-safe bg-gradient-to-br from-[#FFD6A5] via-[#FFC3A0] to-[#FFDEE9]">
       {/* 顶部导航 */}
       <div className="flex items-center mb-8 relative">
-        <button onClick={onBack} className="absolute left-0 -ml-2 p-2">
+        <button onClick={goBack} className="absolute left-0 -ml-2 p-2">
           <ChevronLeft size={24} className="text-gray-800" />
         </button>
         <h1 className="text-lg font-bold text-gray-900 w-full text-center">注册</h1>
@@ -272,12 +277,11 @@ const Register: React.FC<RegisterProps> = ({
           />
         </div>
 
-
         {/* 登录密码 */}
         <div className="bg-white rounded-lg flex items-center px-4 py-3 shadow-sm">
           <Lock className="text-gray-500 mr-3" size={20} />
           <input
-            type={showPassword ? "text" : "password"}
+            type={showPassword ? 'text' : 'password'}
             placeholder="设置登录密码"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
@@ -296,7 +300,7 @@ const Register: React.FC<RegisterProps> = ({
         <div className="bg-white rounded-lg flex items-center px-4 py-3 shadow-sm">
           <CreditCard className="text-gray-500 mr-3" size={20} />
           <input
-            type={showPayPassword ? "text" : "password"}
+            type={showPayPassword ? 'text' : 'password'}
             placeholder="设置支付密码 (6位数字)"
             value={payPassword}
             onChange={(e) => setPayPassword(e.target.value)}
@@ -352,11 +356,19 @@ const Register: React.FC<RegisterProps> = ({
         </div>
         <div className="leading-none flex items-center flex-wrap">
           <span>阅读并同意</span>
-          <button type="button" className="text-orange-500 mx-0.5" onClick={onNavigateUserAgreement}>
+          <button
+            type="button"
+            className="text-orange-500 mx-0.5"
+            onClick={() => navigateTo({ name: 'user-agreement' })}
+          >
             《用户协议》
           </button>
           <span>及</span>
-          <button type="button" className="text-orange-500 mx-0.5" onClick={onNavigatePrivacyPolicy}>
+          <button
+            type="button"
+            className="text-orange-500 mx-0.5"
+            onClick={() => navigateTo({ name: 'privacy-policy' })}
+          >
             《隐私政策》
           </button>
         </div>

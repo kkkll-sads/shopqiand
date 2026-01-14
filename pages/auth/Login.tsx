@@ -1,22 +1,24 @@
 /**
- * Login - 登录页面
- * 
- * 使用 isValidPhone 验证函数重构
- * 
+ * Login - 登录页面（新路由系统版）
+ *
+ * ✅ 已迁移：使用 usePageNavigation 替代 Props
+ * ✅ 已迁移：使用 useAuthStore 管理登录状态
+ *
  * @author 树交所前端团队
- * @version 2.0.0
+ * @version 3.0.0（新路由版）
+ * @refactored 2026-01-14
  */
-
 
 import React, { useState, useEffect } from 'react';
 import { Eye, EyeOff, User, Lock, Check, HeadphonesIcon } from 'lucide-react';
 import { login as loginApi, LoginParams } from '../../services/api';
-import { LoginSuccessPayload } from '../../types';
 import { useNotification } from '../../context/NotificationContext';
-import { bizLog, debugLog, errorLog } from '../../utils/logger';
-import { isSuccess, extractError } from '../../utils/apiHelpers';
+import { bizLog, debugLog } from '../../utils/logger';
+import { isSuccess } from '../../utils/apiHelpers';
 import { useErrorHandler } from '../../hooks/useErrorHandler';
 import { sendSmsCode } from '../../services/common';
+import { usePageNavigation } from '../../src/hooks/usePageNavigation';
+import { useAuthStore } from '../../src/stores/authStore';
 
 // localStorage 存储键名
 const STORAGE_KEY_PHONE = 'login_remembered_phone';
@@ -24,28 +26,11 @@ const STORAGE_KEY_PASSWORD = 'login_remembered_password';
 const STORAGE_KEY_REMEMBER = 'login_remember_me';
 
 /**
- * Login 组件属性接口
- */
-interface LoginProps {
-  onLogin: (payload?: LoginSuccessPayload) => void;
-  onNavigateRegister: () => void;
-  onNavigateUserAgreement: () => void;
-  onNavigatePrivacyPolicy: () => void;
-  onNavigateForgotPassword: () => void;
-  onNavigateOnlineService: () => void;
-}
-
-/**
  * Login 登录页面组件
  */
-const Login: React.FC<LoginProps> = ({
-  onLogin,
-  onNavigateRegister,
-  onNavigateUserAgreement,
-  onNavigatePrivacyPolicy,
-  onNavigateForgotPassword,
-  onNavigateOnlineService,
-}) => {
+const Login: React.FC = () => {
+  const { navigateTo } = usePageNavigation();
+  const { login: loginToStore } = useAuthStore();
   const { showToast } = useNotification();
 
   // ✅ 使用统一错误处理Hook（提供日志记录和错误分类）
@@ -71,8 +56,9 @@ const Login: React.FC<LoginProps> = ({
       const basePadding = 48;
 
       // 检测iOS安全区域（底部刘海区域）
-      const safeAreaBottomCSS = getComputedStyle(document.documentElement)
-        .getPropertyValue('env(safe-area-inset-bottom)');
+      const safeAreaBottomCSS = getComputedStyle(document.documentElement).getPropertyValue(
+        'env(safe-area-inset-bottom)'
+      );
       let safeAreaBottom = 0;
       if (safeAreaBottomCSS) {
         safeAreaBottom = parseInt(safeAreaBottomCSS.replace('px', ''), 10) || 0;
@@ -190,7 +176,7 @@ const Login: React.FC<LoginProps> = ({
     try {
       await sendSmsCode({
         mobile: phone.trim(),
-        event: 'user_login' // 验证码登录场景使用 user_login
+        event: 'user_login', // 验证码登录场景使用 user_login
       });
       showToast('success', '验证码已发送');
       setCountdown(60);
@@ -263,16 +249,21 @@ const Login: React.FC<LoginProps> = ({
         }
 
         showToast('success', '登录成功', response.msg);
-        onLogin({
+        
+        // ✅ 使用 Zustand store 管理登录状态
+        loginToStore({
           token,
           userInfo: response.data?.userInfo || null,
         });
+        
+        // ✅ 登录成功后跳转到首页
+        navigateTo({ name: 'home' });
       } else {
         // ✅ 使用统一错误处理（自动记录日志、分类错误、显示Toast）
         handleError(response, {
           toastTitle: '登录失败',
           customMessage: '登录失败，请稍后重试',
-          context: { phone, loginType }
+          context: { phone, loginType },
         });
       }
     } catch (error: any) {
@@ -280,7 +271,7 @@ const Login: React.FC<LoginProps> = ({
       handleError(error, {
         toastTitle: error.isCorsError ? '网络错误' : '登录失败',
         customMessage: error.isCorsError ? error.message : '请检查网络连接后重试',
-        context: { phone, loginType }
+        context: { phone, loginType },
       });
     } finally {
       setLoading(false);
@@ -291,7 +282,7 @@ const Login: React.FC<LoginProps> = ({
     <div className="min-h-screen flex flex-col px-8 pt-20 pb-safe bg-gradient-to-br from-[#FFD6A5] via-[#FFC3A0] to-[#FFDEE9] relative">
       {/* 顶部客服入口 */}
       <button
-        onClick={onNavigateOnlineService}
+        onClick={() => navigateTo({ name: 'online-service' })}
         className="absolute top-6 right-6 p-2 rounded-full bg-white/30 backdrop-blur-md border border-white/50 text-gray-700 active:scale-95 transition-all shadow-sm z-10"
       >
         <div className="flex items-center gap-1">
@@ -309,19 +300,21 @@ const Login: React.FC<LoginProps> = ({
       <div className="flex items-center space-x-6 mb-8">
         <button
           onClick={() => setLoginType('password')}
-          className={`text-lg font-medium transition-colors relative pb-2 ${loginType === 'password'
-            ? 'text-gray-800 font-bold after:content-[""] after:absolute after:bottom-0 after:left-1/2 after:-translate-x-1/2 after:w-6 after:h-1 after:bg-orange-500 after:rounded-full'
-            : 'text-gray-500'
-            }`}
+          className={`text-lg font-medium transition-colors relative pb-2 ${
+            loginType === 'password'
+              ? 'text-gray-800 font-bold after:content-[""] after:absolute after:bottom-0 after:left-1/2 after:-translate-x-1/2 after:w-6 after:h-1 after:bg-orange-500 after:rounded-full'
+              : 'text-gray-500'
+          }`}
         >
           密码登录
         </button>
         <button
           onClick={() => setLoginType('code')}
-          className={`text-lg font-medium transition-colors relative pb-2 ${loginType === 'code'
-            ? 'text-gray-800 font-bold after:content-[""] after:absolute after:bottom-0 after:left-1/2 after:-translate-x-1/2 after:w-6 after:h-1 after:bg-orange-500 after:rounded-full'
-            : 'text-gray-500'
-            }`}
+          className={`text-lg font-medium transition-colors relative pb-2 ${
+            loginType === 'code'
+              ? 'text-gray-800 font-bold after:content-[""] after:absolute after:bottom-0 after:left-1/2 after:-translate-x-1/2 after:w-6 after:h-1 after:bg-orange-500 after:rounded-full'
+              : 'text-gray-500'
+          }`}
         >
           验证码登录
         </button>
@@ -342,7 +335,21 @@ const Login: React.FC<LoginProps> = ({
           {phone && (
             <button onClick={() => setPhone('')} className="text-gray-300 ml-2">
               <div className="bg-gray-200 rounded-full p-0.5">
-                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="text-white"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="12"
+                  height="12"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="3"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="text-white"
+                >
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
               </div>
             </button>
           )}
@@ -353,7 +360,7 @@ const Login: React.FC<LoginProps> = ({
           <div className="bg-white rounded-lg flex items-center px-4 py-3 shadow-sm">
             <Lock className="text-gray-500 mr-3" size={20} />
             <input
-              type={showPassword ? "text" : "password"}
+              type={showPassword ? 'text' : 'password'}
               placeholder="请输入您的密码"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -366,7 +373,19 @@ const Login: React.FC<LoginProps> = ({
         ) : (
           <div className="bg-white rounded-lg flex items-center px-4 py-3 shadow-sm">
             <div className="text-gray-500 mr-3">
-              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+              </svg>
             </div>
             <input
               type="text"
@@ -390,17 +409,20 @@ const Login: React.FC<LoginProps> = ({
       <div className="flex justify-between items-center mb-10 text-sm">
         <label className="flex items-center text-gray-700 gap-2 cursor-pointer select-none">
           <div
-            className={`w-4 h-4 border rounded flex items-center justify-center transition-colors cursor-pointer ${rememberMe
-              ? 'bg-orange-400 border-orange-400'
-              : 'border-orange-400 bg-transparent'
-              }`}
+            className={`w-4 h-4 border rounded flex items-center justify-center transition-colors cursor-pointer ${
+              rememberMe ? 'bg-orange-400 border-orange-400' : 'border-orange-400 bg-transparent'
+            }`}
             onClick={() => setRememberMe(!rememberMe)}
           >
             {rememberMe && <Check size={12} className="text-white" />}
           </div>
           <span onClick={() => setRememberMe(!rememberMe)}>记住密码</span>
         </label>
-        <button type="button" className="text-gray-600" onClick={onNavigateForgotPassword}>
+        <button
+          type="button"
+          className="text-gray-600"
+          onClick={() => navigateTo({ name: 'forgot-password' })}
+        >
           忘记密码
         </button>
       </div>
@@ -424,11 +446,19 @@ const Login: React.FC<LoginProps> = ({
         </div>
         <div className="leading-none flex items-center flex-wrap">
           <span>登录即代表你已同意</span>
-          <button type="button" className="text-orange-500 mx-0.5" onClick={onNavigateUserAgreement}>
+          <button
+            type="button"
+            className="text-orange-500 mx-0.5"
+            onClick={() => navigateTo({ name: 'user-agreement' })}
+          >
             用户协议
           </button>
           <span>和</span>
-          <button type="button" className="text-orange-500 mx-0.5" onClick={onNavigatePrivacyPolicy}>
+          <button
+            type="button"
+            className="text-orange-500 mx-0.5"
+            onClick={() => navigateTo({ name: 'privacy-policy' })}
+          >
             隐私政策
           </button>
         </div>
@@ -440,7 +470,10 @@ const Login: React.FC<LoginProps> = ({
         style={{ paddingBottom: `${bottomPadding}px` }}
       >
         <span className="text-gray-600">没有账户？</span>
-        <button onClick={onNavigateRegister} className="text-blue-600 font-medium hover:text-blue-700">
+        <button
+          onClick={() => navigateTo({ name: 'register' })}
+          className="text-blue-600 font-medium hover:text-blue-700"
+        >
           点击注册
         </button>
       </div>

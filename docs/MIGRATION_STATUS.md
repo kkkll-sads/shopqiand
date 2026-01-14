@@ -1,10 +1,12 @@
 # 页面路由迁移状态
 
-## 迁移进度: 约 35/67 页面 (52%)
+## 迁移进度: 约 37/67 页面 (55%)
 
 ## 已完成迁移的页面
 
-### 认证页面 (3个)
+### 认证页面 (5个) ✅ **全部完成**
+- ✅ Login.tsx
+- ✅ Register.tsx
 - ✅ ForgotPassword.tsx
 - ✅ ResetLoginPassword.tsx
 - ✅ ResetPayPassword.tsx
@@ -52,11 +54,7 @@
 - ✅ OrderFundDetail.tsx
 - ✅ ServiceRecharge.tsx
 
-## 待迁移的页面 (约 32个)
-
-### 认证页面 (2个)
-- Login.tsx (复杂：需要处理登录流程)
-- Register.tsx (复杂：需要处理注册流程)
+## 待迁移的页面 (约 30个)
 
 ### CMS页面 (2个)
 - AnnouncementDetail.tsx

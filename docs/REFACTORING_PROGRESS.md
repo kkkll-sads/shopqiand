@@ -505,7 +505,66 @@ pages/[Feature].tsx       # 使用状态机的页面
 
 ---
 
-## 十一、项目最新统计（2026-01-14）
+## 十一、第八阶段 - 认证页面迁移（2026-01-14）✅
+
+### 已完成迁移
+
+**认证页面** (5/5) - 100% ✅
+- ✅ Login.tsx - 使用 usePageNavigation + useAuthStore
+- ✅ Register.tsx - 使用 usePageNavigation + useAuthStore
+- ✅ ForgotPassword.tsx
+- ✅ ResetLoginPassword.tsx
+- ✅ ResetPayPassword.tsx
+
+### 迁移内容
+
+#### 1. Login.tsx
+**改动**:
+- 移除Props接口（6个回调函数）
+- 使用 `usePageNavigation()` 替代导航Props
+- 使用 `useAuthStore()` 管理登录状态
+- 登录成功后自动跳转到首页
+
+**代码简化**:
+```typescript
+// ❌ 迁移前
+interface LoginProps {
+  onLogin: (payload) => void;
+  onNavigateRegister: () => void;
+  onNavigateUserAgreement: () => void;
+  // ... 6个回调
+}
+
+// ✅ 迁移后
+const Login: React.FC = () => {
+  const { navigateTo } = usePageNavigation();
+  const { login } = useAuthStore();
+  // 直接使用hooks，无需Props
+};
+```
+
+#### 2. Register.tsx
+**改动**:
+- 移除Props接口（4个回调函数）
+- 使用 `usePageNavigation()` 替代导航Props
+- 使用 `useAuthStore()` 管理注册后自动登录
+- 注册成功后自动跳转到首页
+
+#### 3. Wrapper简化
+- LoginWrapper: 从33行 → 12行
+- RegisterWrapper: 从33行 → 12行
+- 移除所有Props传递逻辑
+
+### 统计
+
+- 迁移页面: 2个
+- 简化Wrapper: 2个
+- 删除代码: ~40行（Props传递逻辑）
+- 认证页面完成率: 100%
+
+---
+
+## 十二、项目最新统计（2026-01-14）
 
 | 指标 | 数值 |
 |------|------|
@@ -513,6 +572,7 @@ pages/[Feature].tsx       # 使用状态机的页面
 | Hooks | 9 个（新增useCashier） |
 | 组件 | 23 个 |
 | 页面 | 85 个 |
+| 已迁移页面 | 37/67 (55%) |
 | 服务 | 21 个 |
 | 状态机 | 3 个 |
 | 文档 | 15+ 个 |

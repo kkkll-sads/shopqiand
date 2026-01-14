@@ -1,32 +1,13 @@
 /**
- * Register 页面包装器
+ * Register 页面包装器（简化版）
+ * 
+ * ✅ 已简化：Register页面已迁移到新路由系统，不再需要Props
  */
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
 import Register from '../../../pages/auth/Register';
-import { useAuthStore } from '../../stores/authStore';
-import type { LoginSuccessPayload } from '../../../types';
 
 const RegisterWrapper: React.FC = () => {
-  const navigate = useNavigate();
-  const { login } = useAuthStore();
-
-  const handleRegister = (payload?: LoginSuccessPayload) => {
-    if (payload) {
-      login(payload);
-    }
-    navigate('/');
-  };
-
-  return (
-    <Register
-      onRegister={handleRegister}
-      onBack={() => navigate(-1)}
-      onNavigateLogin={() => navigate('/login')}
-      onNavigateUserAgreement={() => navigate('/user-agreement')}
-      onNavigatePrivacyPolicy={() => navigate('/privacy-policy')}
-    />
-  );
+  return <Register />;
 };
 
 export default RegisterWrapper;
