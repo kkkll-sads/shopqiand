@@ -1,17 +1,52 @@
-
 import React, { useEffect, useMemo, useState } from 'react';
-import { ChevronRight, Settings, MessageSquare, ShieldCheck, CreditCard, MapPin, Users, UserCheck, HelpCircle, FileText, HeadphonesIcon, Newspaper, Gift, Wallet, Receipt, Box, Gem, Sprout, Award, CalendarCheck, Leaf, ClipboardList, Coins, Package, Truck, CheckCircle } from 'lucide-react';
+import {
+  ChevronRight,
+  Settings,
+  MessageSquare,
+  ShieldCheck,
+  CreditCard,
+  MapPin,
+  Users,
+  UserCheck,
+  HelpCircle,
+  FileText,
+  HeadphonesIcon,
+  Newspaper,
+  Gift,
+  Wallet,
+  Receipt,
+  Box,
+  Gem,
+  Sprout,
+  Award,
+  CalendarCheck,
+  Leaf,
+  ClipboardList,
+  Coins,
+  Package,
+  Truck,
+  CheckCircle,
+} from 'lucide-react';
 import { formatAmount } from '../../utils/format';
-import { AUTH_TOKEN_KEY, USER_INFO_KEY, fetchProfile, normalizeAssetUrl, fetchShopOrderStatistics, ShopOrderStatistics, fetchSignInInfo } from '../../services/api';
+import {
+  AUTH_TOKEN_KEY,
+  USER_INFO_KEY,
+  fetchProfile,
+  normalizeAssetUrl,
+  fetchShopOrderStatistics,
+  ShopOrderStatistics,
+  fetchSignInInfo,
+} from '../../services/api';
 import { STORAGE_KEYS } from '../../constants/storageKeys';
 import { UserInfo } from '../../types';
 import useAuth from '../../hooks/useAuth';
 import { isSuccess, extractError } from '../../utils/apiHelpers';
 import { useErrorHandler } from '../../hooks/useErrorHandler';
+import { usePageNavigation } from '../../src/hooks/usePageNavigation';
 import { Route } from '../../router/routes';
 
 // Helper for custom coin icon
-const CoinsIcon = ({ size, className }: { size: number, className: string }) => (
+const CoinsIcon = ({ size, className }: { size: number; className: string }) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
     width={size}
@@ -36,14 +71,10 @@ interface ProfileProps {
   unreadCount?: number;
 }
 
-const Profile: React.FC<ProfileProps> = ({ onNavigate, unreadCount = 0 }) => {
+const Profile: React.FC<{ unreadCount?: number }> = ({ unreadCount = 0 }) => {
+  const { navigateTo } = usePageNavigation();
   // ✅ 使用统一错误处理Hook（持久化显示）
-  const {
-    errorMessage,
-    hasError,
-    handleError,
-    clearError
-  } = useErrorHandler();
+  const { errorMessage, hasError, handleError, clearError } = useErrorHandler();
 
   const [userInfo, setUserInfo] = useState<UserInfo | null>(() => {
     try {
@@ -64,7 +95,7 @@ const Profile: React.FC<ProfileProps> = ({ onNavigate, unreadCount = 0 }) => {
       // ✅ 使用统一错误处理
       handleError('未检测到登录信息，请重新登录', {
         persist: true,
-        showToast: false
+        showToast: false,
       });
       return;
     }
@@ -85,7 +116,7 @@ const Profile: React.FC<ProfileProps> = ({ onNavigate, unreadCount = 0 }) => {
           handleError(response, {
             persist: true,
             showToast: false,
-            customMessage: '获取用户信息失败'
+            customMessage: '获取用户信息失败',
           });
         }
       } catch (err: any) {
@@ -94,7 +125,7 @@ const Profile: React.FC<ProfileProps> = ({ onNavigate, unreadCount = 0 }) => {
         handleError(err, {
           persist: true,
           showToast: false,
-          customMessage: '获取个人信息失败'
+          customMessage: '获取个人信息失败',
         });
       } finally {
         if (isMounted) {
@@ -135,9 +166,10 @@ const Profile: React.FC<ProfileProps> = ({ onNavigate, unreadCount = 0 }) => {
         const res = await fetchSignInInfo(token);
         console.log('[Profile] 签到状态API响应:', res);
 
-        // Check both code 1 (success) and code 0 (also success in some cases)
-        if ((isSuccess(res) || res.code === 1 || res.code === 0) && res.data) {
-          const hasSign = res.data.today_signed || false;
+        // 使用统一的API响应处理
+        const signInData = extractData(res);
+        if (signInData) {
+          const hasSign = signInData.today_signed || false;
           console.log('[Profile] 今日是否已签到:', hasSign);
           setHasSignedToday(hasSign);
 
@@ -170,7 +202,7 @@ const Profile: React.FC<ProfileProps> = ({ onNavigate, unreadCount = 0 }) => {
     // The dependency array is empty, so it runs on mount.
     // If the component is kept alive (not unmounted), focus listener helps.
     // If we want to force check more often:
-    // const interval = setInterval(loadSignInStatus, 10000); 
+    // const interval = setInterval(loadSignInStatus, 10000);
 
     return () => {
       isMounted = false;
@@ -179,14 +211,13 @@ const Profile: React.FC<ProfileProps> = ({ onNavigate, unreadCount = 0 }) => {
     };
   }, []);
 
-
   const { realName, logout } = useAuth();
 
   const handleLogout = () => {
     logout();
     // 稍微延迟一下跳转，让状态更新
     setTimeout(() => {
-      onNavigate({ name: 'sign-in' });
+      navigateTo({ name: 'sign-in' });
     }, 50);
   };
   const displayName = realName || userInfo?.nickname || userInfo?.username || '用户';
@@ -209,31 +240,27 @@ const Profile: React.FC<ProfileProps> = ({ onNavigate, unreadCount = 0 }) => {
   };
   const displayId = getUserTypeLabel(userInfo?.user_type);
 
-
-  const stats = useMemo(() => ([
-    { label: '供应链专项金', val: formatAmount(userInfo?.money) },
-    { label: '可调度收益', val: formatAmount(userInfo?.withdrawable_money) },
-    { label: '确权金', val: formatAmount(userInfo?.service_fee_balance) },
-  ]), [userInfo]);
+  const stats = useMemo(
+    () => [
+      { label: '供应链专项金', val: formatAmount(userInfo?.money) },
+      { label: '可调度收益', val: formatAmount(userInfo?.withdrawable_money) },
+      { label: '确权金', val: formatAmount(userInfo?.service_fee_balance) },
+    ],
+    [userInfo]
+  );
 
   return (
     <div className="pb-24 min-h-screen bg-gray-50">
       {/* Top Background Gradient - Match Home Page (Pastel Orange) */}
-      <div className="absolute top-0 left-0 right-0 h-72 bg-gradient-to-b from-[#FFD6A5] to-gray-50 z-0">
-      </div>
+      <div className="absolute top-0 left-0 right-0 h-72 bg-gradient-to-b from-[#FFD6A5] to-gray-50 z-0"></div>
 
       {/* User Header */}
       <div className="pt-12 pb-6 px-4 relative z-10 text-gray-900">
-
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-4">
             <div className="w-14 h-14 rounded-full bg-orange-100 border-2 border-white flex items-center justify-center text-xl font-bold text-orange-600 overflow-hidden shadow-sm">
               {displayAvatarUrl ? (
-                <img
-                  src={displayAvatarUrl}
-                  alt="用户头像"
-                  className="w-full h-full object-cover"
-                />
+                <img src={displayAvatarUrl} alt="用户头像" className="w-full h-full object-cover" />
               ) : (
                 displayAvatarText || '用'
               )}
@@ -248,7 +275,7 @@ const Profile: React.FC<ProfileProps> = ({ onNavigate, unreadCount = 0 }) => {
                       const statusConfig = {
                         0: { icon: Sprout, color: 'text-green-600' },
                         1: { icon: UserCheck, color: 'text-blue-600' },
-                        2: { icon: Gem, color: 'text-yellow-600' }
+                        2: { icon: Gem, color: 'text-yellow-600' },
                       }[userInfo?.user_type ?? -1] || { icon: UserCheck, color: 'text-gray-500' };
                       const Icon = statusConfig.icon;
                       return <Icon size={10} className={`${statusConfig.color} fill-current`} />;
@@ -288,13 +315,21 @@ const Profile: React.FC<ProfileProps> = ({ onNavigate, unreadCount = 0 }) => {
             </div>
           </div>
           <div className="flex gap-4">
-            <button onClick={() => onNavigate('service-center:message')} className="text-gray-600 hover:text-gray-900 transition-colors relative">
+            <button
+              onClick={() => navigateTo('service-center:message')}
+              className="text-gray-600 hover:text-gray-900 transition-colors relative"
+            >
               <MessageSquare size={22} />
               {unreadCount > 0 && (
                 <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white box-content"></span>
               )}
             </button>
-            <button onClick={() => onNavigate('service-center:settings')} className="text-gray-600 hover:text-gray-900 transition-colors"><Settings size={22} /></button>
+            <button
+              onClick={() => navigateTo('service-center:settings')}
+              className="text-gray-600 hover:text-gray-900 transition-colors"
+            >
+              <Settings size={22} />
+            </button>
           </div>
         </div>
 
@@ -309,7 +344,7 @@ const Profile: React.FC<ProfileProps> = ({ onNavigate, unreadCount = 0 }) => {
                 </span>
               </div>
               <button
-                onClick={() => onNavigate('asset:balance-recharge:profile')}
+                onClick={() => navigateTo('asset:balance-recharge:profile')}
                 className="text-orange-600 text-sm font-medium flex items-center gap-1 active:opacity-70"
               >
                 去充值 <ChevronRight size={14} />
@@ -319,7 +354,7 @@ const Profile: React.FC<ProfileProps> = ({ onNavigate, unreadCount = 0 }) => {
             {/* Main Big Number: Supply Chain Special Fund (balance_available) */}
             <div
               className="text-3xl font-[DINAlternate-Bold,Roboto,sans-serif] font-bold text-gray-900 tracking-tight mb-6 cursor-pointer active:opacity-70 transition-opacity"
-              onClick={() => onNavigate('asset-view:0')}
+              onClick={() => navigateTo('asset-view:0')}
             >
               <span className="text-xl mr-1">¥</span>
               {/* Display balance_available without commas */}
@@ -331,7 +366,7 @@ const Profile: React.FC<ProfileProps> = ({ onNavigate, unreadCount = 0 }) => {
               {/* Row 1, Col 1: Withdrawable */}
               <div
                 className="flex flex-col cursor-pointer active:opacity-70 transition-opacity"
-                onClick={() => onNavigate('asset-view:1')}
+                onClick={() => navigateTo('asset-view:1')}
               >
                 <div className="text-xs text-gray-400 mb-1">可调度收益</div>
                 <div className="text-[15px] font-bold text-gray-800 font-[DINAlternate-Bold,Roboto,sans-serif] leading-tight">
@@ -342,7 +377,7 @@ const Profile: React.FC<ProfileProps> = ({ onNavigate, unreadCount = 0 }) => {
               {/* Row 1, Col 2: Consumer Points */}
               <div
                 className="flex flex-col items-end cursor-pointer active:opacity-70 transition-opacity"
-                onClick={() => onNavigate('switch-to-market')}
+                onClick={() => navigateTo('switch-to-market')}
               >
                 <div className="text-xs text-gray-400 mb-1">消费金</div>
                 <div className="text-[15px] font-bold text-gray-800 font-[DINAlternate-Bold,Roboto,sans-serif] leading-tight">
@@ -353,7 +388,7 @@ const Profile: React.FC<ProfileProps> = ({ onNavigate, unreadCount = 0 }) => {
               {/* Row 2, Col 1: Green Power */}
               <div
                 className="flex flex-col cursor-pointer active:opacity-70 transition-opacity"
-                onClick={() => onNavigate('wallet:hashrate_exchange:profile')}
+                onClick={() => navigateTo('wallet:hashrate_exchange:profile')}
               >
                 <div className="text-xs text-gray-400 mb-1 flex items-center gap-1">
                   绿色算力 <Leaf size={10} className="text-green-500" />
@@ -366,7 +401,7 @@ const Profile: React.FC<ProfileProps> = ({ onNavigate, unreadCount = 0 }) => {
               {/* Row 2, Col 2: Rights Fund */}
               <div
                 className="flex flex-col items-end cursor-pointer active:opacity-70 transition-opacity"
-                onClick={() => onNavigate('asset-view:3')}
+                onClick={() => navigateTo('asset-view:3')}
               >
                 <div className="text-xs text-gray-400 mb-1">确权金</div>
                 <div className="text-[15px] font-bold text-gray-800 font-[DINAlternate-Bold,Roboto,sans-serif] leading-tight">
@@ -378,16 +413,13 @@ const Profile: React.FC<ProfileProps> = ({ onNavigate, unreadCount = 0 }) => {
         </div>
       </div>
 
-      {
-        hasError && !userInfo && !errorMessage.includes('登录态过期') && (
-          <div className="mx-4 mt-4 bg-red-50 text-red-600 text-sm px-4 py-2 rounded-lg shadow-sm">
-            {errorMessage}
-          </div>
-        )
-      }
+      {hasError && !userInfo && !errorMessage.includes('登录态过期') && (
+        <div className="mx-4 mt-4 bg-red-50 text-red-600 text-sm px-4 py-2 rounded-lg shadow-sm">
+          {errorMessage}
+        </div>
+      )}
 
       <div className="px-4 mt-2 relative z-10 space-y-4">
-
         {/* Convenient Services - Micro Texture Icons */}
         <div className="bg-white rounded-2xl p-4 shadow-sm">
           <div className="font-bold text-gray-800 text-sm mb-4 flex items-center gap-2">
@@ -396,13 +428,43 @@ const Profile: React.FC<ProfileProps> = ({ onNavigate, unreadCount = 0 }) => {
           </div>
           <div className="grid grid-cols-4 gap-4">
             {[
-              { label: '专项金充值', icon: Wallet, color: 'text-orange-600', bg: 'bg-orange-50', action: () => onNavigate({ name: 'balance-recharge', source: 'asset-view' }) },
-              { label: '每日签到', icon: CalendarCheck, color: 'text-red-500', bg: 'bg-red-50', action: () => onNavigate({ name: 'sign-in' }) },
-              { label: '收益提现', icon: Receipt, color: 'text-orange-500', bg: 'bg-orange-50', action: () => onNavigate({ name: 'balance-withdraw', source: 'asset-view' }) },
-              { label: '消费金兑换', icon: CoinsIcon, color: 'text-yellow-600', bg: 'bg-yellow-50', action: () => onNavigate({ name: 'switch-to-market' }) },
+              {
+                label: '专项金充值',
+                icon: Wallet,
+                color: 'text-orange-600',
+                bg: 'bg-orange-50',
+                action: () => navigateTo({ name: 'balance-recharge', source: 'asset-view' }),
+              },
+              {
+                label: '每日签到',
+                icon: CalendarCheck,
+                color: 'text-red-500',
+                bg: 'bg-red-50',
+                action: () => navigateTo({ name: 'sign-in' }),
+              },
+              {
+                label: '收益提现',
+                icon: Receipt,
+                color: 'text-orange-500',
+                bg: 'bg-orange-50',
+                action: () => navigateTo({ name: 'balance-withdraw', source: 'asset-view' }),
+              },
+              {
+                label: '消费金兑换',
+                icon: CoinsIcon,
+                color: 'text-yellow-600',
+                bg: 'bg-yellow-50',
+                action: () => navigateTo({ name: 'switch-to-market' }),
+              },
             ].map((item, idx) => (
-              <div key={idx} className="flex flex-col items-center cursor-pointer active:opacity-60 group" onClick={item.action}>
-                <div className={`w-11 h-11 rounded-2xl ${item.bg} flex items-center justify-center mb-2 transition-transform group-active:scale-95 relative`}>
+              <div
+                key={idx}
+                className="flex flex-col items-center cursor-pointer active:opacity-60 group"
+                onClick={item.action}
+              >
+                <div
+                  className={`w-11 h-11 rounded-2xl ${item.bg} flex items-center justify-center mb-2 transition-transform group-active:scale-95 relative`}
+                >
                   <item.icon size={20} className={item.color} strokeWidth={2} />
                   {(item as any).badge && (item as any).badge > 0 ? (
                     <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] bg-red-500 rounded-full border-2 border-white flex items-center justify-center text-[10px] text-white px-1">
@@ -427,14 +489,50 @@ const Profile: React.FC<ProfileProps> = ({ onNavigate, unreadCount = 0 }) => {
           </div>
           <div className="grid grid-cols-4 gap-4">
             {[
-              { label: '资产明细', icon: FileText, color: 'text-purple-600', bg: 'bg-purple-50', action: () => onNavigate({ name: 'asset-view' }) },
-              { label: '累计权益', icon: ShieldCheck, color: 'text-green-600', bg: 'bg-green-50', action: () => onNavigate({ name: 'cumulative-rights' }) },
-              { label: '寄售券', icon: Receipt, color: 'text-pink-600', bg: 'bg-pink-50', action: () => onNavigate({ name: 'consignment-voucher' }) },
-              { label: '我的藏品', icon: Box, color: 'text-indigo-600', bg: 'bg-indigo-50', action: () => onNavigate({ name: 'my-collection' }) },
-              { label: '交易订单', icon: ClipboardList, color: 'text-blue-600', bg: 'bg-blue-50', action: () => onNavigate({ name: 'order-list', kind: 'transaction', status: 0 }) },
+              {
+                label: '资产明细',
+                icon: FileText,
+                color: 'text-purple-600',
+                bg: 'bg-purple-50',
+                action: () => navigateTo({ name: 'asset-view' }),
+              },
+              {
+                label: '累计权益',
+                icon: ShieldCheck,
+                color: 'text-green-600',
+                bg: 'bg-green-50',
+                action: () => navigateTo({ name: 'cumulative-rights' }),
+              },
+              {
+                label: '寄售券',
+                icon: Receipt,
+                color: 'text-pink-600',
+                bg: 'bg-pink-50',
+                action: () => navigateTo({ name: 'consignment-voucher' }),
+              },
+              {
+                label: '我的藏品',
+                icon: Box,
+                color: 'text-indigo-600',
+                bg: 'bg-indigo-50',
+                action: () => navigateTo({ name: 'my-collection' }),
+              },
+              {
+                label: '交易订单',
+                icon: ClipboardList,
+                color: 'text-blue-600',
+                bg: 'bg-blue-50',
+                action: () => navigateTo({ name: 'order-list', kind: 'transaction', status: 0 }),
+              },
             ].map((item, idx) => (
-              <div key={idx} className="flex flex-col items-center cursor-pointer active:opacity-60 group" onClick={item.action}>
-                <div className={`w-11 h-11 rounded-2xl ${item.bg} flex items-center justify-center mb-2 transition-transform group-active:scale-95`}>
+              <div
+                key={idx}
+                className="flex flex-col items-center cursor-pointer active:opacity-60 group"
+                onClick={item.action}
+              >
+                <div
+                  className={`w-11 h-11 rounded-2xl ${item.bg} flex items-center justify-center mb-2 transition-transform group-active:scale-95`}
+                >
                   <item.icon size={20} className={item.color} strokeWidth={2} />
                 </div>
                 <span className="text-xs text-gray-600 font-medium">{item.label}</span>
@@ -451,13 +549,47 @@ const Profile: React.FC<ProfileProps> = ({ onNavigate, unreadCount = 0 }) => {
           </div>
           <div className="grid grid-cols-4 gap-4">
             {[
-              { label: '待付款', icon: Coins, color: 'text-orange-500', bg: 'bg-orange-50', action: () => onNavigate({ name: 'order-list', kind: 'points', status: 0 }), badge: orderStats?.pending_count || 0 },
-              { label: '待发货', icon: Package, color: 'text-blue-500', bg: 'bg-blue-50', action: () => onNavigate({ name: 'order-list', kind: 'points', status: 1 }), badge: orderStats?.paid_count || 0 },
-              { label: '待收货', icon: Truck, color: 'text-purple-500', bg: 'bg-purple-50', action: () => onNavigate({ name: 'order-list', kind: 'points', status: 2 }), badge: orderStats?.shipped_count || 0 },
-              { label: '已完成', icon: CheckCircle, color: 'text-green-500', bg: 'bg-green-50', action: () => onNavigate({ name: 'order-list', kind: 'points', status: 3 }), badge: orderStats?.completed_count || 0 },
+              {
+                label: '待付款',
+                icon: Coins,
+                color: 'text-orange-500',
+                bg: 'bg-orange-50',
+                action: () => navigateTo({ name: 'order-list', kind: 'points', status: 0 }),
+                badge: orderStats?.pending_count || 0,
+              },
+              {
+                label: '待发货',
+                icon: Package,
+                color: 'text-blue-500',
+                bg: 'bg-blue-50',
+                action: () => navigateTo({ name: 'order-list', kind: 'points', status: 1 }),
+                badge: orderStats?.paid_count || 0,
+              },
+              {
+                label: '待收货',
+                icon: Truck,
+                color: 'text-purple-500',
+                bg: 'bg-purple-50',
+                action: () => navigateTo({ name: 'order-list', kind: 'points', status: 2 }),
+                badge: orderStats?.shipped_count || 0,
+              },
+              {
+                label: '已完成',
+                icon: CheckCircle,
+                color: 'text-green-500',
+                bg: 'bg-green-50',
+                action: () => navigateTo({ name: 'order-list', kind: 'points', status: 3 }),
+                badge: orderStats?.completed_count || 0,
+              },
             ].map((item, idx) => (
-              <div key={idx} className="flex flex-col items-center cursor-pointer active:opacity-60 group" onClick={item.action}>
-                <div className={`w-11 h-11 rounded-2xl ${item.bg} flex items-center justify-center mb-2 transition-transform group-active:scale-95 relative`}>
+              <div
+                key={idx}
+                className="flex flex-col items-center cursor-pointer active:opacity-60 group"
+                onClick={item.action}
+              >
+                <div
+                  className={`w-11 h-11 rounded-2xl ${item.bg} flex items-center justify-center mb-2 transition-transform group-active:scale-95 relative`}
+                >
                   <item.icon size={20} className={item.color} strokeWidth={2} />
                   {item.badge > 0 && (
                     <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] bg-red-500 rounded-full border-2 border-white flex items-center justify-center text-[10px] text-white px-1">
@@ -479,19 +611,59 @@ const Profile: React.FC<ProfileProps> = ({ onNavigate, unreadCount = 0 }) => {
           </div>
           <div className="grid grid-cols-4 gap-y-6 gap-x-4">
             {[
-              { label: '实名认证', icon: UserCheck, action: () => onNavigate({ name: 'real-name-auth' }) },
-              { label: '卡号管理', icon: CreditCard, action: () => onNavigate({ name: 'card-management' }) },
-              { label: '收货地址', icon: MapPin, action: () => onNavigate({ name: 'address-list' }) },
-              { label: '我的好友', icon: Users, action: () => onNavigate({ name: 'my-friends' }) },
-              { label: '代理认证', icon: UserCheck, action: () => onNavigate({ name: 'agent-auth' }) },
-              { label: '帮助中心', icon: HelpCircle, action: () => onNavigate({ name: 'help-center' }) },
-              { label: '规则协议', icon: FileText, action: () => onNavigate({ name: 'user-agreement' }) },
-              { label: '用户问卷', icon: FileText, action: () => onNavigate({ name: 'user-survey' }) },
-              { label: '活动中心', icon: Gift, action: () => onNavigate({ name: 'activity-center' }) },
-              { label: '在线客服', icon: HeadphonesIcon, action: () => onNavigate({ name: 'online-service' }) },
-              { label: '平台资讯', icon: Newspaper, action: () => onNavigate({ name: 'news' }) },
+              {
+                label: '实名认证',
+                icon: UserCheck,
+                action: () => navigateTo({ name: 'real-name-auth' }),
+              },
+              {
+                label: '卡号管理',
+                icon: CreditCard,
+                action: () => navigateTo({ name: 'card-management' }),
+              },
+              {
+                label: '收货地址',
+                icon: MapPin,
+                action: () => navigateTo({ name: 'address-list' }),
+              },
+              { label: '我的好友', icon: Users, action: () => navigateTo({ name: 'my-friends' }) },
+              {
+                label: '代理认证',
+                icon: UserCheck,
+                action: () => navigateTo({ name: 'agent-auth' }),
+              },
+              {
+                label: '帮助中心',
+                icon: HelpCircle,
+                action: () => navigateTo({ name: 'help-center' }),
+              },
+              {
+                label: '规则协议',
+                icon: FileText,
+                action: () => navigateTo({ name: 'user-agreement' }),
+              },
+              {
+                label: '用户问卷',
+                icon: FileText,
+                action: () => navigateTo({ name: 'user-survey' }),
+              },
+              {
+                label: '活动中心',
+                icon: Gift,
+                action: () => navigateTo({ name: 'activity-center' }),
+              },
+              {
+                label: '在线客服',
+                icon: HeadphonesIcon,
+                action: () => navigateTo({ name: 'online-service' }),
+              },
+              { label: '平台资讯', icon: Newspaper, action: () => navigateTo({ name: 'news' }) },
             ].map((item, idx) => (
-              <div key={idx} className="flex flex-col items-center cursor-pointer active:opacity-60 group" onClick={item.action}>
+              <div
+                key={idx}
+                className="flex flex-col items-center cursor-pointer active:opacity-60 group"
+                onClick={item.action}
+              >
                 <div className="w-11 h-11 rounded-2xl bg-gray-50 flex items-center justify-center mb-2 transition-transform group-active:scale-95">
                   <item.icon size={20} className="text-gray-600" strokeWidth={1.5} />
                 </div>
@@ -500,9 +672,8 @@ const Profile: React.FC<ProfileProps> = ({ onNavigate, unreadCount = 0 }) => {
             ))}
           </div>
         </div>
-
       </div>
-    </div >
+    </div>
   );
 };
 

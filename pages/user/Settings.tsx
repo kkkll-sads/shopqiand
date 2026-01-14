@@ -1,12 +1,12 @@
 /**
  * Settings - 设置页面
  *
- * 使用 PageContainer、ListItem 组件重构
- * 使用 formatPhone 工具函数
+ * 使用 PageContainer、ListItem 组件
+ * 使用 usePageNavigation Hook 进行导航
  * 集成版本检查功能
  *
  * @author 树交所前端团队
- * @version 2.1.0
+ * @version 3.0.0 - 迁移到新路由系统
  */
 
 import React, { useMemo, useState } from 'react';
@@ -16,23 +16,18 @@ import { ListItem, UpdatePromptModal } from '../../components/common';
 import { USER_INFO_KEY, normalizeAssetUrl, checkAppUpdate } from '../../services/api';
 import { UserInfo } from '../../types';
 import { formatPhone } from '../../utils/format';
-import { Route } from '../../router/routes';
 import { AppVersionInfo } from '../../services/app';
 import { APP_VERSION } from '../../constants';
-
-/**
- * Settings 组件属性接口
- */
-interface SettingsProps {
-  onBack: () => void;
-  onLogout: () => void;
-  onNavigate: (route: Route) => void;
-}
+import { usePageNavigation } from '../../src/hooks/usePageNavigation';
+import { useAuthStore } from '../../src/stores/authStore';
 
 /**
  * Settings 设置页面组件
  */
-const Settings: React.FC<SettingsProps> = ({ onBack, onLogout, onNavigate }) => {
+const Settings: React.FC = () => {
+  const { goBack, navigateTo } = usePageNavigation();
+  const { logout } = useAuthStore();
+
   // 版本检查相关状态
   const [isCheckingUpdate, setIsCheckingUpdate] = useState(false);
   const [updateModalVisible, setUpdateModalVisible] = useState(false);
@@ -62,27 +57,24 @@ const Settings: React.FC<SettingsProps> = ({ onBack, onLogout, onNavigate }) => 
 
     setIsCheckingUpdate(true);
     try {
-      // 获取平台类型（这里简单判断为android，可根据实际情况调整）
       const platform = 'android';
-      const currentVersion = APP_VERSION; // 当前版本号
+      const currentVersion = APP_VERSION;
 
       const response = await checkAppUpdate({
         platform,
         current_version: currentVersion,
       });
 
-      if (response.code === 1) {
-        const data = response.data;
-        if (data?.need_update && data?.data) {
-          // 发现新版本，显示更新提示
+      const data = extractData(response);
+      if (data) {
+        if (data.need_update && data.data) {
           setVersionInfo(data.data);
           setUpdateModalVisible(true);
         } else {
-          // 已是最新版本，可以显示提示
           console.log('已是最新版本');
         }
       } else {
-        console.error('检查更新失败:', response.message || response.msg);
+        console.error('检查更新失败:', extractError(response));
       }
     } catch (error) {
       console.error('检查更新出错:', error);
@@ -91,34 +83,32 @@ const Settings: React.FC<SettingsProps> = ({ onBack, onLogout, onNavigate }) => 
     }
   };
 
-  /**
-   * 处理更新模态框确认
-   */
   const handleUpdateConfirm = () => {
     setUpdateModalVisible(false);
     setVersionInfo(null);
   };
 
-  /**
-   * 处理更新模态框取消
-   */
   const handleUpdateCancel = () => {
     setUpdateModalVisible(false);
     setVersionInfo(null);
   };
 
+  /**
+   * 处理退出登录
+   */
+  const handleLogout = () => {
+    logout();
+    navigateTo('login', undefined, { replace: true });
+  };
+
   return (
-    <PageContainer title="设置" onBack={onBack} bgColor="bg-gray-100" padding={false}>
+    <PageContainer title="设置" onBack={goBack} bgColor="bg-gray-100" padding={false}>
       {/* 用户信息卡片 */}
       <div className="bg-white mt-2 px-4 py-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="w-11 h-11 rounded-full bg-yellow-200 flex items-center justify-center text-lg font-bold text-yellow-700 overflow-hidden">
             {displayAvatarUrl ? (
-              <img
-                src={displayAvatarUrl}
-                alt="用户头像"
-                className="w-full h-full object-cover"
-              />
+              <img src={displayAvatarUrl} alt="用户头像" className="w-full h-full object-cover" />
             ) : (
               displayAvatarText
             )}
@@ -126,15 +116,13 @@ const Settings: React.FC<SettingsProps> = ({ onBack, onLogout, onNavigate }) => 
           <div className="flex flex-col">
             <span className="text-sm font-medium text-gray-900">{displayName}</span>
             {displayMobile && displayMobile !== '-' && (
-              <span className="text-xs text-gray-400 mt-0.5">
-                手机号：{displayMobile}
-              </span>
+              <span className="text-xs text-gray-400 mt-0.5">手机号：{displayMobile}</span>
             )}
           </div>
         </div>
         <button
           className="flex items-center text-xs text-gray-500 active:opacity-70"
-          onClick={() => onNavigate({ name: 'edit-profile' })}
+          onClick={() => navigateTo('edit-profile')}
         >
           编辑
           <ChevronRight size={16} className="ml-0.5" />
@@ -145,19 +133,19 @@ const Settings: React.FC<SettingsProps> = ({ onBack, onLogout, onNavigate }) => 
       <div className="mt-3 bg-white">
         <ListItem
           title="重置登录密码"
-          onClick={() => onNavigate({ name: 'reset-login-password', from: 'settings' })}
+          onClick={() => navigateTo('reset-login-password', { from: 'settings' })}
         />
         <ListItem
           title="重置支付密码"
-          onClick={() => onNavigate({ name: 'reset-pay-password', from: 'settings' })}
+          onClick={() => navigateTo('reset-pay-password', { from: 'settings' })}
         />
         <ListItem
           title="新消息通知"
-          onClick={() => onNavigate({ name: 'notification-settings', from: 'settings' })}
+          onClick={() => navigateTo('notification-settings', { from: 'settings' })}
         />
         <ListItem
           title="账户注销"
-          onClick={() => onNavigate({ name: 'account-deletion', from: 'settings' })}
+          onClick={() => navigateTo('account-deletion', { from: 'settings' })}
         />
       </div>
 
@@ -168,9 +156,7 @@ const Settings: React.FC<SettingsProps> = ({ onBack, onLogout, onNavigate }) => 
           extra={
             <div className="flex items-center gap-2">
               <span className="text-gray-400 text-xs">{APP_VERSION}</span>
-              {isCheckingUpdate && (
-                <RefreshCw size={14} className="text-gray-400 animate-spin" />
-              )}
+              {isCheckingUpdate && <RefreshCw size={14} className="text-gray-400 animate-spin" />}
             </div>
           }
           onClick={handleCheckUpdate}
@@ -178,11 +164,11 @@ const Settings: React.FC<SettingsProps> = ({ onBack, onLogout, onNavigate }) => 
         />
         <ListItem
           title="隐私政策"
-          onClick={() => onNavigate({ name: 'privacy-policy', from: 'settings' })}
+          onClick={() => navigateTo('privacy-policy', { from: 'settings' })}
         />
         <ListItem
           title="关于我们"
-          onClick={() => onNavigate({ name: 'about-us', from: 'settings' })}
+          onClick={() => navigateTo('about-us', { from: 'settings' })}
         />
       </div>
 
@@ -190,7 +176,7 @@ const Settings: React.FC<SettingsProps> = ({ onBack, onLogout, onNavigate }) => 
       <div className="mt-8 px-4">
         <button
           className="w-full bg-orange-500 text-white text-sm font-semibold py-3 rounded-md active:opacity-80 shadow-sm"
-          onClick={onLogout}
+          onClick={handleLogout}
         >
           退出登录
         </button>
