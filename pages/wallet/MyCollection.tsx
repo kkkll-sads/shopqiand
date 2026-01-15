@@ -140,39 +140,15 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onBack, onItemSelect, onNav
     setError(null);
 
     try {
-      if (activeTab === 'hold' || activeTab === 'dividend') {
+      if (activeTab === 'hold') {
+        // 持仓中：使用 status=holding 参数
         const res = await getMyCollection({ page, token, status: 'holding' });
         if (isSuccess(res) && res.data) {
           const list = res.data.list || [];
-          const filteredList = list.filter(item => {
-            const dStatus = Number(item.delivery_status) || 0;
-            const miningStatus = Number(item.mining_status) || 0;
-
-            if (activeTab === 'hold') {
-              // 持仓中列表：未提货 (0) 且 未寄售 (0)
-              // 再次确认：用户要求持仓中也显示共识验证节点的藏品
-              const cStatus = Number(item.consignment_status) || 0;
-              return dStatus === DeliveryStatus.NOT_DELIVERED && cStatus === 0;
-            } else {
-              // 权益节点：共识验证节点 (mining_status === 1) 或 已提货
-              return miningStatus === 1 || dStatus === DeliveryStatus.DELIVERED;
-            }
-          });
-
-          console.log('API返回数据:', list.length, '个藏品');
-          console.log('过滤后数据:', filteredList.length, '个藏品');
-          console.log('当前标签页:', activeTab);
-
           if (page === 1) {
-            const deduplicated = deduplicateCollections(filteredList);
-            console.log('去重后数据:', deduplicated.length, '个藏品');
-            setMyCollections(deduplicated);
+            setMyCollections(deduplicateCollections(list));
           } else {
-            setMyCollections(prev => {
-              const combined = deduplicateCollections([...prev, ...filteredList]);
-              console.log('合并去重后数据:', combined.length, '个藏品');
-              return combined;
-            });
+            setMyCollections(prev => deduplicateCollections([...prev, ...list]));
           }
           setHasMore(list.length >= 10 && res.data.has_more !== false);
           if (typeof (res.data as any).consignment_coupon === 'number') {
@@ -180,6 +156,23 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onBack, onItemSelect, onNav
           }
         } else {
           setError(extractError(res, '获取我的藏品失败'));
+        }
+      } else if (activeTab === 'dividend') {
+        // 权益节点（矿机）：使用 status=mining 参数
+        const res = await getMyCollection({ page, token, status: 'mining' });
+        if (isSuccess(res) && res.data) {
+          const list = res.data.list || [];
+          if (page === 1) {
+            setMyCollections(deduplicateCollections(list));
+          } else {
+            setMyCollections(prev => deduplicateCollections([...prev, ...list]));
+          }
+          setHasMore(list.length >= 10 && res.data.has_more !== false);
+          if (typeof (res.data as any).consignment_coupon === 'number') {
+            setConsignmentTicketCount((res.data as any).consignment_coupon);
+          }
+        } else {
+          setError(extractError(res, '获取权益节点列表失败'));
         }
       } else if (activeTab === 'sold') {
         // Use the new status=sold param on myCollection API

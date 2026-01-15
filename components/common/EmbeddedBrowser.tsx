@@ -18,6 +18,7 @@ export const EmbeddedBrowser: React.FC<EmbeddedBrowserProps> = ({
     const [loading, setLoading] = useState(true);
     const [key, setKey] = useState(0); // Used to reload iframe
     const [showInstructionOverlay, setShowInstructionOverlay] = useState(false);
+    const [iframeError, setIframeError] = useState(false);
 
     useEffect(() => {
         if (isOpen && url) {
@@ -35,6 +36,44 @@ export const EmbeddedBrowser: React.FC<EmbeddedBrowserProps> = ({
             return () => clearTimeout(timer);
         }
     }, [isOpen, url]);
+
+    // 检测 iframe 加载错误（X-Frame-Options 限制）
+    useEffect(() => {
+        if (!isOpen || !url) return;
+
+        const checkIframeError = () => {
+            const iframe = document.querySelector('iframe[src="' + url + '"]') as HTMLIFrameElement;
+            if (!iframe) return;
+
+            try {
+                // 尝试访问 iframe 内容，如果被阻止会抛出错误
+                const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
+                if (!iframeDoc) {
+                    setIframeError(true);
+                }
+            } catch (e) {
+                // 捕获跨域或 X-Frame-Options 错误
+                console.warn('iframe 加载受限，将在新窗口打开:', e);
+                setIframeError(true);
+            }
+        };
+
+        // 延迟检查，给 iframe 加载时间
+        const timer = setTimeout(checkIframeError, 2000);
+        return () => clearTimeout(timer);
+    }, [isOpen, url, key]);
+
+    // 如果检测到 iframe 错误，自动在新窗口打开
+    useEffect(() => {
+        if (iframeError && url) {
+            window.open(url, '_blank', 'noopener,noreferrer');
+            // 关闭模态框
+            setTimeout(() => {
+                onClose();
+                setIframeError(false);
+            }, 500);
+        }
+    }, [iframeError, url, onClose]);
 
     if (!isOpen) return null;
 
