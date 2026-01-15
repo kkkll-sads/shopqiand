@@ -141,8 +141,8 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onBack, onItemSelect, onNav
 
     try {
       if (activeTab === 'hold') {
-        // 持仓中：使用 status=holding 参数
-        const res = await getMyCollection({ page, token, status: 'holding' });
+        // 持仓中：使用 status=all 参数
+        const res = await getMyCollection({ page, token, status: 'all' });
         if (isSuccess(res) && res.data) {
           const list = res.data.list || [];
           if (page === 1) {
