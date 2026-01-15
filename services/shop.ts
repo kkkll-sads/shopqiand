@@ -41,12 +41,14 @@ export interface ShopProductListData {
 export interface FetchShopProductsParams {
     page?: number;
     limit?: number;
+    category?: string;
 }
 
 export async function fetchShopProducts(params: FetchShopProductsParams = {}): Promise<ApiResponse<ShopProductListData>> {
     const search = new URLSearchParams();
     if (params.page !== undefined) search.set('page', String(params.page));
     if (params.limit !== undefined) search.set('limit', String(params.limit));
+    if (params.category !== undefined && params.category !== 'all') search.set('category', params.category);
 
     const path = `${API_ENDPOINTS.shopProduct.list}?${search.toString()}`;
     return authedFetch<ShopProductListData>(path, {
@@ -80,6 +82,7 @@ export async function fetchShopProductsBySales(params: FetchShopProductsParams =
     const search = new URLSearchParams();
     if (params.page !== undefined) search.set('page', String(params.page));
     if (params.limit !== undefined) search.set('limit', String(params.limit));
+    if (params.category !== undefined && params.category !== 'all') search.set('category', params.category);
 
     const path = `${API_ENDPOINTS.shopProduct.sales}?${search.toString()}`;
     return authedFetch<ShopProductListData>(path, {
@@ -91,6 +94,7 @@ export async function fetchShopProductsByLatest(params: FetchShopProductsParams 
     const search = new URLSearchParams();
     if (params.page !== undefined) search.set('page', String(params.page));
     if (params.limit !== undefined) search.set('limit', String(params.limit));
+    if (params.category !== undefined && params.category !== 'all') search.set('category', params.category);
 
     const path = `${API_ENDPOINTS.shopProduct.latest}?${search.toString()}`;
     return authedFetch<ShopProductListData>(path, {

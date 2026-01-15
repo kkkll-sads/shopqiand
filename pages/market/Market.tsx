@@ -92,14 +92,20 @@ const Market: React.FC<MarketProps> = ({ onProductSelect }) => {
       }
       setError(null);
 
+      const params = {
+        page: pageNum,
+        limit: PAGE_SIZE,
+        category: selectedCategory
+      };
+
       // 根据 activeFilter 选择不同的接口
       let listRes;
       if (activeFilter === 'sales') {
-        listRes = await fetchShopProductsBySales({ page: pageNum, limit: PAGE_SIZE });
+        listRes = await fetchShopProductsBySales(params);
       } else if (activeFilter === 'new') {
-        listRes = await fetchShopProductsByLatest({ page: pageNum, limit: PAGE_SIZE });
+        listRes = await fetchShopProductsByLatest(params);
       } else {
-        listRes = await fetchShopProducts({ page: pageNum, limit: PAGE_SIZE });
+        listRes = await fetchShopProducts(params);
       }
 
       const remoteList = listRes.data?.list ?? [];
@@ -120,13 +126,13 @@ const Market: React.FC<MarketProps> = ({ onProductSelect }) => {
       setLoading(false);
       setLoadingMore(false);
     }
-  }, [activeFilter]);
+  }, [activeFilter, selectedCategory]);
 
   useEffect(() => {
     setPage(1);
     setProducts([]);
     loadProducts(1, false);
-  }, [activeFilter, loadProducts]);
+  }, [activeFilter, selectedCategory, loadProducts]);
 
   // 滚动加载更多
   const handleScroll = useCallback(() => {
@@ -144,18 +150,14 @@ const Market: React.FC<MarketProps> = ({ onProductSelect }) => {
       const matchesSearch = product.title.includes(searchQuery) ||
         product.artist.includes(searchQuery);
 
-      // Filter by Category
-      // Note: existing mock data mostly has 'painting'.
-      const matchesCategory = selectedCategory === 'all' || product.category === selectedCategory;
-
-      return matchesSearch && matchesCategory;
+      return matchesSearch;
     }).sort((a, b) => {
       // Sort Logic
       if (activeFilter === 'price_asc') return a.price - b.price;
       if (activeFilter === 'price_desc') return b.price - a.price;
       return 0; // Default order
     });
-  }, [products, searchQuery, selectedCategory, activeFilter]);
+  }, [products, searchQuery, activeFilter]);
 
   const handleFilterClick = (filter: string) => {
     if (filter === 'price') {
