@@ -11,7 +11,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Eye, EyeOff, User, Lock, Check, HeadphonesIcon } from 'lucide-react';
-import { login as loginApi, LoginParams, fetchProfile } from '../../services/api';
+import { login as loginApi, LoginParams, fetchProfile, fetchRealNameStatus } from '../../services/api';
 import { useNotification } from '../../context/NotificationContext';
 import { bizLog, debugLog } from '../../utils/logger';
 import { isSuccess } from '../../utils/apiHelpers';
@@ -250,8 +250,11 @@ const Login: React.FC = () => {
 
         showToast('success', '登录成功', response.msg);
         
-        // ✅ 获取完整的用户信息（包含实名状态）
+        // ✅ 获取完整的用户信息
         let fullUserInfo = response.data?.userInfo || null;
+        let realNameStatus = 0;
+        let realName = '';
+        
         try {
           const profileRes = await fetchProfile(token);
           if (isSuccess(profileRes) && profileRes.data?.userInfo) {
@@ -261,20 +264,35 @@ const Login: React.FC = () => {
               ...profileRes.data.userInfo,
               token, // 保留 token
             };
-            debugLog('auth.login.page', '获取用户信息成功', {
-              real_name_status: fullUserInfo.real_name_status,
-              real_name: fullUserInfo.real_name,
-            });
           }
         } catch (e) {
           console.warn('获取用户信息失败，使用登录返回的基础信息:', e);
         }
         
-        // ✅ 使用 Zustand store 管理登录状态（包含实名状态）
+        // ✅ 单独获取实名认证状态
+        try {
+          const realNameRes = await fetchRealNameStatus(token);
+          if (isSuccess(realNameRes) && realNameRes.data) {
+            realNameStatus = realNameRes.data.real_name_status || 0;
+            realName = realNameRes.data.real_name || '';
+            debugLog('auth.login.page', '获取实名状态成功', {
+              real_name_status: realNameStatus,
+              real_name: realName,
+            });
+          }
+        } catch (e) {
+          console.warn('获取实名状态失败:', e);
+        }
+        
+        // ✅ 使用 Zustand store 管理登录状态
         loginToStore({
           token,
           userInfo: fullUserInfo,
         });
+        
+        // ✅ 更新实名认证状态
+        const { updateRealNameStatus } = useAuthStore.getState();
+        updateRealNameStatus(realNameStatus, realName);
         
         // ✅ 登录成功后跳转到首页
         navigateTo({ name: 'home' });
