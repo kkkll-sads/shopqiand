@@ -1,12 +1,12 @@
 /**
  * Settings 页面包装器
- * Settings 已迁移到新路由系统，不需要传递 props
  */
 import React from 'react';
 import Settings from '../../../pages/user/Settings';
+import { withNavigation } from '../../hoc/withNavigation';
 
-const SettingsWrapper: React.FC = () => {
-  return <Settings />;
-};
+const SettingsWithNav = withNavigation(Settings);
+
+const SettingsWrapper: React.FC = () => <SettingsWithNav />;
 
 export default SettingsWrapper;

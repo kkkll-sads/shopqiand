@@ -1,13 +1,12 @@
 /**
- * Register 页面包装器（简化版）
- * 
- * ✅ 已简化：Register页面已迁移到新路由系统，不再需要Props
+ * Register 页面包装器
  */
 import React from 'react';
 import Register from '../../../pages/auth/Register';
+import { withNavigation } from '../../hoc/withNavigation';
 
-const RegisterWrapper: React.FC = () => {
-  return <Register />;
-};
+const RegisterWithNav = withNavigation(Register);
+
+const RegisterWrapper: React.FC = () => <RegisterWithNav />;
 
 export default RegisterWrapper;

@@ -1,12 +1,12 @@
 /**
  * ForgotPassword 页面包装器
- * ForgotPassword 已迁移到新路由系统
  */
 import React from 'react';
 import ForgotPassword from '../../../pages/auth/ForgotPassword';
+import { withNavigation } from '../../hoc/withNavigation';
 
-const ForgotPasswordWrapper: React.FC = () => {
-  return <ForgotPassword />;
-};
+const ForgotPasswordWithNav = withNavigation(ForgotPassword);
+
+const ForgotPasswordWrapper: React.FC = () => <ForgotPasswordWithNav />;
 
 export default ForgotPasswordWrapper;

@@ -1,6 +1,9 @@
 import React from 'react';
 import ServiceRecharge from '../../../pages/wallet/ServiceRecharge';
+import { withNavigation } from '../../hoc/withNavigation';
 
-const ServiceRechargeWrapper: React.FC = () => <ServiceRecharge />;
+const ServiceRechargeWithNav = withNavigation(ServiceRecharge);
+
+const ServiceRechargeWrapper: React.FC = () => <ServiceRechargeWithNav />;
 
 export default ServiceRechargeWrapper;

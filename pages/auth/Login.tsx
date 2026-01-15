@@ -11,7 +11,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Eye, EyeOff, User, Lock, Check, HeadphonesIcon } from 'lucide-react';
-import { login as loginApi, LoginParams } from '../../services/api';
+import { login as loginApi, LoginParams, fetchProfile } from '../../services/api';
 import { useNotification } from '../../context/NotificationContext';
 import { bizLog, debugLog } from '../../utils/logger';
 import { isSuccess } from '../../utils/apiHelpers';
@@ -250,10 +250,30 @@ const Login: React.FC = () => {
 
         showToast('success', '登录成功', response.msg);
         
-        // ✅ 使用 Zustand store 管理登录状态
+        // ✅ 获取完整的用户信息（包含实名状态）
+        let fullUserInfo = response.data?.userInfo || null;
+        try {
+          const profileRes = await fetchProfile(token);
+          if (isSuccess(profileRes) && profileRes.data?.userInfo) {
+            // 合并登录返回的 userInfo 和 profile 返回的 userInfo
+            fullUserInfo = {
+              ...fullUserInfo,
+              ...profileRes.data.userInfo,
+              token, // 保留 token
+            };
+            debugLog('auth.login.page', '获取用户信息成功', {
+              real_name_status: fullUserInfo.real_name_status,
+              real_name: fullUserInfo.real_name,
+            });
+          }
+        } catch (e) {
+          console.warn('获取用户信息失败，使用登录返回的基础信息:', e);
+        }
+        
+        // ✅ 使用 Zustand store 管理登录状态（包含实名状态）
         loginToStore({
           token,
-          userInfo: response.data?.userInfo || null,
+          userInfo: fullUserInfo,
         });
         
         // ✅ 登录成功后跳转到首页

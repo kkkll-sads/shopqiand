@@ -44,10 +44,18 @@ export const useAuthStore = create<AuthState>()(
 
       // 登录
       login: (payload) => {
+        const userInfo = payload?.userInfo || get().user;
+        // 从 userInfo 中提取实名状态 (real_name_status === 2 表示已通过)
+        const realNameStatus = userInfo?.real_name_status ?? null;
+        const isVerified = realNameStatus === 2;
+        
         set({
           isLoggedIn: true,
           token: payload?.token || get().token,
-          user: payload?.userInfo || get().user,
+          user: userInfo,
+          realNameStatus: realNameStatus,
+          realName: userInfo?.real_name || get().realName,
+          isRealNameVerified: isVerified,
         });
       },
 

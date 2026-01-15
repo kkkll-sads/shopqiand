@@ -26,6 +26,7 @@ import {
 import { getStoredToken } from '../services/client';
 import { withErrorHandling, extractError } from '../utils/apiHelpers';
 import { RealNameStatus } from '../constants/statusEnums';
+import { useAuthStore } from '../src/stores/authStore';
 
 /**
  * 实名认证状态枚举
@@ -261,6 +262,8 @@ export function useRealNameAuth(): UseRealNameAuthReturn {
 
       // 根据认证状态分发到不同状态
       if (data.real_name_status === RealNameStatus.APPROVED) {
+        // ✅ 同步更新 authStore 中的实名状态（确保状态一致）
+        useAuthStore.getState().setRealNameVerified(true, data.real_name || '');
         send(RealNameEvent.LOAD_SUCCESS_VERIFIED, {
           status: data,
           realName: data.real_name || '',
@@ -397,7 +400,9 @@ export function useRealNameAuth(): UseRealNameAuthReturn {
       );
 
       if (result) {
-        showToast('success', '提交成功', '实名认证提交成功，请等待审核');
+        showToast('success', '提交成功', '实名认证提交成功');
+        // ✅ 更新 authStore 中的实名状态
+        useAuthStore.getState().setRealNameVerified(true, context.realName);
         send(RealNameEvent.SUBMIT_SUCCESS);
       }
     } catch (e: any) {
