@@ -43,7 +43,7 @@ const publicRoutes = [
 ];
 
 // 需要登录但不需要实名的路由
-const authOnlyRoutes = ['/real-name-auth', '/settings', '/profile'];
+const authOnlyRoutes = ['/real-name-auth', '/settings', '/profile', '/live', '/rights'];
 
 const MainLayout: React.FC = () => {
   const location = useLocation();
