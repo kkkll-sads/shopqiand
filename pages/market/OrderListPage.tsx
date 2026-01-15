@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import SubPageLayout from '../../components/SubPageLayout';
 import { LoadingSpinner, EmptyState, LazyImage } from '../../components/common';
@@ -28,7 +29,6 @@ import {
 } from '../../services/api';
 import { getStoredToken } from '../../services/client';
 import { useNotification } from '../../context/NotificationContext';
-import { Route } from '../../router/routes';
 // ✅ 引入统一 API 处理工具
 import { isSuccess, extractData, extractError } from '../../utils/apiHelpers';
 import OrderTabs from './components/orders/OrderTabs';
@@ -37,14 +37,17 @@ import ProductOrderList from './components/orders/ProductOrderList';
 import PointDeliveryOrderList from './components/orders/PointDeliveryOrderList';
 import ConsignmentDetailModal from './components/orders/ConsignmentDetailModal';
 
-interface OrderListPageProps {
-  category: 'product' | 'transaction' | 'delivery' | 'points';
-  initialTab: number;
-  onBack: () => void;
-  onNavigate: (route: Route) => void;
-}
+type OrderCategory = 'product' | 'transaction' | 'delivery' | 'points';
 
-const OrderListPage: React.FC<OrderListPageProps> = ({ category, initialTab, onBack, onNavigate }) => {
+const OrderListPage: React.FC = () => {
+  const navigate = useNavigate();
+  const { category: categoryParam, status } = useParams<{ category?: string; status?: string }>();
+  const category = useMemo<OrderCategory>(() => {
+    const value = categoryParam as OrderCategory;
+    return value && ['product', 'transaction', 'delivery', 'points'].includes(value) ? value : 'product';
+  }, [categoryParam]);
+  const initialTab = useMemo(() => (status ? parseInt(status, 10) || 0 : 0), [status]);
+
   const [activeTab, setActiveTab] = useState(initialTab);
   const [orders, setOrders] = useState<ShopOrderItem[]>([]);
   const [consignmentOrders, setConsignmentOrders] = useState<MyConsignmentItem[]>([]);
@@ -59,6 +62,10 @@ const OrderListPage: React.FC<OrderListPageProps> = ({ category, initialTab, onB
   const [showConsignmentDetailModal, setShowConsignmentDetailModal] = useState(false);
   const [selectedConsignmentDetail, setSelectedConsignmentDetail] = useState<ConsignmentDetailData | null>(null);
   const [loadingConsignmentDetail, setLoadingConsignmentDetail] = useState(false);
+
+  useEffect(() => {
+    setActiveTab(initialTab);
+  }, [initialTab]);
 
   const getPageConfig = () => {
     switch (category) {
@@ -89,23 +96,26 @@ const OrderListPage: React.FC<OrderListPageProps> = ({ category, initialTab, onB
 
   const config = getPageConfig();
 
+  const handleBack = () => {
+    navigate(-1);
+  };
+
   // ... (fetch logic remains same)
 
   // Navigate to Detail Page instead of Modal
   const handleViewDetail = (id: number) => {
-    const backRoute: Route = { name: 'order-list', kind: category, status: activeTab };
-    onNavigate({ name: 'order-detail', orderId: String(id), back: backRoute });
+    navigate(`/order/${String(id)}`);
   };
 
   // Navigate to Collection Order Detail
   const handleViewCollectionOrderDetail = (id?: number | string, orderNo?: string) => {
-    const backRoute: Route = { name: 'order-list', kind: category, status: activeTab };
-    onNavigate({
-      name: 'collection-order-detail',
-      id,
-      orderNo,
-      back: backRoute,
-    });
+    if (id) {
+      navigate(`/collection-order/${String(id)}`);
+      return;
+    }
+    if (orderNo) {
+      navigate(`/collection-order?orderNo=${encodeURIComponent(String(orderNo))}`);
+    }
   };
 
   // ... (other handlers)
@@ -747,7 +757,7 @@ const OrderListPage: React.FC<OrderListPageProps> = ({ category, initialTab, onB
             <button
               className="p-2 -ml-2 hover:bg-white/30 rounded-full transition-colors"
               aria-label="返回"
-              onClick={onBack}
+            onClick={handleBack}
             >
               <ArrowLeft className="w-5 h-5" />
             </button>
@@ -789,7 +799,7 @@ const OrderListPage: React.FC<OrderListPageProps> = ({ category, initialTab, onB
   }
 
   return (
-    <SubPageLayout title={config.title} onBack={onBack}>
+    <SubPageLayout title={config.title} onBack={handleBack}>
       <OrderTabs tabs={config.tabs} activeTab={activeTab} onChange={setActiveTab} />
 
       {/* Order List */}

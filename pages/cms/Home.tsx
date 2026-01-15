@@ -1,17 +1,16 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Building2, Newspaper, Palette, Trophy, ChevronRight, UserCheck, TreeDeciduous, Search, Wallet, Vault, Zap, FileBadge, ClipboardList, Clock, CheckCircle2, AlertCircle } from 'lucide-react';
 import { Banner, Artist, NewsItem } from '../../types';
 import { fetchBanners, fetchArtists, normalizeAssetUrl, ArtistApiItem, fetchReservations, ReservationItem, ReservationStatus } from '../../services/api';
-import { Route } from '../../router/routes';
 import { isSuccess } from '../../utils/apiHelpers';
 
 interface HomeProps {
-  onNavigate: (route: Route) => void;
-  onSwitchTab: (tab: string) => void;
   announcements?: NewsItem[];
 }
 
-const Home: React.FC<HomeProps> = ({ onNavigate, onSwitchTab, announcements = [] }) => {
+const Home: React.FC<HomeProps> = ({ announcements = [] }) => {
+  const navigate = useNavigate();
   const [currentBanner, setCurrentBanner] = useState(0);
   const [noticeIndex, setNoticeIndex] = useState(0);
   const [banners, setBanners] = useState<Banner[]>([]);
@@ -22,6 +21,37 @@ const Home: React.FC<HomeProps> = ({ onNavigate, onSwitchTab, announcements = []
   const touchEndRef = useRef(0);
   const bannerTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const noticeTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const handleNavigate = (routeName: string, params?: { id?: string | number }) => {
+    switch (routeName) {
+      case 'balance-recharge':
+        navigate('/balance-recharge');
+        return;
+      case 'balance-withdraw':
+        navigate('/balance-withdraw');
+        return;
+      case 'hashrate-exchange':
+        navigate('/hashrate-exchange');
+        return;
+      case 'cumulative-rights':
+        navigate('/cumulative-rights');
+        return;
+      case 'search':
+        navigate('/search');
+        return;
+      case 'trading-zone':
+        navigate('/trading-zone');
+        return;
+      case 'reservation-record':
+        navigate('/reservation-record');
+        return;
+      case 'news-detail':
+        navigate(`/news/${params?.id ?? ''}`);
+        return;
+      default:
+        navigate('/');
+    }
+  };
 
   // Banner Auto-play
   const startBannerTimer = () => {
@@ -182,28 +212,28 @@ const Home: React.FC<HomeProps> = ({ onNavigate, onSwitchTab, announcements = []
       icon: Wallet,
       color: 'text-orange-500',
       bgColor: 'bg-orange-50',
-      action: () => onNavigate({ name: 'balance-recharge', source: 'asset-view' })
+      action: () => handleNavigate('balance-recharge')
     },
     {
       label: '收益提现',
       icon: Vault,
       color: 'text-orange-500',
       bgColor: 'bg-orange-50',
-      action: () => onNavigate({ name: 'balance-withdraw', source: 'asset-view' })
+      action: () => handleNavigate('balance-withdraw')
     },
     {
       label: '算力补充',
       icon: Zap,
       color: 'text-orange-500',
       bgColor: 'bg-orange-50',
-      action: () => onNavigate({ name: 'hashrate-exchange', source: 'asset-view' })
+      action: () => handleNavigate('hashrate-exchange')
     },
     {
       label: '确权申报',
       icon: FileBadge,
       color: 'text-orange-500',
       bgColor: 'bg-orange-50',
-      action: () => onNavigate({ name: 'cumulative-rights' })
+      action: () => handleNavigate('cumulative-rights')
     },
   ];
 
@@ -216,7 +246,7 @@ const Home: React.FC<HomeProps> = ({ onNavigate, onSwitchTab, announcements = []
       <header className="px-4 py-3 fixed top-0 left-0 right-0 z-20 bg-gradient-to-r from-[#FFD6A5] to-[#FFC3A0] shadow-sm max-w-md mx-auto">
         <div
           className="flex items-center bg-white rounded-full p-1 pl-4 shadow-sm cursor-pointer active:scale-[0.99] transition-transform"
-          onClick={() => onNavigate({ name: 'search' })}
+          onClick={() => handleNavigate('search')}
         >
           <Search size={16} className="text-gray-400 mr-2 flex-shrink-0" />
           <span className="text-sm text-gray-400 flex-1 truncate">数据资产溯源查询...</span>
@@ -269,7 +299,7 @@ const Home: React.FC<HomeProps> = ({ onNavigate, onSwitchTab, announcements = []
             if (announcements.length) {
               const targetId = announcements[noticeIndex]?.id;
               if (targetId) {
-                onNavigate({ name: 'news-detail', id: targetId, back: null });
+                handleNavigate('news-detail', { id: targetId });
               }
             }
           }}
@@ -313,7 +343,7 @@ const Home: React.FC<HomeProps> = ({ onNavigate, onSwitchTab, announcements = []
       <div className="px-4 py-2 mb-2 relative z-0">
         <div
           className="w-full h-24 rounded-xl overflow-hidden relative shadow-md cursor-pointer transform transition active:scale-95 duration-200 group bg-gradient-to-r from-[#FFD6A5] to-[#FFC3A0]"
-          onClick={() => onNavigate({ name: 'trading-zone' })}
+          onClick={() => handleNavigate('trading-zone')}
         >
           <div className="absolute inset-0 flex flex-col items-center justify-center">
             <h2 className="text-2xl font-bold text-white tracking-widest drop-shadow-md">交易专区</h2>
@@ -329,7 +359,7 @@ const Home: React.FC<HomeProps> = ({ onNavigate, onSwitchTab, announcements = []
             申购记录
           </h2>
           <button
-            onClick={() => onNavigate({ name: 'reservation-record' })}
+            onClick={() => handleNavigate('reservation-record')}
             className="text-gray-400 flex items-center text-xs bg-gray-50 px-2 py-1 rounded-full"
           >
             全部记录 <ChevronRight size={14} />
@@ -382,7 +412,7 @@ const Home: React.FC<HomeProps> = ({ onNavigate, onSwitchTab, announcements = []
                 <div
                   key={record.id}
                   className="bg-gray-50 rounded-xl p-3 flex flex-col gap-2 active:scale-[0.99] transition-transform cursor-pointer"
-                  onClick={() => onNavigate({ name: 'reservation-record' })}
+                  onClick={() => handleNavigate('reservation-record')}
                 >
                   <div className="flex justify-between items-start">
                     <div>

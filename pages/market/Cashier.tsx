@@ -11,19 +11,14 @@
  */
 
 import React from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { LoadingSpinner } from '../../components/common';
 import { Coins, CreditCard, ChevronLeft } from 'lucide-react';
-import { Route, RoutePayload } from '../../router/routes';
 import { useCashier } from '../../hooks/useCashier';
 
-interface CashierProps {
-  orderId: string;
-  backRoute?: RoutePayload | null;
-  onBack: () => void;
-  onNavigate: (route: Route) => void;
-}
-
-const Cashier: React.FC<CashierProps> = ({ orderId, backRoute, onBack, onNavigate }) => {
+const Cashier: React.FC = () => {
+  const navigate = useNavigate();
+  const { orderId = '' } = useParams<{ orderId?: string }>();
   // ✅ 使用状态机Hook管理所有状态和业务逻辑
   const {
     state,
@@ -42,14 +37,10 @@ const Cashier: React.FC<CashierProps> = ({ orderId, backRoute, onBack, onNavigat
   // 支付成功后跳转
   React.useEffect(() => {
     if (isSuccess) {
-      onNavigate({
-        name: 'order-list',
-        kind: payType === 'score' ? 'points' : 'product',
-        status: 1,
-        back: backRoute || null,
-      });
+      const category = payType === 'score' ? 'points' : 'product';
+      navigate(`/orders/${category}/1`);
     }
-  }, [isSuccess, payType, backRoute, onNavigate]);
+  }, [isSuccess, payType, navigate]);
 
   // 加载中状态
   if (isLoading) {
@@ -103,7 +94,7 @@ const Cashier: React.FC<CashierProps> = ({ orderId, backRoute, onBack, onNavigat
     <div className="min-h-screen bg-gray-50 pb-safe">
       {/* Header */}
       <header className="bg-white px-4 py-3 flex items-center justify-between sticky top-0 z-10">
-        <button onClick={onBack} className="p-2 -ml-2 text-gray-800">
+        <button onClick={() => navigate(-1)} className="p-2 -ml-2 text-gray-800">
           <ChevronLeft size={24} />
         </button>
         <h1 className="text-lg font-bold text-gray-900">收银台</h1>

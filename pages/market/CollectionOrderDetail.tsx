@@ -8,6 +8,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Clock, CreditCard, ShoppingBag, FileText, CheckCircle, XCircle, AlertCircle, ShieldCheck, Copy, Package, Calendar, Receipt, Check } from 'lucide-react';
 import PageContainer from '../../components/layout/PageContainer';
 import { LoadingSpinner, LazyImage } from '../../components/common';
@@ -18,14 +19,11 @@ import { formatTime, formatAmount } from '../../utils/format';
 import { getStoredToken } from '../../services/client';
 import { useNotification } from '../../context/NotificationContext';
 
-interface CollectionOrderDetailProps {
-  id?: number | string;
-  orderNo?: string;
-  onBack: () => void;
-  onNavigate?: (route: any) => void;
-}
-
-const CollectionOrderDetail: React.FC<CollectionOrderDetailProps> = ({ id, orderNo, onBack, onNavigate }) => {
+const CollectionOrderDetail: React.FC = () => {
+  const navigate = useNavigate();
+  const { id } = useParams<{ id?: string }>();
+  const [searchParams] = useSearchParams();
+  const orderNo = searchParams.get('orderNo') || undefined;
   const { showToast } = useNotification();
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -114,7 +112,7 @@ const CollectionOrderDetail: React.FC<CollectionOrderDetailProps> = ({ id, order
 
   if (loading) {
     return (
-      <PageContainer title="订单详情" onBack={onBack}>
+      <PageContainer title="订单详情" onBack={() => navigate(-1)}>
         <LoadingSpinner text="加载中..." />
       </PageContainer>
     );
@@ -122,7 +120,7 @@ const CollectionOrderDetail: React.FC<CollectionOrderDetailProps> = ({ id, order
 
   if (error || !order) {
     return (
-      <PageContainer title="订单详情" onBack={onBack}>
+      <PageContainer title="订单详情" onBack={() => navigate(-1)}>
         <div className="flex flex-col items-center justify-center py-20 text-red-400">
           <div className="w-16 h-16 mb-4 border-2 border-red-200 rounded-lg flex items-center justify-center">
             <Package size={32} className="opacity-50" />
@@ -141,7 +139,7 @@ const CollectionOrderDetail: React.FC<CollectionOrderDetailProps> = ({ id, order
   ];
 
   return (
-    <PageContainer title="订单详情" onBack={onBack}>
+    <PageContainer title="订单详情" onBack={() => navigate(-1)}>
       <div className="space-y-4 pb-safe">
         {/* 订单状态横幅 */}
         <div className="bg-gradient-to-br from-orange-500 to-orange-600 rounded-2xl p-6 text-white shadow-lg mx-4">

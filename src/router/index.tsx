@@ -62,6 +62,7 @@ const ReservationPage = lazy(() => import('../pages/market/ReservationPageWrappe
 const ReservationRecordPage = lazy(() => import('../pages/market/ReservationRecordPageWrapper'));
 const OrderListPage = lazy(() => import('../pages/market/OrderListPageWrapper'));
 const OrderDetail = lazy(() => import('../pages/market/OrderDetailWrapper'));
+const CollectionOrderDetail = lazy(() => import('../pages/market/CollectionOrderDetailWrapper'));
 const Cashier = lazy(() => import('../pages/market/CashierWrapper'));
 
 // 钱包/资产页面
@@ -69,6 +70,8 @@ const AssetView = lazy(() => import('../pages/wallet/AssetViewWrapper'));
 const AssetHistory = lazy(() => import('../pages/wallet/AssetHistoryWrapper'));
 const BalanceRecharge = lazy(() => import('../pages/wallet/BalanceRechargeWrapper'));
 const BalanceWithdraw = lazy(() => import('../pages/wallet/BalanceWithdrawWrapper'));
+const RechargeOrderDetail = lazy(() => import('../pages/wallet/RechargeOrderDetailWrapper'));
+const WithdrawOrderDetail = lazy(() => import('../pages/wallet/WithdrawOrderDetailWrapper'));
 const ServiceRecharge = lazy(() => import('../pages/wallet/ServiceRechargeWrapper'));
 const ExtensionWithdraw = lazy(() => import('../pages/wallet/ExtensionWithdrawWrapper'));
 const CardManagement = lazy(() => import('../pages/wallet/CardManagementWrapper'));
@@ -287,6 +290,14 @@ const routes: RouteObject[] = [
         element: <LazyComponent component={OrderDetail} />,
       },
       {
+        path: '/collection-order',
+        element: <LazyComponent component={CollectionOrderDetail} />,
+      },
+      {
+        path: '/collection-order/:id',
+        element: <LazyComponent component={CollectionOrderDetail} />,
+      },
+      {
         path: '/cashier/:orderId',
         element: <LazyComponent component={Cashier} />,
       },
@@ -306,6 +317,14 @@ const routes: RouteObject[] = [
       {
         path: '/balance-withdraw',
         element: <LazyComponent component={BalanceWithdraw} />,
+      },
+      {
+        path: '/recharge-order/:orderId',
+        element: <LazyComponent component={RechargeOrderDetail} />,
+      },
+      {
+        path: '/withdraw-order/:orderId',
+        element: <LazyComponent component={WithdrawOrderDetail} />,
       },
       {
         path: '/service-recharge',

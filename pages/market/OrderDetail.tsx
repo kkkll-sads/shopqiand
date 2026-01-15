@@ -1,22 +1,18 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Package, Phone, MapPin, Copy, Check, Truck, Calendar, Gift, CheckCircle } from 'lucide-react';
 import { LoadingSpinner, LazyImage } from '../../components/common';
 import { formatTime, formatAmount } from '../../utils/format';
 import { getOrderDetail, ShopOrderItem, confirmOrder, normalizeAssetUrl, payOrder, cancelOrder } from '../../services/api';
 import { getStoredToken } from '../../services/client';
 import { useNotification } from '../../context/NotificationContext';
-import { Route } from '../../router/routes';
 import { ShopOrderPayStatus, ShopOrderShippingStatus } from '../../constants/statusEnums';
 import { isSuccess, extractError } from '../../utils/apiHelpers';
 import { useErrorHandler } from '../../hooks/useErrorHandler';
 
-interface OrderDetailProps {
-    orderId: string;
-    onBack: () => void;
-    onNavigate: (route: Route) => void;
-}
-
-const OrderDetail: React.FC<OrderDetailProps> = ({ orderId, onBack, onNavigate }) => {
+const OrderDetail: React.FC = () => {
+    const navigate = useNavigate();
+    const { orderId = '' } = useParams<{ orderId?: string }>();
     const { showToast, showDialog } = useNotification();
     const [copiedOrderNo, setCopiedOrderNo] = useState(false);
 
@@ -51,7 +47,7 @@ const OrderDetail: React.FC<OrderDetailProps> = ({ orderId, onBack, onNavigate }
                     showToast('error', '订单不存在');
                     // 延迟一下再跳转，让用户看到提示
                     setTimeout(() => {
-                        onNavigate({ name: 'order-list' });
+                        navigate('/orders/product/0');
                     }, 1500);
                     return;
                 }
@@ -107,7 +103,7 @@ const OrderDetail: React.FC<OrderDetailProps> = ({ orderId, onBack, onNavigate }
                 }
             });
         } else {
-            onNavigate({ name: 'cashier', orderId: targetId, back: { name: 'order-detail', orderId: targetId } });
+            navigate(`/cashier/${targetId}`);
         }
     };
 
@@ -237,7 +233,7 @@ const OrderDetail: React.FC<OrderDetailProps> = ({ orderId, onBack, onNavigate }
             <header className="bg-white border-b border-gray-100 sticky top-0 z-10 shadow-sm">
                 <div className="flex items-center h-14 px-4">
                     <button
-                        onClick={onBack}
+                        onClick={() => navigate(-1)}
                         className="p-2 -ml-2 hover:bg-gray-50 rounded-full transition-colors"
                         aria-label="返回"
                     >

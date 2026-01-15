@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { MessageSquare, FileText, Bell, CheckCircle, AlertCircle, Info, Package, Truck, Wallet, Receipt } from 'lucide-react';
 import SubPageLayout from '../../components/SubPageLayout';
 import { LoadingSpinner, EmptyState } from '../../components/common';
@@ -16,16 +17,11 @@ import {
   ShopOrderItem,
 } from '../../services/api';
 import { getStoredToken } from '../../services/client';
-import { Route } from '../../router/routes';
 // ✅ 引入统一 API 处理工具
 import { extractData } from '../../utils/apiHelpers';
 // ✅ 引入枚举常量替换魔法数字
 import { RechargeOrderStatus, WithdrawOrderStatus } from '../../constants/statusEnums';
-
-interface MessageCenterProps {
-  onBack: () => void;
-  onNavigate: (route: Route) => void;
-}
+import { STORAGE_KEYS } from '../../constants/storageKeys';
 
 interface MessageItem {
   id: string;
@@ -41,7 +37,8 @@ interface MessageItem {
   sourceId?: string | number; // 原始数据ID，用于跳转
 }
 
-const MessageCenter: React.FC<MessageCenterProps> = ({ onBack, onNavigate }) => {
+const MessageCenter: React.FC = () => {
+  const navigate = useNavigate();
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [messages, setMessages] = useState<MessageItem[]>([]);
@@ -570,39 +567,23 @@ const MessageCenter: React.FC<MessageCenterProps> = ({ onBack, onNavigate }) => 
       case 'notice':
       case 'activity':
         if (message.sourceId) {
-          onNavigate({
-            name: 'news-detail',
-            id: String(message.sourceId),
-            back: { name: 'message-center' },
-          });
+          navigate(`/news/${String(message.sourceId)}`);
         }
         break;
       case 'recharge':
         if (message.sourceId) {
-          onNavigate({
-            name: 'recharge-order-detail',
-            orderId: String(message.sourceId),
-            back: { name: 'message-center' }
-          });
+          navigate(`/recharge-order/${String(message.sourceId)}`);
         }
         break;
       case 'withdraw':
         if (message.sourceId) {
-          onNavigate({
-            name: 'withdraw-order-detail',
-            orderId: String(message.sourceId),
-            back: { name: 'message-center' }
-          });
+          navigate(`/withdraw-order/${String(message.sourceId)}`);
         }
         break;
       case 'shop_order':
         // 商城订单，跳转到订单详情页
         if (message.sourceId) {
-          onNavigate({
-            name: 'order-detail',
-            orderId: String(message.sourceId),
-            back: { name: 'message-center' }
-          });
+          navigate(`/order/${String(message.sourceId)}`);
         }
         break;
       default:
@@ -614,7 +595,7 @@ const MessageCenter: React.FC<MessageCenterProps> = ({ onBack, onNavigate }) => 
   return (
     <SubPageLayout
       title="消息中心"
-      onBack={onBack}
+      onBack={() => navigate(-1)}
       rightAction={
         unreadCount > 0 ? (
           <button
