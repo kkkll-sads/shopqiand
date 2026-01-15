@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ChevronLeft, Clock, CheckCircle2, AlertCircle, FileText, ImageIcon, Copy } from 'lucide-react';
 import { useNotification } from '../../context/NotificationContext';
 import { getRightsDeclarationDetail, RightsDeclarationDetail } from '../../services/rightsDeclaration';
-import { AUTH_TOKEN_KEY } from '../../constants/storageKeys';
+import { getStoredToken } from '../../services/client';
 import { isSuccess, extractError } from '../../utils/apiHelpers';
 
 interface ClaimDetailProps {
@@ -22,7 +22,7 @@ const ClaimDetail: React.FC<ClaimDetailProps> = ({ id, onBack }) => {
     const loadDetail = async () => {
         setLoading(true);
         try {
-            const token = localStorage.getItem(AUTH_TOKEN_KEY);
+            const token = getStoredToken();
             if (!token) {
                 showToast('error', '登录过期', '请重新登录');
                 return;

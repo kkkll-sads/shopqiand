@@ -2,7 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { ChevronLeft, Zap, Server, Shield, Leaf, Activity } from 'lucide-react';
 import { LoadingSpinner } from '../../components/common';
 
-import { fetchProfile, exchangeScoreToGreenPower, USER_INFO_KEY, AUTH_TOKEN_KEY } from '../../services/api';
+import { fetchProfile, exchangeScoreToGreenPower } from '../../services/api';
+import { getStoredToken } from '../../services/client';
+import { useAuthStore } from '../../src/stores/authStore';
 import { UserInfo } from '../../types';
 import { useNotification } from '../../context/NotificationContext';
 import { Route } from '../../router/routes';
@@ -30,14 +32,14 @@ const HashrateExchange: React.FC<HashrateExchangeProps> = ({ onBack, onNavigate 
     }, []);
 
     const loadUserInfo = async () => {
-        const token = localStorage.getItem(AUTH_TOKEN_KEY);
+        const token = getStoredToken();
         if (!token) return;
         try {
             const res = await fetchProfile(token);
             const data = extractData(res);
             if (data?.userInfo) {
                 setUserInfo(data.userInfo);
-                localStorage.setItem(USER_INFO_KEY, JSON.stringify(data.userInfo));
+                useAuthStore.getState().updateUser(data.userInfo);
             }
         } catch (err) {
             console.error(err);

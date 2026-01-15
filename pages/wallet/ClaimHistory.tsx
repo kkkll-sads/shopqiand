@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ChevronLeft, Search, Clock, CheckCircle2, AlertCircle, FileText } from 'lucide-react';
 import { getRightsDeclarationList, RightsDeclarationRecord } from '../../services/rightsDeclaration';
-import { AUTH_TOKEN_KEY } from '../../constants/storageKeys';
+import { getStoredToken } from '../../services/client';
 import { useNotification } from '../../context/NotificationContext';
 import { Route } from '../../router/routes';
 import { isSuccess, extractError } from '../../utils/apiHelpers';
@@ -28,7 +28,7 @@ const ClaimHistory: React.FC<ClaimHistoryProps> = ({ onBack, onNavigate }) => {
     const loadHistory = async () => {
         setLoading(true);
         try {
-            const token = localStorage.getItem(AUTH_TOKEN_KEY);
+            const token = getStoredToken();
             if (!token) {
                 showToast('error', '登录过期', '请重新登录');
                 return;

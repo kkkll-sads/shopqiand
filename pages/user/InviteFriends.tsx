@@ -12,7 +12,8 @@ import React, { useState, useEffect } from 'react';
 import { Copy, Share2 } from 'lucide-react';
 import PageContainer from '../../components/layout/PageContainer';
 import { LoadingSpinner } from '../../components/common';
-import { fetchPromotionCard, AUTH_TOKEN_KEY } from '../../services/api';
+import { fetchPromotionCard } from '../../services/api';
+import { getStoredToken } from '../../services/client';
 import { useNotification } from '../../context/NotificationContext';
 import { isSuccess, extractError } from '../../utils/apiHelpers';
 import { usePageNavigation } from '../../src/hooks/usePageNavigation';
@@ -54,7 +55,7 @@ const InviteFriends: React.FC = () => {
       try {
         setLoading(true);
         setError(null);
-        const token = localStorage.getItem(AUTH_TOKEN_KEY) || '';
+        const token = getStoredToken() || '';
         if (!token) {
           setError('请先登录');
           return;

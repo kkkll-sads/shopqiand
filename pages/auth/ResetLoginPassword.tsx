@@ -14,9 +14,9 @@ import { PasswordForm } from '../../components/business';
  * ResetLoginPassword 组件属性接口
  */
 interface ResetLoginPasswordProps {
-  /** 返回回调 */
-  onBack: () => void;
-  /** 跳转找回密码回调 */
+  /** 返回回调 (可选，PasswordForm 有默认行为) */
+  onBack?: () => void;
+  /** 跳转找回密码回调 (可选，PasswordForm 有默认行为) */
   onNavigateForgotPassword?: () => void;
 }
 
@@ -28,8 +28,8 @@ const ResetLoginPassword: React.FC<ResetLoginPasswordProps> = ({ onBack, onNavig
     <PasswordForm
       type="reset_login"
       title="重置登录密码"
-      onBack={onBack}
-      onNavigateForgotPassword={onNavigateForgotPassword}
+      {...(onBack && { onBack })}
+      {...(onNavigateForgotPassword && { onNavigateForgotPassword })}
     />
   );
 };

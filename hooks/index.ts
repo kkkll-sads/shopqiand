@@ -1,7 +1,6 @@
 /**
  * Hooks 统一导出
  */
-export { default as useAuth } from './useAuth';
 export { default as useModal } from './useModal';
 export { useErrorHandler } from './useErrorHandler';
 export { useStateMachine } from './useStateMachine';

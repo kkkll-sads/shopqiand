@@ -1,6 +1,6 @@
 import { API_BASE_URL } from './config';
 import { NeedLoginError } from '../utils/errors';
-import { clearAuthStorage } from '../utils/storageAccess';
+import { useAuthStore } from '../src/stores/authStore';
 import { notifyNeedLogin } from './needLoginHandler';
 
 export interface ApiFetchConfig {
@@ -112,7 +112,7 @@ export async function apiFetch<T = any>(
         if (error?.name === 'NeedLoginError') {
             const handled = notifyNeedLogin(error.message);
             if (!handled) {
-                clearAuthStorage();
+                useAuthStore.getState().logout();
             }
             throw error;
         }

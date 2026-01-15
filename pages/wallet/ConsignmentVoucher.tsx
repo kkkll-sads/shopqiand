@@ -12,7 +12,8 @@ import React, { useState, useEffect } from 'react';
 import { Receipt, FileText, ShoppingBag, Clock, Tag, Calendar } from 'lucide-react';
 import PageContainer from '../../components/layout/PageContainer';
 import { LoadingSpinner, EmptyState } from '../../components/common';
-import { AUTH_TOKEN_KEY, fetchProfile } from '../../services/api';
+import { fetchProfile } from '../../services/api';
+import { getStoredToken } from '../../services/client';
 import { fetchConsignmentCoupons, ConsignmentCouponItem } from '../../services/consignment';
 import { formatTime } from '../../utils/format';
 import { isSuccess, extractError, extractData } from '../../utils/apiHelpers';
@@ -38,7 +39,7 @@ const ConsignmentVoucher: React.FC<ConsignmentVoucherProps> = ({ onBack }) => {
   // 加载数据
   useEffect(() => {
     const loadData = async () => {
-      const token = localStorage.getItem(AUTH_TOKEN_KEY);
+      const token = getStoredToken();
       if (!token) {
         setError('请先登录');
         setLoading(false);

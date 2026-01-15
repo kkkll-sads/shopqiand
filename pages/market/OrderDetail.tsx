@@ -3,8 +3,8 @@ import { ArrowLeft, Package, Phone, MapPin, Copy, Check, Truck, Calendar, Gift, 
 import { LoadingSpinner, LazyImage } from '../../components/common';
 import { formatTime, formatAmount } from '../../utils/format';
 import { getOrderDetail, ShopOrderItem, confirmOrder, normalizeAssetUrl, payOrder, cancelOrder } from '../../services/api';
+import { getStoredToken } from '../../services/client';
 import { useNotification } from '../../context/NotificationContext';
-import { AUTH_TOKEN_KEY } from '../../constants/storageKeys';
 import { Route } from '../../router/routes';
 import { ShopOrderPayStatus, ShopOrderShippingStatus } from '../../constants/statusEnums';
 import { isSuccess, extractError } from '../../utils/apiHelpers';
@@ -39,7 +39,7 @@ const OrderDetail: React.FC<OrderDetailProps> = ({ orderId, onBack, onNavigate }
     const loadOrder = async () => {
         try {
             setLoading(true);
-            const token = localStorage.getItem(AUTH_TOKEN_KEY);
+            const token = getStoredToken();
             if (!token) return;
 
             const response = await getOrderDetail({ id: orderId, token });
@@ -84,7 +84,7 @@ const OrderDetail: React.FC<OrderDetailProps> = ({ orderId, onBack, onNavigate }
                 cancelText: '取消',
                 onConfirm: async () => {
                     try {
-                        const token = localStorage.getItem(AUTH_TOKEN_KEY) || '';
+                        const token = getStoredToken() || '';
                         const response = await payOrder({ id: targetId, token });
 
                         if (isSuccess(response)) {
@@ -119,7 +119,7 @@ const OrderDetail: React.FC<OrderDetailProps> = ({ orderId, onBack, onNavigate }
             cancelText: '取消',
             onConfirm: async () => {
                 try {
-                    const token = localStorage.getItem(AUTH_TOKEN_KEY) || '';
+                    const token = getStoredToken() || '';
                     const response = await confirmOrder({ id, token });
                     if (isSuccess(response)) {
                         showToast('success', response.msg || '收货成功');
@@ -150,7 +150,7 @@ const OrderDetail: React.FC<OrderDetailProps> = ({ orderId, onBack, onNavigate }
             cancelText: '再想想',
             onConfirm: async () => {
                 try {
-                    const token = localStorage.getItem(AUTH_TOKEN_KEY) || '';
+                    const token = getStoredToken() || '';
                     const response = await cancelOrder({ id, token });
                     if (isSuccess(response)) {
                         showToast('success', response.msg || '订单取消成功');

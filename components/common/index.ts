@@ -49,8 +49,5 @@ export { default as RegionPicker } from './RegionPicker';
 // 银行选择器组件
 export { default as BankPicker } from './BankPicker';
 
-// 实名认证提示弹窗组件
-export { default as RealNameRequiredModal } from './RealNameRequiredModal';
-
 // 版本更新提示弹窗组件
 export { default as UpdatePromptModal } from './UpdatePromptModal';

@@ -50,14 +50,3 @@ export const writeJSON = <T>(key: StorageKey, value: T): void => {
     }
 };
 
-/** 清空认证相关存储 */
-export const clearAuthStorage = (): void => {
-    [
-        STORAGE_KEYS.AUTH_KEY,
-        STORAGE_KEYS.AUTH_TOKEN_KEY,
-        STORAGE_KEYS.USER_INFO_KEY,
-        STORAGE_KEYS.REAL_NAME_STATUS_KEY,
-        STORAGE_KEYS.REAL_NAME_KEY,
-    ].forEach(removeStorage);
-};
-

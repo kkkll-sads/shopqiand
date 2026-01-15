@@ -8,9 +8,9 @@
  */
 
 import { ApiResponse } from './networking';
-import { API_ENDPOINTS, AUTH_TOKEN_KEY } from './config';
+import { API_ENDPOINTS } from './config';
 // 统一的带 token 请求封装，避免重复从 localStorage 取值
-import { authedFetch } from './client';
+import { authedFetch, getStoredToken } from './client';
 import type { ShopOrderItem } from './shop';
 
 // ============================================================================
@@ -507,7 +507,7 @@ export interface RightsDeliverResult {
  * @returns 返回权益分割结果
  */
 export async function rightsDeliver(params: RightsDeliverParams): Promise<ApiResponse<RightsDeliverResult>> {
-    const token = params.token || localStorage.getItem(AUTH_TOKEN_KEY) || '';
+    const token = params.token || getStoredToken();
 
     const payload: Record<string, any> = {
         user_collection_id: Number(params.user_collection_id),

@@ -13,7 +13,7 @@ import React, { useMemo, useState } from 'react';
 import { ChevronRight, RefreshCw } from 'lucide-react';
 import PageContainer from '../../components/layout/PageContainer';
 import { ListItem, UpdatePromptModal } from '../../components/common';
-import { USER_INFO_KEY, normalizeAssetUrl, checkAppUpdate } from '../../services/api';
+import { normalizeAssetUrl, checkAppUpdate } from '../../services/api';
 import { UserInfo } from '../../types';
 import { formatPhone } from '../../utils/format';
 import { AppVersionInfo } from '../../services/app';
@@ -33,16 +33,8 @@ const Settings: React.FC = () => {
   const [updateModalVisible, setUpdateModalVisible] = useState(false);
   const [versionInfo, setVersionInfo] = useState<AppVersionInfo | null>(null);
 
-  // 从本地存储获取用户信息
-  const userInfo: UserInfo | null = useMemo(() => {
-    try {
-      const cached = localStorage.getItem(USER_INFO_KEY);
-      return cached ? JSON.parse(cached) : null;
-    } catch (e) {
-      console.warn('解析本地用户信息失败:', e);
-      return null;
-    }
-  }, []);
+  // 从 authStore 获取用户信息
+  const userInfo = useAuthStore((state) => state.user);
 
   const displayName = userInfo?.nickname || userInfo?.username || '用户';
   const displayAvatarText = displayName.slice(0, 1).toUpperCase();

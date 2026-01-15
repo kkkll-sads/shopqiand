@@ -20,8 +20,8 @@ import {
   getOrderDetail,
   fetchProfile,
   ShopOrderItem,
-  AUTH_TOKEN_KEY,
 } from '../services/api';
+import { getStoredToken } from '../services/client';
 import { isSuccess, extractData, extractError } from '../utils/apiHelpers';
 import { CashierState, CashierEvent } from '../types/states';
 
@@ -138,7 +138,7 @@ export function useCashier(orderId: string): UseCashierReturn {
     send(CashierEvent.LOAD);
 
     try {
-      const token = localStorage.getItem(AUTH_TOKEN_KEY) || '';
+      const token = getStoredToken() || '';
 
       // 并行获取订单和用户信息
       const [orderRes, profileRes] = await Promise.all([
@@ -198,7 +198,7 @@ export function useCashier(orderId: string): UseCashierReturn {
     }
 
     try {
-      const token = localStorage.getItem(AUTH_TOKEN_KEY) || '';
+      const token = getStoredToken() || '';
       const res = await payOrder({ id: orderId, token });
 
       if (isSuccess(res)) {

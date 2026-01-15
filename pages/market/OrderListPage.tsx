@@ -24,9 +24,9 @@ import {
   PurchaseRecordItem,
   ConsignmentDetailData,
   MyCollectionItem,
-  AUTH_TOKEN_KEY,
   normalizeAssetUrl,
 } from '../../services/api';
+import { getStoredToken } from '../../services/client';
 import { useNotification } from '../../context/NotificationContext';
 import { Route } from '../../router/routes';
 // ✅ 引入统一 API 处理工具
@@ -116,7 +116,7 @@ const OrderListPage: React.FC<OrderListPageProps> = ({ category, initialTab, onB
       const loadOrders = async () => {
         setLoading(true);
         try {
-          const token = localStorage.getItem(AUTH_TOKEN_KEY) || '';
+          const token = getStoredToken() || '';
           let response;
 
           switch (activeTab) {
@@ -163,7 +163,7 @@ const OrderListPage: React.FC<OrderListPageProps> = ({ category, initialTab, onB
       const loadOrders = async () => {
         setLoading(true);
         try {
-          const token = localStorage.getItem(AUTH_TOKEN_KEY) || '';
+          const token = getStoredToken() || '';
           let status: 'paid' | 'shipped' | 'completed' | undefined;
 
           switch (activeTab) {
@@ -209,7 +209,7 @@ const OrderListPage: React.FC<OrderListPageProps> = ({ category, initialTab, onB
       const loadConsignmentOrders = async () => {
         setLoading(true);
         try {
-          const token = localStorage.getItem(AUTH_TOKEN_KEY) || '';
+          const token = getStoredToken() || '';
           let status: string;
 
           switch (activeTab) {
@@ -279,7 +279,7 @@ const OrderListPage: React.FC<OrderListPageProps> = ({ category, initialTab, onB
       const loadPurchaseRecords = async () => {
         setLoading(true);
         try {
-          const token = localStorage.getItem(AUTH_TOKEN_KEY) || '';
+          const token = getStoredToken() || '';
 
           if (activeTab === 0) {
             // 买入订单 - 使用购买记录接口
@@ -330,7 +330,7 @@ const OrderListPage: React.FC<OrderListPageProps> = ({ category, initialTab, onB
 
   const handleConfirmReceipt = async (orderId: number | string) => {
     try {
-      const token = localStorage.getItem(AUTH_TOKEN_KEY) || '';
+      const token = getStoredToken() || '';
       const response = await confirmOrder({ id: orderId, token });
 
       // ✅ 使用统一判断
@@ -507,7 +507,7 @@ const OrderListPage: React.FC<OrderListPageProps> = ({ category, initialTab, onB
       cancelText: '取消',
       onConfirm: async () => {
         try {
-          const token = localStorage.getItem(AUTH_TOKEN_KEY) || '';
+          const token = getStoredToken() || '';
           const response = await payOrder({ id: orderId, token });
 
           // ✅ 使用统一判断
@@ -584,7 +584,7 @@ const OrderListPage: React.FC<OrderListPageProps> = ({ category, initialTab, onB
       cancelText: '取消',
       onConfirm: async () => {
         try {
-          const token = localStorage.getItem(AUTH_TOKEN_KEY) || '';
+          const token = getStoredToken() || '';
           const response = await deleteOrder({ id: orderId, token });
 
           // ✅ 使用统一判断
@@ -657,7 +657,7 @@ const OrderListPage: React.FC<OrderListPageProps> = ({ category, initialTab, onB
   const handleViewConsignmentDetail = async (consignmentId: number) => {
     setLoadingConsignmentDetail(true);
     try {
-      const token = localStorage.getItem(AUTH_TOKEN_KEY) || '';
+      const token = getStoredToken() || '';
       const response = await getConsignmentDetail({ consignment_id: consignmentId, token });
 
       // ✅ 使用统一判断
@@ -684,7 +684,7 @@ const OrderListPage: React.FC<OrderListPageProps> = ({ category, initialTab, onB
       cancelText: '取消',
       onConfirm: async () => {
         try {
-          const token = localStorage.getItem(AUTH_TOKEN_KEY) || '';
+          const token = getStoredToken() || '';
           const response = await cancelConsignment({ consignment_id: consignmentId, token });
 
           // ✅ 使用统一判断

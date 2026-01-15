@@ -15,7 +15,7 @@ import { getCollectionOrderDetail, CollectionOrderDetailData } from '../../servi
 import { normalizeAssetUrl } from '../../services/config';
 import { isSuccess, extractData, extractError } from '../../utils/apiHelpers';
 import { formatTime, formatAmount } from '../../utils/format';
-import { AUTH_TOKEN_KEY } from '../../constants/storageKeys';
+import { getStoredToken } from '../../services/client';
 import { useNotification } from '../../context/NotificationContext';
 
 interface CollectionOrderDetailProps {
@@ -37,7 +37,7 @@ const CollectionOrderDetail: React.FC<CollectionOrderDetailProps> = ({ id, order
   }, [id, orderNo]);
 
   const loadOrder = async () => {
-    const token = localStorage.getItem(AUTH_TOKEN_KEY);
+    const token = getStoredToken();
     if (!token) {
       setError('请先登录');
       setLoading(false);

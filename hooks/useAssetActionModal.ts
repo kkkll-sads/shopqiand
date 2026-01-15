@@ -18,9 +18,9 @@ import {
   getConsignmentCheck,
   rightsDeliver,
   consignCollectionItem,
-  AUTH_TOKEN_KEY,
   MyCollectionItem,
 } from '../services/api';
+import { getStoredToken } from '../services/client';
 import { isSuccess, extractError } from '../utils/apiHelpers';
 import { ConsignmentStatus, DeliveryStatus } from '../constants/statusEnums';
 
@@ -334,7 +334,7 @@ export function useAssetActionModal(
     }
 
     let mounted = true;
-    const token = localStorage.getItem(AUTH_TOKEN_KEY) || undefined;
+    const token = getStoredToken() || undefined;
 
     getConsignmentCheck({ user_collection_id: collectionId, token })
       .then((res: any) => {
@@ -399,7 +399,7 @@ export function useAssetActionModal(
   const handleSubmit = useCallback(async () => {
     if (!context.selectedItem || state === ActionModalState.SUBMITTING) return;
 
-    const token = localStorage.getItem(AUTH_TOKEN_KEY);
+    const token = getStoredToken();
     if (!token) {
       showToast('warning', '请登录', '请先登录后再进行操作');
       return;
@@ -517,7 +517,7 @@ export function useAssetActionModal(
         return;
       }
 
-      const priceValue = parseFloat(context.selectedItem.price || '0');
+      const priceValue = parseFloat(String(context.selectedItem.price || '0'));
       if (Number.isNaN(priceValue) || priceValue <= 0) {
         showToast('error', '错误', '藏品价格无效，无法进行寄售');
         return;

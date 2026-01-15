@@ -13,7 +13,7 @@
  */
 
 import { useState, useCallback, useEffect } from 'react';
-import { AUTH_TOKEN_KEY } from '../services/api';
+import { getStoredToken } from '../services/client';
 
 /**
  * 标签页状态
@@ -151,7 +151,7 @@ export function useAssetTabs<T = any>(
    * 加载标签页数据
    */
   const loadTab = useCallback(async (tabId: number, page: number = 1) => {
-    const token = localStorage.getItem(AUTH_TOKEN_KEY);
+    const token = getStoredToken();
     if (!token) {
       updateTabState(tabId, { error: '请先登录', loading: false });
       return;

@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { LoadingSpinner, LazyImage } from '../../components/common';
 import { Product } from '../../types';
 import { fetchShopProductDetail, ShopProductDetailData, createOrder, fetchAddressList, AddressItem } from '../../services/api';
+import { getStoredToken } from '../../services/client';
 import { useNotification } from '../../context/NotificationContext';
-import { AUTH_TOKEN_KEY } from '../../constants/storageKeys';
 import { Route } from '../../router/routes';
 import { Copy, X, Check } from 'lucide-react';
 import { isSuccess, extractError } from '../../utils/apiHelpers';
@@ -56,7 +56,7 @@ const PointsProductDetail: React.FC<PointsProductDetailProps> = ({ product, onBa
 
     const loadAddresses = async () => {
         try {
-            const token = localStorage.getItem(AUTH_TOKEN_KEY) || '';
+            const token = getStoredToken() || '';
             if (!token) return;
 
             const response = await fetchAddressList(token);

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { uploadImage } from '../../../services/common';
-import { AUTH_TOKEN_KEY } from '../../../services/api';
+import { getStoredToken } from '../../../services/client';
 import { extractData, extractError } from '../../../utils/apiHelpers';
 
 export type ImageUploadState = {
@@ -46,7 +46,7 @@ export const useClaimUpload = ({
   const handleImageUpload = useCallback(
     async (files: FileList | null) => {
       if (!files || files.length === 0) return;
-      const token = localStorage.getItem(AUTH_TOKEN_KEY);
+      const token = getStoredToken();
       if (!token) {
         showToast('error', '登录过期', '请重新登录');
         return;

@@ -8,15 +8,16 @@
  */
 
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { PasswordForm } from '../../components/business';
 
 /**
  * ResetPayPassword 组件属性接口
  */
 interface ResetPayPasswordProps {
-  /** 返回回调 */
-  onBack: () => void;
-  /** 跳转找回密码回调 */
+  /** 返回回调 (可选，有默认行为) */
+  onBack?: () => void;
+  /** 跳转找回密码回调 (可选) */
   onNavigateForgotPassword?: () => void;
 }
 
@@ -24,6 +25,7 @@ interface ResetPayPasswordProps {
  * ResetPayPassword 修改支付密码页面组件
  */
 const ResetPayPassword: React.FC<ResetPayPasswordProps> = ({ onBack, onNavigateForgotPassword }) => {
+  const navigate = useNavigate();
   const [formType, setFormType] = useState<'reset_pay' | 'reset_pay_sms'>('reset_pay');
 
   const handleBack = () => {
@@ -31,7 +33,11 @@ const ResetPayPassword: React.FC<ResetPayPasswordProps> = ({ onBack, onNavigateF
       setFormType('reset_pay');
       return;
     }
-    onBack();
+    if (onBack) {
+      onBack();
+    } else {
+      navigate(-1);
+    }
   };
 
   return (

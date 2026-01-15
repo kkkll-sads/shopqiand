@@ -11,10 +11,9 @@ import {
   getMyCollection,
   MyCollectionItem,
   fetchProfile,
-  AUTH_TOKEN_KEY,
-  USER_INFO_KEY,
   normalizeAssetUrl,
 } from '../../services/api';
+import { getStoredToken } from '../../services/client';
 import { Product, UserInfo } from '../../types';
 import { useNotification } from '../../context/NotificationContext';
 import { Route } from '../../router/routes';
@@ -161,7 +160,7 @@ const AssetView: React.FC<AssetViewProps> = ({ onBack, onNavigate, onProductSele
 
   useEffect(() => {
     const loadUserInfo = async () => {
-      const token = localStorage.getItem(AUTH_TOKEN_KEY);
+      const token = getStoredToken();
       if (!token) return;
       try {
         const response = await fetchProfile(token);
@@ -171,7 +170,7 @@ const AssetView: React.FC<AssetViewProps> = ({ onBack, onNavigate, onProductSele
           console.log('用户信息:', profileData.userInfo);
           console.log('API中的寄售券数量:', profileData.userInfo.consignment_coupon);
           setUserInfo(profileData.userInfo);
-          localStorage.setItem(USER_INFO_KEY, JSON.stringify(profileData.userInfo));
+          useAuthStore.getState().updateUser(profileData.userInfo);
           // 从用户信息中获取寄售券数量
           const couponCount = profileData.userInfo.consignment_coupon || 0;
           console.log('设置寄售券数量为:', couponCount);

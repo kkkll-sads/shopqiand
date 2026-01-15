@@ -1,12 +1,11 @@
 import { apiFetch, type ApiFetchConfig, type ApiResponse } from './networking';
-import { AUTH_TOKEN_KEY } from './config';
-import { readStorage } from '../utils/storageAccess';
+import { useAuthStore } from '../src/stores/authStore';
 
 /**
  * getStoredToken - 统一获取本地存储的用户 token
- * 说明：集中读取便于后续替换存储方案或加入刷新逻辑
+ * 说明：从 Zustand authStore 读取 token
  */
-export const getStoredToken = () => readStorage(AUTH_TOKEN_KEY) || '';
+export const getStoredToken = () => useAuthStore.getState().token || '';
 
 /**
  * authedFetch 额外配置

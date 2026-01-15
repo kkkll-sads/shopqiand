@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Loader2, ChevronLeft, CreditCard, Wallet, AlertCircle, ShieldCheck } from 'lucide-react';
-import { rechargeServiceFee, fetchProfile, AUTH_TOKEN_KEY, USER_INFO_KEY } from '../../services/api';
+import { rechargeServiceFee, fetchProfile } from '../../services/api';
+import { getStoredToken } from '../../services/client';
+import { useAuthStore } from '../../src/stores/authStore';
 import { UserInfo } from '../../types';
 import { formatAmount } from '../../utils/format';
 import { isSuccess, extractError } from '../../utils/apiHelpers';
@@ -23,13 +25,13 @@ const ServiceRecharge: React.FC<ServiceRechargeProps> = ({ onBack }) => {
   }, []);
 
   const loadUserInfo = async () => {
-    const token = localStorage.getItem(AUTH_TOKEN_KEY);
+    const token = getStoredToken();
     if (!token) return;
     try {
       const response = await fetchProfile(token);
       if (isSuccess(response) && response.data?.userInfo) {
         setUserInfo(response.data.userInfo);
-        localStorage.setItem(USER_INFO_KEY, JSON.stringify(response.data.userInfo));
+        useAuthStore.getState().updateUser(response.data.userInfo);
       }
     } catch (err) {
       console.error(err);
@@ -37,7 +39,7 @@ const ServiceRecharge: React.FC<ServiceRechargeProps> = ({ onBack }) => {
   };
 
   const handleRecharge = async () => {
-    const token = localStorage.getItem(AUTH_TOKEN_KEY);
+    const token = getStoredToken();
     if (!token) return;
     setLoading(true);
     try {

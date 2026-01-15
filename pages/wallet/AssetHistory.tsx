@@ -5,8 +5,8 @@ import { FilterBar } from '../../components/FilterBar';
 import {
   getAllLog,
   AllLogItem,
-  AUTH_TOKEN_KEY,
 } from '../../services/api';
+import { getStoredToken } from '../../services/client';
 import { isSuccess, extractData } from '../../utils/apiHelpers';
 import { BALANCE_TYPE_OPTIONS, getBalanceTypeLabel } from '../../constants/balanceTypes';
 import { Route } from '../../router/routes';
@@ -54,7 +54,7 @@ const AssetHistory: React.FC<AssetHistoryProps> = ({ onBack, onNavigate }) => {
   };
 
   const loadData = async (pageNum: number, isRefresh = false) => {
-    const token = localStorage.getItem(AUTH_TOKEN_KEY);
+    const token = getStoredToken();
     if (!token) {
       setError('请先登录');
       return;

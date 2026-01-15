@@ -29,17 +29,15 @@ import {
 } from 'lucide-react';
 import { formatAmount } from '../../utils/format';
 import {
-  AUTH_TOKEN_KEY,
-  USER_INFO_KEY,
   fetchProfile,
   normalizeAssetUrl,
   fetchShopOrderStatistics,
   ShopOrderStatistics,
   fetchSignInInfo,
 } from '../../services/api';
-import { STORAGE_KEYS } from '../../constants/storageKeys';
+import { getStoredToken } from '../../services/client';
 import { UserInfo } from '../../types';
-import useAuth from '../../hooks/useAuth';
+import { useAuthStore } from '../../src/stores/authStore';
 import { isSuccess, extractError } from '../../utils/apiHelpers';
 import { useErrorHandler } from '../../hooks/useErrorHandler';
 import { usePageNavigation } from '../../src/hooks/usePageNavigation';
@@ -76,21 +74,14 @@ const Profile: React.FC<{ unreadCount?: number }> = ({ unreadCount = 0 }) => {
   // ✅ 使用统一错误处理Hook（持久化显示）
   const { errorMessage, hasError, handleError, clearError } = useErrorHandler();
 
-  const [userInfo, setUserInfo] = useState<UserInfo | null>(() => {
-    try {
-      const cached = localStorage.getItem(USER_INFO_KEY);
-      return cached ? JSON.parse(cached) : null;
-    } catch (error) {
-      console.warn('解析本地用户信息失败:', error);
-      return null;
-    }
-  });
+  const storedUser = useAuthStore((state) => state.user);
+  const [userInfo, setUserInfo] = useState<UserInfo | null>(storedUser);
   const [loading, setLoading] = useState<boolean>(false);
   const [orderStats, setOrderStats] = useState<ShopOrderStatistics | null>(null);
   const [hasSignedToday, setHasSignedToday] = useState<boolean>(false); // Default to false to ensure red dot is visible initially
 
   useEffect(() => {
-    const token = localStorage.getItem(AUTH_TOKEN_KEY);
+    const token = getStoredToken();
     if (!token) {
       // ✅ 使用统一错误处理
       handleError('未检测到登录信息，请重新登录', {
@@ -109,7 +100,7 @@ const Profile: React.FC<{ unreadCount?: number }> = ({ unreadCount = 0 }) => {
 
         if (isSuccess(response) && response.data?.userInfo) {
           setUserInfo(response.data.userInfo);
-          localStorage.setItem(USER_INFO_KEY, JSON.stringify(response.data.userInfo));
+          updateUser(response.data.userInfo);
           clearError(); // ✅ 使用统一错误清除
         } else {
           // ✅ 使用统一错误处理
@@ -211,7 +202,7 @@ const Profile: React.FC<{ unreadCount?: number }> = ({ unreadCount = 0 }) => {
     };
   }, []);
 
-  const { realName, logout } = useAuth();
+  const { realName, logout, updateUser } = useAuthStore();
 
   const handleLogout = () => {
     logout();

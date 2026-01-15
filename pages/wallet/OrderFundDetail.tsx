@@ -12,7 +12,7 @@ import { ArrowLeft, FileText, Receipt, ShoppingCart, CreditCard } from 'lucide-r
 import PageContainer from '../../components/layout/PageContainer';
 import { LoadingSpinner } from '../../components/common';
 import { getAllLog, AllLogItem } from '../../services/wallet';
-import { AUTH_TOKEN_KEY } from '../../constants/storageKeys';
+import { getStoredToken } from '../../services/client';
 import { isSuccess, extractData, extractError } from '../../utils/apiHelpers';
 import { formatAmount } from '../../utils/format';
 import { getBalanceTypeLabel } from '../../constants/balanceTypes';
@@ -30,7 +30,7 @@ const OrderFundDetail: React.FC<OrderFundDetailProps> = ({ onBack }) => {
 
   // 加载数据
   const loadData = async (pageNum: number, isRefresh = false) => {
-    const token = localStorage.getItem(AUTH_TOKEN_KEY);
+    const token = getStoredToken();
     if (!token) {
       setError('请先登录');
       return;

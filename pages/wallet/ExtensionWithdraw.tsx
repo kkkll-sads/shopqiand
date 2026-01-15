@@ -13,7 +13,8 @@ import { UserInfo } from '../../types';
 
 import { formatAmount } from '../../utils/format';
 import { useNotification } from '../../context/NotificationContext';
-import { USER_INFO_KEY, AUTH_TOKEN_KEY } from '../../constants/storageKeys';
+import { getStoredToken } from '../../services/client';
+import { useAuthStore } from '../../src/stores/authStore';
 import { isSuccess, extractError } from '../../utils/apiHelpers';
 import { useErrorHandler } from '../../hooks/useErrorHandler';
 
@@ -36,15 +37,8 @@ const ExtensionWithdraw: React.FC<ExtensionWithdrawProps> = ({ onBack, onNavigat
     clearError: clearSubmitError
   } = useErrorHandler();
 
-  const [userInfo, setUserInfo] = useState<UserInfo | null>(() => {
-    try {
-      const cached = localStorage.getItem(USER_INFO_KEY);
-      return cached ? JSON.parse(cached) : null;
-    } catch (error) {
-      console.warn('解析本地用户信息失败:', error);
-      return null;
-    }
-  });
+  const storedUser = useAuthStore((state) => state.user);
+  const [userInfo, setUserInfo] = useState<UserInfo | null>(storedUser);
 
   const [accounts, setAccounts] = useState<PaymentAccountItem[]>([]);
   const [selectedAccount, setSelectedAccount] = useState<PaymentAccountItem | null>(null);
@@ -69,7 +63,7 @@ const ExtensionWithdraw: React.FC<ExtensionWithdrawProps> = ({ onBack, onNavigat
         const response = await fetchProfile(token);
         if (isSuccess(response) && response.data?.userInfo) {
           setUserInfo(response.data.userInfo);
-          localStorage.setItem('cat_user_info', JSON.stringify(response.data.userInfo));
+          useAuthStore.getState().updateUser(response.data.userInfo);
         }
       } catch (err) {
         console.error('获取用户信息失败:', err);
@@ -156,7 +150,7 @@ const ExtensionWithdraw: React.FC<ExtensionWithdrawProps> = ({ onBack, onNavigat
     setSubmitting(true);
     clearSubmitError(); // ✅ 提交前清除错误
 
-    const token = localStorage.getItem(AUTH_TOKEN_KEY);
+    const token = getStoredToken();
     if (!token) {
       handleSubmitError('未找到用户登录信息，请先登录', { persist: true, showToast: false });
       setSubmitting(false);
@@ -183,7 +177,7 @@ const ExtensionWithdraw: React.FC<ExtensionWithdrawProps> = ({ onBack, onNavigat
         const updatedResponse = await fetchProfile(token);
         if (isSuccess(updatedResponse) && updatedResponse.data?.userInfo) {
           setUserInfo(updatedResponse.data.userInfo);
-          localStorage.setItem(USER_INFO_KEY, JSON.stringify(updatedResponse.data.userInfo));
+          useAuthStore.getState().updateUser(updatedResponse.data.userInfo);
         }
       } else {
         // ✅ 使用统一错误处理

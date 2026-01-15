@@ -3,7 +3,6 @@ import { CreditCard, Trash2, Edit2, ChevronRight, Plus } from 'lucide-react';
 import SubPageLayout from '../../components/SubPageLayout';
 import { LoadingSpinner, EmptyState, BankPicker } from '../../components/common';
 import {
-  AUTH_TOKEN_KEY,
   PaymentAccountItem,
   fetchPaymentAccountList,
   addPaymentAccount,
@@ -11,6 +10,7 @@ import {
   editPaymentAccount,
   setDefaultPaymentAccount,
 } from '../../services/api';
+import { getStoredToken } from '../../services/client';
 // ✅ 引入统一 API 处理工具
 import { isSuccess, extractData, extractError } from '../../utils/apiHelpers';
 import { useErrorHandler } from '../../hooks/useErrorHandler';
@@ -71,7 +71,7 @@ const CardManagement: React.FC<CardManagementProps> = ({ onBack }) => {
   const [showBankPicker, setShowBankPicker] = useState(false);
 
   const loadAccounts = useCallback(async () => {
-    const token = localStorage.getItem(AUTH_TOKEN_KEY) || '';
+    const token = getStoredToken() || '';
     if (!token) {
       // ✅ 使用统一错误处理
       handleListError('未检测到登录信息，请重新登录后重试', {

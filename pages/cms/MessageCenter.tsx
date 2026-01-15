@@ -15,7 +15,7 @@ import {
   WithdrawOrderItem,
   ShopOrderItem,
 } from '../../services/api';
-import { AUTH_TOKEN_KEY, STORAGE_KEYS } from '../../constants/storageKeys';
+import { getStoredToken } from '../../services/client';
 import { Route } from '../../router/routes';
 // ✅ 引入统一 API 处理工具
 import { extractData } from '../../utils/apiHelpers';
@@ -175,7 +175,7 @@ const MessageCenter: React.FC<MessageCenterProps> = ({ onBack, onNavigate }) => 
         return;
       }
 
-      const token = localStorage.getItem(AUTH_TOKEN_KEY);
+      const token = getStoredToken();
       if (!token) {
         setError('请先登录');
         setLoading(false);

@@ -11,10 +11,10 @@ import {
   ShopProductDetailData,
   createOrder,
   bidBuy,
-  AUTH_TOKEN_KEY,
   fetchAnnouncements,
   AnnouncementItem,
 } from '../../services/api';
+import { getStoredToken } from '../../services/client';
 import { useNotification } from '../../context/NotificationContext';
 import { Route } from '../../router/routes';
 import { bizLog, debugLog } from '../../utils/logger';

@@ -16,7 +16,7 @@ import { isSuccess, extractData, extractError } from '../../utils/apiHelpers';
 import { useNotification } from '../../context/NotificationContext';
 import { formatAmount, formatTime } from '../../utils/format';
 import { getBalanceTypeLabel } from '../../constants/balanceTypes';
-import { AUTH_TOKEN_KEY } from '../../constants/storageKeys';
+import { getStoredToken } from '../../services/client';
 import { normalizeAssetUrl } from '../../services/config';
 import { BizTypeMap, BizType } from '../../constants/statusEnums';
 
@@ -98,7 +98,7 @@ const MoneyLogDetail: React.FC<MoneyLogDetailProps> = ({ id, flowNo, onBack }) =
   }, [id, flowNo]);
 
   const loadDetail = async () => {
-    const token = localStorage.getItem(AUTH_TOKEN_KEY);
+    const token = getStoredToken();
     if (!token) {
       setError('请先登录');
       setLoading(false);

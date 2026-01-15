@@ -12,15 +12,14 @@ import {
   getConsignmentCheck,
   fetchProfile,
   MyCollectionItem,
-  AUTH_TOKEN_KEY,
-  USER_INFO_KEY,
   normalizeAssetUrl,
   fetchConsignmentCoupons,
   getBatchConsignableList,
   batchConsign,
   BatchConsignableListData,
 } from '../../services/api';
-
+import { getStoredToken } from '../../services/client';
+import { useAuthStore } from '../../src/stores/authStore';
 import { UserInfo } from '../../types';
 import { useNotification } from '../../context/NotificationContext';
 import { ConsignmentStatus, DeliveryStatus } from '../../constants/statusEnums';
@@ -75,24 +74,19 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onBack, onItemSelect, onNav
   // 加载用户信息和寄售券数量
   useEffect(() => {
     const loadUserInfo = async () => {
-      const token = localStorage.getItem(AUTH_TOKEN_KEY);
+      const token = getStoredToken();
       if (!token) return;
 
       try {
-        const cached = localStorage.getItem(USER_INFO_KEY);
-        if (cached) {
-          try {
-            const cachedUserInfo = JSON.parse(cached);
-            setUserInfo(cachedUserInfo);
-          } catch (e) {
-            console.warn('解析本地用户信息失败:', e);
-          }
+        const cachedUserInfo = useAuthStore.getState().user;
+        if (cachedUserInfo) {
+          setUserInfo(cachedUserInfo);
         }
 
         const response = await fetchProfile(token);
         if (isSuccess(response) && response.data?.userInfo) {
           setUserInfo(response.data.userInfo);
-          localStorage.setItem(USER_INFO_KEY, JSON.stringify(response.data.userInfo));
+          useAuthStore.getState().updateUser(response.data.userInfo);
         }
 
         // 移除重复请求：getMyCollection 在 loadData 中会被再次调用
@@ -129,7 +123,7 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onBack, onItemSelect, onNav
   };
 
   const loadData = useCallback(async () => {
-    const token = localStorage.getItem(AUTH_TOKEN_KEY);
+    const token = getStoredToken();
     if (!token) {
       setError('请先登录');
       setLoading(false);
@@ -240,7 +234,7 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onBack, onItemSelect, onNav
   // 获取批量寄售可寄售藏品列表
   useEffect(() => {
     const loadBatchConsignableList = async () => {
-      const token = localStorage.getItem(AUTH_TOKEN_KEY);
+      const token = getStoredToken();
       if (!token) return;
 
       setCheckingBatchConsignable(true);
@@ -450,7 +444,7 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onBack, onItemSelect, onNav
     }
 
     let mounted = true;
-    const token = localStorage.getItem(AUTH_TOKEN_KEY) || undefined;
+    const token = getStoredToken() || undefined;
 
     // 并发请求：检查解锁状态 + 检查可用寄售券
     setCheckingCoupons(true);
@@ -678,7 +672,7 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onBack, onItemSelect, onNav
   const handleConfirmActionByType = async (targetType: 'delivery' | 'consignment') => {
     if (!selectedItem || actionLoading) return;
 
-    const token = localStorage.getItem(AUTH_TOKEN_KEY);
+    const token = getStoredToken();
     if (!token) {
       showToast('warning', '请登录', '请先登录后再进行操作');
       return;
@@ -887,7 +881,7 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onBack, onItemSelect, onNav
       return;
     }
 
-    const token = localStorage.getItem(AUTH_TOKEN_KEY);
+    const token = getStoredToken();
     if (!token) {
       showToast('warning', '请登录', '请先登录后再进行操作');
       return;

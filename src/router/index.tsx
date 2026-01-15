@@ -23,8 +23,8 @@ const LivePage = lazy(() => import('../pages/live/LivePageWrapper'));
 const Login = lazy(() => import('../pages/auth/LoginWrapper'));
 const Register = lazy(() => import('../pages/auth/RegisterWrapper'));
 const ForgotPassword = lazy(() => import('../pages/auth/ForgotPasswordWrapper'));
-const ResetLoginPassword = lazy(() => import('../../pages/auth/ResetLoginPassword'));
-const ResetPayPassword = lazy(() => import('../../pages/auth/ResetPayPassword'));
+const ResetLoginPassword = lazy(() => import('../pages/auth/ResetLoginPasswordWrapper'));
+const ResetPayPassword = lazy(() => import('../pages/auth/ResetPayPasswordWrapper'));
 
 // 用户页面
 const Settings = lazy(() => import('../pages/user/SettingsWrapper'));
@@ -45,18 +45,18 @@ const AnnouncementDetail = lazy(() => import('../pages/cms/AnnouncementDetailWra
 const MessageCenter = lazy(() => import('../pages/cms/MessageCenterWrapper'));
 const SignIn = lazy(() => import('../pages/cms/SignInWrapper'));
 const HelpCenter = lazy(() => import('../pages/cms/HelpCenterWrapper'));
-const OnlineService = lazy(() => import('../../pages/cms/OnlineService'));
-const AboutUs = lazy(() => import('../../pages/cms/AboutUs'));
-const PrivacyPolicy = lazy(() => import('../../pages/cms/PrivacyPolicy'));
-const UserAgreement = lazy(() => import('../../pages/cms/UserAgreement'));
+const OnlineService = lazy(() => import('../pages/cms/OnlineServiceWrapper'));
+const AboutUs = lazy(() => import('../pages/cms/AboutUsWrapper'));
+const PrivacyPolicy = lazy(() => import('../pages/cms/PrivacyPolicyWrapper'));
+const UserAgreement = lazy(() => import('../pages/cms/UserAgreementWrapper'));
 
 // 市场/交易页面
 const ProductDetail = lazy(() => import('../pages/market/ProductDetailWrapper'));
-const PointsProductDetail = lazy(() => import('../../pages/market/PointsProductDetail'));
+const PointsProductDetail = lazy(() => import('../pages/market/PointsProductDetailWrapper'));
 const TradingZone = lazy(() => import('../pages/market/TradingZoneWrapper'));
 const ArtistShowcase = lazy(() => import('../pages/market/ArtistShowcaseWrapper'));
 const ArtistDetail = lazy(() => import('../pages/market/ArtistDetailWrapper'));
-const ArtistWorksShowcase = lazy(() => import('../../pages/market/ArtistWorksShowcase'));
+const ArtistWorksShowcase = lazy(() => import('../pages/market/ArtistWorksShowcaseWrapper'));
 const MasterpieceShowcase = lazy(() => import('../pages/market/MasterpieceShowcaseWrapper'));
 const ReservationPage = lazy(() => import('../pages/market/ReservationPageWrapper'));
 const ReservationRecordPage = lazy(() => import('../pages/market/ReservationRecordPageWrapper'));

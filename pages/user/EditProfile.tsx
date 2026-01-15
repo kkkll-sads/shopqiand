@@ -11,7 +11,9 @@
 import React, { useMemo, useRef, useState } from 'react';
 import { ChevronRight } from 'lucide-react';
 import PageContainer from '../../components/layout/PageContainer';
-import { AUTH_TOKEN_KEY, USER_INFO_KEY, uploadImage, updateAvatar, updateNickname } from '../../services/api';
+import { uploadImage, updateAvatar, updateNickname } from '../../services/api';
+import { getStoredToken } from '../../services/client';
+import { useAuthStore } from '../../src/stores/authStore';
 import { UserInfo } from '../../types';
 import { useNotification } from '../../context/NotificationContext';
 import { usePageNavigation } from '../../src/hooks/usePageNavigation';
@@ -22,16 +24,8 @@ import { usePageNavigation } from '../../src/hooks/usePageNavigation';
 const EditProfile: React.FC = () => {
   const { goBack, onLogout } = usePageNavigation();
   const { showToast } = useNotification();
-  // 从本地存储获取用户信息
-  const cachedUser: UserInfo | null = useMemo(() => {
-    try {
-      const cached = localStorage.getItem(USER_INFO_KEY);
-      return cached ? JSON.parse(cached) : null;
-    } catch (e) {
-      console.warn('解析本地用户信息失败:', e);
-      return null;
-    }
-  }, []);
+  // 从 authStore 获取用户信息
+  const cachedUser = useAuthStore((state) => state.user);
 
   const [userInfo, setUserInfo] = useState<UserInfo | null>(cachedUser);
   const [nickname, setNickname] = useState<string>(cachedUser?.nickname || cachedUser?.username || '');
@@ -58,7 +52,7 @@ const EditProfile: React.FC = () => {
     try {
       const res = await updateNickname({
         nickname: finalNickname,
-        token: userInfo.token || localStorage.getItem(AUTH_TOKEN_KEY) || '',
+        token: userInfo.token || getStoredToken() || '',
       });
 
       const updated: UserInfo = {
@@ -67,7 +61,7 @@ const EditProfile: React.FC = () => {
       };
 
       setUserInfo(updated);
-      localStorage.setItem(USER_INFO_KEY, JSON.stringify(updated));
+      useAuthStore.getState().updateUser(updated);
       showToast('success', res?.msg || '保存成功');
       goBack();
     } catch (error: any) {
@@ -119,7 +113,7 @@ const EditProfile: React.FC = () => {
         throw new Error('上传返回结果为空，请重试');
       }
 
-      const token = userInfo.token || localStorage.getItem(AUTH_TOKEN_KEY) || '';
+      const token = userInfo.token || getStoredToken() || '';
 
       const avatarRes = await updateAvatar({
         avatar: avatarPath || avatarUrl,
@@ -134,7 +128,7 @@ const EditProfile: React.FC = () => {
 
       setUserInfo(updatedUser);
       setAvatarPreview(updatedUser.avatar || '');
-      localStorage.setItem(USER_INFO_KEY, JSON.stringify(updatedUser));
+      useAuthStore.getState().updateUser(updatedUser);
       showToast('success', avatarRes?.msg || '头像更新成功');
     } catch (error: any) {
       console.error('修改头像失败:', error);

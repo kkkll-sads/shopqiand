@@ -359,5 +359,3 @@ export const API_ENDPOINTS = {
     },
 } as const;
 
-// 本地存储 key - 从统一位置导入并重新导出
-export { AUTH_TOKEN_KEY, USER_INFO_KEY } from '../constants/storageKeys';

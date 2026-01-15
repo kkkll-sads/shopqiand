@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ChevronLeft, Share2, Copy, Shield, Fingerprint, Award, ExternalLink, ArrowRightLeft, Store, X, Cpu, FileText } from 'lucide-react';
-import { MyCollectionItem, fetchProfile, fetchRealNameStatus, AUTH_TOKEN_KEY, fetchUserCollectionDetail, getConsignmentCheck, consignCollectionItem, getMyCollection, normalizeAssetUrl, toMining } from '../../services/api';
+import { MyCollectionItem, fetchProfile, fetchRealNameStatus, fetchUserCollectionDetail, getConsignmentCheck, consignCollectionItem, getMyCollection, normalizeAssetUrl, toMining } from '../../services/api';
+import { getStoredToken } from '../../services/client';
 import { UserInfo } from '../../types';
 import { useNotification } from '../../context/NotificationContext';
 import { Route } from '../../router/routes';
@@ -74,7 +75,7 @@ const MyCollectionDetail: React.FC<MyCollectionDetailProps> = ({ item: initialIt
 
     useEffect(() => {
         const loadData = async () => {
-            const token = localStorage.getItem(AUTH_TOKEN_KEY);
+            const token = getStoredToken();
             if (!token) {
                 setLoading(false);
                 return;
@@ -132,7 +133,7 @@ const MyCollectionDetail: React.FC<MyCollectionDetailProps> = ({ item: initialIt
         if (!showConsignmentModal) return;
 
         const loadCheck = async () => {
-            const token = localStorage.getItem(AUTH_TOKEN_KEY);
+            const token = getStoredToken();
             if (!token) return;
 
             try {
@@ -425,7 +426,7 @@ const MyCollectionDetail: React.FC<MyCollectionDetailProps> = ({ item: initialIt
                                         confirmText: '确认升级',
                                         cancelText: '取消',
                                         onConfirm: async () => {
-                                            const token = localStorage.getItem(AUTH_TOKEN_KEY);
+                                            const token = getStoredToken();
                                             if (!token) {
                                                 showToast('warning', '请登录');
                                                 return;
@@ -609,7 +610,7 @@ const MyCollectionDetail: React.FC<MyCollectionDetailProps> = ({ item: initialIt
 
                             <button
                                 onClick={async () => {
-                                    const token = localStorage.getItem(AUTH_TOKEN_KEY);
+                                    const token = getStoredToken();
                                     if (!token) {
                                         showToast('warning', '请登录');
                                         return;

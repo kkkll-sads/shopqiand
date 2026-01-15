@@ -12,7 +12,8 @@ import React, { useState, useEffect } from 'react';
 import { ShieldCheck, FileText, TrendingUp, Award, Gift, Receipt } from 'lucide-react';
 import PageContainer from '../../components/layout/PageContainer';
 import { LoadingSpinner } from '../../components/common';
-import { AUTH_TOKEN_KEY, fetchProfile } from '../../services/api';
+import { fetchProfile } from '../../services/api';
+import { getStoredToken } from '../../services/client';
 import { UserInfo } from '../../types';
 import { formatAmount } from '../../utils/format';
 import { isSuccess, extractError } from '../../utils/apiHelpers';
@@ -37,7 +38,7 @@ const CumulativeRights: React.FC<CumulativeRightsProps> = ({ onBack, onNavigate 
   // 加载用户数据
   useEffect(() => {
     const loadData = async () => {
-      const token = localStorage.getItem(AUTH_TOKEN_KEY);
+      const token = getStoredToken();
       if (!token) {
         setError('请先登录');
         setLoading(false);

@@ -14,8 +14,6 @@ import {
 import { getStoredToken } from '../../services/client';
 import { Route } from '../../router/routes';
 import { useNotification } from '../../context/NotificationContext';
-import { AUTH_TOKEN_KEY } from '../../constants/storageKeys';
-import { STORAGE_KEYS } from '../../constants/storageKeys';
 // ✅ 引入统一 API 处理工具
 import { isSuccess, extractData, extractError } from '../../utils/apiHelpers';
 
@@ -145,7 +143,7 @@ const SignIn: React.FC<SignInProps> = ({ onBack, onNavigate }) => {
             return;
         }
 
-        const token = localStorage.getItem(AUTH_TOKEN_KEY);
+        const token = getStoredToken();
         if (!token) {
             showToast('warning', '请先登录');
             return;
@@ -182,7 +180,7 @@ const SignIn: React.FC<SignInProps> = ({ onBack, onNavigate }) => {
                 setSignedInDates(dates);
 
                 // Refresh progress info after sign in
-                const token = localStorage.getItem(AUTH_TOKEN_KEY);
+                const token = getStoredToken();
                 if (token) {
                     try {
                         const progressRes = await fetchSignInProgress(token);

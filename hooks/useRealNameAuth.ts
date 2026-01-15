@@ -16,7 +16,6 @@ import { useEffect } from 'react';
 import { useNotification } from '../context/NotificationContext';
 import { useStateMachine } from './useStateMachine';
 import {
-  AUTH_TOKEN_KEY,
   fetchRealNameStatus,
   RealNameStatusData,
   submitRealName,
@@ -24,6 +23,7 @@ import {
   h5Recheck,
   H5RecheckResult,
 } from '../services/api';
+import { getStoredToken } from '../services/client';
 import { withErrorHandling, extractError } from '../utils/apiHelpers';
 import { RealNameStatus } from '../constants/statusEnums';
 
@@ -240,7 +240,7 @@ export function useRealNameAuth(): UseRealNameAuthReturn {
    * 加载实名认证状态
    */
   const loadRealNameStatus = async () => {
-    const token = localStorage.getItem(AUTH_TOKEN_KEY) || '';
+    const token = getStoredToken() || '';
     if (!token) {
       send(RealNameEvent.LOAD_ERROR, {
         error: '未找到登录信息，请先登录',
@@ -287,7 +287,7 @@ export function useRealNameAuth(): UseRealNameAuthReturn {
    * 处理H5核身回调
    */
   const handleAuthCallback = async () => {
-    const token = localStorage.getItem(AUTH_TOKEN_KEY) || '';
+    const token = getStoredToken() || '';
     if (!token) {
       send(RealNameEvent.VERIFY_ERROR, {
         error: '未找到登录信息，请先登录',
@@ -365,7 +365,7 @@ export function useRealNameAuth(): UseRealNameAuthReturn {
    */
   const submitRealNameWithAuthToken = async () => {
     console.log('🚀 submitRealNameWithAuthToken 被调用');
-    const token = localStorage.getItem(AUTH_TOKEN_KEY) || '';
+    const token = getStoredToken() || '';
 
     // 前端必须传递 auth_token
     if (!context.authToken) {
@@ -424,7 +424,7 @@ export function useRealNameAuth(): UseRealNameAuthReturn {
       return;
     }
 
-    const token = localStorage.getItem(AUTH_TOKEN_KEY) || '';
+    const token = getStoredToken() || '';
     if (!token) {
       setContext((prev) => ({ ...prev, error: '未找到登录信息，请先登录' }));
       showToast('error', '登录信息缺失');

@@ -6,12 +6,12 @@ import SubPageLayout from '../../components/SubPageLayout';
 import { LoadingSpinner, EmptyState, RegionPicker } from '../../components/common';
 import { isValidPhone } from '../../utils/validation';
 import {
-  AUTH_TOKEN_KEY,
   AddressItem,
   deleteAddress,
   fetchAddressList,
   saveAddress,
 } from '../../services/api';
+import { getStoredToken } from '../../services/client';
 import { useNotification } from '../../context/NotificationContext';
 import { isSuccess, extractError } from '../../utils/apiHelpers';
 import { useErrorHandler } from '../../hooks/useErrorHandler';
@@ -73,7 +73,7 @@ const AddressList: React.FC<AddressListProps> = ({ onBack }) => {
   const [showRegionPicker, setShowRegionPicker] = useState(false);
 
   const loadAddresses = async () => {
-    const token = localStorage.getItem(AUTH_TOKEN_KEY) || '';
+    const token = getStoredToken() || '';
     if (!token) {
       // ✅ 使用统一错误处理
       handleListError('未检测到登录信息，请重新登录后再查看地址列表', {

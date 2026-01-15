@@ -8,7 +8,7 @@
  */
 
 import { ApiResponse } from './networking';
-import { API_ENDPOINTS, AUTH_TOKEN_KEY } from './config';
+import { API_ENDPOINTS } from './config';
 import { authedFetch, getStoredToken } from './client';
 import { bizLog, debugLog, errorLog } from '../utils/logger';
 
@@ -757,7 +757,7 @@ export async function getCollectionOrderDetail(params: GetCollectionOrderDetailP
 }
 
 export async function getMyCollection(params: { page?: number; limit?: number; status?: string; token?: string } = {}): Promise<ApiResponse<{ list: MyCollectionItem[], total: number, has_more?: boolean, consignment_coupon?: number }>> {
-    const token = params.token || localStorage.getItem(AUTH_TOKEN_KEY) || '';
+    const token = params.token || getStoredToken();
     const search = new URLSearchParams();
     search.set('page', String(params.page || 1));
     search.set('limit', String(params.limit || 10));

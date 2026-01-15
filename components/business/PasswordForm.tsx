@@ -16,6 +16,7 @@
  */
 
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, Eye, EyeOff } from 'lucide-react';
 import { LoadingSpinner } from '../common';
 import {
@@ -26,10 +27,8 @@ import {
 } from '../../services/api';
 import { sendSmsCode } from '../../services/common';
 import { useNotification } from '../../context/NotificationContext';
-import { clearAuthStorage } from '../../utils/storageAccess';
-import { readJSON } from '../../utils/storageAccess';
+import { useAuthStore } from '../../src/stores/authStore';
 import { isSuccess, extractError } from '../../utils/apiHelpers';
-import { STORAGE_KEYS } from '../../constants/storageKeys';
 import { handleApiError, getApiErrorMessage, isApiSuccess } from '../../utils/apiErrorHandler';
 
 /**
@@ -45,8 +44,8 @@ interface PasswordFormProps {
     type: FormType;
     /** 页面标题 */
     title: string;
-    /** 返回回调 */
-    onBack: () => void;
+    /** 返回回调 (可选，默认使用 navigate(-1)) */
+    onBack?: () => void;
     /** 成功回调 */
     onSuccess?: () => void;
     /** 跳转找回密码回调 (可选) */
@@ -152,7 +151,27 @@ const PasswordForm: React.FC<PasswordFormProps> = ({
     onSuccess,
     onNavigateForgotPassword,
 }) => {
+    const navigate = useNavigate();
+    const logout = useAuthStore((state) => state.logout);
     const [currentType, setCurrentType] = useState<FormType>(type);
+
+    // 默认返回行为
+    const handleBack = () => {
+        if (onBack) {
+            onBack();
+        } else {
+            navigate(-1);
+        }
+    };
+
+    // 默认找回密码导航
+    const handleNavigateForgotPassword = () => {
+        if (onNavigateForgotPassword) {
+            onNavigateForgotPassword();
+        } else {
+            navigate('/forgot-password');
+        }
+    };
 
     // 获取通知上下文
     const { showToast } = useNotification();
@@ -160,9 +179,9 @@ const PasswordForm: React.FC<PasswordFormProps> = ({
     // 获取表单配置
     const config = getFormConfig(currentType);
 
-    // 读取本地用户手机号（用于重置登录/交易密码时自动填充且不可修改）
-    const storedUserInfo = readJSON<{ mobile?: string }>(STORAGE_KEYS.USER_INFO_KEY, null);
-    const presetAccount = storedUserInfo?.mobile || '';
+    // 从 authStore 读取用户手机号（用于重置登录/交易密码时自动填充且不可修改）
+    const storedUser = useAuthStore((state) => state.user);
+    const presetAccount = storedUser?.mobile || '';
 
     // 表单状态
     const [phone, setPhone] = useState(presetAccount);
@@ -268,7 +287,7 @@ const PasswordForm: React.FC<PasswordFormProps> = ({
                 });
                 showToast('success', '重置成功', '请使用新密码重新登录');
                 onSuccess?.();
-                onBack();
+                handleBack();
             } catch (error: any) {
                 const message = error.msg || error.message || '重置密码失败，请检查验证码是否正确';
                 setError(message);
@@ -340,11 +359,11 @@ const PasswordForm: React.FC<PasswordFormProps> = ({
                 // 检查返回码
                 if (isSuccess(response)) {
                     // 清理本地登录态，强制重新登录
-                    clearAuthStorage();
+                    logout();
 
                     showToast('success', '重置成功', '登录密码重置成功，请使用新密码重新登录');
                     onSuccess?.();
-                    onBack();
+                    handleBack();
                 } else {
                     const errorMsg = extractError(response, '修改密码失败');
                     setError(errorMsg);
@@ -361,7 +380,7 @@ const PasswordForm: React.FC<PasswordFormProps> = ({
                 if (isSuccess(response)) {
                     showToast('success', '修改成功', '支付密码修改成功');
                     onSuccess?.();
-                    onBack();
+                    handleBack();
                 } else {
                     const errorMsg = extractError(response, '修改支付密码失败');
                     setError(errorMsg);
@@ -377,7 +396,7 @@ const PasswordForm: React.FC<PasswordFormProps> = ({
                 if (isSuccess(response)) {
                     showToast('success', '重置成功', '支付密码重置成功');
                     onSuccess?.();
-                    onBack();
+                    handleBack();
                 } else {
                     const errorMsg = extractError(response, '重置支付密码失败');
                     setError(errorMsg);
@@ -401,7 +420,7 @@ const PasswordForm: React.FC<PasswordFormProps> = ({
                 <div className="relative flex items-center justify-center w-full">
                     <button
                         className="absolute left-0 p-2 -ml-2 rounded-full active:bg-gray-100 transition-colors"
-                        onClick={onBack}
+                        onClick={handleBack}
                         aria-label="返回"
                     >
                         <ChevronLeft size={22} className="text-gray-900" />
@@ -409,7 +428,7 @@ const PasswordForm: React.FC<PasswordFormProps> = ({
                     <h1 className="text-lg font-bold text-gray-900">{title}</h1>
 
                     {/* 忘记密码按钮 (仅在重置登录密码或支付密码时显示) */}
-                    {(currentType === 'reset_login' || currentType === 'reset_pay') && onNavigateForgotPassword && (
+                    {(currentType === 'reset_login' || currentType === 'reset_pay') && (
                         <button
                             type="button"
                             className="absolute right-0 text-sm text-orange-600 font-medium active:opacity-70"
@@ -423,7 +442,7 @@ const PasswordForm: React.FC<PasswordFormProps> = ({
                                     setNewPassword('');
                                     setConfirmPassword('');
                                 } else {
-                                    onNavigateForgotPassword();
+                                    handleNavigateForgotPassword();
                                 }
                             }}
                         >

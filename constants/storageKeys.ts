@@ -45,9 +45,5 @@ export const STORAGE_KEYS = {
     LAST_SIGN_IN_DATE_KEY: 'cat_last_sign_in_date',
 } as const;
 
-// 为了向后兼容，导出单独的常量（逐步废弃，推荐使用 STORAGE_KEYS）
-export const AUTH_KEY = STORAGE_KEYS.AUTH_KEY;
-export const AUTH_TOKEN_KEY = STORAGE_KEYS.AUTH_TOKEN_KEY;
-export const USER_INFO_KEY = STORAGE_KEYS.USER_INFO_KEY;
-export const REAL_NAME_STATUS_KEY = STORAGE_KEYS.REAL_NAME_STATUS_KEY;
-export const REAL_NAME_KEY = STORAGE_KEYS.REAL_NAME_KEY;
+// 注意：AUTH_TOKEN_KEY 和 USER_INFO_KEY 已废弃
+// 认证状态请使用 src/stores/authStore.ts (Zustand)

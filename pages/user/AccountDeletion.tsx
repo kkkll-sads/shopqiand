@@ -12,7 +12,9 @@
 import React, { useState } from 'react';
 import PageContainer from '../../components/layout/PageContainer';
 import { ConfirmModal } from '../../components/common';
-import { AUTH_TOKEN_KEY, USER_INFO_KEY, cancelAccount } from '../../services/api';
+import { cancelAccount } from '../../services/api';
+import { getStoredToken } from '../../services/client';
+import { useAuthStore } from '../../src/stores/authStore';
 import { useModal } from '../../hooks';
 import { useNotification } from '../../context/NotificationContext';
 
@@ -90,8 +92,7 @@ const AccountDeletion: React.FC<AccountDeletionProps> = ({ onBack }) => {
       });
 
       // 注销成功后清理本地登录态
-      localStorage.removeItem(AUTH_TOKEN_KEY);
-      localStorage.removeItem(USER_INFO_KEY);
+      useAuthStore.getState().logout();
 
       showToast('success', '提交成功', response?.msg || '您的注销申请已提交，我们将尽快处理。');
       onBack();

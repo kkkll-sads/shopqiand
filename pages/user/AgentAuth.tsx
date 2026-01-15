@@ -13,13 +13,13 @@ import { Building2, User, IdCard, Image as ImageIcon } from 'lucide-react';
 import PageContainer from '../../components/layout/PageContainer';
 import { LoadingSpinner } from '../../components/common';
 import {
-  AUTH_TOKEN_KEY,
   AgentReviewStatusData,
   fetchAgentReviewStatus,
   submitAgentReview,
   uploadImage,
   normalizeAssetUrl,
 } from '../../services/api';
+import { getStoredToken } from '../../services/client';
 import { useNotification } from '../../context/NotificationContext';
 import { isSuccess, extractError } from '../../utils/apiHelpers';
 import { useErrorHandler } from '../../hooks/useErrorHandler';
@@ -61,7 +61,7 @@ const AgentAuth: React.FC<AgentAuthProps> = ({ onBack }) => {
   // 加载代理商状态
   useEffect(() => {
     const init = async () => {
-      const token = localStorage.getItem(AUTH_TOKEN_KEY) || '';
+      const token = getStoredToken() || '';
       if (!token) {
         // ✅ 使用统一错误处理
         handleError('未找到登录信息，请先登录', {
@@ -152,7 +152,7 @@ const AgentAuth: React.FC<AgentAuthProps> = ({ onBack }) => {
       setSubmitting(true);
       clearError(); // ✅ 使用统一错误清除
 
-      const token = localStorage.getItem(AUTH_TOKEN_KEY) || '';
+      const token = getStoredToken() || '';
       const res = await submitAgentReview({
         company_name: companyName,
         legal_person: legalPerson,
