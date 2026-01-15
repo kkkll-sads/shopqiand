@@ -120,10 +120,12 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onBack, onItemSelect, onNav
     const seen = new Set<string>();
     return collections.filter(item => {
       const uniqueKey = item.id || item.user_collection_id || item.item_id;
-      if (seen.has(String(uniqueKey))) {
+      const key = String(uniqueKey);
+      if (seen.has(key)) {
+        console.log('去重：过滤重复藏品', { id: item.id, asset_code: item.asset_code });
         return false;
       }
-      seen.add(String(uniqueKey));
+      seen.add(key);
       return true;
     });
   };

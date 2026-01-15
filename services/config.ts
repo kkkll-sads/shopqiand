@@ -357,6 +357,18 @@ export const API_ENDPOINTS = {
         /** 获取直播广告视频配置 */
         config: '/index.php/api/liveVideo/config',
     },
+    contentHotVideo: {
+        /** 获取热门视频列表 */
+        index: '/ContentHotVideo/index',
+        /** 添加视频 */
+        add: '/ContentHotVideo/add',
+        /** 编辑视频 */
+        edit: '/ContentHotVideo/edit',
+        /** 删除视频 */
+        delete: '/ContentHotVideo/delete',
+        /** 视频详情 */
+        detail: '/ContentHotVideo/detail',
+    },
 } as const;
 
 // 本地存储 key - 从统一位置导入并重新导出
