@@ -70,9 +70,9 @@ export async function login(params: LoginParams): Promise<ApiResponse> {
             formData.append('captcha', params.captcha);
         } else if (params.password) {
             // 密码登录：使用 login tab，使用 username 字段
-            formData.append('tab', 'login');
-            formData.append('username', params.mobile);
-            formData.append('password', params.password);
+        formData.append('tab', 'login');
+        formData.append('username', params.mobile);
+        formData.append('password', params.password);
         } else {
             // 既没有验证码也没有密码，抛出错误
             throw new Error('请提供密码或验证码');

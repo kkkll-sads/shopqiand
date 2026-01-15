@@ -57,7 +57,6 @@ import OnlineService from '../pages/cms/OnlineService';
 import SearchPage from '../pages/market/SearchPage';
 import ReservationRecordDetailPage from '../pages/market/ReservationRecordDetailPage';
 import ReservationRecordPage from '../pages/market/ReservationRecordPage';
-import VideoManagement from '../pages/admin/VideoManagement';
 import { STORAGE_KEYS } from '../constants/storageKeys';
 import { writeStorage } from '../utils/storageAccess';
 import { type NewsItem, type Product } from '../types';
@@ -634,11 +633,6 @@ export const routeComponents: Partial<Record<Route['name'], RouteRenderer>> = {
   'withdraw-order-detail': (route, helpers) => (
     <WithdrawOrderDetail
       orderId={(route as Extract<Route, { name: 'withdraw-order-detail' }>).orderId}
-      onBack={() => helpers.goBack()}
-    />
-  ),
-  'video-management': (route, helpers) => (
-    <VideoManagement
       onBack={() => helpers.goBack()}
     />
   ),

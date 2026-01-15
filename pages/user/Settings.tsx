@@ -161,16 +161,6 @@ const Settings: React.FC<SettingsProps> = ({ onBack, onLogout, onNavigate }) => 
         />
       </div>
 
-      {/* 管理功能 */}
-      {userInfo?.user_type === 'admin' && (
-        <div className="mt-3 bg-white">
-          <ListItem
-            title="视频管理"
-            onClick={() => onNavigate({ name: 'video-management' })}
-          />
-        </div>
-      )}
-
       {/* 版本和政策 */}
       <div className="mt-3 bg-white">
         <ListItem

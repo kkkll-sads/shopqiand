@@ -636,72 +636,72 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, onNaviga
 
       {/* Bottom Action - 证书查询页面隐藏 */}
       {!hideActions && (
-        <div className="fixed bottom-0 left-0 right-0 p-4 bg-white/90 backdrop-blur-md border-t border-gray-100 z-50">
+      <div className="fixed bottom-0 left-0 right-0 p-4 bg-white/90 backdrop-blur-md border-t border-gray-100 z-50">
 
-          {/* Market Heat Indicator - Only for Collection */}
-          {/* Frozen Amount & Hashrate Tip - Only for Collection */}
-          {!isShopProduct && (
-            <div className="flex justify-end mb-2">
-              <span className="text-[10px] text-gray-900 bg-white px-1 py-0.5">
-                本次申购需冻结：¥{displayPriceNum.toFixed(2)} | 消耗算力：5
-              </span>
-            </div>
-          )}
+        {/* Market Heat Indicator - Only for Collection */}
+        {/* Frozen Amount & Hashrate Tip - Only for Collection */}
+        {!isShopProduct && (
+          <div className="flex justify-end mb-2">
+            <span className="text-[10px] text-gray-900 bg-white px-1 py-0.5">
+              本次申购需冻结：¥{displayPriceNum.toFixed(2)} | 消耗算力：5
+            </span>
+          </div>
+        )}
 
-          <div className="flex items-center justify-between gap-4">
-            <div className="text-left">
-              <div className="flex flex-col">
-                <div className="text-xl font-bold text-gray-900 font-mono flex items-baseline leading-none">
-                  {displayPriceStr}
-                </div>
-                {/* Expected Appreciation Label - Only for Collection */}
-                {!isShopProduct && (
-                  <div className="flex items-center gap-1 mt-1">
-                    <TrendingUp size={10} className="text-red-500" />
-                    <span className="text-[10px] font-bold text-red-500 bg-red-50 px-1 py-0.5 rounded border border-red-100/50">
-                      预期增值 +4%~+6%
-                    </span>
-                  </div>
-                )}
+        <div className="flex items-center justify-between gap-4">
+          <div className="text-left">
+            <div className="flex flex-col">
+              <div className="text-xl font-bold text-gray-900 font-mono flex items-baseline leading-none">
+                {displayPriceStr}
               </div>
+              {/* Expected Appreciation Label - Only for Collection */}
+              {!isShopProduct && (
+                <div className="flex items-center gap-1 mt-1">
+                  <TrendingUp size={10} className="text-red-500" />
+                  <span className="text-[10px] font-bold text-red-500 bg-red-50 px-1 py-0.5 rounded border border-red-100/50">
+                    预期增值 +4%~+6%
+                  </span>
+                </div>
+              )}
             </div>
+          </div>
 
-            {(() => {
-              debugLog('productDetail.render', '渲染按钮区', {
-                isShopProduct,
-                consignmentId: product.consignmentId,
-                reservationId: product.reservationId,
-                productId: product.id,
-              });
+          {(() => {
+            debugLog('productDetail.render', '渲染按钮区', {
+              isShopProduct,
+              consignmentId: product.consignmentId,
+              reservationId: product.reservationId,
+              productId: product.id,
+            });
 
-              if (isShopProduct) {
-                return (
-                  <button
-                    onClick={handleBuy}
-                    disabled={buying}
-                    className="flex-1 bg-[#EE4D2D] text-white hover:bg-[#D73211] transition-colors py-3.5 rounded-lg font-bold flex items-center justify-center gap-2 shadow-lg shadow-orange-900/20 active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed">
-                    {buying ? <LoadingSpinner size={18} color="white" /> : <CreditCard size={18} />}
-                    {buying ? '处理中...' : '立即购买'}
-                  </button>
-                );
-              } else if (product.reservationId) {
-                return (
-                  <button
-                    disabled
-                    className="flex-1 bg-gray-100 text-gray-400 border border-gray-200 cursor-not-allowed py-3.5 rounded-lg font-bold flex items-center justify-center gap-2">
-                    <Gavel size={18} />
-                    确权中
-                  </button>
-                );
-              } else {
-                return (
-                  <button
-                    onClick={() => {
-                      debugLog('productDetail.render', '点击申请确权', {
-                        id: product.id,
-                        title: product.title,
-                        consignmentId: product.consignmentId,
-                        reservationId: product.reservationId,
+            if (isShopProduct) {
+              return (
+                <button
+                  onClick={handleBuy}
+                  disabled={buying}
+                  className="flex-1 bg-[#EE4D2D] text-white hover:bg-[#D73211] transition-colors py-3.5 rounded-lg font-bold flex items-center justify-center gap-2 shadow-lg shadow-orange-900/20 active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed">
+                  {buying ? <LoadingSpinner size={18} color="white" /> : <CreditCard size={18} />}
+                  {buying ? '处理中...' : '立即购买'}
+                </button>
+              );
+            } else if (product.reservationId) {
+              return (
+                <button
+                  disabled
+                  className="flex-1 bg-gray-100 text-gray-400 border border-gray-200 cursor-not-allowed py-3.5 rounded-lg font-bold flex items-center justify-center gap-2">
+                  <Gavel size={18} />
+                  确权中
+                </button>
+              );
+            } else {
+              return (
+                <button
+                  onClick={() => {
+                    debugLog('productDetail.render', '点击申请确权', {
+                      id: product.id,
+                      title: product.title,
+                      consignmentId: product.consignmentId,
+                      reservationId: product.reservationId,
                         detailData: detailData ? {
                           session_id: (detailData as any).session_id,
                           zone_id: (detailData as any).zone_id,
@@ -749,17 +749,17 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, onNaviga
                         }
                       }
 
-                      onNavigate({ name: 'reservation', back: { name: 'product-detail' } });
-                    }}
-                    className="flex-1 bg-[#8B0000] text-amber-100 hover:bg-[#A00000] transition-colors py-3.5 rounded-lg font-bold flex items-center justify-center gap-2 shadow-lg shadow-red-900/20 active:scale-[0.98]">
-                    <Gavel size={18} />
-                    申请确权
-                  </button>
-                );
-              }
-            })()}
-          </div>
+                    onNavigate({ name: 'reservation', back: { name: 'product-detail' } });
+                  }}
+                  className="flex-1 bg-[#8B0000] text-amber-100 hover:bg-[#A00000] transition-colors py-3.5 rounded-lg font-bold flex items-center justify-center gap-2 shadow-lg shadow-red-900/20 active:scale-[0.98]">
+                  <Gavel size={18} />
+                  申请确权
+                </button>
+              );
+            }
+          })()}
         </div>
+      </div>
       )}
 
       {/* 交易须知公告弹窗 */}

@@ -92,7 +92,7 @@ const WithdrawOrderDetail: React.FC<WithdrawOrderDetailProps> = ({ orderId, onBa
             document.body.removeChild(textArea);
 
             if (successful) {
-                showToast('success', '复制成功');
+            showToast('success', '复制成功');
                 return;
             }
             throw new Error('execCommand failed');

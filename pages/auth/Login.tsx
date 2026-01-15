@@ -193,16 +193,16 @@ const Login: React.FC<LoginProps> = ({
         event: 'user_login' // 验证码登录场景使用 user_login
       });
       showToast('success', '验证码已发送');
-      setCountdown(60);
-      const timer = setInterval(() => {
-        setCountdown((prev) => {
-          if (prev <= 1) {
-            clearInterval(timer);
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
+    setCountdown(60);
+    const timer = setInterval(() => {
+      setCountdown((prev) => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
     } catch (error: any) {
       const msg = error.msg || error.message || '发送验证码失败';
       showToast('error', '验证码发送失败', msg);
@@ -283,7 +283,7 @@ const Login: React.FC<LoginProps> = ({
         context: { phone, loginType }
       });
     } finally {
-      setLoading(false);
+        setLoading(false);
     }
   };
 

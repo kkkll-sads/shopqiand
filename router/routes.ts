@@ -76,9 +76,7 @@ export type RoutePayload =
   | { name: 'recharge-order-detail'; orderId: string }
   | { name: 'withdraw-order-list' }
   | { name: 'withdraw-order-detail'; orderId: string }
-  | { name: 'friend-detail'; id: string; friend?: TeamMember }
-  // 管理页面
-  | { name: 'video-management' };
+  | { name: 'friend-detail'; id: string; friend?: TeamMember };
 
 // 导航过程中可携带 back，类型安全的回退路径
 export type Route = RoutePayload & { back?: RoutePayload | null };
@@ -165,8 +163,6 @@ export function encodeRoute(r: RoutePayload): string {
       return `my-collection-action:consignment:${r.id}`;
     case 'friend-detail':
       return `friend-detail:${r.id}`;
-    case 'video-management':
-      return 'video-management';
     default:
       return r.name;
   }
@@ -241,8 +237,6 @@ export function decodeRoute(s: string): RoutePayload {
       return { name: 'my-collection' };
     case 'friend-detail':
       return { name: 'friend-detail', id: parts[1] || '' };
-    case 'video-management':
-      return { name: 'video-management' };
     case 'service-center':
       switch (parts[1]) {
         case 'settings':

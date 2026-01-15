@@ -85,7 +85,7 @@ const ClaimDetail: React.FC<ClaimDetailProps> = ({ id, onBack }) => {
             document.body.removeChild(textArea);
 
             if (successful) {
-                showToast('success', '复制成功');
+            showToast('success', '复制成功');
                 return;
             }
             throw new Error('execCommand failed');

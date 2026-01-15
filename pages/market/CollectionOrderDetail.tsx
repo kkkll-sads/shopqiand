@@ -99,9 +99,9 @@ const CollectionOrderDetail: React.FC<CollectionOrderDetailProps> = ({ id, order
     
     try {
       await copyText(text);
-      setCopiedOrderNo(true);
-      showToast('success', '复制成功', '订单号已复制到剪贴板');
-      setTimeout(() => setCopiedOrderNo(false), 2000);
+    setCopiedOrderNo(true);
+    showToast('success', '复制成功', '订单号已复制到剪贴板');
+    setTimeout(() => setCopiedOrderNo(false), 2000);
     } catch (error) {
       showToast('error', '复制失败', '请手动复制');
     }
