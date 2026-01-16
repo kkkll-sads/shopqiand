@@ -340,7 +340,7 @@ const Profile: React.FC<{ unreadCount?: number }> = ({ unreadCount = 0 }) => {
             {/* Main Big Number: Supply Chain Special Fund (balance_available) */}
             <div
               className="text-3xl font-[DINAlternate-Bold,Roboto,sans-serif] font-bold text-gray-900 tracking-tight mb-6 cursor-pointer active:opacity-70 transition-opacity"
-              onClick={() => navigateTo('asset-view:0')}
+              onClick={() => navigateTo('asset-view', { tab: 0 })}
             >
               <span className="text-xl mr-1">¥</span>
               {/* Display balance_available without commas */}
@@ -352,7 +352,7 @@ const Profile: React.FC<{ unreadCount?: number }> = ({ unreadCount = 0 }) => {
               {/* Row 1, Col 1: Withdrawable */}
               <div
                 className="flex flex-col cursor-pointer active:opacity-70 transition-opacity"
-                onClick={() => navigateTo('asset-view:1')}
+                onClick={() => navigateTo('asset-view', { tab: 1 })}
               >
                 <div className="text-xs text-gray-400 mb-1">可调度收益</div>
                 <div className="text-[15px] font-bold text-gray-800 font-[DINAlternate-Bold,Roboto,sans-serif] leading-tight">
@@ -387,7 +387,7 @@ const Profile: React.FC<{ unreadCount?: number }> = ({ unreadCount = 0 }) => {
               {/* Row 2, Col 2: Rights Fund */}
               <div
                 className="flex flex-col items-end cursor-pointer active:opacity-70 transition-opacity"
-                onClick={() => navigateTo('asset-view:3')}
+                onClick={() => navigateTo('asset-view', { tab: 3 })}
               >
                 <div className="text-xs text-gray-400 mb-1">确权金</div>
                 <div className="text-[15px] font-bold text-gray-800 font-[DINAlternate-Bold,Roboto,sans-serif] leading-tight">
