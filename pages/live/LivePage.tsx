@@ -4,7 +4,7 @@ import { fetchProfile } from '../../services/user';
 import { fetchLiveVideoConfig } from '../../services/common';
 import { getStoredToken } from '../../services/client';
 import { isSuccess, extractData } from '../../utils/apiHelpers';
-import { LoadingSpinner, EmbeddedBrowser } from '../../components/common';
+import { LoadingSpinner, VideoBrowser } from '../../components/common';
 import { useErrorHandler } from '../../hooks/useErrorHandler';
 
 const LivePage: React.FC = () => {
@@ -208,7 +208,7 @@ const LivePage: React.FC = () => {
             </div>
 
             {/* Embedded Live Browser */}
-            <EmbeddedBrowser
+            <VideoBrowser
                 isOpen={showLiveBrowser}
                 url={liveUrl || ''}
                 title="直播间"
@@ -216,7 +216,7 @@ const LivePage: React.FC = () => {
             />
 
             {/* Embedded Video Browser */}
-            <EmbeddedBrowser
+            <VideoBrowser
                 isOpen={showVideoBrowser}
                 url={videoConfig?.video_url || ''}
                 title={videoConfig?.title || '广告视频'}

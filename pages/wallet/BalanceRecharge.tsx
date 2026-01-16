@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import { ChevronLeft, Zap, Radar, CheckCircle, Shield, AlertTriangle, AlertCircle, X, Wallet, CreditCard, Banknote, Upload, Image as ImageIcon } from 'lucide-react';
 
-import { LoadingSpinner, EmbeddedBrowser } from '../../components/common';
+import { LoadingSpinner, PaymentBrowser } from '../../components/common';
 import { fetchCompanyAccountList, CompanyAccountItem, submitRechargeOrder, transferIncomeToPurchase, updateRechargeOrderRemark } from '../../services/api';
 import { fetchProfile } from '../../services/user';
 import { getStoredToken } from '../../services/client';
@@ -1099,7 +1099,7 @@ const BalanceRecharge: React.FC<BalanceRechargeProps> = ({ onBack, onNavigate, i
       )}
 
       {/* Embedded Payment Browser */}
-      <EmbeddedBrowser
+      <PaymentBrowser
         isOpen={showPaymentBrowser}
         url={paymentUrl}
         title="支付收银台"

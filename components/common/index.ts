@@ -28,6 +28,12 @@ export { default as ResultModal } from './ResultModal';
 // 内嵌浏览器组件
 export * from './EmbeddedBrowser';
 
+// 支付浏览器组件
+export * from './PaymentBrowser';
+
+// 视频浏览器组件
+export * from './VideoBrowser';
+
 // 卡片组件
 export { default as Card } from './Card';
 
