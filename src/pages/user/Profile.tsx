@@ -302,7 +302,7 @@ const Profile: React.FC<{ unreadCount?: number }> = ({ unreadCount = 0 }) => {
           </div>
           <div className="flex gap-4">
             <button
-              onClick={() => navigateTo('service-center:message')}
+              onClick={() => navigateTo('message-center')}
               className="text-gray-600 hover:text-gray-900 transition-colors relative"
             >
               <MessageSquare size={22} />
@@ -311,7 +311,7 @@ const Profile: React.FC<{ unreadCount?: number }> = ({ unreadCount = 0 }) => {
               )}
             </button>
             <button
-              onClick={() => navigateTo('service-center:settings')}
+              onClick={() => navigateTo('settings')}
               className="text-gray-600 hover:text-gray-900 transition-colors"
             >
               <Settings size={22} />
