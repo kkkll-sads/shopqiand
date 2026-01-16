@@ -6,6 +6,7 @@ import { getStoredToken } from '../../services/client';
 import { isSuccess, extractData } from '../../utils/apiHelpers';
 import { LoadingSpinner, VideoBrowser } from '../../components/common';
 import { useErrorHandler } from '../../hooks/useErrorHandler';
+import VideoDetail from './VideoDetail';
 
 const LivePage: React.FC = () => {
     const [activeTab, setActiveTab] = useState('live');
@@ -19,6 +20,7 @@ const LivePage: React.FC = () => {
     } | null>(null);
     const [videoLoading, setVideoLoading] = useState<boolean>(false);
     const [showVideoBrowser, setShowVideoBrowser] = useState<boolean>(false);
+    const [showVideoDetail, setShowVideoDetail] = useState<boolean>(false);
     const { handleError } = useErrorHandler();
 
     const tabs = [
@@ -78,6 +80,11 @@ const LivePage: React.FC = () => {
         }
     }, [activeTab, handleError]);
 
+    // 如果显示视频详情页，则渲染视频详情页
+    if (showVideoDetail) {
+        return <VideoDetail onBack={() => setShowVideoDetail(false)} />;
+    }
+
     return (
         <div className="h-screen bg-gray-50 flex flex-col overflow-hidden">
             {/* Header with Tabs */}
@@ -111,7 +118,7 @@ const LivePage: React.FC = () => {
                         {/* 广告视频卡片 */}
                         {videoConfig && (
                             <div
-                                onClick={() => setShowVideoBrowser(true)}
+                                onClick={() => setShowVideoDetail(true)}
                                 className="bg-white rounded-xl overflow-hidden shadow-lg active:scale-[0.98] transition-transform cursor-pointer"
                             >
                                 {/* 视频封面区域 */}
