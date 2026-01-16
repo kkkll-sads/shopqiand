@@ -175,6 +175,10 @@ export async function fetchLiveVideoConfig(token?: string): Promise<ApiResponse<
     try {
         const headers: Record<string, string> = {
             'Accept': 'application/json',
+            // 添加缓存控制头，防止浏览器缓存
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache',
+            'Expires': '0',
         };
 
         // 如果有 token，添加到请求头
@@ -182,13 +186,19 @@ export async function fetchLiveVideoConfig(token?: string): Promise<ApiResponse<
             headers['batoken'] = token;
         }
 
-        const response = await fetch(API_ENDPOINTS.liveVideo.config, {
+        // 添加时间戳参数防止缓存
+        const timestamp = Date.now();
+        const url = `${API_ENDPOINTS.liveVideo.config}?_t=${timestamp}`;
+
+        const response = await fetch(url, {
             method: 'GET',
             headers,
+            // 禁用浏览器缓存
+            cache: 'no-store',
         });
 
         const data = await response.json();
-        debugLog('api.liveVideo.config', { token: !!token, data });
+        debugLog('api.liveVideo.config', { token: !!token, timestamp, data });
         return data;
     } catch (error: any) {
         errorLog('api.liveVideo.config', '获取视频配置失败', error);
