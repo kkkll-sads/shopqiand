@@ -355,7 +355,7 @@ export const API_ENDPOINTS = {
     },
     liveVideo: {
         /** 获取直播广告视频配置 */
-        config: '/index.php/api/liveVideo/config',
+        config: '/liveVideo/config',
     },
 } as const;
 
