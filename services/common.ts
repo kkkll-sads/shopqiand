@@ -161,46 +161,37 @@ export interface VideoDetailData {
     description: string;
     play_count: number;
     user_played: boolean;
+    is_login: boolean;
 }
 
 /**
- * 获取直播广告视频配置（公共接口，无需token）
- * 用于直播页面列表展示
+ * 获取视频配置/详情（统一接口）
+ * @param token - 可选，传递后会记录播放量并返回用户观看状态
+ * 
+ * 不传token：返回基本信息（video_url, title, description, play_count）
+ * 传token：返回完整信息（包含 user_played, is_login）
  */
-export async function fetchLiveVideoConfig(): Promise<ApiResponse<LiveVideoConfigData>> {
+export async function fetchLiveVideoConfig(token?: string): Promise<ApiResponse<VideoDetailData>> {
     try {
-        // 直接请求，不使用API_BASE_URL前缀，通过Vite代理处理
+        const headers: Record<string, string> = {
+            'Accept': 'application/json',
+        };
+
+        // 如果有 token，添加到请求头
+        if (token) {
+            headers['batoken'] = token;
+        }
+
         const response = await fetch(API_ENDPOINTS.liveVideo.config, {
             method: 'GET',
-            headers: {
-                'Accept': 'application/json',
-            },
+            headers,
         });
 
         const data = await response.json();
-        debugLog('api.liveVideo.config.raw', data);
+        debugLog('api.liveVideo.config', { token: !!token, data });
         return data;
     } catch (error: any) {
-        errorLog('api.liveVideo.config', '获取广告视频配置失败', error);
-        throw error;
-    }
-}
-
-/**
- * 获取视频详情（需要token）
- * 用于视频详情页，包含播放次数和用户观看状态
- */
-export async function fetchVideoDetail(token?: string): Promise<ApiResponse<VideoDetailData>> {
-    try {
-        const response = await authedFetch<VideoDetailData>(API_ENDPOINTS.liveVideo.config, {
-            method: 'GET',
-            token,
-        });
-
-        debugLog('api.liveVideo.detail', response);
-        return response;
-    } catch (error: any) {
-        errorLog('api.liveVideo.detail', '获取视频详情失败', error);
+        errorLog('api.liveVideo.config', '获取视频配置失败', error);
         throw error;
     }
 }

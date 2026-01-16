@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ChevronLeft, Play, Pause, Volume2, VolumeX, Maximize, Eye } from 'lucide-react';
 import { LoadingSpinner } from '../../components/common';
-import { fetchVideoDetail, VideoDetailData } from '../../services/common';
+import { fetchLiveVideoConfig, VideoDetailData } from '../../services/common';
 import { getStoredToken } from '../../services/client';
 import { isSuccess, extractData } from '../../utils/apiHelpers';
 import { useErrorHandler } from '../../hooks/useErrorHandler';
@@ -30,7 +30,8 @@ const VideoDetail: React.FC<VideoDetailProps> = ({ onBack }) => {
         try {
             setLoading(true);
             const token = getStoredToken();
-            const response = await fetchVideoDetail(token || '');
+            // 传递 token 以记录播放量并获取用户观看状态
+            const response = await fetchLiveVideoConfig(token || undefined);
 
             if (isSuccess(response)) {
                 const data = extractData<VideoDetailData>(response);
