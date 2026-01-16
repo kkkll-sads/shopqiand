@@ -1,9 +1,6 @@
 import React from 'react';
-import ResetLoginPassword from '../../../pages/auth/ResetLoginPassword';
-import { withNavigation } from '../../hoc/withNavigation';
+import ResetLoginPassword from './ResetLoginPassword';
 
-const ResetLoginPasswordWithNav = withNavigation(ResetLoginPassword);
-
-const ResetLoginPasswordWrapper: React.FC = () => <ResetLoginPasswordWithNav />;
+const ResetLoginPasswordWrapper: React.FC = () => <ResetLoginPassword />;
 
 export default ResetLoginPasswordWrapper;

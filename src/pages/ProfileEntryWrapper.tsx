@@ -1,5 +1,5 @@
 import React from 'react';
-import Profile from '../../pages/user/Profile';
+import Profile from './user/Profile';
 
 const ProfileEntryWrapper: React.FC = () => <Profile />;
 

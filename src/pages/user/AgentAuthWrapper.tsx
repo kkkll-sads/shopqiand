@@ -1,9 +1,6 @@
 import React from 'react';
-import AgentAuth from '../../../pages/user/AgentAuth';
-import { withNavigation } from '../../hoc/withNavigation';
+import AgentAuth from './AgentAuth';
 
-const AgentAuthWithNav = withNavigation(AgentAuth);
-
-const AgentAuthWrapper: React.FC = () => <AgentAuthWithNav />;
+const AgentAuthWrapper: React.FC = () => <AgentAuth />;
 
 export default AgentAuthWrapper;

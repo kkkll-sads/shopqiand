@@ -1,5 +1,5 @@
 import React from 'react';
-import MessageCenter from '../../../pages/cms/MessageCenter';
+import MessageCenter from './MessageCenter';
 
 const MessageCenterWrapper: React.FC = () => <MessageCenter />;
 

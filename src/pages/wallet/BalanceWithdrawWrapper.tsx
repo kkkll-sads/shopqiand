@@ -1,9 +1,6 @@
 import React from 'react';
-import BalanceWithdraw from '../../../pages/wallet/BalanceWithdraw';
-import { withNavigation } from '../../hoc/withNavigation';
+import BalanceWithdraw from './BalanceWithdraw';
 
-const BalanceWithdrawWithNav = withNavigation(BalanceWithdraw);
-
-const BalanceWithdrawWrapper: React.FC = () => <BalanceWithdrawWithNav />;
+const BalanceWithdrawWrapper: React.FC = () => <BalanceWithdraw />;
 
 export default BalanceWithdrawWrapper;

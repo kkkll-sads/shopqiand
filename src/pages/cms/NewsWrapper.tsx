@@ -1,22 +1,10 @@
 /**
- * News 页面包装器
+ * News 页面包装�?
+ * 简化版: 直接渲染 News 组件
  */
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
-import News from '../../../pages/cms/News';
-import { useAppStore } from '../../stores/appStore';
-import type { NewsItem } from '../../../types';
+import News from './News';
 
-const NewsWrapper: React.FC = () => {
-  const navigate = useNavigate();
-  const { markNewsRead } = useAppStore();
-
-  const handleNewsSelect = (news: NewsItem) => {
-    markNewsRead(news.id);
-    navigate(`/news/${news.id}`);
-  };
-
-  return <News onBack={() => navigate(-1)} onNewsSelect={handleNewsSelect} />;
-};
+const NewsWrapper: React.FC = () => <News />;
 
 export default NewsWrapper;

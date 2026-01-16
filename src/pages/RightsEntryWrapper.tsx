@@ -1,5 +1,5 @@
 import React from 'react';
-import ClaimStation from '../../pages/wallet/ClaimStation';
+import ClaimStation from './wallet/ClaimStation';
 
 const RightsEntryWrapper: React.FC = () => <ClaimStation />;
 

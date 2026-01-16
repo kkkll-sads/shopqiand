@@ -1,9 +1,6 @@
 import React from 'react';
-import EditProfile from '../../../pages/user/EditProfile';
-import { withNavigation } from '../../hoc/withNavigation';
+import EditProfile from './EditProfile';
 
-const EditProfileWithNav = withNavigation(EditProfile);
-
-const EditProfileWrapper: React.FC = () => <EditProfileWithNav />;
+const EditProfileWrapper: React.FC = () => <EditProfile />;
 
 export default EditProfileWrapper;

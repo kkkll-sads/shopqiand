@@ -1,5 +1,5 @@
 import React from 'react';
-import CollectionOrderDetail from '../../../pages/market/CollectionOrderDetail';
+import CollectionOrderDetail from './CollectionOrderDetail';
 
 const CollectionOrderDetailWrapper: React.FC = () => <CollectionOrderDetail />;
 

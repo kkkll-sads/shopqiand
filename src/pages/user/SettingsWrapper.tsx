@@ -1,12 +1,9 @@
 /**
- * Settings 页面包装器
+ * Settings 页面包装�?
  */
 import React from 'react';
-import Settings from '../../../pages/user/Settings';
-import { withNavigation } from '../../hoc/withNavigation';
+import Settings from './Settings';
 
-const SettingsWithNav = withNavigation(Settings);
-
-const SettingsWrapper: React.FC = () => <SettingsWithNav />;
+const SettingsWrapper: React.FC = () => <Settings />;
 
 export default SettingsWrapper;

@@ -1,9 +1,6 @@
 import React from 'react';
-import NotificationSettings from '../../../pages/user/NotificationSettings';
-import { withNavigation } from '../../hoc/withNavigation';
+import NotificationSettings from './NotificationSettings';
 
-const NotificationSettingsWithNav = withNavigation(NotificationSettings);
-
-const NotificationSettingsWrapper: React.FC = () => <NotificationSettingsWithNav />;
+const NotificationSettingsWrapper: React.FC = () => <NotificationSettings />;
 
 export default NotificationSettingsWrapper;

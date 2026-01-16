@@ -6,7 +6,6 @@
   <meta name="viewport"
     content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <title>数权中心</title>
-  <script src="https://cdn.tailwindcss.com"></script>
   <style>
     /* Hide scrollbar globally for a native app feel */
     ::-webkit-scrollbar {
@@ -73,28 +72,47 @@
       /* iOS 11.2 */
     }
   </style>
-
   <link rel="stylesheet" href="/index.css">
-  <script type="importmap">
-{
-  "imports": {
-    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
-    "react/": "https://aistudiocdn.com/react@^19.2.0/",
-    "react": "https://aistudiocdn.com/react@^19.2.0",
-    "lucide-react": "https://aistudiocdn.com/lucide-react@^0.554.0"
-  }
-}
-</script>
-  <script type="module" crossorigin src="/assets/index-DvD2vGSS.js"></script>
-  <link rel="modulepreload" crossorigin href="/assets/vendor-YRKd36Sg.js">
-  <link rel="modulepreload" crossorigin href="/assets/react-vendor-C0Yva28M.js">
+  <script type="module" crossorigin src="/assets/index-C8p0JNzB.js"></script>
+  <link rel="modulepreload" crossorigin href="/assets/vendor-DYxmgbLw.js">
+  <link rel="modulepreload" crossorigin href="/assets/react-vendor-BjFjwcIR.js">
   <link rel="modulepreload" crossorigin href="/assets/area-data-BVDNhPol.js">
-  <link rel="stylesheet" crossorigin href="/assets/index-BcxitPqK.css">
+  <link rel="stylesheet" crossorigin href="/assets/index--XM7HXnX.css">
 </head>
 
 <body>
-  <div id="root"></div>
+  <div id="root"></div>
   <script>
+    // 全局错误处理：捕获 browser API 未定义的错误（通常来自浏览器扩展或第三方脚本）
+    window.addEventListener('error', function(event) {
+      // 忽略来自第三方脚本的 browser API 错误
+      if (event.message && (
+        event.message.includes('browser is not defined') ||
+        event.message.includes('chrome is not defined') ||
+        event.filename && (
+          event.filename.includes('myContent.js') ||
+          event.filename.includes('pagehelper.js') ||
+          event.filename.includes('content_script')
+        )
+      )) {
+        // 这些错误通常来自浏览器扩展或第三方脚本，不影响应用功能
+        console.warn('[全局错误处理] 捕获到浏览器扩展/第三方脚本错误:', event.filename || event.message);
+        event.preventDefault(); // 阻止错误冒泡
+        return true;
+      }
+    }, true);
+
+    // 捕获未处理的 Promise 拒绝
+    window.addEventListener('unhandledrejection', function(event) {
+      if (event.reason && event.reason.message && (
+        event.reason.message.includes('browser is not defined') ||
+        event.reason.message.includes('chrome is not defined')
+      )) {
+        console.warn('[全局错误处理] 捕获到未处理的 Promise 拒绝（浏览器扩展）:', event.reason);
+        event.preventDefault(); // 阻止错误冒泡
+      }
+    });
+
     // 禁用右键菜单
     document.addEventListener('contextmenu', function (e) {
       e.preventDefault();

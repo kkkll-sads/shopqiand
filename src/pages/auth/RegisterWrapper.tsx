@@ -1,12 +1,9 @@
 /**
- * Register 页面包装器
+ * Register 页面包装�?
  */
 import React from 'react';
-import Register from '../../../pages/auth/Register';
-import { withNavigation } from '../../hoc/withNavigation';
+import Register from './Register';
 
-const RegisterWithNav = withNavigation(Register);
-
-const RegisterWrapper: React.FC = () => <RegisterWithNav />;
+const RegisterWrapper: React.FC = () => <Register />;
 
 export default RegisterWrapper;

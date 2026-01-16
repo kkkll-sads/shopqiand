@@ -1,9 +1,6 @@
 import React from 'react';
-import ExtensionWithdraw from '../../../pages/wallet/ExtensionWithdraw';
-import { withNavigation } from '../../hoc/withNavigation';
+import ExtensionWithdraw from './ExtensionWithdraw';
 
-const ExtensionWithdrawWithNav = withNavigation(ExtensionWithdraw);
-
-const ExtensionWithdrawWrapper: React.FC = () => <ExtensionWithdrawWithNav />;
+const ExtensionWithdrawWrapper: React.FC = () => <ExtensionWithdraw />;
 
 export default ExtensionWithdrawWrapper;

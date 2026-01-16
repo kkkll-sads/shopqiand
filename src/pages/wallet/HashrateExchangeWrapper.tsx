@@ -1,9 +1,10 @@
+/**
+ * HashrateExchange 页面包装�?
+ * 已简�? 直接渲染组件，导航由组件内部处理
+ */
 import React from 'react';
-import HashrateExchange from '../../../pages/wallet/HashrateExchange';
-import { withNavigation } from '../../hoc/withNavigation';
+import HashrateExchange from './HashrateExchange';
 
-const HashrateExchangeWithNav = withNavigation(HashrateExchange);
-
-const HashrateExchangeWrapper: React.FC = () => <HashrateExchangeWithNav />;
+const HashrateExchangeWrapper: React.FC = () => <HashrateExchange />;
 
 export default HashrateExchangeWrapper;

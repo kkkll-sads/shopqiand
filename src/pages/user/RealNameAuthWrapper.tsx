@@ -1,9 +1,6 @@
 import React from 'react';
-import RealNameAuth from '../../../pages/user/RealNameAuth';
-import { withNavigation } from '../../hoc/withNavigation';
+import RealNameAuth from './RealNameAuth';
 
-const RealNameAuthWithNav = withNavigation(RealNameAuth);
-
-const RealNameAuthWrapper: React.FC = () => <RealNameAuthWithNav />;
+const RealNameAuthWrapper: React.FC = () => <RealNameAuth />;
 
 export default RealNameAuthWrapper;

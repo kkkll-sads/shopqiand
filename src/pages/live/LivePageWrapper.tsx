@@ -1,9 +1,6 @@
 import React from 'react';
-import LivePage from '../../../pages/live/LivePage';
-import { withNavigation } from '../../hoc/withNavigation';
+import LivePage from './LivePage';
 
-const LivePageWithNav = withNavigation(LivePage);
-
-const LivePageWrapper: React.FC = () => <LivePageWithNav />;
+const LivePageWrapper: React.FC = () => <LivePage />;
 
 export default LivePageWrapper;

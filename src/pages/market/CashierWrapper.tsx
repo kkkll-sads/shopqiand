@@ -1,8 +1,8 @@
 /**
- * Cashier 页面包装器
+ * Cashier 页面包装�?
  */
 import React from 'react';
-import Cashier from '../../../pages/market/Cashier';
+import Cashier from './Cashier';
 
 const CashierWrapper: React.FC = () => <Cashier />;
 

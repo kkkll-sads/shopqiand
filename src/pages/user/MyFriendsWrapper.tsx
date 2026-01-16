@@ -1,9 +1,6 @@
 import React from 'react';
-import MyFriends from '../../../pages/user/MyFriends';
-import { withNavigation } from '../../hoc/withNavigation';
+import MyFriends from './MyFriends';
 
-const MyFriendsWithNav = withNavigation(MyFriends);
-
-const MyFriendsWrapper: React.FC = () => <MyFriendsWithNav />;
+const MyFriendsWrapper: React.FC = () => <MyFriends />;
 
 export default MyFriendsWrapper;

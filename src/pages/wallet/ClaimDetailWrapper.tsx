@@ -1,9 +1,6 @@
 import React from 'react';
-import ClaimDetail from '../../../pages/wallet/ClaimDetail';
-import { withNavigation } from '../../hoc/withNavigation';
+import ClaimDetail from './ClaimDetail';
 
-const ClaimDetailWithNav = withNavigation(ClaimDetail);
-
-const ClaimDetailWrapper: React.FC = () => <ClaimDetailWithNav />;
+const ClaimDetailWrapper: React.FC = () => <ClaimDetail />;
 
 export default ClaimDetailWrapper;

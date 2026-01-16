@@ -1,9 +1,6 @@
 import React from 'react';
-import UserAgreement from '../../../pages/cms/UserAgreement';
-import { withNavigation } from '../../hoc/withNavigation';
+import UserAgreement from './UserAgreement';
 
-const UserAgreementWithNav = withNavigation(UserAgreement);
-
-const UserAgreementWrapper: React.FC = () => <UserAgreementWithNav />;
+const UserAgreementWrapper: React.FC = () => <UserAgreement />;
 
 export default UserAgreementWrapper;

@@ -1,9 +1,6 @@
 import React from 'react';
-import OnlineService from '../../../pages/cms/OnlineService';
-import { withNavigation } from '../../hoc/withNavigation';
+import OnlineService from './OnlineService';
 
-const OnlineServiceWithNav = withNavigation(OnlineService);
-
-const OnlineServiceWrapper: React.FC = () => <OnlineServiceWithNav />;
+const OnlineServiceWrapper: React.FC = () => <OnlineService />;
 
 export default OnlineServiceWrapper;

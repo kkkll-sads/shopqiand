@@ -6,6 +6,7 @@
  * - 支持隐私政策、用户协议、关于我们等页面
  * - 自动根据类型获取对应的页面内容
  * - 统一的加载、错误和内容展示逻辑
+ * - 已迁移: onBack 可选，默认使用 navigate(-1)
  * 
  * 可合并的页面：
  * - PrivacyPolicy.tsx
@@ -13,10 +14,11 @@
  * - AboutUs.tsx
  * 
  * @author 树交所前端团队
- * @version 1.0.0
+ * @version 1.1.0
  */
 
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import SubPageLayout from '../SubPageLayout';
 import { LoadingSpinner } from '../common';
 import {
@@ -41,8 +43,8 @@ interface StaticContentPageProps {
     type: PageType;
     /** 默认标题（内容加载前显示） */
     defaultTitle: string;
-    /** 返回回调 */
-    onBack: () => void;
+    /** 返回回调 (可选，默认使用 navigate(-1)) */
+    onBack?: () => void;
 }
 
 /**
@@ -96,6 +98,17 @@ const StaticContentPage: React.FC<StaticContentPageProps> = ({
     defaultTitle,
     onBack,
 }) => {
+    const navigate = useNavigate();
+    
+    // 默认返回行为
+    const handleBack = () => {
+        if (onBack) {
+            onBack();
+        } else {
+            navigate(-1);
+        }
+    };
+    
     // 页面内容状态
     const [page, setPage] = useState<PageContent | null>(null);
     // 加载状态
@@ -148,7 +161,7 @@ const StaticContentPage: React.FC<StaticContentPageProps> = ({
     }, [type, defaultTitle]);
 
     return (
-        <SubPageLayout title={page?.title || defaultTitle} onBack={onBack}>
+        <SubPageLayout title={page?.title || defaultTitle} onBack={handleBack}>
             <div className="p-4 m-4 bg-white rounded-xl shadow-sm border border-gray-100">
                 {/* 加载状态 */}
                 {loading && (

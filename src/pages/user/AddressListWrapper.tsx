@@ -1,9 +1,6 @@
 import React from 'react';
-import AddressList from '../../../pages/user/AddressList';
-import { withNavigation } from '../../hoc/withNavigation';
+import AddressList from './AddressList';
 
-const AddressListWithNav = withNavigation(AddressList);
-
-const AddressListWrapper: React.FC = () => <AddressListWithNav />;
+const AddressListWrapper: React.FC = () => <AddressList />;
 
 export default AddressListWrapper;

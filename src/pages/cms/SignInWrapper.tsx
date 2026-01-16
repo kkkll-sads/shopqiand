@@ -1,9 +1,6 @@
 import React from 'react';
-import SignIn from '../../../pages/cms/SignIn';
-import { withNavigation } from '../../hoc/withNavigation';
+import SignIn from './SignIn';
 
-const SignInWithNav = withNavigation(SignIn);
-
-const SignInWrapper: React.FC = () => <SignInWithNav />;
+const SignInWrapper: React.FC = () => <SignIn />;
 
 export default SignInWrapper;

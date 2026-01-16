@@ -1,9 +1,10 @@
+/**
+ * AssetView 页面包装�?
+ * 已简�? 直接渲染组件，导航由组件内部处理
+ */
 import React from 'react';
-import AssetView from '../../../pages/wallet/AssetView';
-import { withNavigation } from '../../hoc/withNavigation';
+import AssetView from './AssetView';
 
-const AssetViewWithNav = withNavigation(AssetView);
-
-const AssetViewWrapper: React.FC = () => <AssetViewWithNav />;
+const AssetViewWrapper: React.FC = () => <AssetView />;
 
 export default AssetViewWrapper;

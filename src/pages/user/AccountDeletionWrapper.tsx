@@ -1,9 +1,6 @@
 import React from 'react';
-import AccountDeletion from '../../../pages/user/AccountDeletion';
-import { withNavigation } from '../../hoc/withNavigation';
+import AccountDeletion from './AccountDeletion';
 
-const AccountDeletionWithNav = withNavigation(AccountDeletion);
-
-const AccountDeletionWrapper: React.FC = () => <AccountDeletionWithNav />;
+const AccountDeletionWrapper: React.FC = () => <AccountDeletion />;
 
 export default AccountDeletionWrapper;

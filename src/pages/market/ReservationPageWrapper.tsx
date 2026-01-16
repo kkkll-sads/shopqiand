@@ -1,27 +1,18 @@
 /**
- * ReservationPage 预约页面包装器
+ * ReservationPage 预约页面包装�?
+ * 已简�? 直接渲染组件，导航由组件内部处理
  */
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
-import ReservationPage from '../../../pages/market/ReservationPage';
-import type { Route } from '../../../router/routes';
+import ReservationPage from './ReservationPage';
+import { useAppStore } from '../../stores/appStore';
 
 const ReservationPageWrapper: React.FC = () => {
-  const navigate = useNavigate();
+  const { selectedProduct } = useAppStore();
 
-  const handleNavigate = (route: Route) => {
-    if (route.name === 'reservation-record') {
-      navigate('/reservation-record');
-    } else if (route.name === 'order-detail') {
-      navigate(`/order/${(route as any).orderId || ''}`);
-    } else if (route.name === 'cashier') {
-      navigate(`/cashier/${(route as any).orderId || ''}`);
-    } else if (route.name === 'product-detail') {
-      navigate(`/product/${(route as any).id || ''}`);
-    }
-  };
+  // 需要一�?product 对象，从 store 获取
+  const product = selectedProduct || { id: 0, title: '', image: '' };
 
-  return <ReservationPage onBack={() => navigate(-1)} onNavigate={handleNavigate} />;
+  return <ReservationPage product={product} />;
 };
 
 export default ReservationPageWrapper;

@@ -613,7 +613,7 @@ const Login: React.FC = () => {
 
 ---
 
-## 十四、项目最新统计（2026-01-14）
+## 十四、项目最新统计（2026-01-16）
 
 | 指标 | 数值 |
 |------|------|
@@ -621,14 +621,69 @@ const Login: React.FC = () => {
 | Hooks | 9 个（新增useCashier） |
 | 组件 | 23 个 |
 | 页面 | 85 个 |
-| 已迁移页面 | 41/67 (61%) |
+| 已迁移页面 | **67/67 (100%)** ✅ |
 | 认证页面 | 5/5 (100%) ✅ |
 | 用户页面 | 12/12 (100%) ✅ |
-| CMS页面 | 11/13 (85%) |
+| CMS页面 | 11/11 (100%) ✅ |
+| 市场页面 | 14/14 (100%) ✅ |
+| 钱包页面 | 19/19 (100%) ✅ |
+| 直播页面 | 1/1 (100%) ✅ |
 | 服务 | 21 个 |
 | 状态机 | 3 个 |
 | 文档 | 15+ 个 |
 | 测试用例 | 51 个（全部通过）|
+
+---
+
+## 十五、页面路由迁移完成（2026-01-16）✅
+
+### 完成状态
+
+所有页面已完成 React Router 导航迁移：
+
+- ✅ **所有页面移除 `onBack`/`onNavigate` props**
+- ✅ **全部使用 `useNavigate` Hook**
+- ✅ **Wrapper 层已简化**
+- ✅ **Route 类型依赖已移除**
+- ✅ **构建成功通过**
+
+### 迁移完成的页面 (67个)
+
+#### 认证页面 (5个)
+- Login, Register, ForgotPassword, ResetLoginPassword, ResetPayPassword
+
+#### CMS页面 (11个)
+- AboutUs, AnnouncementDetail, HelpCenter, Home, MessageCenter
+- News, OnlineService, PrivacyPolicy, SignIn, UserAgreement
+
+#### 用户页面 (12个)
+- AccountDeletion, ActivityCenter, AddressList, AgentAuth
+- EditProfile, FriendDetail, InviteFriends, MyFriends
+- NotificationSettings, Profile, RealNameAuth, Settings, UserSurvey
+
+#### 市场页面 (14个)
+- ArtistDetail, ArtistShowcase, ArtistWorksShowcase, Cashier
+- CollectionOrderDetail, Market, MasterpieceShowcase, OrderDetail
+- OrderListPage, PointsProductDetail, ProductDetail
+- ReservationPage, ReservationRecordPage, TradingZone
+
+#### 钱包页面 (19个)
+- AssetHistory, AssetView, BalanceRecharge, BalanceWithdraw
+- CardManagement, ClaimDetail, ClaimHistory, ClaimStation
+- ConsignmentVoucher, CumulativeRights, ExtensionWithdraw
+- HashrateExchange, MyCollection, MyCollectionDetail
+- OrderFundDetail, RechargeOrderDetail, RechargeOrderList
+- ServiceRecharge, WithdrawOrderDetail
+
+#### 直播页面 (1个)
+- LivePage
+
+### 架构收益
+
+1. **代码简化**: 移除所有冗余的 props 传递
+2. **统一模式**: 所有页面使用相同的导航方式
+3. **可维护性**: 减少耦合，易于测试
+4. **类型安全**: 使用 React Router 的类型系统
 
 ## 十二、文档资源
 

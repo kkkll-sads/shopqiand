@@ -1,9 +1,9 @@
 /**
- * AnnouncementDetail 公告详情页面包装器
+ * AnnouncementDetail 公告详情页面包装�?
  */
 import React from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import AnnouncementDetail from '../../../pages/cms/AnnouncementDetail';
+import AnnouncementDetail from './AnnouncementDetail';
 
 const AnnouncementDetailWrapper: React.FC = () => {
   const navigate = useNavigate();

@@ -1,9 +1,6 @@
 import React from 'react';
-import HelpCenter from '../../../pages/cms/HelpCenter';
-import { withNavigation } from '../../hoc/withNavigation';
+import HelpCenter from './HelpCenter';
 
-const HelpCenterWithNav = withNavigation(HelpCenter);
-
-const HelpCenterWrapper: React.FC = () => <HelpCenterWithNav />;
+const HelpCenterWrapper: React.FC = () => <HelpCenter />;
 
 export default HelpCenterWrapper;

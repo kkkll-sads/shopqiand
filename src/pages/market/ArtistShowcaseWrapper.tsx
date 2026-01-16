@@ -1,9 +1,6 @@
 import React from 'react';
-import ArtistShowcase from '../../../pages/market/ArtistShowcase';
-import { withNavigation } from '../../hoc/withNavigation';
+import ArtistShowcase from './ArtistShowcase';
 
-const ArtistShowcaseWithNav = withNavigation(ArtistShowcase);
-
-const ArtistShowcaseWrapper: React.FC = () => <ArtistShowcaseWithNav />;
+const ArtistShowcaseWrapper: React.FC = () => <ArtistShowcase />;
 
 export default ArtistShowcaseWrapper;

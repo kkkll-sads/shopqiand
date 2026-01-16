@@ -1,14 +1,9 @@
 /**
- * UserSurvey 用户问卷页面包装器
+ * UserSurvey 用户问卷页面包装�?
  */
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
-import UserSurvey from '../../../pages/user/UserSurvey';
+import UserSurvey from './UserSurvey';
 
-const UserSurveyWrapper: React.FC = () => {
-  const navigate = useNavigate();
-
-  return <UserSurvey onBack={() => navigate(-1)} onSuccess={() => navigate(-1)} />;
-};
+const UserSurveyWrapper: React.FC = () => <UserSurvey />;
 
 export default UserSurveyWrapper;

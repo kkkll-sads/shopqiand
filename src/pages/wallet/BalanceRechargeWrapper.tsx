@@ -1,9 +1,6 @@
 import React from 'react';
-import BalanceRecharge from '../../../pages/wallet/BalanceRecharge';
-import { withNavigation } from '../../hoc/withNavigation';
+import BalanceRecharge from './BalanceRecharge';
 
-const BalanceRechargeWithNav = withNavigation(BalanceRecharge);
-
-const BalanceRechargeWrapper: React.FC = () => <BalanceRechargeWithNav />;
+const BalanceRechargeWrapper: React.FC = () => <BalanceRecharge />;
 
 export default BalanceRechargeWrapper;

@@ -1,12 +1,9 @@
 /**
- * Login 页面包装器
+ * Login 页面包装�?
  */
 import React from 'react';
-import Login from '../../../pages/auth/Login';
-import { withNavigation } from '../../hoc/withNavigation';
+import Login from './Login';
 
-const LoginWithNav = withNavigation(Login);
-
-const LoginWrapper: React.FC = () => <LoginWithNav />;
+const LoginWrapper: React.FC = () => <Login />;
 
 export default LoginWrapper;

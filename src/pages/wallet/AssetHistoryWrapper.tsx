@@ -1,14 +1,6 @@
 import React from 'react';
-import { useParams } from 'react-router-dom';
-import AssetHistory from '../../../pages/wallet/AssetHistory';
-import { withNavigation } from '../../hoc/withNavigation';
+import AssetHistory from './AssetHistory';
 
-const AssetHistoryWithNav = withNavigation(AssetHistory);
-
-const AssetHistoryWrapper: React.FC = () => {
-  const { type } = useParams<{ type: string }>();
-  // AssetHistory might need type prop - but now handles it internally
-  return <AssetHistoryWithNav />;
-};
+const AssetHistoryWrapper: React.FC = () => <AssetHistory />;
 
 export default AssetHistoryWrapper;

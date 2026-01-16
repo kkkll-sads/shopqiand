@@ -1,5 +1,5 @@
 import React from 'react';
-import Market from '../../pages/market/Market';
+import Market from './market/Market';
 
 const MarketEntryWrapper: React.FC = () => <Market />;
 

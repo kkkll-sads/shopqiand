@@ -1,9 +1,6 @@
 import React from 'react';
-import ConsignmentVoucher from '../../../pages/wallet/ConsignmentVoucher';
-import { withNavigation } from '../../hoc/withNavigation';
+import ConsignmentVoucher from './ConsignmentVoucher';
 
-const ConsignmentVoucherWithNav = withNavigation(ConsignmentVoucher);
-
-const ConsignmentVoucherWrapper: React.FC = () => <ConsignmentVoucherWithNav />;
+const ConsignmentVoucherWrapper: React.FC = () => <ConsignmentVoucher />;
 
 export default ConsignmentVoucherWrapper;

@@ -1,9 +1,6 @@
 import React from 'react';
-import PrivacyPolicy from '../../../pages/cms/PrivacyPolicy';
-import { withNavigation } from '../../hoc/withNavigation';
+import PrivacyPolicy from './PrivacyPolicy';
 
-const PrivacyPolicyWithNav = withNavigation(PrivacyPolicy);
-
-const PrivacyPolicyWrapper: React.FC = () => <PrivacyPolicyWithNav />;
+const PrivacyPolicyWrapper: React.FC = () => <PrivacyPolicy />;
 
 export default PrivacyPolicyWrapper;

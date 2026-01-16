@@ -1,8 +1,8 @@
 /**
- * OrderListPage 页面包装器
+ * OrderListPage 页面包装�?
  */
 import React from 'react';
-import OrderListPage from '../../../pages/market/OrderListPage';
+import OrderListPage from './OrderListPage';
 
 const OrderListPageWrapper: React.FC = () => <OrderListPage />;
 

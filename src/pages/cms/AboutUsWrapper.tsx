@@ -1,9 +1,6 @@
 import React from 'react';
-import AboutUs from '../../../pages/cms/AboutUs';
-import { withNavigation } from '../../hoc/withNavigation';
+import AboutUs from './AboutUs';
 
-const AboutUsWithNav = withNavigation(AboutUs);
-
-const AboutUsWrapper: React.FC = () => <AboutUsWithNav />;
+const AboutUsWrapper: React.FC = () => <AboutUs />;
 
 export default AboutUsWrapper;

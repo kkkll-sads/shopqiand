@@ -1,9 +1,6 @@
 import React from 'react';
-import ResetPayPassword from '../../../pages/auth/ResetPayPassword';
-import { withNavigation } from '../../hoc/withNavigation';
+import ResetPayPassword from './ResetPayPassword';
 
-const ResetPayPasswordWithNav = withNavigation(ResetPayPassword);
-
-const ResetPayPasswordWrapper: React.FC = () => <ResetPayPasswordWithNav />;
+const ResetPayPasswordWrapper: React.FC = () => <ResetPayPassword />;
 
 export default ResetPayPasswordWrapper;

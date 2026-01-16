@@ -1,9 +1,6 @@
 import React from 'react';
-import CumulativeRights from '../../../pages/wallet/CumulativeRights';
-import { withNavigation } from '../../hoc/withNavigation';
+import CumulativeRights from './CumulativeRights';
 
-const CumulativeRightsWithNav = withNavigation(CumulativeRights);
-
-const CumulativeRightsWrapper: React.FC = () => <CumulativeRightsWithNav />;
+const CumulativeRightsWrapper: React.FC = () => <CumulativeRights />;
 
 export default CumulativeRightsWrapper;

@@ -1,9 +1,6 @@
 import React from 'react';
-import MyCollection from '../../../pages/wallet/MyCollection';
-import { withNavigation } from '../../hoc/withNavigation';
+import MyCollection from './MyCollection';
 
-const MyCollectionWithNav = withNavigation(MyCollection);
-
-const MyCollectionWrapper: React.FC = () => <MyCollectionWithNav />;
+const MyCollectionWrapper: React.FC = () => <MyCollection />;
 
 export default MyCollectionWrapper;

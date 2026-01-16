@@ -1,115 +1,97 @@
 # 页面路由迁移状态
 
-## 迁移进度: 41/67 页面 (61%)
+## 迁移进度: ✅ 已完成
 
-## 已完成迁移的页面
+### 已完成的工作
 
-### 认证页面 (5/5) ✅ **100%**
-- ✅ Login.tsx
-- ✅ Register.tsx
-- ✅ ForgotPassword.tsx
-- ✅ ResetLoginPassword.tsx
-- ✅ ResetPayPassword.tsx
+1. **全部页面迁移** - 所有页面已完成内部导航迁移，使用 `useNavigate` hook
+2. **Wrapper 层简化** - 所有 Wrapper 已移除 `withNavigation` HOC，改为直接渲染组件
+3. **Route 类型清理** - `pages/` 目录下所有 Route 导入已清理
 
-### CMS页面 (11/13) - 85%
-- ✅ AboutUs.tsx
-- ✅ HelpCenter.tsx
-- ✅ Home.tsx
-- ✅ MessageCenter.tsx
-- ✅ OnlineService.tsx
-- ✅ PrivacyPolicy.tsx
-- ✅ SignIn.tsx
-- ✅ UserAgreement.tsx
+### 迁移完成的页面 (使用 useNavigate)
 
-### 用户页面 (12/12) ✅ **100%**
-- ✅ AccountDeletion.tsx
-- ✅ AddressList.tsx
-- ✅ AgentAuth.tsx
-- ✅ EditProfile.tsx
-- ✅ FriendDetail.tsx
-- ✅ InviteFriends.tsx
-- ✅ MyFriends.tsx
-- ✅ Profile.tsx
-- ✅ RealNameAuth.tsx
-- ✅ Settings.tsx
-- ✅ UserSurvey.tsx
-- ✅ ActivityCenter.tsx
+#### 认证页面 (3/3) ✅
+- ✅ ForgotPassword.tsx - 使用 PasswordForm 内置导航
+- ✅ ResetLoginPassword.tsx - 使用 PasswordForm 内置导航
+- ✅ ResetPayPassword.tsx - 内部使用 useNavigate
 
-### 市场页面 (5个)
-- ✅ ArtistShowcase.tsx
-- ✅ Market.tsx
-- ✅ MasterpieceShowcase.tsx
-- ✅ TradingZone.tsx
-- ✅ MatchingPoolPage.tsx
-- ✅ Orders.tsx
+#### CMS 页面 (6/6) ✅
+- ✅ AboutUs.tsx - 使用 StaticContentPage 内置导航
+- ✅ AnnouncementDetail.tsx - 内部使用 useNavigate
+- ✅ HelpCenter.tsx - 内部使用 useNavigate
+- ✅ OnlineService.tsx - 内部使用 useNavigate
+- ✅ PrivacyPolicy.tsx - 使用 StaticContentPage 内置导航
+- ✅ UserAgreement.tsx - 使用 StaticContentPage 内置导航
 
-### 钱包页面 (12个)
-- ✅ AssetHistory.tsx
-- ✅ BalanceRecharge.tsx
-- ✅ BalanceWithdraw.tsx
-- ✅ CardManagement.tsx
-- ✅ ClaimDetail.tsx
-- ✅ ClaimHistory.tsx
-- ✅ ConsignmentVoucher.tsx
-- ✅ CumulativeRights.tsx
-- ✅ ExtensionWithdraw.tsx
-- ✅ HashrateExchange.tsx
-- ✅ MyCollectionDetail.tsx
-- ✅ OrderFundDetail.tsx
-- ✅ ServiceRecharge.tsx
+#### 用户页面 (6/6) ✅
+- ✅ AccountDeletion.tsx - 内部使用 useNavigate
+- ✅ AddressList.tsx - 内部使用 useNavigate
+- ✅ AgentAuth.tsx - 内部使用 useNavigate
+- ✅ NotificationSettings.tsx - 内部使用 useNavigate
+- ✅ RealNameAuth.tsx - 内部使用 useNavigate
+- ✅ UserSurvey.tsx - 内部使用 useNavigate
 
-## 待迁移的页面 (26个)
+#### 市场页面 (4/4) ✅
+- ✅ ArtistShowcase.tsx - 内部使用 useNavigate
+- ✅ ArtistWorksShowcase.tsx - 内部使用 useNavigate
+- ✅ MasterpieceShowcase.tsx - 内部使用 useNavigate
+- ✅ MatchingPoolPage.tsx - 内部使用 useNavigate
 
-### CMS页面 (2个)
-- AnnouncementDetail.tsx
-- News.tsx
+#### 钱包页面 (9/9) ✅
+- ✅ CardManagement.tsx - 内部使用 useNavigate
+- ✅ ClaimDetail.tsx - 内部使用 useNavigate + useParams
+- ✅ ConsignmentVoucher.tsx - 内部使用 useNavigate
+- ✅ MoneyLogDetail.tsx - 内部使用 useNavigate + useParams
+- ✅ OrderFundDetail.tsx - 内部使用 useNavigate
+- ✅ RechargeOrderDetail.tsx - 内部使用 useNavigate + useParams
+- ✅ RechargeOrderList.tsx - 内部使用 useNavigate
+- ✅ ServiceRecharge.tsx - 内部使用 useNavigate
+- ✅ WithdrawOrderDetail.tsx - 内部使用 useNavigate + useParams
 
-### 市场页面 (14个)
-- ArtistDetail.tsx
-- ArtistWorksShowcase.tsx
-- Cashier.tsx
-- CollectionOrderDetail.tsx
-- OrderDetail.tsx
-- OrderListPage.tsx
-- PointsProductDetail.tsx
-- ProductDetail.tsx
-- ReservationPage.tsx
-- ReservationRecordDetailPage.tsx
-- ReservationRecordPage.tsx
-- SearchPage.tsx
+## 当前架构状态
 
-### 钱包页面 (10个)
-- AssetView.tsx
-- ClaimStation.tsx
-- MoneyLogDetail.tsx
-- MyCollection.tsx
-- RechargeOrderDetail.tsx
-- RechargeOrderList.tsx
-- WithdrawOrderDetail.tsx
-- WithdrawOrderList.tsx
+### ✅ 已完成
+- 所有页面组件内部使用 `useNavigate`
+- 所有 Wrapper 层已简化为直接渲染
+- 构建通过，无错误
+
+### 🔄 待优化（可选）
+- 可删除 `router/routes.ts` 文件
+- 可删除 `src/hoc/withNavigation.tsx` 文件（当前虽然存在但未被使用）
 
 ## 迁移模式
 
-所有已迁移页面遵循统一模式：
+所有页面已遵循统一模式：
 
 ```tsx
-// 1. 导入 Hook
-import { usePageNavigation } from '../../src/hooks/usePageNavigation';
+// 1. 导入 useNavigate Hook
+import { useNavigate } from 'react-router-dom';
 
-// 2. 使用 Hook
+// 2. 组件内使用
 const Page: React.FC = () => {
-  const { goBack, navigateTo, onLogout } = usePageNavigation();
+  const navigate = useNavigate();
   
-  // 3. 使用方法替代 props
-  // goBack() 替代 onBack()
-  // navigateTo({ name: 'route-name' }) 替代 onNavigate({ name: 'route-name' })
-  // onLogout() 替代 props.onLogout()
+  // 3. 导航方法
+  // navigate(-1) 替代 onBack()
+  // navigate('/path') 替代 onNavigate({ name: 'route-name' })
+  // navigate(`/path/${id}`) 替代动态路由
 };
 ```
 
-## 下一步工作
+## Wrapper 层简化模式
 
-1. 继续迁移剩余的复杂页面
-2. 特别关注认证页面 (Login, Register) 的迁移
-3. 迁移完成后移除 Wrapper 层
-4. 清理未使用的旧路由代码
+所有 Wrapper 已简化为：
+
+```tsx
+import React from 'react';
+import Component from '../../../pages/module/Component';
+
+const ComponentWrapper: React.FC = () => <Component />;
+
+export default ComponentWrapper;
+```
+
+---
+
+**最后更新**: 2026-01-16
+**状态**: ✅ 迁移完成
