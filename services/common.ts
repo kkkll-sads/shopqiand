@@ -144,7 +144,7 @@ export async function sendSmsCode(params: SendSmsParams, token?: string): Promis
 }
 
 /**
- * 广告视频配置数据
+ * 广告视频配置数据（列表页）
  */
 export interface LiveVideoConfigData {
     video_url: string;
@@ -153,7 +153,19 @@ export interface LiveVideoConfigData {
 }
 
 /**
+ * 视频详情数据（详情页）
+ */
+export interface VideoDetailData {
+    video_url: string;
+    title: string;
+    description: string;
+    play_count: number;
+    user_played: boolean;
+}
+
+/**
  * 获取直播广告视频配置（公共接口，无需token）
+ * 用于直播页面列表展示
  */
 export async function fetchLiveVideoConfig(): Promise<ApiResponse<LiveVideoConfigData>> {
     try {
@@ -170,6 +182,25 @@ export async function fetchLiveVideoConfig(): Promise<ApiResponse<LiveVideoConfi
         return data;
     } catch (error: any) {
         errorLog('api.liveVideo.config', '获取广告视频配置失败', error);
+        throw error;
+    }
+}
+
+/**
+ * 获取视频详情（需要token）
+ * 用于视频详情页，包含播放次数和用户观看状态
+ */
+export async function fetchVideoDetail(token?: string): Promise<ApiResponse<VideoDetailData>> {
+    try {
+        const response = await authedFetch<VideoDetailData>(API_ENDPOINTS.liveVideo.config, {
+            method: 'GET',
+            token,
+        });
+
+        debugLog('api.liveVideo.detail', response);
+        return response;
+    } catch (error: any) {
+        errorLog('api.liveVideo.detail', '获取视频详情失败', error);
         throw error;
     }
 }

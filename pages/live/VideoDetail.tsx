@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ChevronLeft, Play, Pause, Volume2, VolumeX, Maximize, Eye } from 'lucide-react';
 import { LoadingSpinner } from '../../components/common';
-import { fetchLiveVideoConfig } from '../../services/common';
+import { fetchVideoDetail, VideoDetailData } from '../../services/common';
 import { getStoredToken } from '../../services/client';
 import { isSuccess, extractData } from '../../utils/apiHelpers';
 import { useErrorHandler } from '../../hooks/useErrorHandler';
@@ -10,16 +10,8 @@ interface VideoDetailProps {
     onBack: () => void;
 }
 
-interface VideoData {
-    video_url: string;
-    title: string;
-    description: string;
-    play_count: number;
-    user_played: boolean;
-}
-
 const VideoDetail: React.FC<VideoDetailProps> = ({ onBack }) => {
-    const [videoData, setVideoData] = useState<VideoData | null>(null);
+    const [videoData, setVideoData] = useState<VideoDetailData | null>(null);
     const [loading, setLoading] = useState(true);
     const [isPlaying, setIsPlaying] = useState(false);
     const [isMuted, setIsMuted] = useState(false);
@@ -38,10 +30,10 @@ const VideoDetail: React.FC<VideoDetailProps> = ({ onBack }) => {
         try {
             setLoading(true);
             const token = getStoredToken();
-            const response = await fetchLiveVideoConfig(token || '');
+            const response = await fetchVideoDetail(token || '');
 
             if (isSuccess(response)) {
-                const data = extractData<VideoData>(response);
+                const data = extractData<VideoDetailData>(response);
                 setVideoData(data);
             } else {
                 handleError(new Error('获取视频信息失败'));
