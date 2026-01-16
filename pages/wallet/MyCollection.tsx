@@ -1138,31 +1138,61 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onBack, onItemSelect, onNav
           ))}
         </div>
 
-        {/* 批量寄售按钮 */}
-        {batchConsignableData && batchConsignableData.items.length > 0 && batchConsignableData.stats.is_in_trading_time && (
+        {/* 批量寄售按钮和统计信息 */}
+        {batchConsignableData && batchConsignableData.stats.is_in_trading_time && (
           <div className="bg-white px-4 py-3 border-b border-gray-100/80">
-            <button
-              onClick={handleBatchConsign}
-              disabled={batchConsignLoading || checkingBatchConsignable}
-              className="w-full py-3 px-4 bg-gradient-to-r from-orange-500 to-orange-600 text-white font-semibold rounded-xl shadow-lg shadow-orange-200 hover:shadow-xl disabled:opacity-50 disabled:shadow-none disabled:cursor-not-allowed transition-all duration-200 active:scale-[0.98] flex items-center justify-center gap-2"
-            >
-              {batchConsignLoading ? (
-                <>
-                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  <span>批量寄售中...</span>
-                </>
-              ) : (
-                <>
-                  <span>⚡ 一键批量寄售</span>
-                  <span className="text-sm bg-white/20 px-2 py-0.5 rounded-full">
-                    {batchConsignableData.available_now_count || batchConsignableData.stats.available_collections} 个可寄售
-                  </span>
-                </>
-              )}
-            </button>
-            <div className="text-xs text-gray-500 text-center mt-2">
-              当前时间: {batchConsignableData.stats.current_time} • 活跃场次: {batchConsignableData.stats.active_sessions}
+            {/* 统计信息卡片 */}
+            <div className="grid grid-cols-3 gap-2 mb-3">
+              <div className="bg-green-50 rounded-lg p-2 text-center">
+                <div className="text-lg font-bold text-green-600">{batchConsignableData.stats.can_consign_now}</div>
+                <div className="text-xs text-gray-600">可立即寄售</div>
+              </div>
+              <div className="bg-blue-50 rounded-lg p-2 text-center">
+                <div className="text-lg font-bold text-blue-600">{batchConsignableData.stats.can_consign_later}</div>
+                <div className="text-xs text-gray-600">等待场次</div>
+              </div>
+              <div className="bg-gray-50 rounded-lg p-2 text-center">
+                <div className="text-lg font-bold text-gray-600">{batchConsignableData.stats.no_coupon}</div>
+                <div className="text-xs text-gray-600">无券/无次数</div>
+              </div>
             </div>
+
+            {/* 批量寄售按钮 */}
+            {batchConsignableData.items.length > 0 && (
+              <button
+                onClick={handleBatchConsign}
+                disabled={batchConsignLoading || checkingBatchConsignable}
+                className="w-full py-3 px-4 bg-gradient-to-r from-orange-500 to-orange-600 text-white font-semibold rounded-xl shadow-lg shadow-orange-200 hover:shadow-xl disabled:opacity-50 disabled:shadow-none disabled:cursor-not-allowed transition-all duration-200 active:scale-[0.98] flex items-center justify-center gap-2"
+              >
+                {batchConsignLoading ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    <span>批量寄售中...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>⚡ 一键批量寄售</span>
+                    <span className="text-sm bg-white/20 px-2 py-0.5 rounded-full">
+                      {batchConsignableData.stats.can_consign_now} 个
+                    </span>
+                  </>
+                )}
+              </button>
+            )}
+
+            {/* 提示信息 */}
+            {batchConsignableData.note && (
+              <div className="text-xs text-gray-500 text-center mt-2">
+                {batchConsignableData.note}
+              </div>
+            )}
+
+            {/* 寄售券信息 */}
+            {batchConsignableData.stats.total_coupons > 0 && (
+              <div className="text-xs text-orange-600 text-center mt-1">
+                💳 可用寄售券: {batchConsignableData.stats.total_coupons} 张
+              </div>
+            )}
           </div>
         )}
 

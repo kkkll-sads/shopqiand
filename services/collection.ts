@@ -864,20 +864,50 @@ export async function fetchArtistAllWorks(params: { page?: number; limit?: numbe
  * 批量寄售可寄售列表数据接口
  * API: GET /api/collectionItem/batchConsignableList
  */
+/**
+ * 批量寄售藏品项
+ */
+export interface BatchConsignableItem {
+    user_collection_id: number;         // 用户藏品ID
+    title: string;                      // 藏品名称
+    price: number;                      // 价格
+    session_id: number;                 // 场次ID
+    zone_id: number;                    // 价格分区ID
+    has_free_attempt: boolean;          // 是否有免费寄售次数
+    has_coupon: boolean;                // 是否有寄售券
+    can_consign: boolean;               // 是否可以寄售
+    reason: string;                     // 原因说明
+}
+
+/**
+ * 寄售券信息
+ */
+export interface ConsignmentCoupon {
+    id: number;                         // 券ID
+    session_id: number;                 // 场次ID
+    zone_id: number;                    // 价格分区ID
+    expire_time: string;                // 过期时间
+    [key: string]: any;                 // 其他字段
+}
+
+/**
+ * 批量寄售列表数据
+ */
 export interface BatchConsignableListData {
     stats: {
-        total_collections: number;      // 总藏品数量
-        available_collections: number;  // 可寄售藏品数量
-        current_time: string;           // 当前时间
-        active_sessions: number;        // 活跃场次数量
+        total_collections: number;      // 总藏品数
+        with_session: number;           // 关联场次的藏品数
+        can_consign_now: number;        // 当前可寄售
+        can_consign_later: number;      // 等待场次开放
+        no_coupon: number;              // 无券/无免费次数
+        total_coupons: number;          // 用户可用寄售券总数
         is_in_trading_time: boolean;    // 是否在交易时间内
     };
-    items: Array<{
-        user_collection_id: number;     // 用户藏品ID
-    }>;
-    available_now_count: number;        // 当前可寄售数量
-    returned_items_count: number;       // 返回的藏品数量
-    note: string;                       // 备注信息
+    items: BatchConsignableItem[];      // 当前可立即寄售
+    items_waiting: BatchConsignableItem[];  // 等待场次开放
+    items_no_coupon: BatchConsignableItem[]; // 无券（限50条）
+    coupons: ConsignmentCoupon[];       // 用户可用寄售券
+    note: string;                       // 提示信息
 }
 
 /**
