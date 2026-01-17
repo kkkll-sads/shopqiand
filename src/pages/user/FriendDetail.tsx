@@ -43,7 +43,7 @@ const FriendDetail: React.FC<FriendDetailProps> = ({ friend, id }) => {
     (friend.join_time ? formatTime(friend.join_time, 'YYYY-MM-DD') : '-');
 
   return (
-    <PageContainer title="好友详情" onBack={goBack}>
+    <PageContainer title="好友详情" onBack={() => navigate(-1)}>
       <div className="p-4 space-y-4">
         {/* 头部信息卡片 */}
         <div className="bg-white rounded-2xl p-6 shadow-sm flex flex-col items-center relative overflow-hidden">

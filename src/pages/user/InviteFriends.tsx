@@ -220,7 +220,7 @@ const InviteFriends: React.FC = () => {
   // 加载状态
   if (loading) {
     return (
-      <PageContainer title="邀请好友" onBack={onBack}>
+      <PageContainer title="邀请好友" onBack={() => navigate(-1)}>
         <div className="min-h-[60vh] flex items-center justify-center">
           <LoadingSpinner text="加载中..." />
         </div>
@@ -231,7 +231,7 @@ const InviteFriends: React.FC = () => {
   // 错误状态
   if (error) {
     return (
-      <PageContainer title="邀请好友" onBack={onBack}>
+      <PageContainer title="邀请好友" onBack={() => navigate(-1)}>
         <div className="min-h-[60vh] flex flex-col items-center justify-center">
           <div className="text-red-500 text-center px-4">{error}</div>
           <button
