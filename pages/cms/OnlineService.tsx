@@ -14,7 +14,7 @@ const OnlineService: React.FC<OnlineServiceProps> = ({ onBack }) => {
   useEffect(() => {
     // 加载聊天组件脚本
     const script = document.createElement('script');
-    script.src = 'https://www.axd01kp.cfd/chat/widget.js';
+    script.src = 'https://chat.bskhu.cn/chat/widget.js';
     script.async = true;
     script.onload = function() {
       // 初始化聊天组件
@@ -35,7 +35,7 @@ const OnlineService: React.FC<OnlineServiceProps> = ({ onBack }) => {
     };
     
     // 检查脚本是否已存在
-    const existingScript = document.querySelector('script[src="https://www.axd01kp.cfd/chat/widget.js"]');
+    const existingScript = document.querySelector('script[src="https://chat.bskhu.cn/chat/widget.js"]');
     if (!existingScript) {
       document.body.appendChild(script);
     } else {
