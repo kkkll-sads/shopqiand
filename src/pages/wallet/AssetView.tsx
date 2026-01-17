@@ -20,6 +20,7 @@ import {
 import { getStoredToken } from '../../../services/client';
 import { Product, UserInfo } from '../../../types';
 import { useNotification } from '../../../context/NotificationContext';
+import { useAuthStore } from '../../stores/authStore';
 import AssetHeaderCard from './components/asset/AssetHeaderCard';
 import AssetActionsGrid from './components/asset/AssetActionsGrid';
 import AssetTabSwitcher from './components/asset/AssetTabSwitcher';

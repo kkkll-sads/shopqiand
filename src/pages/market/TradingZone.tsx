@@ -392,7 +392,7 @@ const TradingZone: React.FC<TradingZoneProps> = ({
                 clearItemsError();
             }
         } else {
-            onBack();
+            navigate(-1);
         }
     };
 

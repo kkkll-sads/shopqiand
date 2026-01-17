@@ -1,5 +1,6 @@
 
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Search, Filter, LayoutGrid, List, Loader2 } from 'lucide-react';
 import { LoadingSpinner, EmptyState, LazyImage } from '../../../components/common';
 import { Product } from '../../../types';
@@ -19,6 +20,7 @@ interface MarketProps {
 const PAGE_SIZE = 10;
 
 const Market: React.FC<MarketProps> = ({ onProductSelect }) => {
+  const navigate = useNavigate();
   const [activeFilter, setActiveFilter] = useState('comprehensive');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
@@ -256,7 +258,13 @@ const Market: React.FC<MarketProps> = ({ onProductSelect }) => {
               <div
                 key={product.id}
                 className="bg-white rounded-lg overflow-hidden shadow-sm active:scale-[0.98] transition-transform flex flex-col"
-                onClick={() => onProductSelect && onProductSelect(product)}
+                onClick={() => {
+                  if (onProductSelect) {
+                    onProductSelect(product);
+                  } else {
+                    navigate(`/points-product/${product.id}`);
+                  }
+                }}
               >
                 <div className="aspect-square bg-gray-100 relative">
                   <LazyImage src={product.image} alt={product.title} className="w-full h-full object-cover" />
