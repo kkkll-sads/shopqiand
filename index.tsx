@@ -6,7 +6,7 @@ import { NotificationProvider } from './context/NotificationContext';
 import { GlobalNotificationSystem } from './components/common/GlobalNotificationSystem';
 import { setNeedLoginHandler, clearNeedLoginHandler } from './services/needLoginHandler';
 import { useAuthStore } from './src/stores/authStore';
-import { fetchProfile } from './services/api';
+import { fetchProfile, fetchRealNameStatus } from './services/api';
 import { isSuccess } from './utils/apiHelpers';
 import './src/styles/main.css';
 import './src/styles/notifications.css';
@@ -28,25 +28,42 @@ const AuthHandler: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     return () => clearNeedLoginHandler();
   }, [logout]);
 
-  // 应用启动时，如果已登录则刷新用户信息（包含实名状态）
+  // 应用启动时，如果已登录则刷新用户信息和实名状态
   useEffect(() => {
     const refreshUserInfo = async () => {
       if (!isLoggedIn || !token) return;
       
+      const { updateRealNameStatus } = useAuthStore.getState();
+      
       try {
         console.log('[AuthHandler] 刷新用户信息...');
-        const profileRes = await fetchProfile(token);
+        
+        // 并行获取用户信息和实名状态
+        const [profileRes, realNameRes] = await Promise.all([
+          fetchProfile(token),
+          fetchRealNameStatus(token),
+        ]);
+        
+        // 处理用户信息
         if (isSuccess(profileRes) && profileRes.data?.userInfo) {
           const userInfo = {
             ...profileRes.data.userInfo,
             token,
           };
-          console.log('[AuthHandler] 用户信息刷新成功', {
-            real_name_status: userInfo.real_name_status,
-            isRealNameVerified: userInfo.real_name_status === 2,
-          });
-          // 使用 login 方法更新状态（会自动提取实名状态）
+          console.log('[AuthHandler] 用户信息刷新成功');
           login({ token, userInfo });
+        }
+        
+        // 处理实名状态（独立接口，确保准确）
+        if (isSuccess(realNameRes) && realNameRes.data) {
+          const realNameStatus = realNameRes.data.real_name_status || 0;
+          const realName = realNameRes.data.real_name || '';
+          console.log('[AuthHandler] 实名状态刷新成功', {
+            real_name_status: realNameStatus,
+            real_name: realName,
+            isRealNameVerified: realNameStatus === 2,
+          });
+          updateRealNameStatus(realNameStatus, realName);
         }
       } catch (e) {
         console.warn('[AuthHandler] 刷新用户信息失败:', e);

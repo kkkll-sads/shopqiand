@@ -16,13 +16,13 @@ import { fetchPromotionCard } from '../../../services/api';
 import { getStoredToken } from '../../../services/client';
 import { useNotification } from '../../../context/NotificationContext';
 import { isSuccess, extractError } from '../../../utils/apiHelpers';
-import { usePageNavigation } from '../../hooks/usePageNavigation';
+import { useNavigate } from 'react-router-dom';
 
 /**
  * InviteFriends 邀请好友页面组件
  */
 const InviteFriends: React.FC = () => {
-  const { goBack } = usePageNavigation();
+  const navigate = useNavigate();
   const { showToast } = useNotification();
   const [inviteCode, setInviteCode] = useState('');
   const [inviteLink, setInviteLink] = useState('');
@@ -246,7 +246,7 @@ const InviteFriends: React.FC = () => {
   }
 
   return (
-    <PageContainer title="邀请好友" onBack={goBack}>
+    <PageContainer title="邀请好友" onBack={() => navigate(-1)}>
       <div className="relative min-h-[70vh] flex flex-col items-center">
         {/* 顶部渐变背景 */}
         <div className="absolute top-0 left-0 right-0 h-64 bg-gradient-to-b from-[#FFD6A5]/30 to-transparent pointer-events-none" />

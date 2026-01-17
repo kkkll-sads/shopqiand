@@ -8,14 +8,8 @@
  */
 
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { ShoppingCart, Truck, Coins, Clock, Package, XCircle, CheckCircle, ArrowRightLeft } from 'lucide-react';
-
-/**
- * Orders 组件属性接口
- */
-interface OrdersProps {
-  onNavigate?: (path: string) => void;
-}
 
 /**
  * 订单区块属性接口
@@ -58,14 +52,16 @@ const OrderSection: React.FC<OrderSectionProps> = ({ title, items, onItemClick }
 /**
  * Orders 订单中心页面组件
  */
-const Orders: React.FC<OrdersProps> = ({ onNavigate }) => {
+const Orders: React.FC = () => {
+  const navigate = useNavigate();
+
   /**
    * 处理导航
    */
   const handleNav = (key: string) => {
-    if (onNavigate) {
-      onNavigate(`order-list:${key}`);
-    }
+    // key 格式: "product:0" / "transaction:1" 等
+    const [category, status] = key.split(':');
+    navigate(`/orders/${category}/${status || 0}`);
   };
 
   return (

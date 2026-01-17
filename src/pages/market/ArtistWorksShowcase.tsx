@@ -17,12 +17,6 @@ import {
   normalizeAssetUrl,
 } from '../../../services/api';
 
-/**
- * ArtistWorksShowcase 组件属性接口
- */
-interface ArtistWorksShowcaseProps {
-  onNavigateToArtist?: (artistId: number | string) => void;
-}
 
 /**
  * 随机打乱数组
@@ -39,9 +33,7 @@ function shuffleArray<T>(arr: T[]): T[] {
 /**
  * ArtistWorksShowcase 佳作鉴赏页面组件
  */
-const ArtistWorksShowcase: React.FC<ArtistWorksShowcaseProps> = ({
-  onNavigateToArtist,
-}) => {
+const ArtistWorksShowcase: React.FC = () => {
   const navigate = useNavigate();
   const [works, setWorks] = useState<ArtistAllWorkItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -138,7 +130,7 @@ const ArtistWorksShowcase: React.FC<ArtistWorksShowcaseProps> = ({
             <div
               key={work.id}
               className="bg-white rounded-xl overflow-hidden shadow-sm border border-gray-100 active:scale-[0.99] transition-transform cursor-pointer flex flex-col"
-              onClick={() => onNavigateToArtist?.(work.artist_id)}
+              onClick={() => navigate(`/artist/${work.artist_id}`)}
             >
               <LazyImage
                 src={work.image}

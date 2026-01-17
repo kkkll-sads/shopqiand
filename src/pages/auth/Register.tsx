@@ -28,14 +28,14 @@ import { isValidPhone } from '../../../utils/validation';
 import { useNotification } from '../../../context/NotificationContext';
 import { isSuccess, extractError } from '../../../utils/apiHelpers';
 import PopupAnnouncementModal from '../../../components/common/PopupAnnouncementModal';
-import { usePageNavigation } from '../../hooks/usePageNavigation';
+import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../stores/authStore';
 
 /**
  * Register 注册页面组件
  */
 const Register: React.FC = () => {
-  const { goBack, navigateTo } = usePageNavigation();
+  const navigate = useNavigate();
   const { login: loginToStore } = useAuthStore();
   const { showToast } = useNotification();
 
@@ -196,7 +196,7 @@ const Register: React.FC = () => {
 
         if (!token) {
           showToast('warning', '注册成功', '但未获取到登录凭证，请手动登录');
-          navigateTo({ name: 'login' });
+          navigate('/login');
           return;
         }
 
@@ -211,7 +211,7 @@ const Register: React.FC = () => {
         console.log('自动登录成功，跳转到首页');
 
         // ✅ 注册成功后跳转到首页
-        navigateTo({ name: 'home' });
+        navigate('/');
       } else {
         const errorMsg = extractError(response, '注册失败，请稍后重试');
         showToast('error', '注册失败', errorMsg);
@@ -234,7 +234,7 @@ const Register: React.FC = () => {
     <div className="min-h-screen flex flex-col px-6 pt-8 pb-safe bg-gradient-to-br from-[#FFD6A5] via-[#FFC3A0] to-[#FFDEE9]">
       {/* 顶部导航 */}
       <div className="flex items-center mb-8 relative">
-        <button onClick={goBack} className="absolute left-0 -ml-2 p-2">
+        <button onClick={() => navigate(-1)} className="absolute left-0 -ml-2 p-2">
           <ChevronLeft size={24} className="text-gray-800" />
         </button>
         <h1 className="text-lg font-bold text-gray-900 w-full text-center">注册</h1>
@@ -359,7 +359,7 @@ const Register: React.FC = () => {
           <button
             type="button"
             className="text-orange-500 mx-0.5"
-            onClick={() => navigateTo({ name: 'user-agreement' })}
+            onClick={() => navigate('/user-agreement')}
           >
             《用户协议》
           </button>
@@ -367,7 +367,7 @@ const Register: React.FC = () => {
           <button
             type="button"
             className="text-orange-500 mx-0.5"
-            onClick={() => navigateTo({ name: 'privacy-policy' })}
+            onClick={() => navigate('/privacy-policy')}
           >
             《隐私政策》
           </button>

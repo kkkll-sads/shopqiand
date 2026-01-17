@@ -17,7 +17,7 @@ import { bizLog, debugLog } from '../../../utils/logger';
 import { isSuccess } from '../../../utils/apiHelpers';
 import { useErrorHandler } from '../../../hooks/useErrorHandler';
 import { sendSmsCode } from '../../../services/common';
-import { usePageNavigation } from '../../hooks/usePageNavigation';
+import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../stores/authStore';
 
 // localStorage 存储键名
@@ -29,7 +29,7 @@ const STORAGE_KEY_REMEMBER = 'login_remember_me';
  * Login 登录页面组件
  */
 const Login: React.FC = () => {
-  const { navigateTo } = usePageNavigation();
+  const navigate = useNavigate();
   const { login: loginToStore } = useAuthStore();
   const { showToast } = useNotification();
 
@@ -295,7 +295,7 @@ const Login: React.FC = () => {
         updateRealNameStatus(realNameStatus, realName);
         
         // ✅ 登录成功后跳转到首页
-        navigateTo({ name: 'home' });
+        navigate('/');
       } else {
         // ✅ 使用统一错误处理（自动记录日志、分类错误、显示Toast）
         handleError(response, {
@@ -320,7 +320,7 @@ const Login: React.FC = () => {
     <div className="min-h-screen flex flex-col px-8 pt-20 pb-safe bg-gradient-to-br from-[#FFD6A5] via-[#FFC3A0] to-[#FFDEE9] relative">
       {/* 顶部客服入口 */}
       <button
-        onClick={() => navigateTo({ name: 'online-service' })}
+        onClick={() => navigate('/online-service')}
         className="absolute top-6 right-6 p-2 rounded-full bg-white/30 backdrop-blur-md border border-white/50 text-gray-700 active:scale-95 transition-all shadow-sm z-10"
       >
         <div className="flex items-center gap-1">
@@ -459,7 +459,7 @@ const Login: React.FC = () => {
         <button
           type="button"
           className="text-gray-600"
-          onClick={() => navigateTo({ name: 'forgot-password' })}
+          onClick={() => navigate('/forgot-password')}
         >
           忘记密码
         </button>
@@ -487,7 +487,7 @@ const Login: React.FC = () => {
           <button
             type="button"
             className="text-orange-500 mx-0.5"
-            onClick={() => navigateTo({ name: 'user-agreement' })}
+            onClick={() => navigate('/user-agreement')}
           >
             用户协议
           </button>
@@ -495,7 +495,7 @@ const Login: React.FC = () => {
           <button
             type="button"
             className="text-orange-500 mx-0.5"
-            onClick={() => navigateTo({ name: 'privacy-policy' })}
+            onClick={() => navigate('/privacy-policy')}
           >
             隐私政策
           </button>
@@ -509,7 +509,7 @@ const Login: React.FC = () => {
       >
         <span className="text-gray-600">没有账户？</span>
         <button
-          onClick={() => navigateTo({ name: 'register' })}
+          onClick={() => navigate('/register')}
           className="text-blue-600 font-medium hover:text-blue-700"
         >
           点击注册

@@ -16,13 +16,13 @@ import { getStoredToken } from '../../../services/client';
 import { useAuthStore } from '../../stores/authStore';
 import { UserInfo } from '../../../types';
 import { useNotification } from '../../../context/NotificationContext';
-import { usePageNavigation } from '../../hooks/usePageNavigation';
+import { useNavigate } from 'react-router-dom';
 
 /**
  * EditProfile 编辑资料页面组件
  */
 const EditProfile: React.FC = () => {
-  const { goBack, onLogout } = usePageNavigation();
+  const navigate = useNavigate();
   const { showToast } = useNotification();
   // 从 authStore 获取用户信息
   const cachedUser = useAuthStore((state) => state.user);
@@ -42,7 +42,7 @@ const EditProfile: React.FC = () => {
    */
   const handleSave = async () => {
     if (!userInfo) {
-      goBack();
+      navigate(-1);
       return;
     }
 
@@ -63,7 +63,7 @@ const EditProfile: React.FC = () => {
       setUserInfo(updated);
       useAuthStore.getState().updateUser(updated);
       showToast('success', res?.msg || '保存成功');
-      goBack();
+      navigate(-1);
     } catch (error: any) {
       console.error('昵称更新失败:', error);
       showToast('error', '保存失败', error?.message || '昵称保存失败，请稍后重试');
@@ -140,7 +140,7 @@ const EditProfile: React.FC = () => {
   };
 
   return (
-    <PageContainer title="编辑资料" onBack={goBack} bgColor="bg-gray-100" padding={false}>
+    <PageContainer title="编辑资料" onBack={() => navigate(-1)} bgColor="bg-gray-100" padding={false}>
       {/* 表单区域 */}
       <div className="bg-white mt-2 px-4">
         {/* 头像行 */}

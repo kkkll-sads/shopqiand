@@ -4,9 +4,10 @@
 
 ### 已完成的工作
 
-1. **全部页面迁移** - 所有页面已完成内部导航迁移，使用 `useNavigate` hook
-2. **Wrapper 层简化** - 所有 Wrapper 已移除 `withNavigation` HOC，改为直接渲染组件
-3. **Route 类型清理** - `pages/` 目录下所有 Route 导入已清理
+1. **全部页面迁移** - 所有页面已迁移到 `src/pages/` 并使用 `useNavigate`
+2. **导航兼容层移除** - `withNavigation` HOC 已删除
+3. **旧 Route 类型清理** - `router/routes.ts` 已删除
+4. **根目录 pages/ 清理** - 已删除，所有页面统一在 `src/pages/`
 
 ### 迁移完成的页面 (使用 useNavigate)
 
@@ -23,23 +24,29 @@
 - ✅ PrivacyPolicy.tsx - 使用 StaticContentPage 内置导航
 - ✅ UserAgreement.tsx - 使用 StaticContentPage 内置导航
 
-#### 用户页面 (6/6) ✅
+#### 用户页面 (8/8) ✅
 - ✅ AccountDeletion.tsx - 内部使用 useNavigate
 - ✅ AddressList.tsx - 内部使用 useNavigate
 - ✅ AgentAuth.tsx - 内部使用 useNavigate
+- ✅ MyFriends.tsx - 内部使用 useNavigate
 - ✅ NotificationSettings.tsx - 内部使用 useNavigate
 - ✅ RealNameAuth.tsx - 内部使用 useNavigate
 - ✅ UserSurvey.tsx - 内部使用 useNavigate
+- ✅ EditProfile.tsx - 内部使用 useNavigate
 
-#### 市场页面 (4/4) ✅
+#### 市场页面 (7/7) ✅
 - ✅ ArtistShowcase.tsx - 内部使用 useNavigate
 - ✅ ArtistWorksShowcase.tsx - 内部使用 useNavigate
 - ✅ MasterpieceShowcase.tsx - 内部使用 useNavigate
 - ✅ MatchingPoolPage.tsx - 内部使用 useNavigate
+- ✅ Orders.tsx - 内部使用 useNavigate
+- ✅ ProductDetail.tsx - 内部使用 useNavigate
+- ✅ PointsProductDetail.tsx - 内部使用 useNavigate
 
-#### 钱包页面 (9/9) ✅
+#### 钱包页面 (12/12) ✅
 - ✅ CardManagement.tsx - 内部使用 useNavigate
 - ✅ ClaimDetail.tsx - 内部使用 useNavigate + useParams
+- ✅ ClaimStation.tsx - 内部使用 useNavigate
 - ✅ ConsignmentVoucher.tsx - 内部使用 useNavigate
 - ✅ MoneyLogDetail.tsx - 内部使用 useNavigate + useParams
 - ✅ OrderFundDetail.tsx - 内部使用 useNavigate
@@ -47,17 +54,28 @@
 - ✅ RechargeOrderList.tsx - 内部使用 useNavigate
 - ✅ ServiceRecharge.tsx - 内部使用 useNavigate
 - ✅ WithdrawOrderDetail.tsx - 内部使用 useNavigate + useParams
+- ✅ AssetView.tsx - 内部使用 useNavigate
+- ✅ MyCollection.tsx - 内部使用 useNavigate
 
 ## 当前架构状态
 
 ### ✅ 已完成
 - 所有页面组件内部使用 `useNavigate`
 - 所有 Wrapper 层已简化为直接渲染
+- 旧导航兼容层已移除
+- 根目录 `pages/` 已删除
 - 构建通过，无错误
 
-### 🔄 待优化（可选）
-- 可删除 `router/routes.ts` 文件
-- 可删除 `src/hoc/withNavigation.tsx` 文件（当前虽然存在但未被使用）
+### 📁 目录结构
+```
+src/pages/
+├── auth/           # 认证页面
+├── cms/            # 内容页面
+├── live/           # 直播页面
+├── market/         # 市场页面
+├── user/           # 用户页面
+└── wallet/         # 钱包页面
+```
 
 ## 迁移模式
 
@@ -84,7 +102,7 @@ const Page: React.FC = () => {
 
 ```tsx
 import React from 'react';
-import Component from '../../../pages/module/Component';
+import Component from './Component';
 
 const ComponentWrapper: React.FC = () => <Component />;
 
@@ -93,5 +111,5 @@ export default ComponentWrapper;
 
 ---
 
-**最后更新**: 2026-01-16
+**最后更新**: 2026-01-17
 **状态**: ✅ 迁移完成

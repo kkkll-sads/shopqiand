@@ -2,6 +2,11 @@
 
 ## 完成日期: 2026-01-14
 
+## 最新更新（2026-01-17）
+- 页面主体已迁移到 `src/pages/`，根目录 `pages/` 仅保留少量未迁移页面
+- 删除旧 `router/routes.ts` 与 `src/hoc/withNavigation.tsx`
+- 文档中关于“全部页面迁移完成”已改为“进行中”
+
 ## 一、已完成任务
 
 ### 1. 基础设施升级 ✅
@@ -112,7 +117,7 @@
 - 更新 `jest.fn()` → `vi.fn()`
 - 所有 51 个测试通过
 
-## 三、最终项目结构
+## 三、当前项目结构（更新摘要）
 
 ```
 .
@@ -124,20 +129,14 @@
 ├── context/            # React Context
 ├── docs/               # 项目文档
 ├── hooks/              # 自定义 Hooks
-├── pages/              # 页面组件
-│   ├── auth/          # 认证页面
-│   ├── cms/           # 内容页面
-│   ├── live/          # 直播页面
-│   ├── market/        # 市场页面
-│   ├── user/          # 用户页面
-│   └── wallet/        # 钱包页面
+├── pages/              # 旧路径残留页面（待迁移）
 ├── public/             # 静态资源
-├── router/             # 旧路由类型（Route）
+├── router/             # 已清理（旧 Route 已删除）
 ├── services/           # API 服务
 ├── src/                # 重构后的核心代码
 │   ├── hooks/         # 新 Hooks
 │   ├── layouts/       # 布局组件
-│   ├── pages/         # 页面包装器
+│   ├── pages/         # 迁移后的页面
 │   ├── providers/     # Provider 组件
 │   ├── router/        # React Router 配置
 │   ├── stores/        # Zustand Stores

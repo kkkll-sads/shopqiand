@@ -41,7 +41,7 @@ import { useAuthStore } from '../../stores/authStore';
 import { STORAGE_KEYS } from '../../../constants/storageKeys';
 import { isSuccess, extractData, extractError } from '../../../utils/apiHelpers';
 import { useErrorHandler } from '../../../hooks/useErrorHandler';
-import { usePageNavigation } from '../../hooks/usePageNavigation';
+import { useNavigate } from 'react-router-dom';
 
 // Helper for custom coin icon
 const CoinsIcon = ({ size, className }: { size: number; className: string }) => (
@@ -65,7 +65,7 @@ const CoinsIcon = ({ size, className }: { size: number; className: string }) => 
 );
 
 const Profile: React.FC<{ unreadCount?: number }> = ({ unreadCount = 0 }) => {
-  const { navigateTo } = usePageNavigation();
+  const navigate = useNavigate();
   // ✅ 使用统一错误处理Hook（持久化显示）
   const { errorMessage, hasError, handleError, clearError } = useErrorHandler();
 
@@ -203,7 +203,7 @@ const Profile: React.FC<{ unreadCount?: number }> = ({ unreadCount = 0 }) => {
     logout();
     // 稍微延迟一下跳转，让状态更新
     setTimeout(() => {
-      navigateTo({ name: 'sign-in' });
+      navigate('/sign-in');
     }, 50);
   };
   const displayName = realName || userInfo?.nickname || userInfo?.username || '用户';
@@ -302,7 +302,7 @@ const Profile: React.FC<{ unreadCount?: number }> = ({ unreadCount = 0 }) => {
           </div>
           <div className="flex gap-4">
             <button
-              onClick={() => navigateTo('message-center')}
+              onClick={() => navigate('/message-center')}
               className="text-gray-600 hover:text-gray-900 transition-colors relative"
             >
               <MessageSquare size={22} />
@@ -311,7 +311,7 @@ const Profile: React.FC<{ unreadCount?: number }> = ({ unreadCount = 0 }) => {
               )}
             </button>
             <button
-              onClick={() => navigateTo('settings')}
+              onClick={() => navigate('/settings')}
               className="text-gray-600 hover:text-gray-900 transition-colors"
             >
               <Settings size={22} />
@@ -330,7 +330,7 @@ const Profile: React.FC<{ unreadCount?: number }> = ({ unreadCount = 0 }) => {
                 </span>
               </div>
               <button
-                onClick={() => navigateTo('asset:balance-recharge:profile')}
+                onClick={() => navigate('/balance-recharge')}
                 className="text-orange-600 text-sm font-medium flex items-center gap-1 active:opacity-70"
               >
                 去充值 <ChevronRight size={14} />
@@ -340,7 +340,7 @@ const Profile: React.FC<{ unreadCount?: number }> = ({ unreadCount = 0 }) => {
             {/* Main Big Number: Supply Chain Special Fund (balance_available) */}
             <div
               className="text-3xl font-[DINAlternate-Bold,Roboto,sans-serif] font-bold text-gray-900 tracking-tight mb-6 cursor-pointer active:opacity-70 transition-opacity"
-              onClick={() => navigateTo('asset-view', { tab: 0 })}
+              onClick={() => navigate('/asset-view?tab=0')}
             >
               <span className="text-xl mr-1">¥</span>
               {/* Display balance_available without commas */}
@@ -352,7 +352,7 @@ const Profile: React.FC<{ unreadCount?: number }> = ({ unreadCount = 0 }) => {
               {/* Row 1, Col 1: Withdrawable */}
               <div
                 className="flex flex-col cursor-pointer active:opacity-70 transition-opacity"
-                onClick={() => navigateTo('asset-view', { tab: 1 })}
+                onClick={() => navigate('/asset-view?tab=1')}
               >
                 <div className="text-xs text-gray-400 mb-1">可调度收益</div>
                 <div className="text-[15px] font-bold text-gray-800 font-[DINAlternate-Bold,Roboto,sans-serif] leading-tight">
@@ -363,7 +363,7 @@ const Profile: React.FC<{ unreadCount?: number }> = ({ unreadCount = 0 }) => {
               {/* Row 1, Col 2: Consumer Points */}
               <div
                 className="flex flex-col items-end cursor-pointer active:opacity-70 transition-opacity"
-                onClick={() => navigateTo({ name: 'switch-to-market' })}
+                onClick={() => navigate('/market')}
               >
                 <div className="text-xs text-gray-400 mb-1">消费金</div>
                 <div className="text-[15px] font-bold text-gray-800 font-[DINAlternate-Bold,Roboto,sans-serif] leading-tight">
@@ -374,7 +374,7 @@ const Profile: React.FC<{ unreadCount?: number }> = ({ unreadCount = 0 }) => {
               {/* Row 2, Col 1: Green Power */}
               <div
                 className="flex flex-col cursor-pointer active:opacity-70 transition-opacity"
-                onClick={() => navigateTo('wallet:hashrate_exchange:profile')}
+                onClick={() => navigate('/hashrate-exchange')}
               >
                 <div className="text-xs text-gray-400 mb-1 flex items-center gap-1">
                   绿色算力 <Leaf size={10} className="text-green-500" />
@@ -387,7 +387,7 @@ const Profile: React.FC<{ unreadCount?: number }> = ({ unreadCount = 0 }) => {
               {/* Row 2, Col 2: Rights Fund */}
               <div
                 className="flex flex-col items-end cursor-pointer active:opacity-70 transition-opacity"
-                onClick={() => navigateTo('asset-view', { tab: 3 })}
+                onClick={() => navigate('/asset-view?tab=3')}
               >
                 <div className="text-xs text-gray-400 mb-1">确权金</div>
                 <div className="text-[15px] font-bold text-gray-800 font-[DINAlternate-Bold,Roboto,sans-serif] leading-tight">
@@ -419,28 +419,28 @@ const Profile: React.FC<{ unreadCount?: number }> = ({ unreadCount = 0 }) => {
                 icon: Wallet,
                 color: 'text-orange-600',
                 bg: 'bg-orange-50',
-                action: () => navigateTo({ name: 'balance-recharge', source: 'asset-view' }),
+                action: () => navigate('/balance-recharge'),
               },
               {
                 label: '每日签到',
                 icon: CalendarCheck,
                 color: 'text-red-500',
                 bg: 'bg-red-50',
-                action: () => navigateTo({ name: 'sign-in' }),
+                action: () => navigate('/sign-in'),
               },
               {
                 label: '收益提现',
                 icon: Receipt,
                 color: 'text-orange-500',
                 bg: 'bg-orange-50',
-                action: () => navigateTo({ name: 'balance-withdraw', source: 'asset-view' }),
+                action: () => navigate('/balance-withdraw'),
               },
               {
                 label: '消费金兑换',
                 icon: CoinsIcon,
                 color: 'text-yellow-600',
                 bg: 'bg-yellow-50',
-                action: () => navigateTo({ name: 'switch-to-market' }),
+                action: () => navigate('/market'),
               },
             ].map((item, idx) => (
               <div
@@ -480,35 +480,35 @@ const Profile: React.FC<{ unreadCount?: number }> = ({ unreadCount = 0 }) => {
                 icon: FileText,
                 color: 'text-purple-600',
                 bg: 'bg-purple-50',
-                action: () => navigateTo({ name: 'asset-view' }),
+                action: () => navigate('/asset-view'),
               },
               {
                 label: '累计权益',
                 icon: ShieldCheck,
                 color: 'text-green-600',
                 bg: 'bg-green-50',
-                action: () => navigateTo({ name: 'cumulative-rights' }),
+                action: () => navigate('/cumulative-rights'),
               },
               {
                 label: '寄售券',
                 icon: Receipt,
                 color: 'text-pink-600',
                 bg: 'bg-pink-50',
-                action: () => navigateTo({ name: 'consignment-voucher' }),
+                action: () => navigate('/consignment-voucher'),
               },
               {
                 label: '我的藏品',
                 icon: Box,
                 color: 'text-indigo-600',
                 bg: 'bg-indigo-50',
-                action: () => navigateTo({ name: 'my-collection' }),
+                action: () => navigate('/my-collection'),
               },
               {
                 label: '交易订单',
                 icon: ClipboardList,
                 color: 'text-blue-600',
                 bg: 'bg-blue-50',
-                action: () => navigateTo({ name: 'order-list', kind: 'transaction', status: 0 }),
+                action: () => navigate('/orders/transaction/0'),
               },
             ].map((item, idx) => (
               <div
@@ -540,7 +540,7 @@ const Profile: React.FC<{ unreadCount?: number }> = ({ unreadCount = 0 }) => {
                 icon: Coins,
                 color: 'text-orange-500',
                 bg: 'bg-orange-50',
-                action: () => navigateTo({ name: 'order-list', kind: 'points', status: 0 }),
+                action: () => navigate('/orders/points/0'),
                 badge: orderStats?.pending_count || 0,
               },
               {
@@ -548,7 +548,7 @@ const Profile: React.FC<{ unreadCount?: number }> = ({ unreadCount = 0 }) => {
                 icon: Package,
                 color: 'text-blue-500',
                 bg: 'bg-blue-50',
-                action: () => navigateTo({ name: 'order-list', kind: 'points', status: 1 }),
+                action: () => navigate('/orders/points/1'),
                 badge: orderStats?.paid_count || 0,
               },
               {
@@ -556,7 +556,7 @@ const Profile: React.FC<{ unreadCount?: number }> = ({ unreadCount = 0 }) => {
                 icon: Truck,
                 color: 'text-purple-500',
                 bg: 'bg-purple-50',
-                action: () => navigateTo({ name: 'order-list', kind: 'points', status: 2 }),
+                action: () => navigate('/orders/points/2'),
                 badge: orderStats?.shipped_count || 0,
               },
               {
@@ -564,7 +564,7 @@ const Profile: React.FC<{ unreadCount?: number }> = ({ unreadCount = 0 }) => {
                 icon: CheckCircle,
                 color: 'text-green-500',
                 bg: 'bg-green-50',
-                action: () => navigateTo({ name: 'order-list', kind: 'points', status: 3 }),
+                action: () => navigate('/orders/points/3'),
                 badge: orderStats?.completed_count || 0,
               },
             ].map((item, idx) => (
@@ -600,50 +600,50 @@ const Profile: React.FC<{ unreadCount?: number }> = ({ unreadCount = 0 }) => {
               {
                 label: '实名认证',
                 icon: UserCheck,
-                action: () => navigateTo({ name: 'real-name-auth' }),
+                action: () => navigate('/real-name-auth'),
               },
               {
                 label: '卡号管理',
                 icon: CreditCard,
-                action: () => navigateTo({ name: 'card-management' }),
+                action: () => navigate('/card-management'),
               },
               {
                 label: '收货地址',
                 icon: MapPin,
-                action: () => navigateTo({ name: 'address-list' }),
+                action: () => navigate('/address-list'),
               },
-              { label: '我的好友', icon: Users, action: () => navigateTo({ name: 'my-friends' }) },
+              { label: '我的好友', icon: Users, action: () => navigate('/my-friends') },
               {
                 label: '代理认证',
                 icon: UserCheck,
-                action: () => navigateTo({ name: 'agent-auth' }),
+                action: () => navigate('/agent-auth'),
               },
               {
                 label: '帮助中心',
                 icon: HelpCircle,
-                action: () => navigateTo({ name: 'help-center' }),
+                action: () => navigate('/help-center'),
               },
               {
                 label: '规则协议',
                 icon: FileText,
-                action: () => navigateTo({ name: 'user-agreement' }),
+                action: () => navigate('/user-agreement'),
               },
               {
                 label: '用户问卷',
                 icon: FileText,
-                action: () => navigateTo({ name: 'user-survey' }),
+                action: () => navigate('/user-survey'),
               },
               {
                 label: '活动中心',
                 icon: Gift,
-                action: () => navigateTo({ name: 'activity-center' }),
+                action: () => navigate('/activity-center'),
               },
               {
                 label: '在线客服',
                 icon: HeadphonesIcon,
-                action: () => navigateTo({ name: 'online-service' }),
+                action: () => navigate('/online-service'),
               },
-              { label: '平台资讯', icon: Newspaper, action: () => navigateTo({ name: 'news' }) },
+              { label: '平台资讯', icon: Newspaper, action: () => navigate('/news') },
             ].map((item, idx) => (
               <div
                 key={idx}

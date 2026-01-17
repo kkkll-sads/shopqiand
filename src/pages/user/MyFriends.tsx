@@ -16,7 +16,7 @@ import { fetchTeamMembers, normalizeAssetUrl } from '../../../services/api';
 import { TeamMember } from '../../../types';
 import { formatTime } from '../../../utils/format';
 import { isSuccess, extractError } from '../../../utils/apiHelpers';
-import { usePageNavigation } from '../../hooks/usePageNavigation';
+import { useNavigate } from 'react-router-dom';
 
 const PAGE_SIZE = 10;
 
@@ -24,7 +24,7 @@ const PAGE_SIZE = 10;
  * MyFriends 我的好友页面组件
  */
 const MyFriends: React.FC = () => {
-  const { goBack, navigateTo } = usePageNavigation();
+  const navigate = useNavigate();
   const [friends, setFriends] = useState<TeamMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -221,7 +221,7 @@ const MyFriends: React.FC = () => {
   };
 
   return (
-    <PageContainer title="我的好友" onBack={goBack}>
+    <PageContainer title="我的好友" onBack={() => navigate(-1)}>
       <div
         ref={containerRef}
         className="flex-1"
@@ -235,7 +235,7 @@ const MyFriends: React.FC = () => {
           }
           title="邀请好友"
           subtitle="邀请好友加入，共享艺术价值"
-          onClick={() => onNavigate?.({ name: 'invite-friends' })}
+          onClick={() => navigate('/invite-friends')}
         />
 
         {/* Tab 切换 */}
@@ -313,7 +313,7 @@ const MyFriends: React.FC = () => {
                   </div>
                 </div>
                 <button
-                  onClick={() => onNavigate?.({ name: 'friend-detail', id: String(friend.id), friend, back: { name: 'my-friends' } })}
+                  onClick={() => navigate(`/friend-detail/${friend.id}`)}
                   className="text-xs bg-gray-100 text-gray-600 px-3 py-1.5 rounded-full"
                 >
                   查看

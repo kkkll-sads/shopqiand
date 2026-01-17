@@ -13,7 +13,7 @@ import PageContainer from '../../../components/layout/PageContainer';
 import { normalizeAssetUrl } from '../../../services/api';
 import { TeamMember } from '../../../types';
 import { formatTime } from '../../../utils/format';
-import { usePageNavigation } from '../../hooks/usePageNavigation';
+import { useNavigate } from 'react-router-dom';
 
 interface FriendDetailProps {
   friend?: TeamMember;
@@ -21,14 +21,14 @@ interface FriendDetailProps {
 }
 
 const FriendDetail: React.FC<FriendDetailProps> = ({ friend, id }) => {
-  const { goBack } = usePageNavigation();
+  const navigate = useNavigate();
   // 如果没有传入 friend 对象，可以显示加载中或者空状态
   // 由于目前 API 不支持单独获取好友详情，这里先假设通过 props 传入
   // 如果 future 需要支持 deep link，则需要增加 API 调用
 
   if (!friend) {
     return (
-      <PageContainer title="好友详情" onBack={goBack}>
+      <PageContainer title="好友详情" onBack={() => navigate(-1)}>
         <div className="flex flex-col items-center justify-center pt-20 text-gray-400">
           <p>未找到好友信息</p>
           <p className="text-xs mt-2">ID: {id}</p>

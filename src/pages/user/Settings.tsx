@@ -18,14 +18,14 @@ import { UserInfo } from '../../../types';
 import { formatPhone } from '../../../utils/format';
 import { AppVersionInfo } from '../../../services/app';
 import { APP_VERSION } from '../../../constants';
-import { usePageNavigation } from '../../hooks/usePageNavigation';
+import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../stores/authStore';
 
 /**
  * Settings 设置页面组件
  */
 const Settings: React.FC = () => {
-  const { goBack, navigateTo } = usePageNavigation();
+  const navigate = useNavigate();
   const { logout } = useAuthStore();
 
   // 版本检查相关状态
@@ -90,11 +90,11 @@ const Settings: React.FC = () => {
    */
   const handleLogout = () => {
     logout();
-    navigateTo('login', undefined, { replace: true });
+    navigate('/login', { replace: true });
   };
 
   return (
-    <PageContainer title="设置" onBack={goBack} bgColor="bg-gray-100" padding={false}>
+    <PageContainer title="设置" onBack={() => navigate(-1)} bgColor="bg-gray-100" padding={false}>
       {/* 用户信息卡片 */}
       <div className="bg-white mt-2 px-4 py-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -114,7 +114,7 @@ const Settings: React.FC = () => {
         </div>
         <button
           className="flex items-center text-xs text-gray-500 active:opacity-70"
-          onClick={() => navigateTo('edit-profile')}
+          onClick={() => navigate('/edit-profile')}
         >
           编辑
           <ChevronRight size={16} className="ml-0.5" />
@@ -125,19 +125,19 @@ const Settings: React.FC = () => {
       <div className="mt-3 bg-white">
         <ListItem
           title="重置登录密码"
-          onClick={() => navigateTo('reset-login-password', { from: 'settings' })}
+          onClick={() => navigate('/reset-login-password')}
         />
         <ListItem
           title="重置支付密码"
-          onClick={() => navigateTo('reset-pay-password', { from: 'settings' })}
+          onClick={() => navigate('/reset-pay-password')}
         />
         <ListItem
           title="新消息通知"
-          onClick={() => navigateTo('notification-settings', { from: 'settings' })}
+          onClick={() => navigate('/notification-settings')}
         />
         <ListItem
           title="账户注销"
-          onClick={() => navigateTo('account-deletion', { from: 'settings' })}
+          onClick={() => navigate('/account-deletion')}
         />
       </div>
 
@@ -156,11 +156,11 @@ const Settings: React.FC = () => {
         />
         <ListItem
           title="隐私政策"
-          onClick={() => navigateTo('privacy-policy', { from: 'settings' })}
+          onClick={() => navigate('/privacy-policy')}
         />
         <ListItem
           title="关于我们"
-          onClick={() => navigateTo('about-us', { from: 'settings' })}
+          onClick={() => navigate('/about-us')}
         />
       </div>
 

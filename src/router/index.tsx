@@ -38,6 +38,7 @@ const InviteFriends = lazy(() => import('../pages/user/InviteFriendsWrapper'));
 const AccountDeletion = lazy(() => import('../pages/user/AccountDeletionWrapper'));
 const NotificationSettings = lazy(() => import('../pages/user/NotificationSettingsWrapper'));
 const UserSurvey = lazy(() => import('../pages/user/UserSurveyWrapper'));
+const ActivityCenter = lazy(() => import('../pages/user/ActivityCenterWrapper'));
 
 // CMS/内容页面
 const News = lazy(() => import('../pages/cms/NewsWrapper'));
@@ -60,6 +61,8 @@ const ArtistWorksShowcase = lazy(() => import('../pages/market/ArtistWorksShowca
 const MasterpieceShowcase = lazy(() => import('../pages/market/MasterpieceShowcaseWrapper'));
 const ReservationPage = lazy(() => import('../pages/market/ReservationPageWrapper'));
 const ReservationRecordPage = lazy(() => import('../pages/market/ReservationRecordPageWrapper'));
+const ReservationRecordDetailPage = lazy(() => import('../pages/market/ReservationRecordDetailPageWrapper'));
+const SearchPage = lazy(() => import('../pages/market/SearchPageWrapper'));
 const OrderListPage = lazy(() => import('../pages/market/OrderListPageWrapper'));
 const OrderDetail = lazy(() => import('../pages/market/OrderDetailWrapper'));
 const CollectionOrderDetail = lazy(() => import('../pages/market/CollectionOrderDetailWrapper'));
@@ -82,6 +85,10 @@ const MyCollectionDetail = lazy(() => import('../pages/wallet/MyCollectionDetail
 const ClaimHistory = lazy(() => import('../pages/wallet/ClaimHistoryWrapper'));
 const ClaimDetail = lazy(() => import('../pages/wallet/ClaimDetailWrapper'));
 const HashrateExchange = lazy(() => import('../pages/wallet/HashrateExchangeWrapper'));
+const MoneyLogDetail = lazy(() => import('../pages/wallet/MoneyLogDetailWrapper'));
+const OrderFundDetail = lazy(() => import('../pages/wallet/OrderFundDetailWrapper'));
+const RechargeOrderList = lazy(() => import('../pages/wallet/RechargeOrderListWrapper'));
+const WithdrawOrderList = lazy(() => import('../pages/wallet/WithdrawOrderListWrapper'));
 
 // ========================================
 // 懒加载包装组件
@@ -200,6 +207,10 @@ const routes: RouteObject[] = [
         element: <LazyComponent component={UserSurvey} />,
       },
       {
+        path: '/activity-center',
+        element: <LazyComponent component={ActivityCenter} />,
+      },
+      {
         path: '/reset-login-password',
         element: <LazyComponent component={ResetLoginPassword} />,
       },
@@ -280,6 +291,14 @@ const routes: RouteObject[] = [
       {
         path: '/reservation-record',
         element: <LazyComponent component={ReservationRecordPage} />,
+      },
+      {
+        path: '/reservation-record/:id',
+        element: <LazyComponent component={ReservationRecordDetailPage} />,
+      },
+      {
+        path: '/search',
+        element: <LazyComponent component={SearchPage} />,
       },
       {
         path: '/orders/:category/:status',
@@ -365,6 +384,22 @@ const routes: RouteObject[] = [
       {
         path: '/hashrate-exchange',
         element: <LazyComponent component={HashrateExchange} />,
+      },
+      {
+        path: '/money-log/:id',
+        element: <LazyComponent component={MoneyLogDetail} />,
+      },
+      {
+        path: '/order-fund/:id',
+        element: <LazyComponent component={OrderFundDetail} />,
+      },
+      {
+        path: '/recharge-orders',
+        element: <LazyComponent component={RechargeOrderList} />,
+      },
+      {
+        path: '/withdraw-orders',
+        element: <LazyComponent component={WithdrawOrderList} />,
       },
     ],
   },
