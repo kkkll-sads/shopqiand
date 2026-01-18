@@ -96,6 +96,26 @@ const Page: React.FC = () => {
 };
 ```
 
+---
+
+## API 响应统一处理状态（扫描：2026-01-19）
+
+**结论**：运行时代码已统一使用 `apiHelpers`（`isSuccess` / `extractError`）。
+
+**备注**：
+- 文档与测试中的示例/断言仍保留，不影响运行。
+
+---
+
+## 状态机覆盖情况（扫描：2026-01-19）
+
+**已落地状态机**：
+- `hooks/useRealNameAuth.ts` → `src/pages/user/RealNameAuth.tsx`
+- `hooks/useCashier.ts` → `src/pages/market/Cashier.tsx`
+- `hooks/useAssetActionModal.ts` → `src/pages/wallet/AssetView.tsx`
+
+**结论**：状态机目前为“关键页面局部覆盖”，非全量覆盖。
+
 ## Wrapper 层简化模式
 
 所有 Wrapper 已简化为：

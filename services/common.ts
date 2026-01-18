@@ -3,6 +3,7 @@ import { API_ENDPOINTS } from './config';
 // 统一的带 token 请求封装，减少重复从 localStorage 取 token
 import { authedFetch } from './client';
 import { debugLog, errorLog } from '../utils/logger';
+import { extractError, isSuccess } from '../utils/apiHelpers';
 
 export interface UploadFileData {
     suffix?: string;
@@ -132,9 +133,9 @@ export async function sendSmsCode(params: SendSmsParams, token?: string): Promis
         token,
     });
 
-    // 检查返回码，code !== 1 表示失败
-    if (Number(response.code) !== 1) {
-        const error = new Error(response.msg || '发送验证码失败');
+    // 统一 API 响应处理：失败时抛出错误
+    if (!isSuccess(response)) {
+        const error = new Error(extractError(response, '发送验证码失败'));
         (error as any).msg = response.msg;
         (error as any).code = response.code;
         throw error;

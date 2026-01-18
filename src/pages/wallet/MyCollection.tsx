@@ -93,7 +93,7 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onItemSelect, initialConsig
 
         // 移除重复请求：getMyCollection 在 loadData 中会被再次调用
         // const collectionRes = await getMyCollection({ page: 1, token });
-        // if (collectionRes.code === 1 && collectionRes.data) {
+        // if (isSuccess(collectionRes) && collectionRes.data) {
         //   const count = (collectionRes.data as any).consignment_coupon ?? 0;
         //   setConsignmentTicketCount(count);
         // }

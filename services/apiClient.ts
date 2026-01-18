@@ -4,6 +4,7 @@
  */
 import { apiFetch, ApiResponse, ApiFetchConfig } from './networking';
 import { useAuthStore } from '../src/stores/authStore';
+import { extractError, isSuccess } from '../utils/apiHelpers';
 
 /**
  * 获取当前 token
@@ -51,7 +52,7 @@ export async function publicFetch<T = any>(
  * API 响应处理工具
  */
 export const isApiSuccess = (response: ApiResponse): boolean => {
-  return response.code === 1 || response.code === 200;
+  return isSuccess(response) || response.code === 200;
 };
 
 export const extractApiData = <T>(response: ApiResponse<T>): T | null => {
@@ -59,5 +60,5 @@ export const extractApiData = <T>(response: ApiResponse<T>): T | null => {
 };
 
 export const extractApiError = (response: ApiResponse): string => {
-  return response.msg || response.message || '请求失败';
+  return extractError(response, '请求失败');
 };

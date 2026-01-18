@@ -19,6 +19,7 @@ import {
   ArtistWorkItem,
   ArtistListData,
 } from '../../../services/api';
+import { extractError, isSuccess } from '../../../utils/apiHelpers';
 
 /**
  * ArtistDetail 组件属性接口
@@ -70,8 +71,8 @@ const ArtistDetail: React.FC<ArtistDetailProps> = ({ onProductSelect }) => {
         const res = await fetchArtistDetail(targetId);
         if (!isMounted) return;
 
-        if (res.code !== 1 || !res.data) {
-          setError(res.msg || '艺术家数据加载失败');
+        if (!isSuccess(res) || !res.data) {
+          setError(extractError(res, '艺术家数据加载失败'));
           return;
         }
 

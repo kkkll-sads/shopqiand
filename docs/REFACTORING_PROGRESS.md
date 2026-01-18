@@ -504,6 +504,26 @@ pages/[Feature].tsx       # 使用状态机的页面
 
 ---
 
+## 扫描结果（2026-01-19）
+
+### API 响应统一处理
+
+**现状**：运行时代码已统一使用 `apiHelpers` 处理（`isSuccess` / `extractError`）。
+
+**备注**：
+- 仍保留文档与测试中的示例/断言，不影响运行。
+
+### 状态机覆盖
+
+**已落地状态机**：
+- `hooks/useRealNameAuth.ts` → `src/pages/user/RealNameAuth.tsx`
+- `hooks/useCashier.ts` → `src/pages/market/Cashier.tsx`
+- `hooks/useAssetActionModal.ts` → `src/pages/wallet/AssetView.tsx`
+
+**结论**：状态机仍处于“关键页面局部覆盖”，尚未覆盖全部复杂页面。
+
+---
+
 ## 十一、第八阶段 - 认证页面迁移（2026-01-14）✅
 
 ### 已完成迁移

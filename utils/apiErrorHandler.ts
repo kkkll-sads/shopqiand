@@ -2,12 +2,13 @@
  * 统一 API 错误处理工具
  * 
  * 后端接口约定：
- * - code === 1 表示成功
- * - code === 0 或其他值表示失败，msg 字段包含错误信息
+ * - 成功判断由 apiHelpers.isSuccess 统一处理
+ * - 失败时 msg 字段包含错误信息
  * - 速率限制等通用错误也通过 msg 返回
  */
 
 import { ApiResponse } from '../services/networking';
+import { isSuccess } from './apiHelpers';
 
 /**
  * 从 API 响应中提取错误消息
@@ -44,12 +45,10 @@ export function getApiErrorMessage(
 
 /**
  * 检查 API 响应是否成功
- * 后端约定 code === 1 为成功
+ * 统一使用 apiHelpers.isSuccess
  */
 export function isApiSuccess(response: ApiResponse<any> | null | undefined): boolean {
-    if (!response) return false;
-    // 兼容 Number 类型转换
-    return Number(response.code) === 1;
+    return isSuccess(response);
 }
 
 /**
