@@ -110,6 +110,9 @@ export function useStateMachine<
   const [state, setState] = useState<TState>(config.initial);
   const [context, setContext] = useState<TContext>((config.context || {}) as TContext);
 
+  // ✅ 使用 ref 跟踪最新状态，避免闭包中的 state 过期
+  const stateRef = useRef<TState>(config.initial);
+
   // 状态转换历史记录（便于调试）
   const historyRef = useRef<Array<{
     from: TState;
@@ -122,7 +125,8 @@ export function useStateMachine<
    * 检查是否可以触发某个事件
    */
   const can = useCallback((event: TEvent): boolean => {
-    const currentStateConfig = config.transitions[state];
+    const currentState = stateRef.current; // ✅ 使用 ref 获取最新状态
+    const currentStateConfig = config.transitions[currentState];
     if (!currentStateConfig) return false;
 
     const transition = currentStateConfig[event];
@@ -134,7 +138,7 @@ export function useStateMachine<
     }
 
     return true;
-  }, [state, config.transitions]);
+  }, [config.transitions]);
 
   /**
    * 触发状态转换
@@ -144,11 +148,12 @@ export function useStateMachine<
    * @returns 是否成功转换
    */
   const send = useCallback((event: TEvent, payload?: Partial<TContext>): boolean => {
-    const currentStateConfig = config.transitions[state];
+    const currentState = stateRef.current; // ✅ 使用 ref 获取最新状态
+    const currentStateConfig = config.transitions[currentState];
 
     if (!currentStateConfig) {
       if (config.debug) {
-        warnLog('stateMachine.send', `No transitions defined for state: ${state}`);
+        warnLog('stateMachine.send', `No transitions defined for state: ${currentState}`);
       }
       return false;
     }
@@ -157,7 +162,7 @@ export function useStateMachine<
 
     if (!transition) {
       if (config.debug) {
-        warnLog('stateMachine.send', `Invalid transition: ${state} + ${event}`);
+        warnLog('stateMachine.send', `Invalid transition: ${currentState} + ${event}`);
       }
       return false;
     }
@@ -180,14 +185,14 @@ export function useStateMachine<
     // 检查守卫条件
     if (guard && !guard()) {
       if (config.debug) {
-        warnLog('stateMachine.send', `Transition blocked by guard: ${state} + ${event}`);
+        warnLog('stateMachine.send', `Transition blocked by guard: ${currentState} + ${event}`);
       }
       return false;
     }
 
     // 记录状态转换历史
     historyRef.current.push({
-      from: state,
+      from: currentState,
       event,
       to: nextState,
       timestamp: Date.now(),
@@ -199,12 +204,15 @@ export function useStateMachine<
     }
 
     if (config.debug) {
-      debugLog('stateMachine.send', `Transition: ${state} --[${event}]--> ${nextState}`, {
+      debugLog('stateMachine.send', `Transition: ${currentState} --[${event}]--> ${nextState}`, {
         payload,
       });
     }
 
-    // 执行状态转换
+    // ✅ 同步更新 ref，确保连续调用 send 时能读取到最新状态
+    stateRef.current = nextState;
+
+    // 执行状态转换（触发 React 重渲染）
     setState(nextState);
 
     // 更新上下文
@@ -218,7 +226,7 @@ export function useStateMachine<
     }
 
     return true;
-  }, [state, config.transitions, config.debug]);
+  }, [config.transitions, config.debug]); // ✅ 移除 state 依赖，使用 stateRef
 
   /**
    * 获取状态转换历史（调试用）
@@ -227,12 +235,18 @@ export function useStateMachine<
     return [...historyRef.current];
   }, []);
 
+  // ✅ 包装 setState，确保 ref 也同步更新
+  const setStateWithRef = useCallback((newState: TState) => {
+    stateRef.current = newState;
+    setState(newState);
+  }, []);
+
   return {
     state,
     context,
     can,
     send,
-    setState,
+    setState: setStateWithRef,
     setContext,
     getHistory,
   };

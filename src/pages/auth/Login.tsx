@@ -263,6 +263,7 @@ const Login: React.FC = () => {
         if (!token) {
           showToast('error', '登录异常', '登录成功，但未获取到 token，无法继续');
           submitMachine.send(FormEvent.SUBMIT_ERROR);
+          submitMachine.send(FormEvent.RESET);
           return;
         }
 
@@ -330,6 +331,7 @@ const Login: React.FC = () => {
           context: { phone, loginType },
         });
         submitMachine.send(FormEvent.SUBMIT_ERROR);
+        submitMachine.send(FormEvent.RESET);
       }
     } catch (error: any) {
       // ✅ 使用统一错误处理
@@ -339,6 +341,7 @@ const Login: React.FC = () => {
         context: { phone, loginType },
       });
       submitMachine.send(FormEvent.SUBMIT_ERROR);
+      submitMachine.send(FormEvent.RESET);
     } finally {
       // 状态机已处理成功/失败
     }

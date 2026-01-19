@@ -222,6 +222,7 @@ const Register: React.FC = () => {
           showToast('warning', '注册成功', '但未获取到登录凭证，请手动登录');
           navigate('/login');
           submitMachine.send(FormEvent.SUBMIT_ERROR);
+          submitMachine.send(FormEvent.RESET);
           return;
         }
 
@@ -242,6 +243,7 @@ const Register: React.FC = () => {
         const errorMsg = extractError(response, '注册失败，请稍后重试');
         showToast('error', '注册失败', errorMsg);
         submitMachine.send(FormEvent.SUBMIT_ERROR);
+        submitMachine.send(FormEvent.RESET);
       }
     } catch (error: any) {
       console.error('注册失败:', error);
@@ -253,6 +255,7 @@ const Register: React.FC = () => {
         showToast('error', '注册失败', '请检查网络连接后重试');
       }
       submitMachine.send(FormEvent.SUBMIT_ERROR);
+      submitMachine.send(FormEvent.RESET);
     } finally {
       // 状态机已处理成功/失败
     }
