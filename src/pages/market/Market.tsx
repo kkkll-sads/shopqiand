@@ -14,6 +14,7 @@ import {
 } from '../../../services/api';
 import { useStateMachine } from '../../../hooks/useStateMachine';
 import { LoadingEvent, LoadingState } from '../../../types/states';
+import { useAppStore } from '../../stores/appStore';
 
 interface MarketProps {
   onProductSelect?: (product: Product) => void;
@@ -23,6 +24,7 @@ const PAGE_SIZE = 10;
 
 const Market: React.FC<MarketProps> = ({ onProductSelect }) => {
   const navigate = useNavigate();
+  const { setSelectedProduct } = useAppStore();
   const [activeFilter, setActiveFilter] = useState('comprehensive');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
@@ -309,7 +311,9 @@ const Market: React.FC<MarketProps> = ({ onProductSelect }) => {
                   if (onProductSelect) {
                     onProductSelect(product);
                   } else {
-                    navigate(`/points-product/${product.id}`);
+                    // 保存商品到 store，然后跳转到新重构的商品详情页
+                    setSelectedProduct(product, 'market');
+                    navigate(`/product/${product.id}`);
                   }
                 }}
               >

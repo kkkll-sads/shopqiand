@@ -26,6 +26,7 @@ import AssetActionsGrid from './components/asset/AssetActionsGrid';
 import AssetTabSwitcher from './components/asset/AssetTabSwitcher';
 import { isSuccess, extractData, extractError } from '../../../utils/apiHelpers';
 import { ConsignmentStatus, DeliveryStatus } from '../../../constants/statusEnums';
+import { useAuthStore } from '../../stores/authStore';
 import { useAssetActionModal, ActionModalState } from '../../../hooks/useAssetActionModal';
 import { useAssetTabs, TabConfig } from '../../../hooks/useAssetTabs';
 import { BALANCE_TYPE_OPTIONS, getBalanceTypeLabel } from '../../../constants/balanceTypes';
