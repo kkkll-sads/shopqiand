@@ -1,7 +1,7 @@
 /**
  * InviteFriends - 邀请好友页面（新路由系统版）
  *
- * ✅ 已迁移：使用 usePageNavigation 替代 Props
+ * ✅ 已迁移：使用 React Router + useNavigate
  *
  * @author 树交所前端团队
  * @version 3.0.0（新路由版）
@@ -15,7 +15,7 @@ import { LoadingSpinner } from '../../../components/common';
 import { fetchPromotionCard } from '../../../services/api';
 import { getStoredToken } from '../../../services/client';
 import { useNotification } from '../../../context/NotificationContext';
-import { isSuccess, extractError } from '../../../utils/apiHelpers';
+import { extractData, extractError } from '../../../utils/apiHelpers';
 import { useNavigate } from 'react-router-dom';
 import { useStateMachine } from '../../../hooks/useStateMachine';
 import { LoadingEvent, LoadingState } from '../../../types/states';
@@ -82,10 +82,11 @@ const InviteFriends: React.FC = () => {
           return;
         }
         const response = await fetchPromotionCard(token);
-        if ((isSuccess(response) || response.code === 0) && response.data) {
-          setInviteCode(response.data.invite_code);
-          const backendLink = response.data.invite_link;
-          const frontendLink = buildInviteLink(response.data.invite_code);
+        const data = extractData(response);
+        if (data) {
+          setInviteCode(data.invite_code);
+          const backendLink = data.invite_link;
+          const frontendLink = buildInviteLink(data.invite_code);
           console.log('后端返回的invite_link:', backendLink);
           console.log('前端构建的invite_link:', frontendLink);
           // 优先使用后端返回的链接，如果后端没有返回则使用前端构建的链接

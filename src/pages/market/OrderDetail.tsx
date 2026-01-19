@@ -63,9 +63,10 @@ const OrderDetail: React.FC = () => {
                 setOrder(response.data);
                 loadMachine.send(LoadingEvent.SUCCESS);
             } else {
+                const errorMsg = extractError(response, '获取订单详情失败');
                 // 检查是否为订单不存在的情况
-                if (response.code === 0 && response.message === '订单不存在') {
-                    showToast('error', '订单不存在');
+                if (errorMsg.includes('订单不存在')) {
+                    showToast('error', '订单不存在', errorMsg);
                     // 延迟一下再跳转，让用户看到提示
                     setTimeout(() => {
                         navigate('/orders/product/0');
@@ -76,7 +77,7 @@ const OrderDetail: React.FC = () => {
                 handleError(response, {
                     persist: true,
                     showToast: false,
-                    customMessage: '获取订单详情失败',
+                    customMessage: errorMsg,
                     context: { orderId }
                 });
                 loadMachine.send(LoadingEvent.ERROR);

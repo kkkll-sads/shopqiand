@@ -272,7 +272,7 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, hideActions = fa
             // address_id will be handled by service (using default if not provided)
           });
           debugLog('productDetail.buy', 'createOrder 响应', response);
-          bizLog('order.create.shop.ui', { code: response.code, productId: product.id });
+          bizLog('order.create.shop.ui', { success: isSuccess(response), productId: product.id });
 
           // ✅ 使用统一判断
           if (isSuccess(response)) {

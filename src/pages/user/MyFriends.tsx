@@ -1,7 +1,7 @@
 /**
  * MyFriends - 我的好友页面（新路由系统版）
  * 
- * ✅ 已迁移：使用 usePageNavigation 替代 Props
+ * ✅ 已迁移：使用 React Router + useNavigate
  * 
  * @author 树交所前端团队
  * @version 3.0.0（新路由版）
@@ -15,7 +15,7 @@ import { LoadingSpinner, EmptyState, ListItem } from '../../../components/common
 import { fetchTeamMembers, normalizeAssetUrl } from '../../../services/api';
 import { TeamMember } from '../../../types';
 import { formatTime } from '../../../utils/format';
-import { isSuccess, extractError } from '../../../utils/apiHelpers';
+import { extractData, extractError } from '../../../utils/apiHelpers';
 import { useNavigate } from 'react-router-dom';
 import { useStateMachine } from '../../../hooks/useStateMachine';
 import { LoadingEvent, LoadingState } from '../../../types/states';
@@ -140,11 +140,11 @@ const MyFriends: React.FC = () => {
 
       const level = activeTab === 'direct' ? 1 : 2;
       const response = await fetchTeamMembers({ page: pageNum, page_size: PAGE_SIZE, level });
+      const data = extractData(response);
 
-
-      if ((isSuccess(response) || response.code === 0) && response.data) {
-        const newList = response.data.list || [];
-        const totalCount = response.data.total || 0;
+      if (data) {
+        const newList = data.list || [];
+        const totalCount = data.total || 0;
 
 
         if (append) {

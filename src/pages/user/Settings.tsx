@@ -2,7 +2,7 @@
  * Settings - 设置页面
  *
  * 使用 PageContainer、ListItem 组件
- * 使用 usePageNavigation Hook 进行导航
+ * 使用 React Router + useNavigate 进行导航
  * 集成版本检查功能
  *
  * @author 树交所前端团队

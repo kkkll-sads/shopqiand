@@ -10,5 +10,4 @@ export { default as useRealNameAuth } from './useRealNameAuth';
 export { default as useCashier } from './useCashier';
 
 // 新路由相关 hooks（从 src/hooks 重导出）
-export { useAppNavigation } from '../src/hooks/useAppNavigation';
 export { useRouteNavigation } from '../src/hooks/useRouteNavigation';

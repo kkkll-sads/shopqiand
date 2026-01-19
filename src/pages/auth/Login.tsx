@@ -1,7 +1,7 @@
 /**
  * Login - 登录页面（新路由系统版）
  *
- * ✅ 已迁移：使用 usePageNavigation 替代 Props
+ * ✅ 已迁移：使用 React Router + useNavigate
  * ✅ 已迁移：使用 useAuthStore 管理登录状态
  *
  * @author 树交所前端团队
@@ -255,7 +255,7 @@ const Login: React.FC = () => {
 
       const response = await loginApi(params);
       debugLog('auth.login.page', '登录接口响应', response);
-      bizLog('auth.login.page', { code: response.code });
+      bizLog('auth.login.page', { success: isSuccess(response) });
 
       // ✅ 使用统一API响应处理
       if (isSuccess(response)) {

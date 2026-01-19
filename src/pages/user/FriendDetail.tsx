@@ -1,7 +1,7 @@
 /**
  * FriendDetail - 好友详情页（新路由系统版）
  *
- * ✅ 已迁移：使用 usePageNavigation 替代 Props
+ * ✅ 已迁移：使用 React Router + useNavigate
  *
  * @author 树交所前端团队
  * @version 3.0.0（新路由版）
