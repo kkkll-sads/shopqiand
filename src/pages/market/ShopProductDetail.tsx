@@ -313,13 +313,16 @@ const ShopProductDetail: React.FC<ShopProductDetailProps> = ({
   const salesCount = ((parseInt(product.id, 10) || 1) * 23 % 800) + 300;
   const reviewCount = ((parseInt(product.id, 10) || 1) * 7 % 150) + 200;
   
-  // 商品图片列表
+  // 商品图片列表 - 防御性处理确保 detail_images 是数组
+  const detailImages = Array.isArray(detailData?.detail_images) ? detailData.detail_images : [];
   const shopImages: string[] = [
     detailData?.thumbnail || product.image,
-    ...(detailData?.detail_images || []),
+    ...detailImages,
   ].filter(Boolean) as string[];
   
-  const mainImage = shopImages[currentImageIndex] || detailData?.thumbnail || product.image;
+  // 确保 shopImages 有内容，避免空数组导致的问题
+  const safeShopImages = shopImages.length > 0 ? shopImages : [product.image].filter(Boolean);
+  const mainImage = safeShopImages[currentImageIndex] || detailData?.thumbnail || product.image;
 
   return (
     <div className="min-h-screen bg-[#f5f5f5] pb-[70px]" ref={scrollContainerRef}>
@@ -413,7 +416,7 @@ const ShopProductDetail: React.FC<ShopProductDetailProps> = ({
           style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
           onScroll={handleImageScroll}
         >
-          {shopImages.map((img, idx) => (
+          {safeShopImages.map((img, idx) => (
             <div key={idx} className="w-full flex-shrink-0 snap-center aspect-square">
               <LazyImage
                 src={img || ''}
@@ -427,15 +430,15 @@ const ShopProductDetail: React.FC<ShopProductDetailProps> = ({
         {/* 图片指示器和功能按钮 */}
         <div className="absolute bottom-3 right-3 flex items-center gap-2">
           <div className="bg-black/50 text-white text-xs px-2.5 py-1 rounded-full">
-            图集 {currentImageIndex + 1}/{shopImages.length}
+            图集 {currentImageIndex + 1}/{safeShopImages.length}
           </div>
         </div>
       </div>
 
       {/* 规格缩略图选择器 */}
-      {shopImages.length > 1 && (
+      {safeShopImages.length > 1 && (
         <div className="bg-white px-3 py-2 flex gap-2 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
-          {shopImages.slice(0, 6).map((img, idx) => (
+          {safeShopImages.slice(0, 6).map((img, idx) => (
             <div
               key={idx}
               onClick={() => {
@@ -454,9 +457,9 @@ const ShopProductDetail: React.FC<ShopProductDetailProps> = ({
               <img src={img} alt="" className="w-full h-full object-cover" />
             </div>
           ))}
-          {shopImages.length > 6 && (
+          {safeShopImages.length > 6 && (
             <div className="flex-shrink-0 w-14 h-14 rounded-lg bg-gray-100 flex items-center justify-center">
-              <span className="text-xs text-gray-500">共{shopImages.length}款</span>
+              <span className="text-xs text-gray-500">共{safeShopImages.length}款</span>
             </div>
           )}
         </div>
@@ -670,7 +673,7 @@ const ShopProductDetail: React.FC<ShopProductDetailProps> = ({
           )}
           
           <div className="space-y-0">
-            {(detailData?.detail_images || [mainImage]).filter(Boolean).map((img, idx) => (
+            {(detailImages.length > 0 ? detailImages : [mainImage]).filter(Boolean).map((img, idx) => (
               <img 
                 key={idx}
                 src={img as string}
