@@ -264,7 +264,7 @@ const Profile: React.FC<{ unreadCount?: number }> = ({ unreadCount = 0 }) => {
       <div className="absolute top-0 left-0 right-0 h-72 bg-gradient-to-b from-[#FFD6A5] to-gray-50 z-0"></div>
 
       {/* User Header - 参考淘宝布局 */}
-      <div className="pt-10 pb-4 px-4 relative z-10 text-gray-900">
+      <div className="pt-8 pb-2 px-4 relative z-10 text-gray-900">
         {/* 顶部操作栏：头像、名称、右侧按钮 */}
         <div className="flex items-center justify-between">
           {/* 左侧：头像 + 名称 + 标签 */}
@@ -313,23 +313,35 @@ const Profile: React.FC<{ unreadCount?: number }> = ({ unreadCount = 0 }) => {
             </div>
           </div>
           
-          {/* 右侧：功能按钮组 - 图标放大 */}
-          <div className="flex items-center gap-4">
+          {/* 右侧：功能按钮组 - 图标放大, 间隔加大 */}
+          <div className="flex items-center gap-6">
+            {/* 客服 */}
+            <button
+              onClick={() => navigate('/online-service')}
+              className="flex flex-col items-center text-gray-700 active:opacity-70"
+            >
+              <HeadphonesIcon size={26} strokeWidth={1.5} />
+              <span className="text-[10px] mt-0.5 font-medium">客服</span>
+            </button>
+
+            {/* 消息 */}
             <button
               onClick={() => navigate('/message-center')}
               className="flex flex-col items-center text-gray-700 active:opacity-70 relative"
             >
-              <MessageSquare size={24} strokeWidth={1.5} />
+              <MessageSquare size={26} strokeWidth={1.5} />
               <span className="text-[10px] mt-0.5 font-medium">消息</span>
               {unreadCount > 0 && (
                 <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white box-content"></span>
               )}
             </button>
+            
+            {/* 设置 */}
             <button
               onClick={() => navigate('/settings')}
               className="flex flex-col items-center text-gray-700 active:opacity-70"
             >
-              <Settings size={24} strokeWidth={1.5} />
+              <Settings size={26} strokeWidth={1.5} />
               <span className="text-[10px] mt-0.5 font-medium">设置</span>
             </button>
           </div>
