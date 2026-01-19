@@ -263,81 +263,71 @@ const Profile: React.FC<{ unreadCount?: number }> = ({ unreadCount = 0 }) => {
       {/* Top Background Gradient - Match Home Page (Pastel Orange) */}
       <div className="absolute top-0 left-0 right-0 h-72 bg-gradient-to-b from-[#FFD6A5] to-gray-50 z-0"></div>
 
-      {/* User Header */}
-      <div className="pt-12 pb-6 px-4 relative z-10 text-gray-900">
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-full bg-orange-100 border-2 border-white flex items-center justify-center text-xl font-bold text-orange-600 overflow-hidden shadow-sm">
+      {/* User Header - 参考淘宝布局 */}
+      <div className="pt-10 pb-4 px-4 relative z-10 text-gray-900">
+        {/* 顶部操作栏：头像、名称、右侧按钮 */}
+        <div className="flex items-center justify-between">
+          {/* 左侧：头像 + 名称 + 标签 */}
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-full bg-orange-100 border-2 border-white flex items-center justify-center text-lg font-bold text-orange-600 overflow-hidden shadow-sm">
               {displayAvatarUrl ? (
                 <img src={displayAvatarUrl} alt="用户头像" className="w-full h-full object-cover" />
               ) : (
                 displayAvatarText || '用'
               )}
             </div>
-            <div>
-              <h2 className="text-xl font-bold text-gray-900">{displayName}</h2>
-              <div className="flex items-center gap-2 mt-1">
-                {/* User Status Badge */}
-                <div className="flex items-center bg-white/60 backdrop-blur-md border border-gray-200/50 rounded-full px-2 py-0.5">
-                  <div className="w-4 h-4 rounded-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center mr-1 shadow-inner">
-                    {(() => {
-                      const statusConfig = {
-                        0: { icon: Sprout, color: 'text-green-600' },
-                        1: { icon: UserCheck, color: 'text-blue-600' },
-                        2: { icon: Gem, color: 'text-yellow-600' },
-                      }[userInfo?.user_type ?? -1] || { icon: UserCheck, color: 'text-gray-500' };
-                      const Icon = statusConfig.icon;
-                      return <Icon size={10} className={`${statusConfig.color} fill-current`} />;
-                    })()}
-                  </div>
-                  <span className="text-xs font-medium text-gray-700">{displayId}</span>
-                </div>
-
-                {/* Agent Badge - 根据 agent_review_status 显示 */}
-                {(() => {
-                  const agentStatus = userInfo?.agent_review_status;
-                  // 只有已通过(1)时才显示代理标签
-                  if (agentStatus === 1) {
-                    return (
-                      <div className="flex items-center bg-white/60 backdrop-blur-md border border-red-200 rounded-full px-2 py-0.5 ml-1">
-                        <div className="w-4 h-4 rounded-full bg-red-100 flex items-center justify-center mr-1">
-                          <Award size={10} className="text-red-500 fill-red-500" />
-                        </div>
-                        <span className="text-xs font-medium text-red-600">代理</span>
-                      </div>
-                    );
-                  }
-                  // 待审核(0)
-                  if (agentStatus === 0) {
-                    return (
-                      <div className="flex items-center bg-white/60 backdrop-blur-md border border-yellow-200 rounded-full px-2 py-0.5 ml-1">
-                        <div className="w-4 h-4 rounded-full bg-yellow-100 flex items-center justify-center mr-1">
-                          <Award size={10} className="text-yellow-600 fill-yellow-600" />
-                        </div>
-                        <span className="text-xs font-medium text-yellow-700">待审核</span>
-                      </div>
-                    );
-                  }
-                  return null;
-                })()}
+            <div className="flex flex-col">
+              <div className="flex items-center gap-2">
+                <h2 className="text-lg font-bold text-gray-900">{displayName}</h2>
+                {/* 用户类型标签 */}
+                <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-600 font-medium">
+                  {displayId}
+                </span>
+                {/* 代理标签 */}
+                {userInfo?.agent_review_status === 1 && (
+                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-red-50 text-red-500 font-medium">
+                    代理
+                  </span>
+                )}
+                {userInfo?.agent_review_status === 0 && (
+                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-yellow-50 text-yellow-600 font-medium">
+                    待审核
+                  </span>
+                )}
+              </div>
+              {/* 副标题链接 */}
+              <div className="flex items-center gap-2 mt-0.5 text-xs text-gray-500">
+                <button onClick={() => navigate('/address-list')} className="flex items-center gap-0.5 active:opacity-70">
+                  <MapPin size={12} />
+                  <span>收货地址</span>
+                </button>
+                <span className="text-gray-300">|</span>
+                <button onClick={() => navigate('/settings')} className="flex items-center gap-0.5 active:opacity-70">
+                  <ShieldCheck size={12} />
+                  <span>账号安全</span>
+                </button>
               </div>
             </div>
           </div>
-          <div className="flex gap-4">
+          
+          {/* 右侧：功能按钮组 */}
+          <div className="flex items-center gap-3">
             <button
               onClick={() => navigate('/message-center')}
-              className="text-gray-600 hover:text-gray-900 transition-colors relative"
+              className="flex flex-col items-center text-gray-600 active:opacity-70 relative"
             >
-              <MessageSquare size={22} />
+              <MessageSquare size={20} strokeWidth={1.5} />
+              <span className="text-[10px] mt-0.5">消息</span>
               {unreadCount > 0 && (
-                <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white box-content"></span>
+                <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full"></span>
               )}
             </button>
             <button
               onClick={() => navigate('/settings')}
-              className="text-gray-600 hover:text-gray-900 transition-colors"
+              className="flex flex-col items-center text-gray-600 active:opacity-70"
             >
-              <Settings size={22} />
+              <Settings size={20} strokeWidth={1.5} />
+              <span className="text-[10px] mt-0.5">设置</span>
             </button>
           </div>
         </div>
