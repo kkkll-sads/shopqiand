@@ -567,9 +567,12 @@ const ShopProductDetail: React.FC<ShopProductDetailProps> = ({
         <div className="text-[11px] text-gray-400 mt-1 ml-5">官方物流 · 全国包邮</div>
       </div>
 
-      {/* 买家评价区 */}
+      {/* 买家评价区 - 点击跳转评价页面 */}
       <div className="bg-white mt-2" ref={reviewsSectionRef}>
-        <div className="px-4 py-3 flex items-center justify-between border-b border-gray-50">
+        <div 
+          className="px-4 py-3 flex items-center justify-between border-b border-gray-50 active:bg-gray-50 cursor-pointer"
+          onClick={() => navigate(`/reviews/${product.id}?name=${encodeURIComponent(displayTitle)}`)}
+        >
           <div className="flex items-center gap-2">
             <span className="font-bold text-gray-800">买家评价</span>
             <span className="text-gray-400 text-sm">{reviewCount}+</span>
@@ -608,21 +611,6 @@ const ShopProductDetail: React.FC<ShopProductDetailProps> = ({
               </div>
             </div>
           ))}
-        </div>
-      </div>
-
-      {/* 问大家 */}
-      <div className="bg-white mt-2 px-4 py-3">
-        <div className="flex items-center justify-between mb-3">
-          <span className="font-bold text-gray-800">问大家</span>
-          <div className="flex items-center text-xs text-gray-500">
-            <span>看问答讨论</span>
-            <ChevronRight size={14} className="text-gray-400" />
-          </div>
-        </div>
-        <div className="bg-gray-50 rounded-lg px-3 py-2.5 flex items-center justify-between">
-          <span className="text-sm text-gray-400">商品好不好，快来问大家吧～</span>
-          <button className="text-red-500 text-sm font-medium">提问</button>
         </div>
       </div>
 
