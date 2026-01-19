@@ -12,6 +12,10 @@ import {
 } from 'lucide-react';
 import { LazyImage } from '../../../components/common';
 import PopupAnnouncementModal from '../../../components/common/PopupAnnouncementModal';
+import BottomSheet from '../../../components/common/BottomSheet';
+import PromotionSheet from '../../../components/business/PromotionSheet';
+import AddressSheet from '../../../components/business/AddressSheet';
+import ServiceSheet from '../../../components/business/ServiceSheet';
 import { Product } from '../../../types';
 import {
   fetchShopProductDetail,
@@ -73,6 +77,11 @@ const ShopProductDetail: React.FC<ShopProductDetailProps> = ({
   // 交易须知公告
   const [showTradingNotice, setShowTradingNotice] = useState(false);
   const [tradingNoticeAnnouncement, setTradingNoticeAnnouncement] = useState<AnnouncementItem | null>(null);
+
+  // 底部弹窗状态
+  const [showPromotionSheet, setShowPromotionSheet] = useState(false);
+  const [showAddressSheet, setShowAddressSheet] = useState(false);
+  const [showServiceSheet, setShowServiceSheet] = useState(false);
 
   // 状态机
   const detailMachine = useStateMachine<LoadingState, LoadingEvent>({
@@ -390,20 +399,6 @@ const ShopProductDetail: React.FC<ShopProductDetailProps> = ({
 
       {/* 商品主图轮播 */}
       <div className="relative" ref={productSectionRef}>
-        {/* 促销活动悬浮卡片 */}
-        <div className="absolute left-2 top-14 z-10 bg-white rounded-lg shadow-lg overflow-hidden w-20">
-          <div className="bg-gradient-to-r from-red-500 to-red-600 text-white text-[10px] py-1 px-2 text-center">
-            新春特惠
-          </div>
-          <div className="p-2 text-center">
-            <div className="text-[10px] text-gray-500">限时直降</div>
-            <div className="text-red-500 font-bold text-xs">5%OFF</div>
-          </div>
-          <div className="border-t border-gray-100 py-1.5 text-center">
-            <span className="text-[10px] text-red-500">领券更优惠</span>
-          </div>
-        </div>
-
         {/* 图片轮播 */}
         <div 
           ref={imageContainerRef}
@@ -460,8 +455,11 @@ const ShopProductDetail: React.FC<ShopProductDetailProps> = ({
         </div>
       )}
 
-      {/* 价格促销区 - 京东风格紧凑卡片 */}
-      <div className="bg-white px-3 py-2.5">
+      {/* 价格促销区 - 京东风格紧凑卡片 - 点击弹出优惠详情 */}
+      <div 
+        className="bg-white px-3 py-2.5 active:bg-gray-50 cursor-pointer"
+        onClick={() => setShowPromotionSheet(true)}
+      >
         {/* 价格行 */}
         <div className="flex items-center justify-between">
           <div className="flex items-baseline">
@@ -531,8 +529,11 @@ const ShopProductDetail: React.FC<ShopProductDetailProps> = ({
         </div>
       </div>
 
-      {/* 服务保障 + 配送信息 合并 */}
-      <div className="bg-white mt-1.5 px-3 py-2">
+      {/* 服务保障 - 点击弹出安心保障详情 */}
+      <div 
+        className="bg-white mt-1.5 px-3 py-2 active:bg-gray-50 cursor-pointer flex items-center justify-between"
+        onClick={() => setShowServiceSheet(true)}
+      >
         <div className="flex items-center text-xs text-gray-500 gap-3">
           <span className="flex items-center gap-1">
             <Shield size={12} className="text-green-500" />
@@ -547,10 +548,14 @@ const ShopProductDetail: React.FC<ShopProductDetailProps> = ({
             专属客服
           </span>
         </div>
+        <ChevronRight size={14} className="text-gray-400" />
       </div>
 
-      {/* 配送信息 */}
-      <div className="bg-white mt-1.5 px-3 py-2">
+      {/* 配送信息 - 点击弹出地址选择 */}
+      <div 
+        className="bg-white mt-1.5 px-3 py-2 active:bg-gray-50 cursor-pointer"
+        onClick={() => setShowAddressSheet(true)}
+      >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Truck size={14} className="text-blue-500" />
@@ -681,10 +686,9 @@ const ShopProductDetail: React.FC<ShopProductDetailProps> = ({
             <button
               onClick={handleBuy}
               disabled={buying}
-              className="flex-1 bg-gradient-to-r from-[#ff4d4f] to-[#e23c41] text-white py-2.5 rounded-r-lg text-sm font-bold active:opacity-90 transition-opacity disabled:opacity-70 flex items-center justify-center gap-1"
+              className="flex-1 bg-gradient-to-r from-[#ff4d4f] to-[#e23c41] text-white py-2.5 rounded-r-lg text-sm font-bold active:opacity-90 transition-opacity disabled:opacity-70"
             >
-              <span className="text-[10px] opacity-90">¥{displayPrice}</span>
-              <span>{buying ? '处理中...' : '立即购买'}</span>
+              {buying ? '处理中...' : '立即购买'}
             </button>
           </div>
         </div>
@@ -702,6 +706,46 @@ const ShopProductDetail: React.FC<ShopProductDetailProps> = ({
           }
         }}
       />
+
+      {/* 优惠详情弹窗 */}
+      <BottomSheet
+        visible={showPromotionSheet}
+        title="优惠"
+        onClose={() => setShowPromotionSheet(false)}
+      >
+        <PromotionSheet
+          price={displayPrice}
+          originalPrice={originalPrice}
+          scorePrice={scorePrice}
+        />
+      </BottomSheet>
+
+      {/* 地址选择弹窗 */}
+      <BottomSheet
+        visible={showAddressSheet}
+        title="选择地址"
+        onClose={() => setShowAddressSheet(false)}
+      >
+        <AddressSheet
+          onSelectAddress={(address) => {
+            console.log('选择地址:', address);
+            setShowAddressSheet(false);
+          }}
+          onAddAddress={() => {
+            navigate('/address-list');
+            setShowAddressSheet(false);
+          }}
+        />
+      </BottomSheet>
+
+      {/* 安心保障弹窗 */}
+      <BottomSheet
+        visible={showServiceSheet}
+        title="安心保障"
+        onClose={() => setShowServiceSheet(false)}
+      >
+        <ServiceSheet productName={displayTitle} />
+      </BottomSheet>
     </div>
   );
 };
