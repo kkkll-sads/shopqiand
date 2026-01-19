@@ -64,6 +64,12 @@ const ShopProductDetail: React.FC<ShopProductDetailProps> = ({
   const [headerStyle, setHeaderStyle] = useState<'transparent' | 'white'>('transparent');
   const imageContainerRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  
+  // 各区块 ref，用于滚动定位和自动切换 Tab
+  const productSectionRef = useRef<HTMLDivElement>(null);
+  const reviewsSectionRef = useRef<HTMLDivElement>(null);
+  const detailSectionRef = useRef<HTMLDivElement>(null);
+  const recommendSectionRef = useRef<HTMLDivElement>(null);
 
   // 交易须知公告
   const [showTradingNotice, setShowTradingNotice] = useState(false);
@@ -194,7 +200,7 @@ const ShopProductDetail: React.FC<ShopProductDetailProps> = ({
     }
   };
 
-  // 页面滚动监听 - 导航栏跟随变化
+  // 页面滚动监听 - 导航栏跟随变化 + Tab 自动切换
   useEffect(() => {
     const handleScroll = () => {
       const currentScrollY = window.scrollY;
@@ -205,6 +211,22 @@ const ShopProductDetail: React.FC<ShopProductDetailProps> = ({
         setHeaderStyle('white');
       } else {
         setHeaderStyle('transparent');
+      }
+      
+      // 根据滚动位置自动切换 Tab
+      const offset = 100; // 导航栏高度补偿
+      const detailTop = detailSectionRef.current?.offsetTop ?? Infinity;
+      const reviewsTop = reviewsSectionRef.current?.offsetTop ?? Infinity;
+      const recommendTop = recommendSectionRef.current?.offsetTop ?? Infinity;
+      
+      if (currentScrollY + offset >= recommendTop) {
+        setActiveTab('recommend');
+      } else if (currentScrollY + offset >= detailTop) {
+        setActiveTab('detail');
+      } else if (currentScrollY + offset >= reviewsTop) {
+        setActiveTab('reviews');
+      } else {
+        setActiveTab('product');
       }
     };
 
@@ -326,14 +348,18 @@ const ShopProductDetail: React.FC<ShopProductDetailProps> = ({
             headerStyle === 'white' ? 'opacity-100' : 'opacity-0 pointer-events-none'
           }`}>
             {[
-              { key: 'product', label: '商品' },
-              { key: 'reviews', label: '大家评' },
-              { key: 'detail', label: '详情' },
-              { key: 'recommend', label: '推荐' },
+              { key: 'product', label: '商品', ref: productSectionRef },
+              { key: 'reviews', label: '大家评', ref: reviewsSectionRef },
+              { key: 'detail', label: '详情', ref: detailSectionRef },
+              { key: 'recommend', label: '推荐', ref: recommendSectionRef },
             ].map(tab => (
               <button
                 key={tab.key}
-                onClick={() => setActiveTab(tab.key as any)}
+                onClick={() => {
+                  setActiveTab(tab.key as any);
+                  // 点击 Tab 滚动到对应区域
+                  tab.ref.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }}
                 className={`text-sm py-1 relative ${activeTab === tab.key ? 'text-gray-900 font-bold' : 'text-gray-500'}`}
               >
                 {tab.label}
@@ -365,9 +391,9 @@ const ShopProductDetail: React.FC<ShopProductDetailProps> = ({
       </header>
 
       {/* 商品主图轮播 */}
-      <div className="pt-12 relative">
+      <div className="relative" ref={productSectionRef}>
         {/* 促销活动悬浮卡片 */}
-        <div className="absolute left-2 top-16 z-10 bg-white rounded-lg shadow-lg overflow-hidden w-20">
+        <div className="absolute left-2 top-14 z-10 bg-white rounded-lg shadow-lg overflow-hidden w-20">
           <div className="bg-gradient-to-r from-red-500 to-red-600 text-white text-[10px] py-1 px-2 text-center">
             新春特惠
           </div>
@@ -550,7 +576,7 @@ const ShopProductDetail: React.FC<ShopProductDetailProps> = ({
       </div>
 
       {/* 买家评价区 */}
-      <div className="bg-white mt-2">
+      <div className="bg-white mt-2" ref={reviewsSectionRef}>
         <div className="px-4 py-3 flex items-center justify-between border-b border-gray-50">
           <div className="flex items-center gap-2">
             <span className="font-bold text-gray-800">买家评价</span>
@@ -609,7 +635,7 @@ const ShopProductDetail: React.FC<ShopProductDetailProps> = ({
       </div>
 
       {/* 店铺推荐区 */}
-      <div className="bg-white mt-2 pb-4">
+      <div className="bg-white mt-2 pb-4" ref={recommendSectionRef}>
         <div className="px-4 py-3">
           <span className="font-bold text-gray-800">店内优选</span>
         </div>
@@ -631,7 +657,7 @@ const ShopProductDetail: React.FC<ShopProductDetailProps> = ({
       </div>
 
       {/* 商品详情（图片展示） */}
-      <div className="bg-white mt-2">
+      <div className="bg-white mt-2" ref={detailSectionRef}>
         <div className="px-4 py-3 border-b border-gray-100">
           <span className="font-bold text-gray-800">商品介绍</span>
         </div>
