@@ -69,7 +69,6 @@ const ShopProductDetail: React.FC<ShopProductDetailProps> = ({
   const productSectionRef = useRef<HTMLDivElement>(null);
   const reviewsSectionRef = useRef<HTMLDivElement>(null);
   const detailSectionRef = useRef<HTMLDivElement>(null);
-  const recommendSectionRef = useRef<HTMLDivElement>(null);
 
   // 交易须知公告
   const [showTradingNotice, setShowTradingNotice] = useState(false);
@@ -217,11 +216,8 @@ const ShopProductDetail: React.FC<ShopProductDetailProps> = ({
       const offset = 100; // 导航栏高度补偿
       const detailTop = detailSectionRef.current?.offsetTop ?? Infinity;
       const reviewsTop = reviewsSectionRef.current?.offsetTop ?? Infinity;
-      const recommendTop = recommendSectionRef.current?.offsetTop ?? Infinity;
       
-      if (currentScrollY + offset >= recommendTop) {
-        setActiveTab('recommend');
-      } else if (currentScrollY + offset >= detailTop) {
+      if (currentScrollY + offset >= detailTop) {
         setActiveTab('detail');
       } else if (currentScrollY + offset >= reviewsTop) {
         setActiveTab('reviews');
@@ -325,7 +321,7 @@ const ShopProductDetail: React.FC<ShopProductDetailProps> = ({
   const mainImage = safeShopImages[currentImageIndex] || detailData?.thumbnail || product.image;
 
   return (
-    <div className="min-h-screen bg-[#f5f5f5] pb-[70px]" ref={scrollContainerRef}>
+    <div className="min-h-screen bg-[#f5f5f5] pb-[56px]" ref={scrollContainerRef}>
       {/* 顶部Tab导航栏 - 滚动跟随变化 */}
       <header 
         className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
@@ -354,7 +350,6 @@ const ShopProductDetail: React.FC<ShopProductDetailProps> = ({
               { key: 'product', label: '商品', ref: productSectionRef },
               { key: 'reviews', label: '大家评', ref: reviewsSectionRef },
               { key: 'detail', label: '详情', ref: detailSectionRef },
-              { key: 'recommend', label: '推荐', ref: recommendSectionRef },
             ].map(tab => (
               <button
                 key={tab.key}
@@ -626,28 +621,6 @@ const ShopProductDetail: React.FC<ShopProductDetailProps> = ({
         </div>
       </div>
 
-      {/* 店铺推荐区 */}
-      <div className="bg-white mt-2 pb-4" ref={recommendSectionRef}>
-        <div className="px-4 py-3">
-          <span className="font-bold text-gray-800">店内优选</span>
-        </div>
-        
-        {/* 推荐商品网格 */}
-        <div className="px-4 grid grid-cols-3 gap-2">
-          {[1, 2, 3].map(i => (
-            <div key={i} className="bg-gray-50 rounded-lg overflow-hidden">
-              <div className="aspect-square bg-gradient-to-br from-orange-100 to-red-100 flex items-center justify-center">
-                <Gift size={32} className="text-orange-300" />
-              </div>
-              <div className="p-2">
-                <div className="text-[11px] text-gray-600 line-clamp-1">精选好物{i}</div>
-                <div className="text-red-500 font-bold text-xs mt-1">¥{(displayPrice * 0.8 + i * 100).toFixed(0)}</div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
       {/* 商品详情（图片展示） */}
       <div className="bg-white mt-2" ref={detailSectionRef}>
         <div className="px-4 py-3 border-b border-gray-100">
@@ -675,42 +648,42 @@ const ShopProductDetail: React.FC<ShopProductDetailProps> = ({
         </div>
       </div>
 
-      {/* 底部操作栏 */}
+      {/* 底部操作栏 - 紧凑设计 */}
       {!hideActions && (
-        <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 px-3 py-2 flex items-center z-50">
-          {/* 左侧图标按钮 */}
-          <div className="flex items-center">
-            <button className="flex flex-col items-center justify-center w-12 py-1">
-              <Store size={20} className="text-gray-500" />
-              <span className="text-[10px] text-gray-500 mt-0.5">店铺</span>
+        <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 px-2 py-1.5 flex items-center z-50">
+          {/* 左侧图标按钮 - 紧凑排列 */}
+          <div className="flex items-center gap-0">
+            <button className="flex flex-col items-center justify-center w-10 py-0.5">
+              <Store size={18} className="text-gray-500" />
+              <span className="text-[9px] text-gray-500">店铺</span>
             </button>
             <button 
               onClick={() => navigate('/online-service')}
-              className="flex flex-col items-center justify-center w-12 py-1"
+              className="flex flex-col items-center justify-center w-10 py-0.5"
             >
-              <MessageCircle size={20} className="text-gray-500" />
-              <span className="text-[10px] text-gray-500 mt-0.5">客服</span>
+              <MessageCircle size={18} className="text-gray-500" />
+              <span className="text-[9px] text-gray-500">客服</span>
             </button>
-            <button className="flex flex-col items-center justify-center w-12 py-1 relative">
-              <ShoppingCart size={20} className="text-gray-500" />
-              <span className="text-[10px] text-gray-500 mt-0.5">购物车</span>
-              <span className="absolute top-0 right-1 w-4 h-4 bg-red-500 text-white text-[10px] rounded-full flex items-center justify-center">
+            <button className="flex flex-col items-center justify-center w-10 py-0.5 relative">
+              <ShoppingCart size={18} className="text-gray-500" />
+              <span className="text-[9px] text-gray-500">购物车</span>
+              <span className="absolute -top-0.5 right-0.5 w-3.5 h-3.5 bg-red-500 text-white text-[8px] rounded-full flex items-center justify-center">
                 2
               </span>
             </button>
           </div>
           
-          {/* 右侧按钮 - 长方形设计 */}
-          <div className="flex-1 flex gap-0 ml-2">
-            <button className="flex-1 bg-gradient-to-r from-[#ffa940] to-[#ff7a00] text-white py-3.5 rounded-l-lg text-sm font-bold active:opacity-90 transition-opacity">
+          {/* 右侧按钮 - 细长设计 */}
+          <div className="flex-1 flex gap-0 ml-1.5">
+            <button className="flex-1 bg-gradient-to-r from-[#ffa940] to-[#ff7a00] text-white py-2 rounded-l-lg text-xs font-bold active:opacity-90 transition-opacity">
               加入购物车
             </button>
             <button
               onClick={handleBuy}
               disabled={buying}
-              className="flex-1 bg-gradient-to-r from-[#ff4d4f] to-[#e23c41] text-white py-3.5 rounded-r-lg text-sm font-bold active:opacity-90 transition-opacity disabled:opacity-70 flex flex-col items-center justify-center leading-tight"
+              className="flex-1 bg-gradient-to-r from-[#ff4d4f] to-[#e23c41] text-white py-2 rounded-r-lg text-xs font-bold active:opacity-90 transition-opacity disabled:opacity-70 flex items-center justify-center gap-1"
             >
-              <span className="text-[10px] opacity-90">到手价 ¥{displayPrice.toLocaleString()}</span>
+              <span className="text-[9px] opacity-90">¥{displayPrice}</span>
               <span>{buying ? '处理中...' : '立即购买'}</span>
             </button>
           </div>
