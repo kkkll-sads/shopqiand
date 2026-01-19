@@ -673,17 +673,17 @@ const ShopProductDetail: React.FC<ShopProductDetailProps> = ({
             </button>
           </div>
           
-          {/* 右侧按钮 - 细长设计 */}
+          {/* 右侧按钮 */}
           <div className="flex-1 flex gap-0 ml-1.5">
-            <button className="flex-1 bg-gradient-to-r from-[#ffa940] to-[#ff7a00] text-white py-2 rounded-l-lg text-xs font-bold active:opacity-90 transition-opacity">
+            <button className="flex-1 bg-gradient-to-r from-[#ffa940] to-[#ff7a00] text-white py-2.5 rounded-l-lg text-sm font-bold active:opacity-90 transition-opacity">
               加入购物车
             </button>
             <button
               onClick={handleBuy}
               disabled={buying}
-              className="flex-1 bg-gradient-to-r from-[#ff4d4f] to-[#e23c41] text-white py-2 rounded-r-lg text-xs font-bold active:opacity-90 transition-opacity disabled:opacity-70 flex items-center justify-center gap-1"
+              className="flex-1 bg-gradient-to-r from-[#ff4d4f] to-[#e23c41] text-white py-2.5 rounded-r-lg text-sm font-bold active:opacity-90 transition-opacity disabled:opacity-70 flex items-center justify-center gap-1"
             >
-              <span className="text-[9px] opacity-90">¥{displayPrice}</span>
+              <span className="text-[10px] opacity-90">¥{displayPrice}</span>
               <span>{buying ? '处理中...' : '立即购买'}</span>
             </button>
           </div>
