@@ -584,10 +584,14 @@ const ShopProductDetail: React.FC<ShopProductDetailProps> = ({
           </div>
         </div>
         
-        {/* 评论列表 */}
+        {/* 评论列表 - 点击跳转评价页面 */}
         <div className="divide-y divide-gray-50">
           {mockReviews.map(review => (
-            <div key={review.id} className="px-4 py-3">
+            <div 
+              key={review.id} 
+              className="px-4 py-3 active:bg-gray-50 cursor-pointer"
+              onClick={() => navigate(`/reviews/${product.id}?name=${encodeURIComponent(displayTitle)}`)}
+            >
               <div className="flex items-center gap-2 mb-2">
                 <div className="w-8 h-8 rounded-full bg-gradient-to-br from-orange-400 to-red-500 flex items-center justify-center text-white text-xs font-bold">
                   {review.user.charAt(0).toUpperCase()}

@@ -259,165 +259,225 @@ const Profile: React.FC<{ unreadCount?: number }> = ({ unreadCount = 0 }) => {
   );
 
   return (
-    <div className="pb-24 min-h-screen bg-gray-50">
-      {/* Top Background Gradient - Match Home Page (Pastel Orange) */}
-      <div className="absolute top-0 left-0 right-0 h-72 bg-gradient-to-b from-[#FFD6A5] to-gray-50 z-0"></div>
-
-      {/* User Header */}
-      <div className="pt-12 pb-6 px-4 relative z-10 text-gray-900">
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-full bg-orange-100 border-2 border-white flex items-center justify-center text-xl font-bold text-orange-600 overflow-hidden shadow-sm">
-              {displayAvatarUrl ? (
-                <img src={displayAvatarUrl} alt="用户头像" className="w-full h-full object-cover" />
-              ) : (
-                displayAvatarText || '用'
-              )}
-            </div>
-            <div>
-              <h2 className="text-xl font-bold text-gray-900">{displayName}</h2>
-              <div className="flex items-center gap-2 mt-1">
-                {/* User Status Badge */}
-                <div className="flex items-center bg-white/60 backdrop-blur-md border border-gray-200/50 rounded-full px-2 py-0.5">
-                  <div className="w-4 h-4 rounded-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center mr-1 shadow-inner">
-                    {(() => {
-                      const statusConfig = {
-                        0: { icon: Sprout, color: 'text-green-600' },
-                        1: { icon: UserCheck, color: 'text-blue-600' },
-                        2: { icon: Gem, color: 'text-yellow-600' },
-                      }[userInfo?.user_type ?? -1] || { icon: UserCheck, color: 'text-gray-500' };
-                      const Icon = statusConfig.icon;
-                      return <Icon size={10} className={`${statusConfig.color} fill-current`} />;
-                    })()}
-                  </div>
-                  <span className="text-xs font-medium text-gray-700">{displayId}</span>
-                </div>
-
-                {/* Agent Badge - 根据 agent_review_status 显示 */}
-                {(() => {
-                  const agentStatus = userInfo?.agent_review_status;
-                  // 只有已通过(1)时才显示代理标签
-                  if (agentStatus === 1) {
-                    return (
-                      <div className="flex items-center bg-white/60 backdrop-blur-md border border-red-200 rounded-full px-2 py-0.5 ml-1">
-                        <div className="w-4 h-4 rounded-full bg-red-100 flex items-center justify-center mr-1">
-                          <Award size={10} className="text-red-500 fill-red-500" />
-                        </div>
-                        <span className="text-xs font-medium text-red-600">代理</span>
-                      </div>
-                    );
-                  }
-                  // 待审核(0)
-                  if (agentStatus === 0) {
-                    return (
-                      <div className="flex items-center bg-white/60 backdrop-blur-md border border-yellow-200 rounded-full px-2 py-0.5 ml-1">
-                        <div className="w-4 h-4 rounded-full bg-yellow-100 flex items-center justify-center mr-1">
-                          <Award size={10} className="text-yellow-600 fill-yellow-600" />
-                        </div>
-                        <span className="text-xs font-medium text-yellow-700">待审核</span>
-                      </div>
-                    );
-                  }
-                  return null;
-                })()}
-              </div>
-            </div>
+    <div className="pb-24 min-h-screen bg-gray-100">
+      {/* 京东风格红色渐变背景头部 */}
+      <div className="bg-gradient-to-b from-[#e23c41] to-[#ff6034] relative">
+        {/* 顶部操作栏 */}
+        <div className="flex items-center justify-between px-4 pt-10 pb-2">
+          <div className="flex items-center gap-1">
+            <span className="text-white/80 text-xs flex items-center gap-1">
+              <span className="w-4 h-4 rounded-full bg-green-400 flex items-center justify-center">
+                <span className="text-[8px] text-white">✓</span>
+              </span>
+              点评
+            </span>
+            <span className="text-white text-xs ml-2">围观树交所真榜上榜好物</span>
+            <ChevronRight size={12} className="text-white/60" />
           </div>
-          <div className="flex gap-4">
-            <button
-              onClick={() => navigate('/message-center')}
-              className="text-gray-600 hover:text-gray-900 transition-colors relative"
-            >
-              <MessageSquare size={22} />
-              {unreadCount > 0 && (
-                <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white box-content"></span>
-              )}
+          <div className="flex items-center gap-4">
+            <button onClick={() => navigate('/online-service')} className="text-white/90 flex flex-col items-center">
+              <HeadphonesIcon size={18} />
+              <span className="text-[10px] mt-0.5">客户服务</span>
             </button>
-            <button
-              onClick={() => navigate('/settings')}
-              className="text-gray-600 hover:text-gray-900 transition-colors"
-            >
-              <Settings size={22} />
+            <button onClick={() => navigate('/address-list')} className="text-white/90 flex flex-col items-center">
+              <MapPin size={18} />
+              <span className="text-[10px] mt-0.5">地址</span>
+            </button>
+            <button onClick={() => navigate('/settings')} className="text-white/90 flex flex-col items-center">
+              <Settings size={18} />
+              <span className="text-[10px] mt-0.5">设置</span>
             </button>
           </div>
         </div>
 
-        {/* Digital Rights Card - Smooth Floating Style */}
-        <div className="bg-white mx-2 rounded-3xl px-8 py-6 shadow-sm relative overflow-hidden mb-3">
-          <div className="relative z-10">
-            <div className="flex justify-between items-start mb-6">
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-gray-500 font-medium">供应链专项金</span>
-                <span className="bg-orange-50 text-orange-600 text-[10px] px-2 py-0.5 rounded-full font-bold">
-                  采购本金
+        {/* 用户信息区 */}
+        <div className="px-4 py-4 flex items-center gap-4">
+          <div className="w-16 h-16 rounded-full bg-white/20 border-2 border-white/30 flex items-center justify-center overflow-hidden">
+            {displayAvatarUrl ? (
+              <img src={displayAvatarUrl} alt="用户头像" className="w-full h-full object-cover" />
+            ) : (
+              <div className="w-full h-full bg-gradient-to-br from-yellow-400 to-orange-500 flex items-center justify-center">
+                <span className="text-white text-2xl font-bold">{displayAvatarText || '用'}</span>
+              </div>
+            )}
+          </div>
+          <div className="flex-1">
+            <div className="flex items-center gap-2">
+              <h2 className="text-white text-lg font-bold">{displayName}</h2>
+              <ChevronRight size={16} className="text-white/60" />
+            </div>
+            <div className="flex items-center gap-2 mt-1">
+              <span className="bg-gradient-to-r from-yellow-500 to-yellow-600 text-white text-[10px] px-2 py-0.5 rounded-full font-medium flex items-center gap-1">
+                <Gem size={10} />
+                {displayId}
+              </span>
+              <span className="bg-white/20 text-white text-[10px] px-2 py-0.5 rounded-full">
+                🎓 学生特权
+              </span>
+              {userInfo?.agent_review_status === 1 && (
+                <span className="bg-red-700 text-white text-[10px] px-2 py-0.5 rounded-full flex items-center gap-1">
+                  <Award size={10} />
+                  代理
                 </span>
-              </div>
-              <button
-                onClick={() => navigate('/balance-recharge')}
-                className="text-orange-600 text-sm font-medium flex items-center gap-1 active:opacity-70"
-              >
-                去充值 <ChevronRight size={14} />
-              </button>
+              )}
             </div>
-
-            {/* Main Big Number: Supply Chain Special Fund (balance_available) */}
-            <div
-              className="text-3xl font-[DINAlternate-Bold,Roboto,sans-serif] font-bold text-gray-900 tracking-tight mb-6 cursor-pointer active:opacity-70 transition-opacity"
-              onClick={() => navigate('/asset-view?tab=0')}
-            >
-              <span className="text-xl mr-1">¥</span>
-              {/* Display balance_available without commas */}
-              {String(userInfo?.balance_available || '0.00')}
+          </div>
+          {/* PLUS 会员入口 */}
+          <div 
+            className="bg-gradient-to-r from-gray-900 to-gray-800 rounded-xl px-3 py-2 min-w-[100px]"
+            onClick={() => navigate('/settings')}
+          >
+            <div className="flex items-center gap-1 text-yellow-400 text-xs font-bold">
+              <span>PLUS会员</span>
+              <ChevronRight size={12} />
             </div>
+            <div className="text-white/70 text-[10px] mt-0.5">享免费退换货</div>
+          </div>
+        </div>
 
-            {/* Bottom Grid: 2x2 Layout */}
-            <div className="grid grid-cols-2 gap-y-2 gap-x-2 mt-2">
-              {/* Row 1, Col 1: Withdrawable */}
-              <div
-                className="flex flex-col cursor-pointer active:opacity-70 transition-opacity"
-                onClick={() => navigate('/asset-view?tab=1')}
-              >
-                <div className="text-xs text-gray-400 mb-1">可调度收益</div>
-                <div className="text-[15px] font-bold text-gray-800 font-[DINAlternate-Bold,Roboto,sans-serif] leading-tight">
-                  {formatAmount(userInfo?.withdrawable_money)}
-                </div>
+        {/* 优惠入口（优惠券、豆子、红包等） */}
+        <div className="px-4 pb-4 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <div className="text-center cursor-pointer" onClick={() => navigate('/asset-view?tab=0')}>
+              <div className="flex items-baseline justify-center">
+                <span className="text-red-200 text-[10px] px-1.5 py-0.5 rounded bg-red-800/50 mr-1">大额券</span>
+                <span className="text-white text-lg font-bold">{userInfo?.coupon_count || 4}</span>
+                <span className="text-white/70 text-xs">张</span>
               </div>
-
-              {/* Row 1, Col 2: Consumer Points */}
-              <div
-                className="flex flex-col items-end cursor-pointer active:opacity-70 transition-opacity"
-                onClick={() => navigate('/market')}
-              >
-                <div className="text-xs text-gray-400 mb-1">消费金</div>
-                <div className="text-[15px] font-bold text-gray-800 font-[DINAlternate-Bold,Roboto,sans-serif] leading-tight">
-                  {userInfo?.score || 0}
-                </div>
+              <div className="text-white/70 text-[10px] mt-0.5">优惠券</div>
+            </div>
+            <div className="text-center cursor-pointer" onClick={() => navigate('/asset-view?tab=1')}>
+              <div className="flex items-baseline justify-center">
+                <span className="text-white/70 text-xs">领</span>
+                <span className="text-white text-lg font-bold">{userInfo?.score || 88}</span>
+                <span className="text-white/70 text-xs">豆</span>
               </div>
-
-              {/* Row 2, Col 1: Green Power */}
-              <div
-                className="flex flex-col cursor-pointer active:opacity-70 transition-opacity"
-                onClick={() => navigate('/hashrate-exchange')}
-              >
-                <div className="text-xs text-gray-400 mb-1 flex items-center gap-1">
-                  绿色算力 <Leaf size={10} className="text-green-500" />
-                </div>
-                <div className="text-[15px] font-bold text-gray-800 font-[DINAlternate-Bold,Roboto,sans-serif] leading-tight">
-                  {userInfo?.green_power || 0}
-                </div>
+              <div className="text-white/70 text-[10px] mt-0.5">京豆</div>
+            </div>
+            <div className="text-center cursor-pointer" onClick={() => navigate('/asset-view?tab=1')}>
+              <div className="flex items-baseline justify-center">
+                <span className="text-white/70 text-xs">领¥</span>
+                <span className="text-white text-lg font-bold">55</span>
               </div>
-
-              {/* Row 2, Col 2: Rights Fund */}
-              <div
-                className="flex flex-col items-end cursor-pointer active:opacity-70 transition-opacity"
-                onClick={() => navigate('/asset-view?tab=3')}
-              >
-                <div className="text-xs text-gray-400 mb-1">确权金</div>
-                <div className="text-[15px] font-bold text-gray-800 font-[DINAlternate-Bold,Roboto,sans-serif] leading-tight">
-                  {formatAmount(userInfo?.service_fee_balance)}
-                </div>
+              <div className="text-white/70 text-[10px] mt-0.5">红包</div>
+            </div>
+            <div className="text-center cursor-pointer" onClick={() => navigate('/balance-recharge')}>
+              <div className="text-white text-sm font-bold">限时返</div>
+              <div className="text-white/70 text-[10px] mt-0.5">京东E卡</div>
+            </div>
+            <div className="text-center cursor-pointer">
+              <div className="flex items-baseline justify-center">
+                <span className="text-white/70 text-xs">抽¥</span>
+                <span className="text-white text-lg font-bold">20</span>
+              </div>
+              <div className="text-white/70 text-[10px] mt-0.5 flex items-center gap-0.5">
+                秒送 <span className="bg-yellow-400 text-black text-[8px] px-1 rounded">外卖</span>
               </div>
             </div>
+            <div className="text-center">
+              <div className="text-white text-sm">更多</div>
+              <ChevronRight size={12} className="text-white/60 mx-auto" />
+            </div>
+          </div>
+        </div>
+
+        {/* 活动横幅 */}
+        <div className="px-4 pb-3 flex gap-2 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
+          <div className="flex-shrink-0 bg-gradient-to-r from-yellow-100 to-yellow-50 rounded-xl px-3 py-2 flex items-center gap-2 min-w-[140px]">
+            <div className="text-red-600 text-xs font-bold">粮油秒杀</div>
+            <div className="text-gray-500 text-[10px]">粮油年货节</div>
+          </div>
+          <div className="flex-shrink-0 bg-gradient-to-r from-red-600 to-red-500 rounded-xl px-3 py-2 flex items-center gap-2 min-w-[140px]">
+            <div className="text-yellow-300 text-xs font-bold">新年购物季</div>
+            <div className="text-white text-[10px]">直降5折起</div>
+            <span className="text-yellow-300 text-[10px]">去抢购 &gt;</span>
+          </div>
+          <div className="flex-shrink-0 bg-gradient-to-r from-pink-100 to-pink-50 rounded-xl px-3 py-2 flex items-center gap-2 min-w-[120px]">
+            <div className="text-red-500 text-xs font-bold">享85折</div>
+            <div className="text-gray-500 text-[10px]">零食购物季</div>
+          </div>
+        </div>
+
+        {/* 余额提醒 */}
+        <div className="mx-4 mb-3 bg-blue-50 rounded-lg px-3 py-2 flex items-center justify-between border border-blue-100">
+          <div className="flex items-center gap-2">
+            <span className="text-blue-600 text-xs font-medium">提醒</span>
+            <span className="text-gray-600 text-xs">您有 ¥ {formatAmount(userInfo?.balance_available)} 余额待提取</span>
+          </div>
+          <button onClick={() => navigate('/balance-withdraw')} className="text-blue-500 text-xs font-medium">
+            去提取 &gt;
+          </button>
+        </div>
+      </div>
+
+      {/* 统计信息栏 - 白色背景 */}
+      <div className="bg-white mx-4 -mt-2 rounded-t-2xl relative z-10">
+        <div className="flex items-center justify-around py-3 border-b border-gray-100">
+          <div className="text-center cursor-pointer" onClick={() => navigate('/my-collection')}>
+            <div className="text-gray-800 font-bold">{userInfo?.footprint_count || 28}</div>
+            <div className="text-gray-400 text-xs">足迹</div>
+          </div>
+          <div className="text-center cursor-pointer" onClick={() => navigate('/my-collection')}>
+            <div className="text-gray-800 font-bold">{userInfo?.collection_count || 1}</div>
+            <div className="text-gray-400 text-xs">收藏</div>
+          </div>
+          <div className="text-center cursor-pointer" onClick={() => navigate('/my-friends')}>
+            <div className="text-gray-800 font-bold">{userInfo?.follow_count || 5}</div>
+            <div className="text-gray-400 text-xs">关注</div>
+          </div>
+          <div className="flex items-center gap-4 text-gray-400 text-sm">
+            <span>种草</span>
+            <span>发现</span>
+          </div>
+        </div>
+
+        {/* 订单状态入口 */}
+        <div className="flex items-center justify-around py-4">
+          <div className="text-center cursor-pointer" onClick={() => navigate('/order-list?status=unpaid')}>
+            <div className="relative">
+              <Receipt size={22} className="text-gray-600 mx-auto" />
+              {(orderStats?.unpaid_count ?? 0) > 0 && (
+                <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[10px] rounded-full flex items-center justify-center">
+                  {orderStats?.unpaid_count}
+                </span>
+              )}
+            </div>
+            <div className="text-gray-600 text-xs mt-1">待付款</div>
+          </div>
+          <div className="text-center cursor-pointer" onClick={() => navigate('/order-list?status=paid')}>
+            <div className="relative">
+              <Truck size={22} className="text-gray-600 mx-auto" />
+              {(orderStats?.pending_shipment_count ?? 0) > 0 && (
+                <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[10px] rounded-full flex items-center justify-center">
+                  {orderStats?.pending_shipment_count}
+                </span>
+              )}
+            </div>
+            <div className="text-gray-600 text-xs mt-1">待收货</div>
+          </div>
+          <div className="text-center cursor-pointer" onClick={() => navigate('/order-list?status=shipped')}>
+            <div className="relative">
+              <Box size={22} className="text-gray-600 mx-auto" />
+            </div>
+            <div className="text-gray-600 text-xs mt-1">待使用</div>
+          </div>
+          <div className="text-center cursor-pointer" onClick={() => navigate('/order-list?status=completed')}>
+            <div className="relative">
+              <MessageSquare size={22} className="text-gray-600 mx-auto" />
+            </div>
+            <div className="text-gray-600 text-xs mt-1">待评价</div>
+          </div>
+          <div className="text-center cursor-pointer" onClick={() => navigate('/order-list')}>
+            <div className="relative">
+              <Package size={22} className="text-gray-600 mx-auto" />
+            </div>
+            <div className="text-gray-600 text-xs mt-1">退换/售后</div>
+          </div>
+          <div className="text-center cursor-pointer" onClick={() => navigate('/order-list')}>
+            <div className="text-gray-600 text-xs flex items-center justify-center w-6 h-6 mx-auto border border-gray-300 rounded-full">
+              <ChevronRight size={14} />
+            </div>
+            <div className="text-gray-600 text-xs mt-1">全部</div>
           </div>
         </div>
       </div>
