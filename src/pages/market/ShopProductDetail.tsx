@@ -650,7 +650,7 @@ const ShopProductDetail: React.FC<ShopProductDetailProps> = ({
 
       {/* 底部操作栏 - 紧凑设计 */}
       {!hideActions && (
-        <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 px-2 py-1.5 flex items-center z-50">
+        <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 px-2 py-2 flex items-center z-50">
           {/* 左侧图标按钮 - 紧凑排列 */}
           <div className="flex items-center gap-0">
             <button className="flex flex-col items-center justify-center w-10 py-0.5">
