@@ -259,6 +259,11 @@ const routes: RouteObject[] = [
         path: '/product/:id',
         element: <LazyComponent component={ProductDetail} />,
       },
+      // 兼容旧路由：/points-product/:id -> /product/:id
+      {
+        path: '/points-product/:id',
+        element: <PointsProductRedirect />,
+      },
       {
         path: '/trading-zone',
         element: <LazyComponent component={TradingZone} />,
