@@ -348,7 +348,7 @@ const Profile: React.FC<{ unreadCount?: number }> = ({ unreadCount = 0 }) => {
         </div>
 
         {/* Digital Rights Card - Smooth Floating Style */}
-        <div className="bg-white mx-2 rounded-3xl px-8 py-6 shadow-sm relative overflow-hidden mb-3">
+        <div className="bg-white mx-4 mt-4 rounded-3xl px-8 py-6 shadow-sm relative overflow-hidden mb-4">
           <div className="relative z-10">
             <div className="flex justify-between items-start mb-6">
               <div className="flex items-center gap-2">
