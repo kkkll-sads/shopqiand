@@ -260,126 +260,163 @@ const Profile: React.FC<{ unreadCount?: number }> = ({ unreadCount = 0 }) => {
 
   return (
     <div className="pb-24 min-h-screen bg-gray-50">
-      {/* 顶部渐变背景 */}
+      {/* Top Background Gradient - Match Home Page (Pastel Orange) */}
       <div className="absolute top-0 left-0 right-0 h-72 bg-gradient-to-b from-[#FFD6A5] to-gray-50 z-0"></div>
 
-      {/* 用户头部区域 - 参考京东排版 */}
-      <div className="pt-10 pb-4 px-4 relative z-10">
-        {/* 顶部操作按钮 */}
-        <div className="flex items-center justify-end gap-3 mb-6">
-          <button
-            onClick={() => navigate('/message-center')}
-            className="text-gray-600 hover:text-gray-900 transition-colors relative"
-          >
-            <MessageSquare size={22} />
-            {unreadCount > 0 && (
-              <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white box-content"></span>
-            )}
-          </button>
-          <button
-            onClick={() => navigate('/settings')}
-            className="text-gray-600 hover:text-gray-900 transition-colors"
-          >
-            <Settings size={22} />
-          </button>
-        </div>
+      {/* User Header */}
+      <div className="pt-12 pb-6 px-4 relative z-10 text-gray-900">
+        <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center gap-4">
+            <div className="w-14 h-14 rounded-full bg-orange-100 border-2 border-white flex items-center justify-center text-xl font-bold text-orange-600 overflow-hidden shadow-sm">
+              {displayAvatarUrl ? (
+                <img src={displayAvatarUrl} alt="用户头像" className="w-full h-full object-cover" />
+              ) : (
+                displayAvatarText || '用'
+              )}
+            </div>
+            <div>
+              <h2 className="text-xl font-bold text-gray-900">{displayName}</h2>
+              <div className="flex items-center gap-2 mt-1">
+                {/* User Status Badge */}
+                <div className="flex items-center bg-white/60 backdrop-blur-md border border-gray-200/50 rounded-full px-2 py-0.5">
+                  <div className="w-4 h-4 rounded-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center mr-1 shadow-inner">
+                    {(() => {
+                      const statusConfig = {
+                        0: { icon: Sprout, color: 'text-green-600' },
+                        1: { icon: UserCheck, color: 'text-blue-600' },
+                        2: { icon: Gem, color: 'text-yellow-600' },
+                      }[userInfo?.user_type ?? -1] || { icon: UserCheck, color: 'text-gray-500' };
+                      const Icon = statusConfig.icon;
+                      return <Icon size={10} className={`${statusConfig.color} fill-current`} />;
+                    })()}
+                  </div>
+                  <span className="text-xs font-medium text-gray-700">{displayId}</span>
+                </div>
 
-        {/* 用户信息 - 横向排列：头像 + 用户名/标签 */}
-        <div className="flex items-center gap-4 mb-6">
-          <div className="w-16 h-16 rounded-full bg-orange-100 border-2 border-white flex items-center justify-center text-2xl font-bold text-orange-600 overflow-hidden shadow-md">
-            {displayAvatarUrl ? (
-              <img src={displayAvatarUrl} alt="用户头像" className="w-full h-full object-cover" />
-            ) : (
-              displayAvatarText || '用'
-            )}
-          </div>
-          <div className="flex-1">
-            <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-              {displayName}
-              <ChevronRight size={18} className="text-gray-400" />
-            </h2>
-            <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-              {/* 用户类型标签 */}
-              <div className="flex items-center bg-gradient-to-r from-yellow-400 to-orange-400 rounded-full px-2.5 py-0.5">
-                <Gem size={12} className="text-white mr-1" />
-                <span className="text-[11px] font-medium text-white">{displayId}</span>
+                {/* Agent Badge - 根据 agent_review_status 显示 */}
+                {(() => {
+                  const agentStatus = userInfo?.agent_review_status;
+                  // 只有已通过(1)时才显示代理标签
+                  if (agentStatus === 1) {
+                    return (
+                      <div className="flex items-center bg-white/60 backdrop-blur-md border border-red-200 rounded-full px-2 py-0.5 ml-1">
+                        <div className="w-4 h-4 rounded-full bg-red-100 flex items-center justify-center mr-1">
+                          <Award size={10} className="text-red-500 fill-red-500" />
+                        </div>
+                        <span className="text-xs font-medium text-red-600">代理</span>
+                      </div>
+                    );
+                  }
+                  // 待审核(0)
+                  if (agentStatus === 0) {
+                    return (
+                      <div className="flex items-center bg-white/60 backdrop-blur-md border border-yellow-200 rounded-full px-2 py-0.5 ml-1">
+                        <div className="w-4 h-4 rounded-full bg-yellow-100 flex items-center justify-center mr-1">
+                          <Award size={10} className="text-yellow-600 fill-yellow-600" />
+                        </div>
+                        <span className="text-xs font-medium text-yellow-700">待审核</span>
+                      </div>
+                    );
+                  }
+                  return null;
+                })()}
               </div>
-              
-              {/* 代理标签 */}
-              {userInfo?.agent_review_status === 1 && (
-                <div className="flex items-center bg-red-500 rounded-full px-2.5 py-0.5">
-                  <Award size={12} className="text-white mr-1" />
-                  <span className="text-[11px] font-medium text-white">代理</span>
-                </div>
-              )}
-              {userInfo?.agent_review_status === 0 && (
-                <div className="flex items-center bg-yellow-500 rounded-full px-2.5 py-0.5">
-                  <Award size={12} className="text-white mr-1" />
-                  <span className="text-[11px] font-medium text-white">待审核</span>
-                </div>
-              )}
             </div>
           </div>
-        </div>
-
-        {/* 资产卡片 */}
-        <div className="bg-white rounded-2xl px-6 py-5 shadow-sm">
-          <div className="flex justify-between items-start mb-4">
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-500 font-medium">供应链专项金</span>
-              <span className="bg-orange-50 text-orange-600 text-[10px] px-2 py-0.5 rounded-full font-bold">
-                采购本金
-              </span>
-            </div>
+          <div className="flex gap-4">
             <button
-              onClick={() => navigate('/balance-recharge')}
-              className="text-orange-600 text-sm font-medium flex items-center gap-1 active:opacity-70"
+              onClick={() => navigate('/message-center')}
+              className="text-gray-600 hover:text-gray-900 transition-colors relative"
             >
-              去充值 <ChevronRight size={14} />
+              <MessageSquare size={22} />
+              {unreadCount > 0 && (
+                <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white box-content"></span>
+              )}
+            </button>
+            <button
+              onClick={() => navigate('/settings')}
+              className="text-gray-600 hover:text-gray-900 transition-colors"
+            >
+              <Settings size={22} />
             </button>
           </div>
+        </div>
 
-          {/* 主金额 */}
-          <div
-            className="text-3xl font-bold text-gray-900 tracking-tight mb-5 cursor-pointer active:opacity-70"
-            onClick={() => navigate('/asset-view?tab=0')}
-          >
-            <span className="text-xl mr-1">¥</span>
-            {String(userInfo?.balance_available || '0.00')}
-          </div>
-
-          {/* 底部四项数据 */}
-          <div className="grid grid-cols-4 gap-2">
-            <div
-              className="text-center cursor-pointer active:opacity-70"
-              onClick={() => navigate('/asset-view?tab=1')}
-            >
-              <div className="text-sm font-bold text-gray-800">{formatAmount(userInfo?.withdrawable_money)}</div>
-              <div className="text-[10px] text-gray-400 mt-0.5">可调度收益</div>
-            </div>
-            <div
-              className="text-center cursor-pointer active:opacity-70"
-              onClick={() => navigate('/market')}
-            >
-              <div className="text-sm font-bold text-gray-800">{userInfo?.score || 0}</div>
-              <div className="text-[10px] text-gray-400 mt-0.5">消费金</div>
-            </div>
-            <div
-              className="text-center cursor-pointer active:opacity-70"
-              onClick={() => navigate('/hashrate-exchange')}
-            >
-              <div className="text-sm font-bold text-gray-800 flex items-center justify-center gap-1">
-                {userInfo?.green_power || 0}
-                <Leaf size={12} className="text-green-500" />
+        {/* Digital Rights Card - Smooth Floating Style */}
+        <div className="bg-white mx-2 rounded-3xl px-8 py-6 shadow-sm relative overflow-hidden mb-3">
+          <div className="relative z-10">
+            <div className="flex justify-between items-start mb-6">
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-gray-500 font-medium">供应链专项金</span>
+                <span className="bg-orange-50 text-orange-600 text-[10px] px-2 py-0.5 rounded-full font-bold">
+                  采购本金
+                </span>
               </div>
-              <div className="text-[10px] text-gray-400 mt-0.5">绿色算力</div>
+              <button
+                onClick={() => navigate('/balance-recharge')}
+                className="text-orange-600 text-sm font-medium flex items-center gap-1 active:opacity-70"
+              >
+                去充值 <ChevronRight size={14} />
+              </button>
             </div>
+
+            {/* Main Big Number: Supply Chain Special Fund (balance_available) */}
             <div
-              className="text-center cursor-pointer active:opacity-70"
-              onClick={() => navigate('/asset-view?tab=3')}
+              className="text-3xl font-[DINAlternate-Bold,Roboto,sans-serif] font-bold text-gray-900 tracking-tight mb-6 cursor-pointer active:opacity-70 transition-opacity"
+              onClick={() => navigate('/asset-view?tab=0')}
             >
-              <div className="text-sm font-bold text-gray-800">{formatAmount(userInfo?.service_fee_balance)}</div>
-              <div className="text-[10px] text-gray-400 mt-0.5">确权金</div>
+              <span className="text-xl mr-1">¥</span>
+              {/* Display balance_available without commas */}
+              {String(userInfo?.balance_available || '0.00')}
+            </div>
+
+            {/* Bottom Grid: 2x2 Layout */}
+            <div className="grid grid-cols-2 gap-y-2 gap-x-2 mt-2">
+              {/* Row 1, Col 1: Withdrawable */}
+              <div
+                className="flex flex-col cursor-pointer active:opacity-70 transition-opacity"
+                onClick={() => navigate('/asset-view?tab=1')}
+              >
+                <div className="text-xs text-gray-400 mb-1">可调度收益</div>
+                <div className="text-[15px] font-bold text-gray-800 font-[DINAlternate-Bold,Roboto,sans-serif] leading-tight">
+                  {formatAmount(userInfo?.withdrawable_money)}
+                </div>
+              </div>
+
+              {/* Row 1, Col 2: Consumer Points */}
+              <div
+                className="flex flex-col items-end cursor-pointer active:opacity-70 transition-opacity"
+                onClick={() => navigate('/market')}
+              >
+                <div className="text-xs text-gray-400 mb-1">消费金</div>
+                <div className="text-[15px] font-bold text-gray-800 font-[DINAlternate-Bold,Roboto,sans-serif] leading-tight">
+                  {userInfo?.score || 0}
+                </div>
+              </div>
+
+              {/* Row 2, Col 1: Green Power */}
+              <div
+                className="flex flex-col cursor-pointer active:opacity-70 transition-opacity"
+                onClick={() => navigate('/hashrate-exchange')}
+              >
+                <div className="text-xs text-gray-400 mb-1 flex items-center gap-1">
+                  绿色算力 <Leaf size={10} className="text-green-500" />
+                </div>
+                <div className="text-[15px] font-bold text-gray-800 font-[DINAlternate-Bold,Roboto,sans-serif] leading-tight">
+                  {userInfo?.green_power || 0}
+                </div>
+              </div>
+
+              {/* Row 2, Col 2: Rights Fund */}
+              <div
+                className="flex flex-col items-end cursor-pointer active:opacity-70 transition-opacity"
+                onClick={() => navigate('/asset-view?tab=3')}
+              >
+                <div className="text-xs text-gray-400 mb-1">确权金</div>
+                <div className="text-[15px] font-bold text-gray-800 font-[DINAlternate-Bold,Roboto,sans-serif] leading-tight">
+                  {formatAmount(userInfo?.service_fee_balance)}
+                </div>
+              </div>
             </div>
           </div>
         </div>
