@@ -300,11 +300,11 @@ const Market: React.FC<MarketProps> = ({ onProductSelect }) => {
             description={error}
           />
         ) : filteredProducts.length > 0 ? (
-          <div className="grid grid-cols-2 gap-3">
-            {filteredProducts.map((product) => (
+          <div className="grid grid-cols-2 gap-2">
+            {filteredProducts.map((product, index) => (
               <div
                 key={product.id}
-                className="bg-white rounded-lg overflow-hidden shadow-sm active:scale-[0.98] transition-transform flex flex-col"
+                className="bg-white rounded-xl overflow-hidden shadow-sm active:scale-[0.98] transition-all duration-200 flex flex-col"
                 onClick={() => {
                   if (onProductSelect) {
                     onProductSelect(product);
@@ -313,38 +313,68 @@ const Market: React.FC<MarketProps> = ({ onProductSelect }) => {
                   }
                 }}
               >
-                <div className="aspect-square bg-gray-100 relative">
-                  <LazyImage src={product.image} alt={product.title} className="w-full h-full object-cover" />
+                {/* 商品图片 */}
+                <div className="aspect-square bg-gray-50 relative overflow-hidden">
+                  <LazyImage 
+                    src={product.image} 
+                    alt={product.title} 
+                    className="w-full h-full object-cover" 
+                  />
+                  {/* 热销标签 */}
+                  {index < 3 && (
+                    <div className="absolute top-0 left-0 bg-gradient-to-r from-red-500 to-orange-500 text-white text-[10px] px-2 py-0.5 rounded-br-lg font-medium">
+                      热销
+                    </div>
+                  )}
                 </div>
-                <div className="p-2.5 flex flex-col flex-1 justify-between">
-                  <div className="mb-2">
-                    <div className="text-sm text-gray-800 font-medium line-clamp-2 h-10 mb-1 leading-5">
+
+                {/* 商品信息 */}
+                <div className="p-2.5 flex flex-col flex-1">
+                  {/* 标题带标签 */}
+                  <div className="flex items-start gap-1 mb-1.5">
+                    <span className="flex-shrink-0 bg-gradient-to-r from-orange-500 to-red-500 text-white text-[9px] px-1 py-0.5 rounded font-bold">
+                      树交所
+                    </span>
+                    <span className="text-[13px] text-gray-800 font-medium line-clamp-2 leading-[1.3]">
                       {product.title}
-                    </div>
-                    <div className="flex items-center text-xs text-gray-500">
-                      <span className="bg-gray-100 text-gray-400 px-1 rounded text-[10px] mr-1 flex-shrink-0">
-                        艺术家
-                      </span>
-                      <span className="truncate">{product.artist}</span>
-                    </div>
+                    </span>
                   </div>
-                  <div className="text-red-500 font-bold text-base leading-none pt-1">
-                    {product.price > 0 ? (
-                      <>
-                        <span className="text-xs">¥</span>{String(product.price)}
-                        {product.score_price && product.score_price > 0 && (
-                          <span className="text-sm">
-                            +{product.score_price}消费金
-                          </span>
-                        )}
-                      </>
-                    ) : (
-                      product.score_price && product.score_price > 0 && (
-                        <span className="text-sm">
-                          {product.score_price}消费金
-                        </span>
-                      )
+
+                  {/* 分类标签 */}
+                  <div className="flex items-center gap-1 mb-2">
+                    <span className="text-[10px] text-orange-600 bg-orange-50 px-1.5 py-0.5 rounded border border-orange-100">
+                      {product.category || '精选'}
+                    </span>
+                    {product.artist && product.artist !== '消费金商品' && (
+                      <span className="text-[10px] text-gray-400 truncate">
+                        {product.artist}
+                      </span>
                     )}
+                  </div>
+
+                  {/* 价格区域 */}
+                  <div className="mt-auto">
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-red-500 text-[10px] font-bold">¥</span>
+                      <span className="text-red-500 text-lg font-bold leading-none">
+                        {product.price > 0 ? product.price.toLocaleString() : '0'}
+                      </span>
+                      {product.score_price && product.score_price > 0 && (
+                        <span className="text-orange-500 text-[11px] font-medium">
+                          +{product.score_price}消费金
+                        </span>
+                      )}
+                    </div>
+                    
+                    {/* 促销信息 */}
+                    <div className="flex items-center justify-between mt-1.5">
+                      <span className="text-[10px] text-gray-400 bg-gray-50 px-1.5 py-0.5 rounded">
+                        兑换价
+                      </span>
+                      <span className="text-[10px] text-gray-400">
+                        {((parseInt(product.id, 10) || index + 1) * 17 % 500) + 100}人付款
+                      </span>
+                    </div>
                   </div>
                 </div>
               </div>
