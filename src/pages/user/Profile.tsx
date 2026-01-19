@@ -346,11 +346,13 @@ const Profile: React.FC<{ unreadCount?: number }> = ({ unreadCount = 0 }) => {
             </button>
           </div>
         </div>
+      </div>
 
-        {/* Digital Rights Card - Smooth Floating Style */}
-        <div className="bg-white mx-4 mt-4 rounded-3xl px-8 py-6 shadow-sm relative overflow-hidden mb-4">
+      {/* Digital Rights Card - 独立区块，减少外边距增加显示区域 */}
+      <div className="px-3 relative z-10">
+        <div className="bg-white rounded-2xl px-5 py-5 shadow-sm relative overflow-hidden">
           <div className="relative z-10">
-            <div className="flex justify-between items-start mb-6">
+            <div className="flex justify-between items-start mb-5">
               <div className="flex items-center gap-2">
                 <span className="text-sm text-gray-500 font-medium">供应链专项金</span>
                 <span className="bg-orange-50 text-orange-600 text-[10px] px-2 py-0.5 rounded-full font-bold">
@@ -367,7 +369,7 @@ const Profile: React.FC<{ unreadCount?: number }> = ({ unreadCount = 0 }) => {
 
             {/* Main Big Number: Supply Chain Special Fund (balance_available) */}
             <div
-              className="text-3xl font-[DINAlternate-Bold,Roboto,sans-serif] font-bold text-gray-900 tracking-tight mb-6 cursor-pointer active:opacity-70 transition-opacity"
+              className="text-3xl font-[DINAlternate-Bold,Roboto,sans-serif] font-bold text-gray-900 tracking-tight mb-5 cursor-pointer active:opacity-70 transition-opacity"
               onClick={() => navigate('/asset-view?tab=0')}
             >
               <span className="text-xl mr-1">¥</span>
@@ -376,30 +378,30 @@ const Profile: React.FC<{ unreadCount?: number }> = ({ unreadCount = 0 }) => {
             </div>
 
             {/* Bottom Grid: 2x2 Layout */}
-            <div className="grid grid-cols-2 gap-y-2 gap-x-2 mt-2">
-              {/* Row 1, Col 1: Withdrawable */}
+            <div className="grid grid-cols-4 gap-x-2">
+              {/* Withdrawable */}
               <div
                 className="flex flex-col cursor-pointer active:opacity-70 transition-opacity"
                 onClick={() => navigate('/asset-view?tab=1')}
               >
                 <div className="text-xs text-gray-400 mb-1">可调度收益</div>
-                <div className="text-[15px] font-bold text-gray-800 font-[DINAlternate-Bold,Roboto,sans-serif] leading-tight">
+                <div className="text-sm font-bold text-gray-800 font-[DINAlternate-Bold,Roboto,sans-serif] leading-tight">
                   {formatAmount(userInfo?.withdrawable_money)}
                 </div>
               </div>
 
-              {/* Row 1, Col 2: Consumer Points */}
+              {/* Consumer Points */}
               <div
-                className="flex flex-col items-end cursor-pointer active:opacity-70 transition-opacity"
+                className="flex flex-col cursor-pointer active:opacity-70 transition-opacity"
                 onClick={() => navigate('/market')}
               >
                 <div className="text-xs text-gray-400 mb-1">消费金</div>
-                <div className="text-[15px] font-bold text-gray-800 font-[DINAlternate-Bold,Roboto,sans-serif] leading-tight">
+                <div className="text-sm font-bold text-gray-800 font-[DINAlternate-Bold,Roboto,sans-serif] leading-tight">
                   {userInfo?.score || 0}
                 </div>
               </div>
 
-              {/* Row 2, Col 1: Green Power */}
+              {/* Green Power */}
               <div
                 className="flex flex-col cursor-pointer active:opacity-70 transition-opacity"
                 onClick={() => navigate('/hashrate-exchange')}
@@ -407,18 +409,18 @@ const Profile: React.FC<{ unreadCount?: number }> = ({ unreadCount = 0 }) => {
                 <div className="text-xs text-gray-400 mb-1 flex items-center gap-1">
                   绿色算力 <Leaf size={10} className="text-green-500" />
                 </div>
-                <div className="text-[15px] font-bold text-gray-800 font-[DINAlternate-Bold,Roboto,sans-serif] leading-tight">
+                <div className="text-sm font-bold text-gray-800 font-[DINAlternate-Bold,Roboto,sans-serif] leading-tight">
                   {userInfo?.green_power || 0}
                 </div>
               </div>
 
-              {/* Row 2, Col 2: Rights Fund */}
+              {/* Rights Fund */}
               <div
-                className="flex flex-col items-end cursor-pointer active:opacity-70 transition-opacity"
+                className="flex flex-col cursor-pointer active:opacity-70 transition-opacity"
                 onClick={() => navigate('/asset-view?tab=3')}
               >
                 <div className="text-xs text-gray-400 mb-1">确权金</div>
-                <div className="text-[15px] font-bold text-gray-800 font-[DINAlternate-Bold,Roboto,sans-serif] leading-tight">
+                <div className="text-sm font-bold text-gray-800 font-[DINAlternate-Bold,Roboto,sans-serif] leading-tight">
                   {formatAmount(userInfo?.service_fee_balance)}
                 </div>
               </div>
