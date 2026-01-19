@@ -49,17 +49,6 @@ const InviteFriends: React.FC = () => {
   });
   const loading = loadMachine.state === LoadingState.LOADING;
 
-  // 临时启用复制功能
-  useEffect(() => {
-    // 标记当前页面允许复制
-    document.body.setAttribute('data-allow-copy', 'true');
-
-    return () => {
-      // 组件卸载时移除标记
-      document.body.removeAttribute('data-allow-copy');
-    };
-  }, []);
-
   /**
    * 根据邀请码构建注册链接
    */

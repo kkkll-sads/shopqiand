@@ -104,6 +104,15 @@ const CollectionCertificate: React.FC<CollectionCertificateProps> = ({
 
   const loading = detailMachine.state === LoadingState.LOADING;
 
+  // 证书页面专用限制：挂载时添加 class，卸载时移除
+  useEffect(() => {
+    document.body.classList.add('certificate-page');
+    
+    return () => {
+      document.body.classList.remove('certificate-page');
+    };
+  }, []);
+
   // 加载藏品详情
   useEffect(() => {
     if (initialData) {

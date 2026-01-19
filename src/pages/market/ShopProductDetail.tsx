@@ -1,13 +1,14 @@
 /**
- * ShopProductDetail - 商城商品详情页（淘宝风格）
+ * ShopProductDetail - 商城商品详情页（京东风格）
  * 
  * 专门用于消费金商城商品的详情展示
+ * 参考京东APP商品详情页设计
  */
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
-  ChevronLeft, Store, MessageCircle, Heart, ShoppingCart, 
-  Truck, ChevronRight, Share2
+  ChevronLeft, ChevronRight, Store, MessageCircle, Heart, ShoppingCart, 
+  Truck, Shield, RotateCcw, Headphones, Star, ThumbsUp, Gift, Tag, Clock
 } from 'lucide-react';
 import { LazyImage } from '../../../components/common';
 import PopupAnnouncementModal from '../../../components/common/PopupAnnouncementModal';
@@ -28,11 +29,16 @@ import { LoadingSpinner } from '../../../components/common';
 
 interface ShopProductDetailProps {
   product: Product;
-  /** 是否隐藏底部操作区域 */
   hideActions?: boolean;
-  /** 预加载的详情数据 */
   initialData?: ShopProductDetailData | null;
 }
+
+// 模拟评论数据
+const mockReviews = [
+  { id: 1, user: 'j***8', avatar: '', level: '11年·购物达人', content: '在树交所入手的这款商品真的超出预期！物流超给力，隔天就收到了，精致礼盒包装很适合自戴或送礼。质量和标注一致，非常满意！', images: [], likes: 128, time: '3天前' },
+  { id: 2, user: '葡***爸', avatar: '', level: '本店买过≥2次', content: '这款商品真是太漂亮了！工艺精细，设计精美，既显高贵又优雅。质量也很好，包装严实，非常满意的一次购物体验！', images: [], likes: 89, time: '5天前' },
+  { id: 3, user: 'k***p', avatar: '', level: '钻石会员', content: '做工精细，质量上乘，值得信赖！给家人买的礼物，官方正品，昨天下单今天就到了，赶上了送礼...', images: [], likes: 56, time: '1周前' },
+];
 
 const ShopProductDetail: React.FC<ShopProductDetailProps> = ({ 
   product, 
@@ -53,7 +59,9 @@ const ShopProductDetail: React.FC<ShopProductDetailProps> = ({
   const [detailData, setDetailData] = useState<ShopProductDetailData | null>(initialData);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isFavorite, setIsFavorite] = useState(false);
+  const [activeTab, setActiveTab] = useState<'product' | 'reviews' | 'detail' | 'recommend'>('product');
   const imageContainerRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   // 交易须知公告
   const [showTradingNotice, setShowTradingNotice] = useState(false);
@@ -172,6 +180,18 @@ const ShopProductDetail: React.FC<ShopProductDetailProps> = ({
     loadTradingNotice();
   }, []);
 
+  // 图片滑动处理
+  const handleImageScroll = () => {
+    if (imageContainerRef.current) {
+      const scrollLeft = imageContainerRef.current.scrollLeft;
+      const width = imageContainerRef.current.offsetWidth;
+      const newIndex = Math.round(scrollLeft / width);
+      if (newIndex !== currentImageIndex) {
+        setCurrentImageIndex(newIndex);
+      }
+    }
+  };
+
   // 购买
   const handleBuy = async () => {
     if (buying) return;
@@ -246,7 +266,10 @@ const ShopProductDetail: React.FC<ShopProductDetailProps> = ({
   const displayTitle = detailData?.name || product.title;
   const displayPrice = Number(detailData?.price ?? product.price);
   const scorePrice = detailData?.score_price || product.score_price || 0;
-  const originalPrice = displayPrice * 1.2;
+  const originalPrice = Math.round(displayPrice * 1.15);
+  const savedAmount = originalPrice - displayPrice;
+  const salesCount = ((parseInt(product.id, 10) || 1) * 23 % 800) + 300;
+  const reviewCount = ((parseInt(product.id, 10) || 1) * 7 % 150) + 200;
   
   // 商品图片列表
   const shopImages: string[] = [
@@ -257,145 +280,312 @@ const ShopProductDetail: React.FC<ShopProductDetailProps> = ({
   const mainImage = shopImages[currentImageIndex] || detailData?.thumbnail || product.image;
 
   return (
-    <div className="min-h-screen bg-gray-100 pb-[70px]">
-      {/* 顶部导航栏 */}
-      <header className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-sm px-3 py-2 flex items-center justify-between border-b border-gray-100">
-        <button onClick={() => navigate(-1)} className="p-2 -ml-2 rounded-full active:bg-gray-100">
-          <ChevronLeft size={24} className="text-gray-700" />
-        </button>
-        <div className="flex items-center gap-3">
-          <button className="p-2 rounded-full active:bg-gray-100">
-            <Share2 size={20} className="text-gray-600" />
+    <div className="min-h-screen bg-[#f5f5f5] pb-[70px]" ref={scrollContainerRef}>
+      {/* 顶部Tab导航栏 */}
+      <header className="fixed top-0 left-0 right-0 z-50 bg-white">
+        <div className="flex items-center px-2 py-2 border-b border-gray-100">
+          <button onClick={() => navigate(-1)} className="p-2 -ml-1 rounded-full active:bg-gray-100">
+            <ChevronLeft size={22} className="text-gray-700" />
           </button>
+          
+          {/* Tab导航 */}
+          <div className="flex-1 flex items-center justify-center gap-6">
+            {[
+              { key: 'product', label: '商品' },
+              { key: 'reviews', label: '大家评' },
+              { key: 'detail', label: '详情' },
+              { key: 'recommend', label: '推荐' },
+            ].map(tab => (
+              <button
+                key={tab.key}
+                onClick={() => setActiveTab(tab.key as any)}
+                className={`text-sm py-1 ${activeTab === tab.key ? 'text-gray-900 font-bold' : 'text-gray-500'}`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+          
+          <div className="flex items-center gap-1">
+            <button className="p-2 rounded-full active:bg-gray-100">
+              <Heart size={20} className={isFavorite ? 'fill-red-500 text-red-500' : 'text-gray-500'} onClick={() => setIsFavorite(!isFavorite)} />
+            </button>
+          </div>
         </div>
       </header>
 
       {/* 商品主图轮播 */}
-      <div className="pt-12">
+      <div className="pt-12 relative">
+        {/* 促销活动悬浮卡片 */}
+        <div className="absolute left-2 top-16 z-10 bg-white rounded-lg shadow-lg overflow-hidden w-20">
+          <div className="bg-gradient-to-r from-red-500 to-red-600 text-white text-[10px] py-1 px-2 text-center">
+            新春特惠
+          </div>
+          <div className="p-2 text-center">
+            <div className="text-[10px] text-gray-500">限时直降</div>
+            <div className="text-red-500 font-bold text-xs">5%OFF</div>
+          </div>
+          <div className="border-t border-gray-100 py-1.5 text-center">
+            <span className="text-[10px] text-red-500">领券更优惠</span>
+          </div>
+        </div>
+
+        {/* 图片轮播 */}
         <div 
           ref={imageContainerRef}
-          className="relative bg-white aspect-square overflow-hidden"
+          className="relative bg-white overflow-x-auto snap-x snap-mandatory flex"
+          style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+          onScroll={handleImageScroll}
         >
-          <LazyImage
-            src={mainImage || ''}
-            alt={displayTitle}
-            className="w-full h-full object-cover"
-          />
-          {shopImages.length > 1 && (
-            <div className="absolute bottom-3 right-3 bg-black/50 text-white text-xs px-2 py-1 rounded-full">
-              {currentImageIndex + 1}/{shopImages.length}
+          {shopImages.map((img, idx) => (
+            <div key={idx} className="w-full flex-shrink-0 snap-center aspect-square">
+              <LazyImage
+                src={img || ''}
+                alt={`${displayTitle} ${idx + 1}`}
+                className="w-full h-full object-cover"
+              />
+            </div>
+          ))}
+        </div>
+        
+        {/* 图片指示器和功能按钮 */}
+        <div className="absolute bottom-3 right-3 flex items-center gap-2">
+          <div className="bg-black/50 text-white text-xs px-2.5 py-1 rounded-full">
+            图集 {currentImageIndex + 1}/{shopImages.length}
+          </div>
+        </div>
+      </div>
+
+      {/* 规格缩略图选择器 */}
+      {shopImages.length > 1 && (
+        <div className="bg-white px-3 py-2 flex gap-2 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
+          {shopImages.slice(0, 6).map((img, idx) => (
+            <div
+              key={idx}
+              onClick={() => {
+                setCurrentImageIndex(idx);
+                if (imageContainerRef.current) {
+                  imageContainerRef.current.scrollTo({
+                    left: idx * imageContainerRef.current.offsetWidth,
+                    behavior: 'smooth'
+                  });
+                }
+              }}
+              className={`relative flex-shrink-0 w-14 h-14 rounded-lg overflow-hidden border-2 transition-all ${
+                currentImageIndex === idx ? 'border-red-500' : 'border-gray-200'
+              }`}
+            >
+              <img src={img} alt="" className="w-full h-full object-cover" />
+            </div>
+          ))}
+          {shopImages.length > 6 && (
+            <div className="flex-shrink-0 w-14 h-14 rounded-lg bg-gray-100 flex items-center justify-center">
+              <span className="text-xs text-gray-500">共{shopImages.length}款</span>
             </div>
           )}
         </div>
+      )}
+
+      {/* 价格促销区 - 红色渐变背景 */}
+      <div className="bg-gradient-to-r from-[#e23c41] to-[#ff6034] text-white p-4 relative overflow-hidden">
+        {/* 背景装饰 */}
+        <div className="absolute -right-4 -top-4 w-24 h-24 bg-white/10 rounded-full"></div>
+        <div className="absolute -right-8 bottom-0 w-16 h-16 bg-white/5 rounded-full"></div>
         
-        {/* 缩略图选择器 */}
-        {shopImages.length > 1 && (
-          <div className="bg-white px-3 py-2 flex gap-2 overflow-x-auto">
-            {shopImages.slice(0, 5).map((img, idx) => (
-              <div
-                key={idx}
-                className={`w-14 h-14 rounded-lg overflow-hidden flex-shrink-0 border-2 transition-all ${
-                  currentImageIndex === idx ? 'border-red-500' : 'border-transparent'
-                }`}
-                onClick={() => setCurrentImageIndex(idx)}
-              >
-                <img src={img} alt="" className="w-full h-full object-cover" />
-              </div>
-            ))}
-            {shopImages.length > 5 && (
-              <div className="w-14 h-14 rounded-lg bg-gray-100 flex items-center justify-center flex-shrink-0 text-gray-500 text-xs">
-                全部 <ChevronRight size={14} />
-              </div>
+        <div className="relative">
+          {/* 价格行 */}
+          <div className="flex items-baseline gap-1">
+            <span className="text-sm">¥</span>
+            <span className="text-3xl font-bold tracking-tight">{displayPrice.toLocaleString()}</span>
+            {scorePrice > 0 && (
+              <span className="ml-2 text-sm bg-white/20 px-2 py-0.5 rounded">
+                +{scorePrice}消费金
+              </span>
             )}
           </div>
-        )}
+          
+          {/* 促销信息 */}
+          <div className="flex items-center gap-3 mt-2">
+            <span className="bg-[#fff4e5] text-[#ff6600] text-[10px] px-2 py-0.5 rounded font-medium">
+              入会到手价
+            </span>
+            <span className="text-white/80 text-xs line-through">¥{originalPrice.toLocaleString()}</span>
+          </div>
+          
+          {/* 标签行 */}
+          <div className="flex items-center gap-2 mt-3">
+            <span className="flex items-center gap-1 bg-white/15 text-xs px-2 py-1 rounded">
+              <Tag size={12} />
+              官方直降{Math.round((savedAmount / originalPrice) * 100)}%
+            </span>
+            <span className="text-white/90 text-xs">已售{salesCount}+</span>
+            <div className="flex-1 text-right">
+              <span className="text-[#ffe4b5] text-xs font-medium">新春购物季</span>
+            </div>
+          </div>
+        </div>
       </div>
 
-      {/* 价格促销区 */}
-      <div className="bg-gradient-to-r from-red-500 to-orange-500 mx-2 mt-2 rounded-xl p-4 text-white">
-        <div className="flex items-center justify-between mb-2">
-          <span className="bg-yellow-400 text-red-600 text-[10px] font-bold px-2 py-0.5 rounded">
-            限时特惠
+      {/* 优惠券区域 */}
+      <div className="bg-white border-b border-gray-100">
+        <div className="px-4 py-3 flex items-center gap-2 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
+          <span className="flex items-center gap-1 text-[10px] text-red-500 bg-red-50 px-2 py-1 rounded border border-red-100 flex-shrink-0">
+            <Gift size={12} />
+            入会赠品1件
           </span>
-          <span className="text-xs opacity-80">活动进行中</span>
-        </div>
-        <div className="flex items-baseline gap-2">
-          <span className="text-sm">兑换价</span>
-          <span className="text-2xl font-bold">¥{displayPrice.toLocaleString()}</span>
-          {scorePrice > 0 && (
-            <span className="text-sm bg-white/20 px-2 py-0.5 rounded">
-              +{scorePrice}消费金
-            </span>
-          )}
-        </div>
-        <div className="flex items-center gap-3 mt-2 text-xs opacity-90">
-          <span className="line-through">原价 ¥{originalPrice.toFixed(0)}</span>
-          <span className="bg-white/20 px-1.5 py-0.5 rounded">省 ¥{(originalPrice - displayPrice).toFixed(0)}</span>
+          <span className="text-[10px] text-orange-600 bg-orange-50 px-2 py-1 rounded border border-orange-100 flex-shrink-0">
+            专项金支付减20元
+          </span>
+          <span className="text-[10px] text-yellow-600 bg-yellow-50 px-2 py-1 rounded border border-yellow-100 flex-shrink-0">
+            最高返1,000积分
+          </span>
         </div>
       </div>
 
       {/* 商品标题区 */}
-      <div className="bg-white mx-2 mt-2 rounded-xl p-4">
+      <div className="bg-white px-4 py-3">
         <div className="flex items-start gap-2">
-          <span className="flex-shrink-0 bg-gradient-to-r from-red-500 to-orange-500 text-white text-[10px] px-1.5 py-0.5 rounded font-bold mt-0.5">
-            树交所
+          <span className="flex-shrink-0 bg-gradient-to-r from-red-500 to-red-600 text-white text-[10px] px-1.5 py-0.5 rounded font-bold mt-0.5">
+            自营
           </span>
-          <h1 className="text-base font-medium text-gray-800 leading-snug">
+          <h1 className="text-[15px] font-medium text-gray-800 leading-snug line-clamp-2">
             {displayTitle}
           </h1>
         </div>
         
-        {/* 标签 */}
-        <div className="flex flex-wrap gap-1.5 mt-3">
-          <span className="text-[10px] text-orange-600 bg-orange-50 px-2 py-0.5 rounded border border-orange-100">
-            正品保障
+        {/* 属性标签 */}
+        <div className="flex flex-wrap gap-1.5 mt-2">
+          <span className="text-[10px] text-gray-500 bg-gray-100 px-2 py-0.5 rounded">
+            品质保障
           </span>
-          <span className="text-[10px] text-green-600 bg-green-50 px-2 py-0.5 rounded border border-green-100">
-            官方直营
-          </span>
-          <span className="text-[10px] text-blue-600 bg-blue-50 px-2 py-0.5 rounded border border-blue-100">
-            品质保证
+          <span className="text-[10px] text-gray-500 bg-gray-100 px-2 py-0.5 rounded">
+            正品保证
           </span>
         </div>
-        
-        {/* 销量 */}
-        <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-100">
-          <span className="text-xs text-gray-400">
-            已售 {((parseInt(product.id, 10) || 1) * 17 % 500) + 100}件
+      </div>
+
+      {/* 服务保障区 */}
+      <div className="bg-white mt-2 px-4 py-3">
+        <div className="flex items-center gap-4 text-xs text-gray-600">
+          <span className="flex items-center gap-1">
+            <Shield size={14} className="text-green-500" />
+            免费上门退换
           </span>
-          <button 
-            onClick={() => setIsFavorite(!isFavorite)}
-            className="flex items-center gap-1 text-xs text-gray-400"
-          >
-            <Heart size={14} className={isFavorite ? 'fill-red-500 text-red-500' : ''} />
-            收藏
-          </button>
+          <span className="flex items-center gap-1">
+            <RotateCcw size={14} className="text-green-500" />
+            7天无理由退货
+          </span>
+          <span className="flex items-center gap-1">
+            <Headphones size={14} className="text-green-500" />
+            专属客服
+          </span>
         </div>
       </div>
 
       {/* 配送信息 */}
-      <div className="bg-white mx-2 mt-2 rounded-xl p-4">
-        <div className="flex items-center gap-3 text-sm">
-          <Truck size={18} className="text-green-500" />
-          <div className="flex-1">
-            <div className="flex items-center justify-between">
-              <span className="text-gray-800 font-medium">官方配送</span>
-              <ChevronRight size={16} className="text-gray-400" />
-            </div>
-            <div className="text-xs text-gray-400 mt-0.5">
-              预计3-5天内发货 · 全国包邮
+      <div className="bg-white mt-2 px-4 py-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Truck size={18} className="text-blue-500" />
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-blue-500 text-xs font-medium">预计明日达</span>
+                <span className="text-xs text-gray-500">付款后预计1-3天送达</span>
+              </div>
+              <div className="text-[11px] text-gray-400 mt-0.5">官方物流 · 全国包邮</div>
             </div>
           </div>
+          <ChevronRight size={16} className="text-gray-400" />
+        </div>
+      </div>
+
+      {/* 买家评价区 */}
+      <div className="bg-white mt-2">
+        <div className="px-4 py-3 flex items-center justify-between border-b border-gray-50">
+          <div className="flex items-center gap-2">
+            <span className="font-bold text-gray-800">买家评价</span>
+            <span className="text-gray-400 text-sm">{reviewCount}+</span>
+          </div>
+          <div className="flex items-center text-xs text-gray-500">
+            <span>近90天好评率</span>
+            <span className="text-red-500 font-bold ml-1">100%</span>
+            <ChevronRight size={14} className="text-gray-400" />
+          </div>
+        </div>
+        
+        {/* 评论列表 */}
+        <div className="divide-y divide-gray-50">
+          {mockReviews.map(review => (
+            <div key={review.id} className="px-4 py-3">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-orange-400 to-red-500 flex items-center justify-center text-white text-xs font-bold">
+                  {review.user.charAt(0).toUpperCase()}
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-gray-700">{review.user}</span>
+                    <span className="text-[10px] text-orange-500 bg-orange-50 px-1.5 py-0.5 rounded">{review.level}</span>
+                  </div>
+                </div>
+              </div>
+              <p className="text-sm text-gray-600 leading-relaxed line-clamp-3">
+                {review.content}
+              </p>
+              <div className="flex items-center justify-between mt-2">
+                <span className="text-xs text-gray-400">{review.time}</span>
+                <button className="flex items-center gap-1 text-xs text-gray-400">
+                  <ThumbsUp size={12} />
+                  {review.likes}
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* 问大家 */}
+      <div className="bg-white mt-2 px-4 py-3">
+        <div className="flex items-center justify-between mb-3">
+          <span className="font-bold text-gray-800">问大家</span>
+          <div className="flex items-center text-xs text-gray-500">
+            <span>看问答讨论</span>
+            <ChevronRight size={14} className="text-gray-400" />
+          </div>
+        </div>
+        <div className="bg-gray-50 rounded-lg px-3 py-2.5 flex items-center justify-between">
+          <span className="text-sm text-gray-400">商品好不好，快来问大家吧～</span>
+          <button className="text-red-500 text-sm font-medium">提问</button>
+        </div>
+      </div>
+
+      {/* 店铺推荐区 */}
+      <div className="bg-white mt-2 pb-4">
+        <div className="px-4 py-3">
+          <span className="font-bold text-gray-800">店内优选</span>
+        </div>
+        
+        {/* 推荐商品网格 */}
+        <div className="px-4 grid grid-cols-3 gap-2">
+          {[1, 2, 3].map(i => (
+            <div key={i} className="bg-gray-50 rounded-lg overflow-hidden">
+              <div className="aspect-square bg-gradient-to-br from-orange-100 to-red-100 flex items-center justify-center">
+                <Gift size={32} className="text-orange-300" />
+              </div>
+              <div className="p-2">
+                <div className="text-[11px] text-gray-600 line-clamp-1">精选好物{i}</div>
+                <div className="text-red-500 font-bold text-xs mt-1">¥{(displayPrice * 0.8 + i * 100).toFixed(0)}</div>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
 
       {/* 商品详情（图片展示） */}
-      <div className="bg-white mx-2 mt-2 rounded-xl overflow-hidden">
+      <div className="bg-white mt-2">
         <div className="px-4 py-3 border-b border-gray-100">
-          <h3 className="text-base font-bold text-gray-800">商品详情</h3>
+          <span className="font-bold text-gray-800">商品介绍</span>
         </div>
         <div className="p-4">
-          {/* 商品描述 */}
           {detailData?.description && (
             <div 
               className="text-sm text-gray-600 leading-relaxed mb-4"
@@ -403,7 +593,6 @@ const ShopProductDetail: React.FC<ShopProductDetailProps> = ({
             />
           )}
           
-          {/* 详情图片 */}
           <div className="space-y-0">
             {(detailData?.detail_images || [mainImage]).filter(Boolean).map((img, idx) => (
               <img 
@@ -420,38 +609,41 @@ const ShopProductDetail: React.FC<ShopProductDetailProps> = ({
 
       {/* 底部操作栏 */}
       {!hideActions && (
-        <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 px-2 py-2 flex items-center gap-2 z-50">
+        <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 px-2 py-2 flex items-center z-50">
           {/* 左侧图标按钮 */}
-          <div className="flex items-center gap-1">
-            <button className="flex flex-col items-center justify-center w-12 py-1">
+          <div className="flex items-center">
+            <button className="flex flex-col items-center justify-center w-14 py-1">
               <Store size={18} className="text-gray-500" />
               <span className="text-[10px] text-gray-500 mt-0.5">店铺</span>
             </button>
-            <button className="flex flex-col items-center justify-center w-12 py-1">
+            <button 
+              onClick={() => navigate('/online-service')}
+              className="flex flex-col items-center justify-center w-14 py-1"
+            >
               <MessageCircle size={18} className="text-gray-500" />
               <span className="text-[10px] text-gray-500 mt-0.5">客服</span>
             </button>
-            <button 
-              onClick={() => setIsFavorite(!isFavorite)}
-              className="flex flex-col items-center justify-center w-12 py-1"
-            >
-              <Heart size={18} className={isFavorite ? 'fill-red-500 text-red-500' : 'text-gray-500'} />
-              <span className="text-[10px] text-gray-500 mt-0.5">收藏</span>
+            <button className="flex flex-col items-center justify-center w-14 py-1 relative">
+              <ShoppingCart size={18} className="text-gray-500" />
+              <span className="text-[10px] text-gray-500 mt-0.5">购物车</span>
+              <span className="absolute top-0 right-2 w-4 h-4 bg-red-500 text-white text-[10px] rounded-full flex items-center justify-center">
+                2
+              </span>
             </button>
           </div>
           
           {/* 右侧按钮 */}
-          <div className="flex-1 flex gap-2">
-            <button className="flex-1 bg-gradient-to-r from-orange-400 to-orange-500 text-white py-3 rounded-full text-sm font-bold active:scale-[0.98] transition-transform">
-              <ShoppingCart size={16} className="inline mr-1" />
+          <div className="flex-1 flex gap-2 ml-2">
+            <button className="flex-1 bg-gradient-to-r from-[#ffa940] to-[#ff7a00] text-white py-3 rounded-full text-sm font-bold active:scale-[0.98] transition-transform">
               加入购物车
             </button>
             <button
               onClick={handleBuy}
               disabled={buying}
-              className="flex-1 bg-gradient-to-r from-red-500 to-red-600 text-white py-3 rounded-full text-sm font-bold active:scale-[0.98] transition-transform disabled:opacity-70"
+              className="flex-1 bg-gradient-to-r from-[#ff4d4f] to-[#e23c41] text-white py-3 rounded-full text-sm font-bold active:scale-[0.98] transition-transform disabled:opacity-70 flex flex-col items-center justify-center leading-tight"
             >
-              {buying ? '处理中...' : '立即购买'}
+              <span className="text-[10px] opacity-80">到手价 ¥{displayPrice.toLocaleString()}</span>
+              <span>{buying ? '处理中...' : '立即购买'}</span>
             </button>
           </div>
         </div>
