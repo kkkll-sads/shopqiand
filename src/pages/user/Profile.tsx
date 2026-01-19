@@ -269,65 +269,68 @@ const Profile: React.FC<{ unreadCount?: number }> = ({ unreadCount = 0 }) => {
         <div className="flex items-center justify-between">
           {/* 左侧：头像 + 名称 + 标签 */}
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-full bg-orange-100 border-2 border-white flex items-center justify-center text-lg font-bold text-orange-600 overflow-hidden shadow-sm">
+            <div className="w-16 h-16 rounded-full bg-orange-100 border-2 border-white flex items-center justify-center text-xl font-bold text-orange-600 overflow-hidden shadow-sm">
               {displayAvatarUrl ? (
                 <img src={displayAvatarUrl} alt="用户头像" className="w-full h-full object-cover" />
               ) : (
                 displayAvatarText || '用'
               )}
             </div>
-            <div className="flex flex-col">
+            <div className="flex flex-col gap-1">
+              <h2 className="text-xl font-bold text-gray-900 leading-tight">{displayName}</h2>
+              {/* 标签行：用户身份 + 代理状态 */}
               <div className="flex items-center gap-2">
-                <h2 className="text-lg font-bold text-gray-900">{displayName}</h2>
-                {/* 用户类型标签 */}
-                <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-600 font-medium">
-                  {displayId}
-                </span>
-                {/* 代理标签 */}
+                {/* 用户类型标签 - 胶囊样式 */}
+                <div className="flex items-center bg-gray-900/5 backdrop-blur-sm rounded-full px-2 py-0.5 border border-gray-200/50">
+                  <div className="w-3.5 h-3.5 rounded-full bg-gradient-to-br from-orange-400 to-red-500 flex items-center justify-center mr-1 shadow-sm">
+                    {(() => {
+                      const statusConfig = {
+                        0: { icon: Sprout },
+                        1: { icon: UserCheck },
+                        2: { icon: Gem },
+                      }[userInfo?.user_type ?? -1] || { icon: UserCheck };
+                      const Icon = statusConfig.icon;
+                      return <Icon size={8} className="text-white fill-current" />;
+                    })()}
+                  </div>
+                  <span className="text-[10px] font-bold text-gray-700">{displayId}</span>
+                </div>
+
+                {/* 代理标签 - 仅在相关状态显示 */}
                 {userInfo?.agent_review_status === 1 && (
-                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-red-50 text-red-500 font-medium">
-                    代理
-                  </span>
+                  <div className="flex items-center bg-red-50 rounded-full px-2 py-0.5 border border-red-100">
+                    <Award size={10} className="text-red-500 mr-1" />
+                    <span className="text-[10px] font-bold text-red-600">代理</span>
+                  </div>
                 )}
                 {userInfo?.agent_review_status === 0 && (
-                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-yellow-50 text-yellow-600 font-medium">
-                    待审核
-                  </span>
+                  <div className="flex items-center bg-yellow-50 rounded-full px-2 py-0.5 border border-yellow-100">
+                    <Award size={10} className="text-yellow-600 mr-1" />
+                    <span className="text-[10px] font-bold text-yellow-700">待审核</span>
+                  </div>
                 )}
-              </div>
-              {/* 副标题链接 */}
-              <div className="flex items-center gap-2 mt-0.5 text-xs text-gray-500">
-                <button onClick={() => navigate('/address-list')} className="flex items-center gap-0.5 active:opacity-70">
-                  <MapPin size={12} />
-                  <span>收货地址</span>
-                </button>
-                <span className="text-gray-300">|</span>
-                <button onClick={() => navigate('/settings')} className="flex items-center gap-0.5 active:opacity-70">
-                  <ShieldCheck size={12} />
-                  <span>账号安全</span>
-                </button>
               </div>
             </div>
           </div>
           
-          {/* 右侧：功能按钮组 */}
-          <div className="flex items-center gap-3">
+          {/* 右侧：功能按钮组 - 图标放大 */}
+          <div className="flex items-center gap-4">
             <button
               onClick={() => navigate('/message-center')}
-              className="flex flex-col items-center text-gray-600 active:opacity-70 relative"
+              className="flex flex-col items-center text-gray-700 active:opacity-70 relative"
             >
-              <MessageSquare size={20} strokeWidth={1.5} />
-              <span className="text-[10px] mt-0.5">消息</span>
+              <MessageSquare size={24} strokeWidth={1.5} />
+              <span className="text-[10px] mt-0.5 font-medium">消息</span>
               {unreadCount > 0 && (
-                <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+                <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white box-content"></span>
               )}
             </button>
             <button
               onClick={() => navigate('/settings')}
-              className="flex flex-col items-center text-gray-600 active:opacity-70"
+              className="flex flex-col items-center text-gray-700 active:opacity-70"
             >
-              <Settings size={20} strokeWidth={1.5} />
-              <span className="text-[10px] mt-0.5">设置</span>
+              <Settings size={24} strokeWidth={1.5} />
+              <span className="text-[10px] mt-0.5 font-medium">设置</span>
             </button>
           </div>
         </div>
