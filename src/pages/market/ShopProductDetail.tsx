@@ -465,117 +465,106 @@ const ShopProductDetail: React.FC<ShopProductDetailProps> = ({
         </div>
       )}
 
-      {/* 价格促销区 - 红色渐变背景 */}
-      <div className="bg-gradient-to-r from-[#e23c41] to-[#ff6034] text-white p-4 relative overflow-hidden">
-        {/* 背景装饰 */}
-        <div className="absolute -right-4 -top-4 w-24 h-24 bg-white/10 rounded-full"></div>
-        <div className="absolute -right-8 bottom-0 w-16 h-16 bg-white/5 rounded-full"></div>
-        
-        <div className="relative">
-          {/* 价格行 */}
-          <div className="flex items-baseline gap-1">
-            <span className="text-sm">¥</span>
-            <span className="text-3xl font-bold tracking-tight">{displayPrice.toLocaleString()}</span>
+      {/* 价格促销区 - 京东风格紧凑卡片 */}
+      <div className="bg-white px-3 py-2.5">
+        {/* 价格行 */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-baseline">
+            <span className="text-red-500 text-sm">¥</span>
+            <span className="text-red-500 text-2xl font-bold">{displayPrice}</span>
             {scorePrice > 0 && (
-              <span className="ml-2 text-sm bg-white/20 px-2 py-0.5 rounded">
-                +{scorePrice}消费金
-              </span>
+              <span className="ml-1.5 text-orange-500 text-xs">+{scorePrice}消费金</span>
             )}
           </div>
-          
-          {/* 促销信息 */}
-          <div className="flex items-center gap-3 mt-2">
-            <span className="bg-[#fff4e5] text-[#ff6600] text-[10px] px-2 py-0.5 rounded font-medium">
-              入会到手价
+          <div className="flex items-center gap-1">
+            <span className="bg-gradient-to-r from-red-500 to-orange-500 text-white text-[10px] px-2 py-0.5 rounded">
+              新春购物季
             </span>
-            <span className="text-white/80 text-xs line-through">¥{originalPrice.toLocaleString()}</span>
-          </div>
-          
-          {/* 标签行 */}
-          <div className="flex items-center gap-2 mt-3">
-            <span className="flex items-center gap-1 bg-white/15 text-xs px-2 py-1 rounded">
-              <Tag size={12} />
-              官方直降{Math.round((savedAmount / originalPrice) * 100)}%
-            </span>
-            <span className="text-white/90 text-xs">已售{salesCount}+</span>
-            <div className="flex-1 text-right">
-              <span className="text-[#ffe4b5] text-xs font-medium">新春购物季</span>
-            </div>
           </div>
         </div>
-      </div>
-
-      {/* 优惠券区域 */}
-      <div className="bg-white border-b border-gray-100">
-        <div className="px-4 py-3 flex items-center gap-2 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
-          <span className="flex items-center gap-1 text-[10px] text-red-500 bg-red-50 px-2 py-1 rounded border border-red-100 flex-shrink-0">
-            <Gift size={12} />
+        
+        {/* 促销标签行 */}
+        <div className="flex items-center gap-2 mt-1.5">
+          <span className="text-[10px] text-orange-600 bg-orange-50 px-1.5 py-0.5 rounded">
+            入会到手价
+          </span>
+          <span className="text-gray-400 text-xs line-through">¥{originalPrice}</span>
+          <span className="text-gray-500 text-xs">官方直降{Math.round((savedAmount / originalPrice) * 100)}%</span>
+          <span className="text-gray-500 text-xs">已售{salesCount}+</span>
+        </div>
+        
+        {/* 优惠券行 */}
+        <div className="flex items-center gap-1.5 mt-2 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
+          <span className="flex items-center gap-0.5 text-[10px] text-red-500 bg-red-50 px-1.5 py-0.5 rounded border border-red-100 flex-shrink-0">
+            <Gift size={10} />
             入会赠品1件
           </span>
-          <span className="text-[10px] text-orange-600 bg-orange-50 px-2 py-1 rounded border border-orange-100 flex-shrink-0">
+          <span className="text-[10px] text-orange-600 bg-orange-50 px-1.5 py-0.5 rounded border border-orange-100 flex-shrink-0">
             专项金支付减20元
           </span>
-          <span className="text-[10px] text-yellow-600 bg-yellow-50 px-2 py-1 rounded border border-yellow-100 flex-shrink-0">
+          <span className="text-[10px] text-yellow-600 bg-yellow-50 px-1.5 py-0.5 rounded border border-yellow-100 flex-shrink-0">
             最高返1,000积分
           </span>
         </div>
       </div>
 
       {/* 商品标题区 */}
-      <div className="bg-white px-4 py-3">
-        <div className="flex items-start gap-2">
-          <span className="flex-shrink-0 bg-gradient-to-r from-red-500 to-red-600 text-white text-[10px] px-1.5 py-0.5 rounded font-bold mt-0.5">
+      <div className="bg-white px-3 py-2 border-t border-gray-50">
+        <div className="flex items-start gap-1.5">
+          <span className="flex-shrink-0 bg-red-500 text-white text-[10px] px-1 py-0.5 rounded font-bold">
             自营
           </span>
-          <h1 className="text-[15px] font-medium text-gray-800 leading-snug line-clamp-2">
+          <span className="flex-shrink-0 bg-orange-500 text-white text-[10px] px-1 py-0.5 rounded">
+            树交所
+          </span>
+          <h1 className="text-sm font-medium text-gray-800 leading-snug line-clamp-2">
             {displayTitle}
           </h1>
         </div>
         
-        {/* 属性标签 */}
-        <div className="flex flex-wrap gap-1.5 mt-2">
-          <span className="text-[10px] text-gray-500 bg-gray-100 px-2 py-0.5 rounded">
-            品质保障
+        {/* 标签行 */}
+        <div className="flex items-center gap-1.5 mt-1.5 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
+          <span className="text-[10px] text-blue-600 border border-blue-200 px-1.5 py-0.5 rounded flex-shrink-0">
+            买贵双倍赔
           </span>
-          <span className="text-[10px] text-gray-500 bg-gray-100 px-2 py-0.5 rounded">
-            正品保证
+          <span className="text-[10px] text-blue-600 border border-blue-200 px-1.5 py-0.5 rounded flex-shrink-0">
+            7天价保
+          </span>
+          <span className="text-[10px] text-green-600 border border-green-200 px-1.5 py-0.5 rounded flex-shrink-0">
+            品质保障
           </span>
         </div>
       </div>
 
-      {/* 服务保障区 */}
-      <div className="bg-white mt-2 px-4 py-3">
-        <div className="flex items-center gap-4 text-xs text-gray-600">
+      {/* 服务保障 + 配送信息 合并 */}
+      <div className="bg-white mt-1.5 px-3 py-2">
+        <div className="flex items-center text-xs text-gray-500 gap-3">
           <span className="flex items-center gap-1">
-            <Shield size={14} className="text-green-500" />
+            <Shield size={12} className="text-green-500" />
             免费上门退换
           </span>
           <span className="flex items-center gap-1">
-            <RotateCcw size={14} className="text-green-500" />
+            <RotateCcw size={12} className="text-green-500" />
             7天无理由退货
           </span>
           <span className="flex items-center gap-1">
-            <Headphones size={14} className="text-green-500" />
+            <Headphones size={12} className="text-green-500" />
             专属客服
           </span>
         </div>
       </div>
 
       {/* 配送信息 */}
-      <div className="bg-white mt-2 px-4 py-3">
+      <div className="bg-white mt-1.5 px-3 py-2">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Truck size={18} className="text-blue-500" />
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="text-blue-500 text-xs font-medium">预计明日达</span>
-                <span className="text-xs text-gray-500">付款后预计1-3天送达</span>
-              </div>
-              <div className="text-[11px] text-gray-400 mt-0.5">官方物流 · 全国包邮</div>
-            </div>
+          <div className="flex items-center gap-2">
+            <Truck size={14} className="text-blue-500" />
+            <span className="text-blue-500 text-xs font-medium">预计明日达</span>
+            <span className="text-xs text-gray-400">付款后预计1-3天送达</span>
           </div>
-          <ChevronRight size={16} className="text-gray-400" />
+          <ChevronRight size={14} className="text-gray-400" />
         </div>
+        <div className="text-[11px] text-gray-400 mt-1 ml-5">官方物流 · 全国包邮</div>
       </div>
 
       {/* 买家评价区 */}
