@@ -20,6 +20,8 @@ import { useNotification } from '../../../context/NotificationContext';
 // ✅ 引入统一 API 处理工具
 import { isSuccess, extractData, extractError } from '../../../utils/apiHelpers';
 import { STORAGE_KEYS } from '../../../constants/storageKeys';
+import { useStateMachine } from '../../../hooks/useStateMachine';
+import { LoadingEvent, LoadingState } from '../../../types/states';
 
 const SignIn: React.FC = () => {
     const navigate = useNavigate();
@@ -33,7 +35,25 @@ const SignIn: React.FC = () => {
     const [signedInDates, setSignedInDates] = useState<string[]>([]);
     const [activityInfo, setActivityInfo] = useState<SignInRulesData | null>(null);
     const [progressInfo, setProgressInfo] = useState<SignInProgressData | null>(null);
-    const [loading, setLoading] = useState<boolean>(true);
+    const loadMachine = useStateMachine<LoadingState, LoadingEvent>({
+        initial: LoadingState.IDLE,
+        transitions: {
+            [LoadingState.IDLE]: { [LoadingEvent.LOAD]: LoadingState.LOADING },
+            [LoadingState.LOADING]: {
+                [LoadingEvent.SUCCESS]: LoadingState.SUCCESS,
+                [LoadingEvent.ERROR]: LoadingState.ERROR,
+            },
+            [LoadingState.SUCCESS]: {
+                [LoadingEvent.LOAD]: LoadingState.LOADING,
+                [LoadingEvent.RETRY]: LoadingState.LOADING,
+            },
+            [LoadingState.ERROR]: {
+                [LoadingEvent.LOAD]: LoadingState.LOADING,
+                [LoadingEvent.RETRY]: LoadingState.LOADING,
+            },
+        },
+    });
+    const loading = loadMachine.state === LoadingState.LOADING;
 
 
     // Calendar state
@@ -42,7 +62,7 @@ const SignIn: React.FC = () => {
     // Load data from API
     useEffect(() => {
         const loadData = async () => {
-            setLoading(true);
+            loadMachine.send(LoadingEvent.LOAD);
             const token = getStoredToken();
 
             try {
@@ -126,11 +146,13 @@ const SignIn: React.FC = () => {
                         }
                     }
                 }
+                loadMachine.send(LoadingEvent.SUCCESS);
             } catch (error: any) {
                 console.error('加载签到数据失败:', error);
                 showToast('error', '加载失败', '加载数据失败，请重试');
+                loadMachine.send(LoadingEvent.ERROR);
             } finally {
-                setLoading(false);
+                // 状态机已处理成功/失败
             }
         };
 

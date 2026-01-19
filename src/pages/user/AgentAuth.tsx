@@ -22,6 +22,8 @@ import { getStoredToken } from '../../../services/client';
 import { useNotification } from '../../../context/NotificationContext';
 import { isSuccess } from '../../../utils/apiHelpers';
 import { useErrorHandler } from '../../../hooks/useErrorHandler';
+import { useStateMachine } from '../../../hooks/useStateMachine';
+import { FormEvent, FormState, LoadingEvent, LoadingState } from '../../../types/states';
 
 /**
  * AgentAuth 代理商申请页面组件
@@ -38,9 +40,63 @@ const AgentAuth: React.FC = () => {
     clearError
   } = useErrorHandler();
 
-  const [loading, setLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
-  const [uploadingLicense, setUploadingLicense] = useState(false);
+  const loadMachine = useStateMachine<LoadingState, LoadingEvent>({
+    initial: LoadingState.IDLE,
+    transitions: {
+      [LoadingState.IDLE]: { [LoadingEvent.LOAD]: LoadingState.LOADING },
+      [LoadingState.LOADING]: {
+        [LoadingEvent.SUCCESS]: LoadingState.SUCCESS,
+        [LoadingEvent.ERROR]: LoadingState.ERROR,
+      },
+      [LoadingState.SUCCESS]: {
+        [LoadingEvent.LOAD]: LoadingState.LOADING,
+        [LoadingEvent.RETRY]: LoadingState.LOADING,
+      },
+      [LoadingState.ERROR]: {
+        [LoadingEvent.LOAD]: LoadingState.LOADING,
+        [LoadingEvent.RETRY]: LoadingState.LOADING,
+      },
+    },
+  });
+  const submitMachine = useStateMachine<FormState, FormEvent>({
+    initial: FormState.IDLE,
+    transitions: {
+      [FormState.IDLE]: { [FormEvent.SUBMIT]: FormState.SUBMITTING },
+      [FormState.SUBMITTING]: {
+        [FormEvent.SUBMIT_SUCCESS]: FormState.SUCCESS,
+        [FormEvent.SUBMIT_ERROR]: FormState.ERROR,
+      },
+      [FormState.SUCCESS]: {
+        [FormEvent.SUBMIT]: FormState.SUBMITTING,
+        [FormEvent.RESET]: FormState.IDLE,
+      },
+      [FormState.ERROR]: {
+        [FormEvent.SUBMIT]: FormState.SUBMITTING,
+        [FormEvent.RESET]: FormState.IDLE,
+      },
+    },
+  });
+  const uploadMachine = useStateMachine<LoadingState, LoadingEvent>({
+    initial: LoadingState.IDLE,
+    transitions: {
+      [LoadingState.IDLE]: { [LoadingEvent.LOAD]: LoadingState.LOADING },
+      [LoadingState.LOADING]: {
+        [LoadingEvent.SUCCESS]: LoadingState.SUCCESS,
+        [LoadingEvent.ERROR]: LoadingState.ERROR,
+      },
+      [LoadingState.SUCCESS]: {
+        [LoadingEvent.LOAD]: LoadingState.LOADING,
+        [LoadingEvent.RETRY]: LoadingState.LOADING,
+      },
+      [LoadingState.ERROR]: {
+        [LoadingEvent.LOAD]: LoadingState.LOADING,
+        [LoadingEvent.RETRY]: LoadingState.LOADING,
+      },
+    },
+  });
+  const loading = loadMachine.state === LoadingState.LOADING;
+  const submitting = submitMachine.state === FormState.SUBMITTING;
+  const uploadingLicense = uploadMachine.state === LoadingState.LOADING;
 
   const [status, setStatus] = useState<AgentReviewStatusData | null>(null);
 
@@ -60,11 +116,12 @@ const AgentAuth: React.FC = () => {
           persist: true,
           showToast: false
         });
-        setLoading(false);
+        loadMachine.send(LoadingEvent.ERROR);
         return;
       }
 
       try {
+        loadMachine.send(LoadingEvent.LOAD);
         const res = await fetchAgentReviewStatus(token);
         if (isSuccess(res)) {
           const data = res.data as AgentReviewStatusData;
@@ -78,12 +135,14 @@ const AgentAuth: React.FC = () => {
             setLicenseImagePath(data.license_image || '');
             setLicensePreview(normalizeAssetUrl(data.license_image || ''));
           }
+          loadMachine.send(LoadingEvent.SUCCESS);
         } else {
           handleError(res, {
             persist: true,
             showToast: false,
             customMessage: '获取代理商状态失败'
           });
+          loadMachine.send(LoadingEvent.ERROR);
         }
       } catch (e: any) {
         handleError(e, {
@@ -91,8 +150,9 @@ const AgentAuth: React.FC = () => {
           showToast: false,
           customMessage: '获取代理商状态失败，请稍后重试'
         });
+        loadMachine.send(LoadingEvent.ERROR);
       } finally {
-        setLoading(false);
+        // 状态机已处理成功/失败
       }
     };
 
@@ -108,7 +168,7 @@ const AgentAuth: React.FC = () => {
     if (!file) return;
 
     try {
-      setUploadingLicense(true);
+      uploadMachine.send(LoadingEvent.LOAD);
       const res = await uploadImage(file);
       const data = (res.data || {}) as any;
       const path = data.url || data.path || data.filepath || '';
@@ -122,12 +182,14 @@ const AgentAuth: React.FC = () => {
       const previewUrl = normalizeAssetUrl(fullUrl || path);
       setLicensePreview(previewUrl);
       showToast('success', res?.msg || '上传成功');
+      uploadMachine.send(LoadingEvent.SUCCESS);
     } catch (err: any) {
       console.error('营业执照上传失败:', err);
       const errorMsg = err?.msg || err?.response?.msg || err?.message || '营业执照上传失败，请稍后重试';
       showToast('error', '上传失败', errorMsg);
+      uploadMachine.send(LoadingEvent.ERROR);
     } finally {
-      setUploadingLicense(false);
+      // 状态机已处理成功/失败
     }
   };
 
@@ -138,7 +200,7 @@ const AgentAuth: React.FC = () => {
     if (submitting) return;
 
     try {
-      setSubmitting(true);
+      submitMachine.send(FormEvent.SUBMIT);
       clearError();
 
       const token = getStoredToken() || '';
@@ -165,12 +227,14 @@ const AgentAuth: React.FC = () => {
       } catch (e) {
         console.warn('刷新代理商状态失败:', e);
       }
+      submitMachine.send(FormEvent.SUBMIT_SUCCESS);
     } catch (e: any) {
       console.error('提交代理商申请失败:', e);
       const errorMsg = e?.message || '提交代理商申请失败，请稍后重试';
       showToast('error', '提交失败', errorMsg);
+      submitMachine.send(FormEvent.SUBMIT_ERROR);
     } finally {
-      setSubmitting(false);
+      // 状态机已处理成功/失败
     }
   };
 

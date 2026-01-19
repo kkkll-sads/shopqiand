@@ -17,6 +17,8 @@ import { getStoredToken } from '../../../services/client';
 import { useNotification } from '../../../context/NotificationContext';
 import { isSuccess, extractError } from '../../../utils/apiHelpers';
 import { useNavigate } from 'react-router-dom';
+import { useStateMachine } from '../../../hooks/useStateMachine';
+import { LoadingEvent, LoadingState } from '../../../types/states';
 
 /**
  * InviteFriends 邀请好友页面组件
@@ -26,8 +28,26 @@ const InviteFriends: React.FC = () => {
   const { showToast } = useNotification();
   const [inviteCode, setInviteCode] = useState('');
   const [inviteLink, setInviteLink] = useState('');
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const loadMachine = useStateMachine<LoadingState, LoadingEvent>({
+    initial: LoadingState.IDLE,
+    transitions: {
+      [LoadingState.IDLE]: { [LoadingEvent.LOAD]: LoadingState.LOADING },
+      [LoadingState.LOADING]: {
+        [LoadingEvent.SUCCESS]: LoadingState.SUCCESS,
+        [LoadingEvent.ERROR]: LoadingState.ERROR,
+      },
+      [LoadingState.SUCCESS]: {
+        [LoadingEvent.LOAD]: LoadingState.LOADING,
+        [LoadingEvent.RETRY]: LoadingState.LOADING,
+      },
+      [LoadingState.ERROR]: {
+        [LoadingEvent.LOAD]: LoadingState.LOADING,
+        [LoadingEvent.RETRY]: LoadingState.LOADING,
+      },
+    },
+  });
+  const loading = loadMachine.state === LoadingState.LOADING;
 
   // 临时启用复制功能
   useEffect(() => {
@@ -53,11 +73,12 @@ const InviteFriends: React.FC = () => {
   useEffect(() => {
     const loadPromotionCard = async () => {
       try {
-        setLoading(true);
+        loadMachine.send(LoadingEvent.LOAD);
         setError(null);
         const token = getStoredToken() || '';
         if (!token) {
           setError('请先登录');
+          loadMachine.send(LoadingEvent.ERROR);
           return;
         }
         const response = await fetchPromotionCard(token);
@@ -71,14 +92,17 @@ const InviteFriends: React.FC = () => {
           const finalLink = backendLink && backendLink.trim() ? backendLink : frontendLink;
           console.log('使用后端返回链接:', finalLink === backendLink);
           setInviteLink(finalLink);
+          loadMachine.send(LoadingEvent.SUCCESS);
         } else {
           setError(extractError(response, '获取推广卡信息失败'));
+          loadMachine.send(LoadingEvent.ERROR);
         }
       } catch (err: any) {
         console.error('加载推广卡信息失败:', err);
         setError(err.message || '获取推广卡信息失败，请稍后重试');
+        loadMachine.send(LoadingEvent.ERROR);
       } finally {
-        setLoading(false);
+        // 状态机已处理成功/失败
       }
     };
 

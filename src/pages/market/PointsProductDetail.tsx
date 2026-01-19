@@ -11,6 +11,8 @@ import { getStoredToken } from '../../../services/client';
 import { useNotification } from '../../../context/NotificationContext';
 import { Copy, X, Check } from 'lucide-react';
 import { isSuccess, extractError } from '../../../utils/apiHelpers';
+import { useStateMachine } from '../../../hooks/useStateMachine';
+import { FormEvent, FormState, LoadingEvent, LoadingState } from '../../../types/states';
 
 interface PointsProductDetailProps {
     product: Product;
@@ -20,16 +22,59 @@ const PointsProductDetail: React.FC<PointsProductDetailProps> = ({ product }) =>
     const navigate = useNavigate();
     const { showToast, showDialog } = useNotification();
     const [detailData, setDetailData] = useState<ShopProductDetailData | null>(null);
-    const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
     // Purchase & Address State
-    const [submitting, setSubmitting] = useState(false);
     const [showSpecModal, setShowSpecModal] = useState(false);
     const [showConfirmModal, setShowConfirmModal] = useState(false);
     const [addresses, setAddresses] = useState<AddressItem[]>([]);
     const [selectedAddress, setSelectedAddress] = useState<AddressItem | null>(null);
     const [showAddressPicker, setShowAddressPicker] = useState(false);
+
+    const detailMachine = useStateMachine<LoadingState, LoadingEvent>({
+        initial: LoadingState.IDLE,
+        transitions: {
+            [LoadingState.IDLE]: { [LoadingEvent.LOAD]: LoadingState.LOADING },
+            [LoadingState.LOADING]: {
+                [LoadingEvent.SUCCESS]: LoadingState.SUCCESS,
+                [LoadingEvent.ERROR]: LoadingState.ERROR,
+            },
+            [LoadingState.SUCCESS]: {
+                [LoadingEvent.LOAD]: LoadingState.LOADING,
+                [LoadingEvent.RETRY]: LoadingState.LOADING,
+            },
+            [LoadingState.ERROR]: {
+                [LoadingEvent.LOAD]: LoadingState.LOADING,
+                [LoadingEvent.RETRY]: LoadingState.LOADING,
+            },
+        },
+    });
+
+    const submitMachine = useStateMachine<FormState, FormEvent>({
+        initial: FormState.IDLE,
+        transitions: {
+            [FormState.IDLE]: { [FormEvent.SUBMIT]: FormState.SUBMITTING },
+            [FormState.VALIDATING]: {
+                [FormEvent.VALIDATION_SUCCESS]: FormState.SUBMITTING,
+                [FormEvent.VALIDATION_ERROR]: FormState.ERROR,
+            },
+            [FormState.SUBMITTING]: {
+                [FormEvent.SUBMIT_SUCCESS]: FormState.SUCCESS,
+                [FormEvent.SUBMIT_ERROR]: FormState.ERROR,
+            },
+            [FormState.SUCCESS]: {
+                [FormEvent.SUBMIT]: FormState.SUBMITTING,
+                [FormEvent.RESET]: FormState.IDLE,
+            },
+            [FormState.ERROR]: {
+                [FormEvent.SUBMIT]: FormState.SUBMITTING,
+                [FormEvent.RESET]: FormState.IDLE,
+            },
+        },
+    });
+
+    const loading = detailMachine.state === LoadingState.LOADING;
+    const submitting = submitMachine.state === FormState.SUBMITTING;
 
     // Purchase Config
     const [quantity, setQuantity] = useState(1);
@@ -38,22 +83,28 @@ const PointsProductDetail: React.FC<PointsProductDetailProps> = ({ product }) =>
     useEffect(() => {
         loadDetail();
         loadAddresses();
+        return () => {
+            submitMachine.send(FormEvent.RESET);
+        };
     }, [product.id]);
 
     const loadDetail = async () => {
         try {
-            setLoading(true);
+            detailMachine.send(LoadingEvent.LOAD);
             setError(null);
             const response = await fetchShopProductDetail(product.id);
             if (isSuccess(response) && response.data) {
                 setDetailData(response.data);
+                detailMachine.send(LoadingEvent.SUCCESS);
             } else {
                 setError(extractError(response, '获取商品详情失败'));
+                detailMachine.send(LoadingEvent.ERROR);
             }
         } catch (err) {
             setError('网络请求失败，请稍后重试');
+            detailMachine.send(LoadingEvent.ERROR);
         } finally {
-            setLoading(false);
+            // 状态机已处理成功/失败
         }
     };
 
@@ -117,7 +168,7 @@ const PointsProductDetail: React.FC<PointsProductDetailProps> = ({ product }) =>
         }
 
         try {
-            setSubmitting(true);
+            submitMachine.send(FormEvent.SUBMIT);
             // 使用 createOrder 创建订单（不支付），然后跳转到支付页面
             const response = await createOrder({
                 items: [{ product_id: Number(product.id), quantity: quantity }],
@@ -140,6 +191,7 @@ const PointsProductDetail: React.FC<PointsProductDetailProps> = ({ product }) =>
                     // 订单创建成功，立即跳转到支付页面（不使用延迟，避免显示中间状态）
                     setShowConfirmModal(false);
                     navigate(`/cashier/${orderId}`);
+                    submitMachine.send(FormEvent.SUBMIT_SUCCESS);
                 } else {
                     // 如果没有订单ID，跳转到订单列表
                     setShowConfirmModal(false);
@@ -147,15 +199,18 @@ const PointsProductDetail: React.FC<PointsProductDetailProps> = ({ product }) =>
                     setTimeout(() => {
                         navigate('/orders/points/0', { replace: true });
                     }, 1500);
+                    submitMachine.send(FormEvent.SUBMIT_SUCCESS);
                 }
             } else {
                 showToast('error', '订单创建失败', extractError(response, '操作失败'));
+                submitMachine.send(FormEvent.SUBMIT_ERROR);
             }
         } catch (err: any) {
             console.error('Create order failed', err);
             showToast('error', '下单失败', err.message || '系统错误');
+            submitMachine.send(FormEvent.SUBMIT_ERROR);
         } finally {
-            setSubmitting(false);
+            // 状态机已处理成功/失败
         }
     };
 

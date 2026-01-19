@@ -20,6 +20,8 @@ import {
   ArtistListData,
 } from '../../../services/api';
 import { extractError, isSuccess } from '../../../utils/apiHelpers';
+import { useStateMachine } from '../../../hooks/useStateMachine';
+import { LoadingEvent, LoadingState } from '../../../types/states';
 
 /**
  * ArtistDetail 组件属性接口
@@ -36,8 +38,26 @@ const ArtistDetail: React.FC<ArtistDetailProps> = ({ onProductSelect }) => {
   const { id: artistId } = useParams<{ id: string }>();
   const [artist, setArtist] = useState<Artist | null>(null);
   const [works, setWorks] = useState<ArtistWorkItem[]>([]);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const loadMachine = useStateMachine<LoadingState, LoadingEvent>({
+    initial: LoadingState.IDLE,
+    transitions: {
+      [LoadingState.IDLE]: { [LoadingEvent.LOAD]: LoadingState.LOADING },
+      [LoadingState.LOADING]: {
+        [LoadingEvent.SUCCESS]: LoadingState.SUCCESS,
+        [LoadingEvent.ERROR]: LoadingState.ERROR,
+      },
+      [LoadingState.SUCCESS]: {
+        [LoadingEvent.LOAD]: LoadingState.LOADING,
+        [LoadingEvent.RETRY]: LoadingState.LOADING,
+      },
+      [LoadingState.ERROR]: {
+        [LoadingEvent.LOAD]: LoadingState.LOADING,
+        [LoadingEvent.RETRY]: LoadingState.LOADING,
+      },
+    },
+  });
+  const loading = loadMachine.state === LoadingState.LOADING;
 
   // 加载艺术家详情
   useEffect(() => {
@@ -45,7 +65,7 @@ const ArtistDetail: React.FC<ArtistDetailProps> = ({ onProductSelect }) => {
 
     const load = async () => {
       try {
-        setLoading(true);
+        loadMachine.send(LoadingEvent.LOAD);
         setError(null);
         let targetId: string | number | undefined = artistId;
 
@@ -59,11 +79,13 @@ const ArtistDetail: React.FC<ArtistDetailProps> = ({ onProductSelect }) => {
               targetId = first.id;
             } else {
               setError('未找到任何艺术家数据');
+              loadMachine.send(LoadingEvent.ERROR);
               return;
             }
           } catch (e) {
             console.error('兜底获取艺术家列表失败:', e);
             setError('未找到有效的艺术家ID');
+            loadMachine.send(LoadingEvent.ERROR);
             return;
           }
         }
@@ -73,6 +95,7 @@ const ArtistDetail: React.FC<ArtistDetailProps> = ({ onProductSelect }) => {
 
         if (!isSuccess(res) || !res.data) {
           setError(extractError(res, '艺术家数据加载失败'));
+          loadMachine.send(LoadingEvent.ERROR);
           return;
         }
 
@@ -90,11 +113,13 @@ const ArtistDetail: React.FC<ArtistDetailProps> = ({ onProductSelect }) => {
             image: normalizeAssetUrl(w.image),
           }))
         );
+        loadMachine.send(LoadingEvent.SUCCESS);
       } catch (e: any) {
         console.error('加载艺术家详情失败:', e);
         setError(e?.message || '加载艺术家详情失败');
+        loadMachine.send(LoadingEvent.ERROR);
       } finally {
-        if (isMounted) setLoading(false);
+        // 状态机已处理成功/失败
       }
     };
 

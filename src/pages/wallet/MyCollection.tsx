@@ -28,6 +28,8 @@ import { UserInfo } from '../../../types';
 import { useNotification } from '../../../context/NotificationContext';
 import { ConsignmentStatus, DeliveryStatus } from '../../../constants/statusEnums';
 import { isSuccess, extractError } from '../../../utils/apiHelpers';
+import { useStateMachine } from '../../../hooks/useStateMachine';
+import { FormEvent, FormState, LoadingEvent, LoadingState } from '../../../types/states';
 
 interface MyCollectionProps {
   onItemSelect?: (item: MyCollectionItem) => void;
@@ -37,13 +39,93 @@ interface MyCollectionProps {
 
 const MyCollection: React.FC<MyCollectionProps> = ({ onItemSelect, initialConsignItemId, preSelectedItem }) => {
   const navigate = useNavigate();
-  const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [myCollections, setMyCollections] = useState<MyCollectionItem[]>([]);
   const [page, setPage] = useState<number>(1);
   const [hasMore, setHasMore] = useState<boolean>(false);
   const [consignmentTicketCount, setConsignmentTicketCount] = useState<number>(0);
   const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
+  const loadMachine = useStateMachine<LoadingState, LoadingEvent>({
+    initial: LoadingState.IDLE,
+    transitions: {
+      [LoadingState.IDLE]: { [LoadingEvent.LOAD]: LoadingState.LOADING },
+      [LoadingState.LOADING]: {
+        [LoadingEvent.SUCCESS]: LoadingState.SUCCESS,
+        [LoadingEvent.ERROR]: LoadingState.ERROR,
+      },
+      [LoadingState.SUCCESS]: {
+        [LoadingEvent.LOAD]: LoadingState.LOADING,
+        [LoadingEvent.RETRY]: LoadingState.LOADING,
+      },
+      [LoadingState.ERROR]: {
+        [LoadingEvent.LOAD]: LoadingState.LOADING,
+        [LoadingEvent.RETRY]: LoadingState.LOADING,
+      },
+    },
+  });
+  const actionMachine = useStateMachine<FormState, FormEvent>({
+    initial: FormState.IDLE,
+    transitions: {
+      [FormState.IDLE]: { [FormEvent.SUBMIT]: FormState.SUBMITTING },
+      [FormState.VALIDATING]: {
+        [FormEvent.VALIDATION_SUCCESS]: FormState.SUBMITTING,
+        [FormEvent.VALIDATION_ERROR]: FormState.ERROR,
+      },
+      [FormState.SUBMITTING]: {
+        [FormEvent.SUBMIT_SUCCESS]: FormState.SUCCESS,
+        [FormEvent.SUBMIT_ERROR]: FormState.ERROR,
+      },
+      [FormState.SUCCESS]: {
+        [FormEvent.SUBMIT]: FormState.SUBMITTING,
+        [FormEvent.RESET]: FormState.IDLE,
+      },
+      [FormState.ERROR]: {
+        [FormEvent.SUBMIT]: FormState.SUBMITTING,
+        [FormEvent.RESET]: FormState.IDLE,
+      },
+    },
+  });
+  const batchConsignMachine = useStateMachine<FormState, FormEvent>({
+    initial: FormState.IDLE,
+    transitions: {
+      [FormState.IDLE]: { [FormEvent.SUBMIT]: FormState.SUBMITTING },
+      [FormState.VALIDATING]: {
+        [FormEvent.VALIDATION_SUCCESS]: FormState.SUBMITTING,
+        [FormEvent.VALIDATION_ERROR]: FormState.ERROR,
+      },
+      [FormState.SUBMITTING]: {
+        [FormEvent.SUBMIT_SUCCESS]: FormState.SUCCESS,
+        [FormEvent.SUBMIT_ERROR]: FormState.ERROR,
+      },
+      [FormState.SUCCESS]: {
+        [FormEvent.SUBMIT]: FormState.SUBMITTING,
+        [FormEvent.RESET]: FormState.IDLE,
+      },
+      [FormState.ERROR]: {
+        [FormEvent.SUBMIT]: FormState.SUBMITTING,
+        [FormEvent.RESET]: FormState.IDLE,
+      },
+    },
+  });
+  const checkBatchMachine = useStateMachine<LoadingState, LoadingEvent>({
+    initial: LoadingState.IDLE,
+    transitions: {
+      [LoadingState.IDLE]: { [LoadingEvent.LOAD]: LoadingState.LOADING },
+      [LoadingState.LOADING]: {
+        [LoadingEvent.SUCCESS]: LoadingState.SUCCESS,
+        [LoadingEvent.ERROR]: LoadingState.ERROR,
+      },
+      [LoadingState.SUCCESS]: {
+        [LoadingEvent.LOAD]: LoadingState.LOADING,
+        [LoadingEvent.RETRY]: LoadingState.LOADING,
+      },
+      [LoadingState.ERROR]: {
+        [LoadingEvent.LOAD]: LoadingState.LOADING,
+        [LoadingEvent.RETRY]: LoadingState.LOADING,
+      },
+    },
+  });
+  const loading = loadMachine.state === LoadingState.LOADING;
 
   // 弹窗状态
   const [showActionModal, setShowActionModal] = useState<boolean>(false);
@@ -51,7 +133,7 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onItemSelect, initialConsig
   const [actionTab, setActionTab] = useState<'delivery' | 'consignment'>('delivery');
   const [countdown, setCountdown] = useState<{ hours: number; minutes: number; seconds: number } | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
-  const [actionLoading, setActionLoading] = useState<boolean>(false);
+  const actionLoading = actionMachine.state === FormState.SUBMITTING;
 
   // Category Tabs
   type CategoryTab = 'hold' | 'consign' | 'sold' | 'dividend';
@@ -70,8 +152,8 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onItemSelect, initialConsig
 
   // 批量寄售状态
   const [batchConsignableData, setBatchConsignableData] = useState<BatchConsignableListData | null>(null);
-  const [batchConsignLoading, setBatchConsignLoading] = useState<boolean>(false);
-  const [checkingBatchConsignable, setCheckingBatchConsignable] = useState<boolean>(false);
+  const batchConsignLoading = batchConsignMachine.state === FormState.SUBMITTING;
+  const checkingBatchConsignable = checkBatchMachine.state === LoadingState.LOADING;
 
   // 加载用户信息和寄售券数量
   useEffect(() => {
@@ -128,13 +210,14 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onItemSelect, initialConsig
     const token = getStoredToken();
     if (!token) {
       setError('请先登录');
-      setLoading(false);
+      loadMachine.send(LoadingEvent.ERROR);
       return;
     }
 
-    setLoading(true);
+    loadMachine.send(LoadingEvent.LOAD);
     setError(null);
 
+    let hasError = false;
     try {
       if (activeTab === 'hold') {
         const res = await getMyCollection({ page, token, status: 'holding' });
@@ -169,6 +252,7 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onItemSelect, initialConsig
           }
         } else {
           setError(extractError(res, '获取我的藏品失败'));
+          hasError = true;
         }
       } else if (activeTab === 'dividend') {
         // 权益节点：使用 status: 'mining' 参数
@@ -186,6 +270,7 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onItemSelect, initialConsig
           }
         } else {
           setError(extractError(res, '获取权益节点列表失败'));
+          hasError = true;
         }
       } else if (activeTab === 'sold') {
         // Use the new status=sold param on myCollection API
@@ -201,6 +286,7 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onItemSelect, initialConsig
           setHasMore(list.length >= 10 && res.data.has_more !== false);
         } else {
           setError(extractError(res, '获取已售出列表失败'));
+          hasError = true;
         }
       } else if (activeTab === 'consign') {
         // 使用 status=consigned 参数获取寄售中的藏品
@@ -230,12 +316,19 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onItemSelect, initialConsig
           }
         } else {
           setError(extractError(res, '获取寄售列表失败'));
+          hasError = true;
         }
+      }
+      if (hasError) {
+        loadMachine.send(LoadingEvent.ERROR);
+      } else {
+        loadMachine.send(LoadingEvent.SUCCESS);
       }
     } catch (e: any) {
       setError(e?.message || '加载数据失败');
+      loadMachine.send(LoadingEvent.ERROR);
     } finally {
-      setLoading(false);
+      // 状态机已处理成功/失败
     }
   }, [activeTab, page]);
 
@@ -249,16 +342,18 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onItemSelect, initialConsig
       const token = getStoredToken();
       if (!token) return;
 
-      setCheckingBatchConsignable(true);
+      checkBatchMachine.send(LoadingEvent.LOAD);
       try {
         const response = await getBatchConsignableList(token);
         if (isSuccess(response) && response.data) {
           setBatchConsignableData(response.data);
+          checkBatchMachine.send(LoadingEvent.SUCCESS);
         }
       } catch (error) {
         console.error('获取批量寄售列表失败:', error);
+        checkBatchMachine.send(LoadingEvent.ERROR);
       } finally {
-        setCheckingBatchConsignable(false);
+        // 状态机已处理成功/失败
       }
     };
 
@@ -721,7 +816,7 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onItemSelect, initialConsig
 
       const hasConsigned = hasConsignedBefore(selectedItem);
       const doRightsDeliver = () => {
-        setActionLoading(true);
+        actionMachine.send(FormEvent.SUBMIT);
         rightsDeliver({
           user_collection_id: collectionId,
           token,
@@ -732,14 +827,19 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onItemSelect, initialConsig
               setShowActionModal(false);
               setSelectedItem(null);
               runLoad();
+              actionMachine.send(FormEvent.SUBMIT_SUCCESS);
             } else {
               showToast('error', '操作失败', extractError(res, '权益分割失败'));
+              actionMachine.send(FormEvent.SUBMIT_ERROR);
             }
           })
           .catch((err: any) => {
             showToast('error', '提交失败', extractError(err, '权益分割失败'));
+            actionMachine.send(FormEvent.SUBMIT_ERROR);
           })
-          .finally(() => setActionLoading(false));
+          .finally(() => {
+            // 状态机已处理成功/失败
+          });
       };
 
       if (hasConsigned) {
@@ -846,7 +946,7 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onItemSelect, initialConsig
         return;
       }
 
-      setActionLoading(true);
+      actionMachine.send(FormEvent.SUBMIT);
       consignCollectionItem({
         user_collection_id: collectionId,
         price: priceValue,
@@ -872,8 +972,10 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onItemSelect, initialConsig
             setSelectedItem(null);
             // Switch to consign tab to show the new status
             handleTabChange('consign');
+            actionMachine.send(FormEvent.SUBMIT_SUCCESS);
           } else {
             showToast('error', '提交失败', extractError(res, '寄售申请失败'));
+            actionMachine.send(FormEvent.SUBMIT_ERROR);
             // 如果是因为未开启场次等业务错误，是否要关闭弹窗？
             // 暂时不关闭，方便用户查看原因，或者根据 message 决定
             // 但用户体验上，明确失败不需要关闭选单
@@ -881,8 +983,11 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onItemSelect, initialConsig
         })
         .catch((err: any) => {
           setActionError(extractError(err, '寄售申请失败'));
+          actionMachine.send(FormEvent.SUBMIT_ERROR);
         })
-        .finally(() => setActionLoading(false));
+        .finally(() => {
+          // 状态机已处理成功/失败
+        });
     }
   };
 
@@ -899,7 +1004,7 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onItemSelect, initialConsig
       return;
     }
 
-    setBatchConsignLoading(true);
+    batchConsignMachine.send(FormEvent.SUBMIT);
     try {
       const consignments = batchConsignableData.items.map(item => ({
         user_collection_id: item.user_collection_id
@@ -951,14 +1056,17 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onItemSelect, initialConsig
             cancelText: null
           });
         }
+        batchConsignMachine.send(FormEvent.SUBMIT_SUCCESS);
       } else {
         showToast('error', '', extractError(response, '批量寄售失败'));
+        batchConsignMachine.send(FormEvent.SUBMIT_ERROR);
       }
     } catch (error) {
       console.error('批量寄售错误:', error);
       showToast('error', '批量寄售失败', '网络错误，请稍后重试');
+      batchConsignMachine.send(FormEvent.SUBMIT_ERROR);
     } finally {
-      setBatchConsignLoading(false);
+      // 状态机已处理成功/失败
     }
   };
 

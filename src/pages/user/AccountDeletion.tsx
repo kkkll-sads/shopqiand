@@ -14,6 +14,8 @@ import { cancelAccount } from '../../../services/api';
 import { useAuthStore } from '../../stores/authStore';
 import { useModal } from '../../../hooks';
 import { useNotification } from '../../../context/NotificationContext';
+import { useStateMachine } from '../../../hooks/useStateMachine';
+import { FormEvent, FormState } from '../../../types/states';
 
 /** 注销提示列表 */
 const tips = [
@@ -32,8 +34,26 @@ const AccountDeletion: React.FC = () => {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [reason, setReason] = useState('');
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const submitMachine = useStateMachine<FormState, FormEvent>({
+    initial: FormState.IDLE,
+    transitions: {
+      [FormState.IDLE]: { [FormEvent.SUBMIT]: FormState.SUBMITTING },
+      [FormState.SUBMITTING]: {
+        [FormEvent.SUBMIT_SUCCESS]: FormState.SUCCESS,
+        [FormEvent.SUBMIT_ERROR]: FormState.ERROR,
+      },
+      [FormState.SUCCESS]: {
+        [FormEvent.SUBMIT]: FormState.SUBMITTING,
+        [FormEvent.RESET]: FormState.IDLE,
+      },
+      [FormState.ERROR]: {
+        [FormEvent.SUBMIT]: FormState.SUBMITTING,
+        [FormEvent.RESET]: FormState.IDLE,
+      },
+    },
+  });
+  const loading = submitMachine.state === FormState.SUBMITTING;
 
   // 使用 useModal 管理确认弹窗
   const confirmModal = useModal();
@@ -74,7 +94,7 @@ const AccountDeletion: React.FC = () => {
    */
   const handleConfirmDeletion = async () => {
     confirmModal.hide();
-    setLoading(true);
+    submitMachine.send(FormEvent.SUBMIT);
 
     try {
       const response = await cancelAccount({
@@ -87,13 +107,15 @@ const AccountDeletion: React.FC = () => {
 
       showToast('success', '提交成功', response?.msg || '您的注销申请已提交，我们将尽快处理。');
       navigate(-1);
+      submitMachine.send(FormEvent.SUBMIT_SUCCESS);
     } catch (err: any) {
       const message =
         err?.msg || err?.message || err?.data?.msg || '提交注销申请失败，请稍后重试';
       setError(message);
       showToast('error', '注销失败', message);
+      submitMachine.send(FormEvent.SUBMIT_ERROR);
     } finally {
-      setLoading(false);
+      // 状态机已处理成功/失败
     }
   };
 

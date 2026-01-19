@@ -15,6 +15,8 @@ import { getBalanceTypeLabel } from '../../../constants/balanceTypes';
 import { getStoredToken } from '../../../services/client';
 import { normalizeAssetUrl } from '../../../services/config';
 import { BizTypeMap, BizType } from '../../../constants/statusEnums';
+import { useStateMachine } from '../../../hooks/useStateMachine';
+import { LoadingEvent, LoadingState } from '../../../types/states';
 
 const MoneyLogDetail: React.FC = () => {
   const navigate = useNavigate();
@@ -23,10 +25,28 @@ const MoneyLogDetail: React.FC = () => {
   const flowNo = searchParams.get('flowNo') || undefined;
 
   const { showToast } = useNotification();
-  const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [detail, setDetail] = useState<MoneyLogDetailData | null>(null);
   const [copiedFlowNo, setCopiedFlowNo] = useState<boolean>(false);
+  const loadMachine = useStateMachine<LoadingState, LoadingEvent>({
+    initial: LoadingState.IDLE,
+    transitions: {
+      [LoadingState.IDLE]: { [LoadingEvent.LOAD]: LoadingState.LOADING },
+      [LoadingState.LOADING]: {
+        [LoadingEvent.SUCCESS]: LoadingState.SUCCESS,
+        [LoadingEvent.ERROR]: LoadingState.ERROR,
+      },
+      [LoadingState.SUCCESS]: {
+        [LoadingEvent.LOAD]: LoadingState.LOADING,
+        [LoadingEvent.RETRY]: LoadingState.LOADING,
+      },
+      [LoadingState.ERROR]: {
+        [LoadingEvent.LOAD]: LoadingState.LOADING,
+        [LoadingEvent.RETRY]: LoadingState.LOADING,
+      },
+    },
+  });
+  const loading = loadMachine.state === LoadingState.LOADING;
 
   const handleCopyFlowNo = (text: string) => {
     if (!text || text === '-') return;
@@ -87,17 +107,17 @@ const MoneyLogDetail: React.FC = () => {
     const token = getStoredToken();
     if (!token) {
       setError('请先登录');
-      setLoading(false);
+      loadMachine.send(LoadingEvent.ERROR);
       return;
     }
 
     if (!id && !flowNo) {
       setError('缺少必要参数');
-      setLoading(false);
+      loadMachine.send(LoadingEvent.ERROR);
       return;
     }
 
-    setLoading(true);
+    loadMachine.send(LoadingEvent.LOAD);
     setError(null);
 
     try {
@@ -110,14 +130,17 @@ const MoneyLogDetail: React.FC = () => {
       const data = extractData(res);
       if (isSuccess(res) && data) {
         setDetail(data);
+        loadMachine.send(LoadingEvent.SUCCESS);
       } else {
         setError(extractError(res, '获取资金明细详情失败'));
+        loadMachine.send(LoadingEvent.ERROR);
       }
     } catch (e: any) {
       console.error('[MoneyLogDetail] 加载失败:', e);
       setError(e?.message || '加载数据失败');
+      loadMachine.send(LoadingEvent.ERROR);
     } finally {
-      setLoading(false);
+      // 状态机已处理成功/失败
     }
   };
 

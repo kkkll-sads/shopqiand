@@ -17,6 +17,8 @@ import { submitQuestionnaire, getMyQuestionnaireList, QuestionnaireItem } from '
 import { isSuccess, extractData, extractError } from '../../../utils/apiHelpers';
 import { uploadImage } from '../../../services/common';
 import { getStoredToken } from '../../../services/client';
+import { useStateMachine } from '../../../hooks/useStateMachine';
+import { FormEvent, FormState, LoadingEvent, LoadingState } from '../../../types/states';
 
 interface ImageUploadState {
   file: File;
@@ -35,7 +37,25 @@ const UserSurvey: React.FC = () => {
   // 提交表单状态
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
-  const [submitting, setSubmitting] = useState(false);
+  const submitMachine = useStateMachine<FormState, FormEvent>({
+    initial: FormState.IDLE,
+    transitions: {
+      [FormState.IDLE]: { [FormEvent.SUBMIT]: FormState.SUBMITTING },
+      [FormState.SUBMITTING]: {
+        [FormEvent.SUBMIT_SUCCESS]: FormState.SUCCESS,
+        [FormEvent.SUBMIT_ERROR]: FormState.ERROR,
+      },
+      [FormState.SUCCESS]: {
+        [FormEvent.SUBMIT]: FormState.SUBMITTING,
+        [FormEvent.RESET]: FormState.IDLE,
+      },
+      [FormState.ERROR]: {
+        [FormEvent.SUBMIT]: FormState.SUBMITTING,
+        [FormEvent.RESET]: FormState.IDLE,
+      },
+    },
+  });
+  const submitting = submitMachine.state === FormState.SUBMITTING;
 
   // 图片上传状态
   const [uploadStates, setUploadStates] = useState<ImageUploadState[]>([]);
@@ -45,14 +65,32 @@ const UserSurvey: React.FC = () => {
 
   // 历史列表状态
   const [historyList, setHistoryList] = useState<QuestionnaireItem[]>([]);
-  const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
+  const loadMachine = useStateMachine<LoadingState, LoadingEvent>({
+    initial: LoadingState.IDLE,
+    transitions: {
+      [LoadingState.IDLE]: { [LoadingEvent.LOAD]: LoadingState.LOADING },
+      [LoadingState.LOADING]: {
+        [LoadingEvent.SUCCESS]: LoadingState.SUCCESS,
+        [LoadingEvent.ERROR]: LoadingState.ERROR,
+      },
+      [LoadingState.SUCCESS]: {
+        [LoadingEvent.LOAD]: LoadingState.LOADING,
+        [LoadingEvent.RETRY]: LoadingState.LOADING,
+      },
+      [LoadingState.ERROR]: {
+        [LoadingEvent.LOAD]: LoadingState.LOADING,
+        [LoadingEvent.RETRY]: LoadingState.LOADING,
+      },
+    },
+  });
+  const loading = loadMachine.state === LoadingState.LOADING;
 
   // 加载历史记录
   const loadHistory = async (pageNum = 1) => {
     try {
-      setLoading(true);
+      loadMachine.send(LoadingEvent.LOAD);
       const res = await getMyQuestionnaireList({ page: pageNum, limit: 10 });
       if (isSuccess(res) && res.data) {
         const list = res.data.list || res.data.data || [];
@@ -63,12 +101,16 @@ const UserSurvey: React.FC = () => {
         }
         setHasMore(list.length >= 10);
         setPage(pageNum);
+        loadMachine.send(LoadingEvent.SUCCESS);
+      } else {
+        loadMachine.send(LoadingEvent.ERROR);
       }
     } catch (error) {
       console.error('Failed to load questionnaire history:', error);
       showToast('error', '加载失败', '无法获取问卷记录');
+      loadMachine.send(LoadingEvent.ERROR);
     } finally {
-      setLoading(false);
+      // 状态机已处理成功/失败
     }
   };
 
@@ -159,7 +201,7 @@ const UserSurvey: React.FC = () => {
     }
 
     try {
-      setSubmitting(true);
+      submitMachine.send(FormEvent.SUBMIT);
       const validImages = uploadStates.filter(s => s.uploaded && s.url).map(s => s.url);
       const res = await submitQuestionnaire({
         title,
@@ -173,14 +215,17 @@ const UserSurvey: React.FC = () => {
         setContent('');
         setUploadStates([]);
         setActiveTab('history');
+        submitMachine.send(FormEvent.SUBMIT_SUCCESS);
       } else {
         showToast('error', '提交失败', res.msg || '请稍后重试');
+        submitMachine.send(FormEvent.SUBMIT_ERROR);
       }
     } catch (error) {
       console.error('Submit error:', error);
       showToast('error', '提交失败', '网络请求失败');
+      submitMachine.send(FormEvent.SUBMIT_ERROR);
     } finally {
-      setSubmitting(false);
+      // 状态机已处理成功/失败
     }
   };
 

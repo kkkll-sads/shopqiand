@@ -9,13 +9,33 @@ import { useNotification } from '../../../context/NotificationContext';
 import { getRightsDeclarationDetail, RightsDeclarationDetail } from '../../../services/rightsDeclaration';
 import { getStoredToken } from '../../../services/client';
 import { isSuccess, extractError } from '../../../utils/apiHelpers';
+import { useStateMachine } from '../../../hooks/useStateMachine';
+import { LoadingEvent, LoadingState } from '../../../types/states';
 
 const ClaimDetail: React.FC = () => {
     const navigate = useNavigate();
     const { id } = useParams<{ id: string }>();
     const { showToast } = useNotification();
     const [record, setRecord] = useState<RightsDeclarationDetail | null>(null);
-    const [loading, setLoading] = useState(true);
+    const loadMachine = useStateMachine<LoadingState, LoadingEvent>({
+        initial: LoadingState.IDLE,
+        transitions: {
+            [LoadingState.IDLE]: { [LoadingEvent.LOAD]: LoadingState.LOADING },
+            [LoadingState.LOADING]: {
+                [LoadingEvent.SUCCESS]: LoadingState.SUCCESS,
+                [LoadingEvent.ERROR]: LoadingState.ERROR,
+            },
+            [LoadingState.SUCCESS]: {
+                [LoadingEvent.LOAD]: LoadingState.LOADING,
+                [LoadingEvent.RETRY]: LoadingState.LOADING,
+            },
+            [LoadingState.ERROR]: {
+                [LoadingEvent.LOAD]: LoadingState.LOADING,
+                [LoadingEvent.RETRY]: LoadingState.LOADING,
+            },
+        },
+    });
+    const loading = loadMachine.state === LoadingState.LOADING;
 
     useEffect(() => {
         loadDetail();
@@ -24,25 +44,29 @@ const ClaimDetail: React.FC = () => {
     const loadDetail = async () => {
         if (!id) return;
         
-        setLoading(true);
+        loadMachine.send(LoadingEvent.LOAD);
         try {
             const token = getStoredToken();
             if (!token) {
                 showToast('error', '登录过期', '请重新登录');
+                loadMachine.send(LoadingEvent.ERROR);
                 return;
             }
 
             const response = await getRightsDeclarationDetail(parseInt(id), token);
             if (isSuccess(response) && response.data) {
                 setRecord(response.data.detail);
+                loadMachine.send(LoadingEvent.SUCCESS);
             } else {
                 showToast('error', '加载失败', extractError(response, '获取详情失败'));
+                loadMachine.send(LoadingEvent.ERROR);
             }
         } catch (error: any) {
             console.error('加载详情失败:', error);
             showToast('error', '加载失败', '网络错误，请重试');
+            loadMachine.send(LoadingEvent.ERROR);
         } finally {
-            setLoading(false);
+            // 状态机已处理成功/失败
         }
     };
 

@@ -17,6 +17,8 @@ import { TeamMember } from '../../../types';
 import { formatTime } from '../../../utils/format';
 import { isSuccess, extractError } from '../../../utils/apiHelpers';
 import { useNavigate } from 'react-router-dom';
+import { useStateMachine } from '../../../hooks/useStateMachine';
+import { LoadingEvent, LoadingState } from '../../../types/states';
 
 const PAGE_SIZE = 10;
 
@@ -26,14 +28,50 @@ const PAGE_SIZE = 10;
 const MyFriends: React.FC = () => {
   const navigate = useNavigate();
   const [friends, setFriends] = useState<TeamMember[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [activeTab, setActiveTab] = useState<'direct' | 'indirect'>('direct');
   const containerRef = useRef<HTMLDivElement>(null);
+  const loadMachine = useStateMachine<LoadingState, LoadingEvent>({
+    initial: LoadingState.IDLE,
+    transitions: {
+      [LoadingState.IDLE]: { [LoadingEvent.LOAD]: LoadingState.LOADING },
+      [LoadingState.LOADING]: {
+        [LoadingEvent.SUCCESS]: LoadingState.SUCCESS,
+        [LoadingEvent.ERROR]: LoadingState.ERROR,
+      },
+      [LoadingState.SUCCESS]: {
+        [LoadingEvent.LOAD]: LoadingState.LOADING,
+        [LoadingEvent.RETRY]: LoadingState.LOADING,
+      },
+      [LoadingState.ERROR]: {
+        [LoadingEvent.LOAD]: LoadingState.LOADING,
+        [LoadingEvent.RETRY]: LoadingState.LOADING,
+      },
+    },
+  });
+  const loadMoreMachine = useStateMachine<LoadingState, LoadingEvent>({
+    initial: LoadingState.IDLE,
+    transitions: {
+      [LoadingState.IDLE]: { [LoadingEvent.LOAD]: LoadingState.LOADING },
+      [LoadingState.LOADING]: {
+        [LoadingEvent.SUCCESS]: LoadingState.SUCCESS,
+        [LoadingEvent.ERROR]: LoadingState.ERROR,
+      },
+      [LoadingState.SUCCESS]: {
+        [LoadingEvent.LOAD]: LoadingState.LOADING,
+        [LoadingEvent.RETRY]: LoadingState.LOADING,
+      },
+      [LoadingState.ERROR]: {
+        [LoadingEvent.LOAD]: LoadingState.LOADING,
+        [LoadingEvent.RETRY]: LoadingState.LOADING,
+      },
+    },
+  });
+  const loading = loadMachine.state === LoadingState.LOADING;
+  const loadingMore = loadMoreMachine.state === LoadingState.LOADING;
 
   // 获取滚动容器 - 尝试多种方式找到正确的滚动容器
   const getScrollContainer = useCallback(() => {
@@ -94,9 +132,9 @@ const MyFriends: React.FC = () => {
   const loadTeamMembers = useCallback(async (pageNum: number, append: boolean = false) => {
     try {
       if (append) {
-        setLoadingMore(true);
+        loadMoreMachine.send(LoadingEvent.LOAD);
       } else {
-        setLoading(true);
+        loadMachine.send(LoadingEvent.LOAD);
       }
       setError(null);
 
@@ -124,14 +162,28 @@ const MyFriends: React.FC = () => {
         setTotal(totalCount);
         setPage(pageNum);
         setHasMore(pageNum * PAGE_SIZE < totalCount);
+        if (append) {
+          loadMoreMachine.send(LoadingEvent.SUCCESS);
+        } else {
+          loadMachine.send(LoadingEvent.SUCCESS);
+        }
       } else {
         setError(extractError(response, '获取好友列表失败'));
+        if (append) {
+          loadMoreMachine.send(LoadingEvent.ERROR);
+        } else {
+          loadMachine.send(LoadingEvent.ERROR);
+        }
       }
     } catch (err: any) {
       setError(err.message || '获取好友列表失败，请稍后重试');
+      if (append) {
+        loadMoreMachine.send(LoadingEvent.ERROR);
+      } else {
+        loadMachine.send(LoadingEvent.ERROR);
+      }
     } finally {
-      setLoading(false);
-      setLoadingMore(false);
+      // 状态机已处理成功/失败
     }
   }, [activeTab, scrollToBottom]);
 
@@ -164,7 +216,7 @@ const MyFriends: React.FC = () => {
     setFriends([]);
     setHasMore(true);
     setError(null);
-    setLoading(true);
+    loadMachine.send(LoadingEvent.LOAD);
     loadTeamMembers(1, false);
   }, [activeTab]);
 

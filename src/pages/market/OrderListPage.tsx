@@ -31,6 +31,8 @@ import { getStoredToken } from '../../../services/client';
 import { useNotification } from '../../../context/NotificationContext';
 // ✅ 引入统一 API 处理工具
 import { isSuccess, extractData, extractError } from '../../../utils/apiHelpers';
+import { useStateMachine } from '../../../hooks/useStateMachine';
+import { LoadingEvent, LoadingState } from '../../../types/states';
 import OrderTabs from './components/orders/OrderTabs';
 import TransactionOrderList from './components/orders/TransactionOrderList';
 import ProductOrderList from './components/orders/ProductOrderList';
@@ -52,7 +54,25 @@ const OrderListPage: React.FC = () => {
   const [orders, setOrders] = useState<ShopOrderItem[]>([]);
   const [consignmentOrders, setConsignmentOrders] = useState<MyConsignmentItem[]>([]);
   const [purchaseRecords, setPurchaseRecords] = useState<PurchaseRecordItem[]>([]);
-  const [loading, setLoading] = useState(false);
+  const loadMachine = useStateMachine<LoadingState, LoadingEvent>({
+    initial: LoadingState.IDLE,
+    transitions: {
+      [LoadingState.IDLE]: { [LoadingEvent.LOAD]: LoadingState.LOADING },
+      [LoadingState.LOADING]: {
+        [LoadingEvent.SUCCESS]: LoadingState.SUCCESS,
+        [LoadingEvent.ERROR]: LoadingState.ERROR,
+      },
+      [LoadingState.SUCCESS]: {
+        [LoadingEvent.LOAD]: LoadingState.LOADING,
+        [LoadingEvent.RETRY]: LoadingState.LOADING,
+      },
+      [LoadingState.ERROR]: {
+        [LoadingEvent.LOAD]: LoadingState.LOADING,
+        [LoadingEvent.RETRY]: LoadingState.LOADING,
+      },
+    },
+  });
+  const loading = loadMachine.state === LoadingState.LOADING;
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   // const [showDetailModal, setShowDetailModal] = useState(false); // Deprecated
@@ -124,7 +144,7 @@ const OrderListPage: React.FC = () => {
   useEffect(() => {
     if (category === 'points') {
       const loadOrders = async () => {
-        setLoading(true);
+        loadMachine.send(LoadingEvent.LOAD);
         try {
           const token = getStoredToken() || '';
           let response;
@@ -147,17 +167,21 @@ const OrderListPage: React.FC = () => {
           }
 
           // ✅ 使用统一判断
-          const data = extractData(response);
+          const data = extractData(response) as any;
           if (data) {
             const newOrders = data.list || [];
             setOrders(newOrders);
             setHasMore(newOrders.length >= 10);
             setPage(1);
+            loadMachine.send(LoadingEvent.SUCCESS);
+          } else {
+            loadMachine.send(LoadingEvent.ERROR);
           }
         } catch (error) {
           console.error('加载订单失败:', error);
+          loadMachine.send(LoadingEvent.ERROR);
         } finally {
-          setLoading(false);
+          // 状态机已处理成功/失败
         }
       };
 
@@ -171,7 +195,7 @@ const OrderListPage: React.FC = () => {
   useEffect(() => {
     if (category === 'delivery') {
       const loadOrders = async () => {
-        setLoading(true);
+        loadMachine.send(LoadingEvent.LOAD);
         try {
           const token = getStoredToken() || '';
           let status: 'paid' | 'shipped' | 'completed' | undefined;
@@ -193,17 +217,21 @@ const OrderListPage: React.FC = () => {
           const response = await getDeliveryList({ page: 1, limit: 10, status, token });
 
           // ✅ 使用统一判断
-          const data = extractData(response);
+          const data = extractData(response) as any;
           if (data) {
             const newOrders = data.list || [];
             setOrders(newOrders);
             setHasMore(newOrders.length >= 10);
             setPage(1);
+            loadMachine.send(LoadingEvent.SUCCESS);
+          } else {
+            loadMachine.send(LoadingEvent.ERROR);
           }
         } catch (error) {
           console.error('加载提货订单失败:', error);
+          loadMachine.send(LoadingEvent.ERROR);
         } finally {
-          setLoading(false);
+          // 状态机已处理成功/失败
         }
       };
 
@@ -217,7 +245,7 @@ const OrderListPage: React.FC = () => {
   useEffect(() => {
     if (category === 'transaction') {
       const loadConsignmentOrders = async () => {
-        setLoading(true);
+        loadMachine.send(LoadingEvent.LOAD);
         try {
           const token = getStoredToken() || '';
           let status: string;
@@ -239,7 +267,7 @@ const OrderListPage: React.FC = () => {
           const response = await getMyCollection({ page: 1, limit: 10, status, token });
 
           // ✅ 使用统一判断
-          const data = extractData(response);
+          const data = extractData(response) as any;
           if (data) {
             let newOrders = data.list || [];
 
@@ -269,11 +297,15 @@ const OrderListPage: React.FC = () => {
             setConsignmentOrders(convertedOrders as any);
             setHasMore(data.has_more || false);
             setPage(1);
+            loadMachine.send(LoadingEvent.SUCCESS);
+          } else {
+            loadMachine.send(LoadingEvent.ERROR);
           }
         } catch (error) {
           console.error('加载交易订单失败:', error);
+          loadMachine.send(LoadingEvent.ERROR);
         } finally {
-          setLoading(false);
+          // 状态机已处理成功/失败
         }
       };
 
@@ -287,7 +319,7 @@ const OrderListPage: React.FC = () => {
   useEffect(() => {
     if (category === 'product') {
       const loadPurchaseRecords = async () => {
-        setLoading(true);
+        loadMachine.send(LoadingEvent.LOAD);
         try {
           const token = getStoredToken() || '';
 
@@ -296,34 +328,40 @@ const OrderListPage: React.FC = () => {
             const response = await getPurchaseRecords({ page: 1, limit: 10, token });
 
             // ✅ 使用统一判断
-            const data = extractData(response);
+            const data = extractData(response) as any;
             if (data) {
               const newRecords = data.list || [];
               setPurchaseRecords(newRecords);
               setHasMore(data.has_more || false);
               setPage(1);
+              loadMachine.send(LoadingEvent.SUCCESS);
+            } else {
+              loadMachine.send(LoadingEvent.ERROR);
             }
           } else if (activeTab === 1) {
             // 卖出订单 - 使用我的寄售列表（状态为已售出）
             const response = await getMyConsignmentList({ page: 1, limit: 10, status: 2, token });
 
             // ✅ 使用统一判断
-            const data = extractData(response);
+            const data = extractData(response) as any;
             if (data) {
               const newConsignments = data.list || [];
               setConsignmentOrders(newConsignments);
               setHasMore(data.has_more || false);
               setPage(1);
+              loadMachine.send(LoadingEvent.SUCCESS);
             } else {
               setConsignmentOrders([]);
               setHasMore(false);
               setPage(1);
+              loadMachine.send(LoadingEvent.ERROR);
             }
           }
         } catch (error) {
           console.error('加载购买记录失败:', error);
+          loadMachine.send(LoadingEvent.ERROR);
         } finally {
-          setLoading(false);
+          // 状态机已处理成功/失败
         }
       };
 
@@ -350,7 +388,7 @@ const OrderListPage: React.FC = () => {
         setOrders([]);
 
         // Reload orders
-        setLoading(true);
+        loadMachine.send(LoadingEvent.LOAD);
         try {
           let reloadResponse;
           if (category === 'delivery') {
@@ -387,14 +425,18 @@ const OrderListPage: React.FC = () => {
           }
 
           // ✅ 使用统一判断
-          const reloadData = extractData(reloadResponse);
+          const reloadData = extractData(reloadResponse) as any;
           if (reloadData) {
             setOrders(reloadData.list || []);
+            loadMachine.send(LoadingEvent.SUCCESS);
+          } else {
+            loadMachine.send(LoadingEvent.ERROR);
           }
         } catch (error) {
           console.error('重新加载订单失败:', error);
+          loadMachine.send(LoadingEvent.ERROR);
         } finally {
-          setLoading(false);
+          // 状态机已处理成功/失败
         }
       } else {
         showToast('error', '操作失败', extractError(response, '确认收货失败'));
@@ -527,7 +569,7 @@ const OrderListPage: React.FC = () => {
             setOrders([]);
 
             // Reload orders
-            setLoading(true);
+            loadMachine.send(LoadingEvent.LOAD);
             try {
               let reloadResponse;
               if (category === 'delivery') {
@@ -564,15 +606,19 @@ const OrderListPage: React.FC = () => {
               }
 
               // ✅ 使用统一判断
-              const reloadData = extractData(reloadResponse);
+              const reloadData = extractData(reloadResponse) as any;
               if (reloadData) {
                 setOrders(reloadData.list || []);
+                loadMachine.send(LoadingEvent.SUCCESS);
+              } else {
+                loadMachine.send(LoadingEvent.ERROR);
               }
               showToast('success', extractError(response, '支付成功'));
             } catch (error) {
               console.error('重新加载订单失败:', error);
+              loadMachine.send(LoadingEvent.ERROR);
             } finally {
-              setLoading(false);
+              // 状态机已处理成功/失败
             }
           } else {
             showToast('error', '支付失败', extractError(response, '支付失败'));
@@ -604,7 +650,7 @@ const OrderListPage: React.FC = () => {
             setOrders([]);
 
             // Reload orders
-            setLoading(true);
+            loadMachine.send(LoadingEvent.LOAD);
             try {
               let reloadResponse;
               if (category === 'delivery') {
@@ -641,15 +687,19 @@ const OrderListPage: React.FC = () => {
               }
 
               // ✅ 使用统一判断
-              const reloadData = extractData(reloadResponse);
+              const reloadData = extractData(reloadResponse) as any;
               if (reloadData) {
                 setOrders(reloadData.list || []);
+                loadMachine.send(LoadingEvent.SUCCESS);
+              } else {
+                loadMachine.send(LoadingEvent.ERROR);
               }
               showToast('success', extractError(response, '删除成功'));
             } catch (error) {
               console.error('重新加载订单失败:', error);
+              loadMachine.send(LoadingEvent.ERROR);
             } finally {
-              setLoading(false);
+              // 状态机已处理成功/失败
             }
           } else {
             showToast('error', '删除失败', extractError(response, '删除失败'));
@@ -671,7 +721,7 @@ const OrderListPage: React.FC = () => {
       const response = await getConsignmentDetail({ consignment_id: consignmentId, token });
 
       // ✅ 使用统一判断
-      const data = extractData(response);
+      const data = extractData(response) as any;
       if (data) {
         setSelectedConsignmentDetail(data);
         setShowConsignmentDetailModal(true);
@@ -704,7 +754,7 @@ const OrderListPage: React.FC = () => {
             setConsignmentOrders([]);
 
             // Reload orders
-            setLoading(true);
+            loadMachine.send(LoadingEvent.LOAD);
             try {
               let status: number | undefined;
               switch (activeTab) {
@@ -723,15 +773,19 @@ const OrderListPage: React.FC = () => {
               const reloadResponse = await getMyConsignmentList({ page: 1, limit: 10, status, token });
 
               // ✅ 使用统一判断
-              const reloadData = extractData(reloadResponse);
+              const reloadData = extractData(reloadResponse) as any;
               if (reloadData) {
                 setConsignmentOrders(reloadData.list || []);
+                loadMachine.send(LoadingEvent.SUCCESS);
+              } else {
+                loadMachine.send(LoadingEvent.ERROR);
               }
               showToast('success', extractError(response, '取消成功'));
             } catch (error) {
               console.error('重新加载寄售订单失败:', error);
+              loadMachine.send(LoadingEvent.ERROR);
             } finally {
-              setLoading(false);
+              // 状态机已处理成功/失败
             }
           } else {
             showToast('error', '取消失败', extractError(response, '取消寄售失败'));

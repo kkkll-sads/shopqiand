@@ -16,6 +16,8 @@ import { getStoredToken } from '../../../services/client';
 import { useNotification } from '../../../context/NotificationContext';
 import { isSuccess, extractError } from '../../../utils/apiHelpers';
 import { useErrorHandler } from '../../../hooks/useErrorHandler';
+import { useStateMachine } from '../../../hooks/useStateMachine';
+import { FormEvent, FormState, LoadingEvent, LoadingState } from '../../../types/states';
 
 const BalanceWithdraw: React.FC = () => {
   const navigate = useNavigate();
@@ -33,17 +35,74 @@ const BalanceWithdraw: React.FC = () => {
   } = useErrorHandler();
 
   const [accounts, setAccounts] = useState<PaymentAccountItem[]>([]);
-  const [loading, setLoading] = useState<boolean>(false);
   const [selectedAccount, setSelectedAccount] = useState<PaymentAccountItem | null>(null);
   const [showAccountModal, setShowAccountModal] = useState<boolean>(false);
   const [showPasswordModal, setShowPasswordModal] = useState<boolean>(false);
   const [amount, setAmount] = useState<string>('');
   const [payPassword, setPayPassword] = useState<string>('');
   const [remark, setRemark] = useState<string>('');
-  const [submitting, setSubmitting] = useState<boolean>(false);
   const [balance, setBalance] = useState<string>('0.00');
-
-  const [loadingBalance, setLoadingBalance] = useState<boolean>(false);
+  const accountsMachine = useStateMachine<LoadingState, LoadingEvent>({
+    initial: LoadingState.IDLE,
+    transitions: {
+      [LoadingState.IDLE]: { [LoadingEvent.LOAD]: LoadingState.LOADING },
+      [LoadingState.LOADING]: {
+        [LoadingEvent.SUCCESS]: LoadingState.SUCCESS,
+        [LoadingEvent.ERROR]: LoadingState.ERROR,
+      },
+      [LoadingState.SUCCESS]: {
+        [LoadingEvent.LOAD]: LoadingState.LOADING,
+        [LoadingEvent.RETRY]: LoadingState.LOADING,
+      },
+      [LoadingState.ERROR]: {
+        [LoadingEvent.LOAD]: LoadingState.LOADING,
+        [LoadingEvent.RETRY]: LoadingState.LOADING,
+      },
+    },
+  });
+  const balanceMachine = useStateMachine<LoadingState, LoadingEvent>({
+    initial: LoadingState.IDLE,
+    transitions: {
+      [LoadingState.IDLE]: { [LoadingEvent.LOAD]: LoadingState.LOADING },
+      [LoadingState.LOADING]: {
+        [LoadingEvent.SUCCESS]: LoadingState.SUCCESS,
+        [LoadingEvent.ERROR]: LoadingState.ERROR,
+      },
+      [LoadingState.SUCCESS]: {
+        [LoadingEvent.LOAD]: LoadingState.LOADING,
+        [LoadingEvent.RETRY]: LoadingState.LOADING,
+      },
+      [LoadingState.ERROR]: {
+        [LoadingEvent.LOAD]: LoadingState.LOADING,
+        [LoadingEvent.RETRY]: LoadingState.LOADING,
+      },
+    },
+  });
+  const submitMachine = useStateMachine<FormState, FormEvent>({
+    initial: FormState.IDLE,
+    transitions: {
+      [FormState.IDLE]: { [FormEvent.SUBMIT]: FormState.SUBMITTING },
+      [FormState.VALIDATING]: {
+        [FormEvent.VALIDATION_SUCCESS]: FormState.SUBMITTING,
+        [FormEvent.VALIDATION_ERROR]: FormState.ERROR,
+      },
+      [FormState.SUBMITTING]: {
+        [FormEvent.SUBMIT_SUCCESS]: FormState.SUCCESS,
+        [FormEvent.SUBMIT_ERROR]: FormState.ERROR,
+      },
+      [FormState.SUCCESS]: {
+        [FormEvent.SUBMIT]: FormState.SUBMITTING,
+        [FormEvent.RESET]: FormState.IDLE,
+      },
+      [FormState.ERROR]: {
+        [FormEvent.SUBMIT]: FormState.SUBMITTING,
+        [FormEvent.RESET]: FormState.IDLE,
+      },
+    },
+  });
+  const loading = accountsMachine.state === LoadingState.LOADING;
+  const loadingBalance = balanceMachine.state === LoadingState.LOADING;
+  const submitting = submitMachine.state === FormState.SUBMITTING;
 
   // 费率
   const feeRate = 0.01; // 1%
@@ -57,13 +116,14 @@ const BalanceWithdraw: React.FC = () => {
   const loadAccounts = async () => {
     const token = getStoredToken();
     if (!token) return;
-    setLoading(true);
+    accountsMachine.send(LoadingEvent.LOAD);
     try {
       const res = await fetchPaymentAccountList(token);
       if (isSuccess(res) && res.data?.list) {
         setAccounts(res.data.list || []);
         const defaultAcc = res.data.list.find((acc: PaymentAccountItem) => Number(acc.is_default) === 1);
         if (defaultAcc) setSelectedAccount(defaultAcc);
+        accountsMachine.send(LoadingEvent.SUCCESS);
       } else {
         // ✅ 使用统一错误处理
         handleLoadError(res, {
@@ -71,6 +131,7 @@ const BalanceWithdraw: React.FC = () => {
           customMessage: '获取提现账户失败',
           context: { page: 'BalanceWithdraw' }
         });
+        accountsMachine.send(LoadingEvent.ERROR);
       }
     } catch (e) {
       // ✅ 使用统一错误处理
@@ -79,20 +140,22 @@ const BalanceWithdraw: React.FC = () => {
         customMessage: '获取提现账户失败',
         context: { page: 'BalanceWithdraw' }
       });
+      accountsMachine.send(LoadingEvent.ERROR);
     } finally {
-      setLoading(false);
+      // 状态机已处理成功/失败
     }
   };
 
   const loadBalance = async () => {
     const token = getStoredToken();
     if (!token) return;
-    setLoadingBalance(true);
+    balanceMachine.send(LoadingEvent.LOAD);
     try {
       const response = await fetchProfile(token);
       if (isSuccess(response) && response.data?.userInfo) {
         const userInfo = response.data.userInfo;
         setBalance(parseFloat(userInfo.withdrawable_money || '0').toFixed(2));
+        balanceMachine.send(LoadingEvent.SUCCESS);
       } else {
         // ✅ 使用统一错误处理
         handleLoadError(response, {
@@ -100,6 +163,7 @@ const BalanceWithdraw: React.FC = () => {
           customMessage: '获取余额失败',
           context: { page: 'BalanceWithdraw' }
         });
+        balanceMachine.send(LoadingEvent.ERROR);
       }
     } catch (err) {
       // ✅ 使用统一错误处理
@@ -108,8 +172,9 @@ const BalanceWithdraw: React.FC = () => {
         customMessage: '获取余额失败',
         context: { page: 'BalanceWithdraw' }
       });
+      balanceMachine.send(LoadingEvent.ERROR);
     } finally {
-      setLoadingBalance(false);
+      // 状态机已处理成功/失败
     }
   };
 
@@ -142,7 +207,7 @@ const BalanceWithdraw: React.FC = () => {
     if (!/^\d{6}$/.test(payPassword)) {
       return handleSubmitError('支付密码必须为6位数字', { persist: true, showToast: false });
     }
-    setSubmitting(true);
+    submitMachine.send(FormEvent.SUBMIT);
     clearSubmitError(); // ✅ 提交前清除错误
     try {
       const res = await submitWithdraw({
@@ -158,6 +223,7 @@ const BalanceWithdraw: React.FC = () => {
         setSelectedAccount(null);
         setShowPasswordModal(false);
         loadBalance();
+        submitMachine.send(FormEvent.SUBMIT_SUCCESS);
       } else {
         // ✅ 使用统一错误处理
         handleSubmitError(res, {
@@ -166,6 +232,7 @@ const BalanceWithdraw: React.FC = () => {
           customMessage: '提现申请提交失败',
           context: { amount, accountId: selectedAccount?.id }
         });
+        submitMachine.send(FormEvent.SUBMIT_ERROR);
       }
     } catch (e: any) {
       // ✅ 使用统一错误处理
@@ -175,8 +242,9 @@ const BalanceWithdraw: React.FC = () => {
         customMessage: '提现申请提交失败',
         context: { amount, accountId: selectedAccount?.id }
       });
+      submitMachine.send(FormEvent.SUBMIT_ERROR);
     } finally {
-      setSubmitting(false);
+      // 状态机已处理成功/失败
     }
   };
 

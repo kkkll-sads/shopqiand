@@ -18,6 +18,8 @@ import { isSuccess, extractData, extractError } from '../../../utils/apiHelpers'
 import { formatTime, formatAmount } from '../../../utils/format';
 import { getStoredToken } from '../../../services/client';
 import { useNotification } from '../../../context/NotificationContext';
+import { useStateMachine } from '../../../hooks/useStateMachine';
+import { LoadingEvent, LoadingState } from '../../../types/states';
 
 const CollectionOrderDetail: React.FC = () => {
   const navigate = useNavigate();
@@ -25,10 +27,28 @@ const CollectionOrderDetail: React.FC = () => {
   const [searchParams] = useSearchParams();
   const orderNo = searchParams.get('orderNo') || undefined;
   const { showToast } = useNotification();
-  const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [order, setOrder] = useState<CollectionOrderDetailData | null>(null);
   const [copiedOrderNo, setCopiedOrderNo] = useState(false);
+  const loadMachine = useStateMachine<LoadingState, LoadingEvent>({
+    initial: LoadingState.IDLE,
+    transitions: {
+      [LoadingState.IDLE]: { [LoadingEvent.LOAD]: LoadingState.LOADING },
+      [LoadingState.LOADING]: {
+        [LoadingEvent.SUCCESS]: LoadingState.SUCCESS,
+        [LoadingEvent.ERROR]: LoadingState.ERROR,
+      },
+      [LoadingState.SUCCESS]: {
+        [LoadingEvent.LOAD]: LoadingState.LOADING,
+        [LoadingEvent.RETRY]: LoadingState.LOADING,
+      },
+      [LoadingState.ERROR]: {
+        [LoadingEvent.LOAD]: LoadingState.LOADING,
+        [LoadingEvent.RETRY]: LoadingState.LOADING,
+      },
+    },
+  });
+  const loading = loadMachine.state === LoadingState.LOADING;
 
   useEffect(() => {
     loadOrder();
@@ -38,17 +58,17 @@ const CollectionOrderDetail: React.FC = () => {
     const token = getStoredToken();
     if (!token) {
       setError('请先登录');
-      setLoading(false);
+      loadMachine.send(LoadingEvent.ERROR);
       return;
     }
 
     if (!id && !orderNo) {
       setError('缺少必要参数');
-      setLoading(false);
+      loadMachine.send(LoadingEvent.ERROR);
       return;
     }
 
-    setLoading(true);
+    loadMachine.send(LoadingEvent.LOAD);
     setError(null);
 
     try {
@@ -61,14 +81,17 @@ const CollectionOrderDetail: React.FC = () => {
       const data = extractData(res);
       if (isSuccess(res) && data) {
         setOrder(data);
+        loadMachine.send(LoadingEvent.SUCCESS);
       } else {
         setError(extractError(res, '获取订单详情失败'));
+        loadMachine.send(LoadingEvent.ERROR);
       }
     } catch (e: any) {
       console.error('[CollectionOrderDetail] 加载失败:', e);
       setError(e?.message || '加载数据失败');
+      loadMachine.send(LoadingEvent.ERROR);
     } finally {
-      setLoading(false);
+      // 状态机已处理成功/失败
     }
   };
 

@@ -12,6 +12,8 @@ import { useNotification } from '../../../context/NotificationContext';
 import { LoadingSpinner } from '../../../components/common';
 import { isSuccess, extractData } from '../../../utils/apiHelpers';
 import { ConsignmentStatus } from '../../../constants/statusEnums';
+import { useStateMachine } from '../../../hooks/useStateMachine';
+import { FormEvent, FormState, LoadingEvent, LoadingState } from '../../../types/states';
 
 interface MyCollectionDetailProps {
     item?: MyCollectionItem | null;
@@ -23,8 +25,48 @@ const MyCollectionDetail: React.FC<MyCollectionDetailProps> = ({ item: initialIt
     const { id } = useParams<{ id: string }>();
     const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
     const [item, setItem] = useState<any>(initialItem || null);
-    const [loading, setLoading] = useState<boolean>(true);
     const { showToast, showDialog } = useNotification();
+    const loadMachine = useStateMachine<LoadingState, LoadingEvent>({
+        initial: LoadingState.IDLE,
+        transitions: {
+            [LoadingState.IDLE]: { [LoadingEvent.LOAD]: LoadingState.LOADING },
+            [LoadingState.LOADING]: {
+                [LoadingEvent.SUCCESS]: LoadingState.SUCCESS,
+                [LoadingEvent.ERROR]: LoadingState.ERROR,
+            },
+            [LoadingState.SUCCESS]: {
+                [LoadingEvent.LOAD]: LoadingState.LOADING,
+                [LoadingEvent.RETRY]: LoadingState.LOADING,
+            },
+            [LoadingState.ERROR]: {
+                [LoadingEvent.LOAD]: LoadingState.LOADING,
+                [LoadingEvent.RETRY]: LoadingState.LOADING,
+            },
+        },
+    });
+    const actionMachine = useStateMachine<FormState, FormEvent>({
+        initial: FormState.IDLE,
+        transitions: {
+            [FormState.IDLE]: { [FormEvent.SUBMIT]: FormState.SUBMITTING },
+            [FormState.VALIDATING]: {
+                [FormEvent.VALIDATION_SUCCESS]: FormState.SUBMITTING,
+                [FormEvent.VALIDATION_ERROR]: FormState.ERROR,
+            },
+            [FormState.SUBMITTING]: {
+                [FormEvent.SUBMIT_SUCCESS]: FormState.SUCCESS,
+                [FormEvent.SUBMIT_ERROR]: FormState.ERROR,
+            },
+            [FormState.SUCCESS]: {
+                [FormEvent.SUBMIT]: FormState.SUBMITTING,
+                [FormEvent.RESET]: FormState.IDLE,
+            },
+            [FormState.ERROR]: {
+                [FormEvent.SUBMIT]: FormState.SUBMITTING,
+                [FormEvent.RESET]: FormState.IDLE,
+            },
+        },
+    });
+    const loading = loadMachine.state === LoadingState.LOADING;
 
     // 可靠的复制函数
     const copyToClipboard = async (text: string, successMsg: string) => {
@@ -72,7 +114,7 @@ const MyCollectionDetail: React.FC<MyCollectionDetailProps> = ({ item: initialIt
     const [showConsignmentModal, setShowConsignmentModal] = useState(false);
     const [consignmentCheckData, setConsignmentCheckData] = useState<any>(null);
     const [consignmentTicketCount, setConsignmentTicketCount] = useState(0);
-    const [actionLoading, setActionLoading] = useState(false);
+    const actionLoading = actionMachine.state === FormState.SUBMITTING;
     const [actionError, setActionError] = useState<string | null>(null);
     const [hasConvertedToMining, setHasConvertedToMining] = useState(false);
 
@@ -80,15 +122,16 @@ const MyCollectionDetail: React.FC<MyCollectionDetailProps> = ({ item: initialIt
         const loadData = async () => {
             const token = getStoredToken();
             if (!token) {
-                setLoading(false);
+                loadMachine.send(LoadingEvent.ERROR);
                 return;
             }
 
             try {
+                loadMachine.send(LoadingEvent.LOAD);
                 const userCollectionId = initialItem?.user_collection_id || initialItem?.id || (id ? Number(id) : undefined);
 
                 if (!userCollectionId) {
-                    setLoading(false);
+                    loadMachine.send(LoadingEvent.ERROR);
                     return;
                 }
 
@@ -123,10 +166,12 @@ const MyCollectionDetail: React.FC<MyCollectionDetailProps> = ({ item: initialIt
                     setUserInfo(currentInfo);
                     setConsignmentTicketCount(parseInt(String(currentInfo.consignment_coupon || 0)) || 0);
                 }
+                loadMachine.send(LoadingEvent.SUCCESS);
             } catch (e) {
                 console.error(e);
+                loadMachine.send(LoadingEvent.ERROR);
             } finally {
-                setLoading(false);
+                // 状态机已处理成功/失败
             }
         };
         loadData();
@@ -440,20 +485,23 @@ const MyCollectionDetail: React.FC<MyCollectionDetailProps> = ({ item: initialIt
                                                 return;
                                             }
 
-                                            setActionLoading(true);
+                                            actionMachine.send(FormEvent.SUBMIT);
                                             try {
                                                 const res = await toMining({ user_collection_id: Number(collectionId), token });
                                                 if (isSuccess(res)) {
                                                     showToast('success', '升级成功', '您的资产已升级为验证节点，参与全网数据确权，每日获得Gas费分红。');
                                                     setHasConvertedToMining(true);
                                                     setTimeout(() => navigate('/my-collection'), 1000);
+                                                    actionMachine.send(FormEvent.SUBMIT_SUCCESS);
                                                 } else {
                                                     showToast('error', '转换失败', res.msg || '操作失败');
+                                                    actionMachine.send(FormEvent.SUBMIT_ERROR);
                                                 }
                                             } catch (err: any) {
                                                 showToast('error', '转换失败', err.message || '系统错误');
+                                                actionMachine.send(FormEvent.SUBMIT_ERROR);
                                             } finally {
-                                                setActionLoading(false);
+                                                // 状态机已处理成功/失败
                                             }
                                         }
                                     });
@@ -628,7 +676,7 @@ const MyCollectionDetail: React.FC<MyCollectionDetailProps> = ({ item: initialIt
                                         return;
                                     }
 
-                                    setActionLoading(true);
+                                    actionMachine.send(FormEvent.SUBMIT);
                                     setActionError(null);
 
                                     try {
@@ -636,7 +684,7 @@ const MyCollectionDetail: React.FC<MyCollectionDetailProps> = ({ item: initialIt
 
                                         if (!collectionId) {
                                             setActionError('无法获取藏品ID，请返回重试');
-                                            setActionLoading(false);
+                                            actionMachine.send(FormEvent.SUBMIT_ERROR);
                                             return;
                                         }
 
@@ -652,17 +700,20 @@ const MyCollectionDetail: React.FC<MyCollectionDetailProps> = ({ item: initialIt
                                             showToast('success', '提交成功', res.msg || '寄售申请已提交');
                                             setShowConsignmentModal(false);
                                             setTimeout(() => navigate('/my-collection'), 1000);
+                                            actionMachine.send(FormEvent.SUBMIT_SUCCESS);
                                         } else {
                                             const errorMsg = res.msg || res.message || '寄售申请失败';
                                             setActionError(errorMsg);
                                             showToast('error', '操作失败', errorMsg);
+                                            actionMachine.send(FormEvent.SUBMIT_ERROR);
                                         }
                                     } catch (err: any) {
                                         const errorMsg = err?.msg || err?.message || '寄售申请失败';
                                         setActionError(errorMsg);
                                         showToast('error', '提交失败', errorMsg);
+                                        actionMachine.send(FormEvent.SUBMIT_ERROR);
                                     } finally {
-                                        setActionLoading(false);
+                                        // 状态机已处理成功/失败
                                     }
                                 }}
                                 disabled={actionLoading}

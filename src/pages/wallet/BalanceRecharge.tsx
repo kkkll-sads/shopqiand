@@ -14,6 +14,8 @@ import { useNotification } from '../../../context/NotificationContext';
 import { isSuccess, extractError } from '../../../utils/apiHelpers';
 import { useErrorHandler } from '../../../hooks/useErrorHandler';
 import { copyToClipboard } from '../../../utils/clipboard';
+import { useStateMachine } from '../../../hooks/useStateMachine';
+import { FormEvent, FormState, LoadingEvent, LoadingState } from '../../../types/states';
 
 import RechargeOrderList from './RechargeOrderList'; // Import the new component
 import RechargeOrderDetail from './RechargeOrderDetail'; // Import the detail component
@@ -42,7 +44,24 @@ const BalanceRecharge: React.FC<BalanceRechargeProps> = ({ initialAmount }) => {
 
   // Data State
   const [allAccounts, setAllAccounts] = useState<CompanyAccountItem[]>([]);
-  const [loading, setLoading] = useState(false);
+  const loadMachine = useStateMachine<LoadingState, LoadingEvent>({
+    initial: LoadingState.IDLE,
+    transitions: {
+      [LoadingState.IDLE]: { [LoadingEvent.LOAD]: LoadingState.LOADING },
+      [LoadingState.LOADING]: {
+        [LoadingEvent.SUCCESS]: LoadingState.SUCCESS,
+        [LoadingEvent.ERROR]: LoadingState.ERROR,
+      },
+      [LoadingState.SUCCESS]: {
+        [LoadingEvent.LOAD]: LoadingState.LOADING,
+        [LoadingEvent.RETRY]: LoadingState.LOADING,
+      },
+      [LoadingState.ERROR]: {
+        [LoadingEvent.LOAD]: LoadingState.LOADING,
+        [LoadingEvent.RETRY]: LoadingState.LOADING,
+      },
+    },
+  });
   const [availableMethods, setAvailableMethods] = useState<{ id: string; name: string; icon: string }[]>([]);
 
   // Embedded Browser State
@@ -51,7 +70,28 @@ const BalanceRecharge: React.FC<BalanceRechargeProps> = ({ initialAmount }) => {
 
   // Transfer State
   const [transferAmount, setTransferAmount] = useState<string>('');
-  const [transferring, setTransferring] = useState(false);
+  const transferMachine = useStateMachine<FormState, FormEvent>({
+    initial: FormState.IDLE,
+    transitions: {
+      [FormState.IDLE]: { [FormEvent.SUBMIT]: FormState.SUBMITTING },
+      [FormState.VALIDATING]: {
+        [FormEvent.VALIDATION_SUCCESS]: FormState.SUBMITTING,
+        [FormEvent.VALIDATION_ERROR]: FormState.ERROR,
+      },
+      [FormState.SUBMITTING]: {
+        [FormEvent.SUBMIT_SUCCESS]: FormState.SUCCESS,
+        [FormEvent.SUBMIT_ERROR]: FormState.ERROR,
+      },
+      [FormState.SUCCESS]: {
+        [FormEvent.SUBMIT]: FormState.SUBMITTING,
+        [FormEvent.RESET]: FormState.IDLE,
+      },
+      [FormState.ERROR]: {
+        [FormEvent.SUBMIT]: FormState.SUBMITTING,
+        [FormEvent.RESET]: FormState.IDLE,
+      },
+    },
+  });
   const [withdrawableBalance, setWithdrawableBalance] = useState<number>(0);
   const transferRemark = '余额划转'; // Fixed remark
 
@@ -88,7 +128,7 @@ const BalanceRecharge: React.FC<BalanceRechargeProps> = ({ initialAmount }) => {
   }, [viewState, selectedMethod]);
 
   const loadAccounts = async () => {
-    setLoading(true);
+    loadMachine.send(LoadingEvent.LOAD);
     try {
       const res = await fetchCompanyAccountList({ usage: 'recharge' });
       if (isSuccess(res)) {
@@ -107,6 +147,7 @@ const BalanceRecharge: React.FC<BalanceRechargeProps> = ({ initialAmount }) => {
           }
         });
         setAvailableMethods(Array.from(methodsMap.values()));
+        loadMachine.send(LoadingEvent.SUCCESS);
       } else {
         // ✅ 使用统一错误处理
         handleError(res, {
@@ -114,6 +155,7 @@ const BalanceRecharge: React.FC<BalanceRechargeProps> = ({ initialAmount }) => {
           customMessage: '获取收款账户失败',
           context: { usage: 'recharge' }
         });
+        loadMachine.send(LoadingEvent.ERROR);
       }
     } catch (err) {
       // ✅ 使用统一错误处理
@@ -122,8 +164,9 @@ const BalanceRecharge: React.FC<BalanceRechargeProps> = ({ initialAmount }) => {
         customMessage: '获取收款账户失败',
         context: { usage: 'recharge' }
       });
+      loadMachine.send(LoadingEvent.ERROR);
     } finally {
-      setLoading(false);
+      // 状态机已处理成功/失败
     }
   };
 
@@ -149,7 +192,31 @@ const BalanceRecharge: React.FC<BalanceRechargeProps> = ({ initialAmount }) => {
   // Image Upload State
   const [uploadedImage, setUploadedImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [submitting, setSubmitting] = useState(false);
+  const submitMachine = useStateMachine<FormState, FormEvent>({
+    initial: FormState.IDLE,
+    transitions: {
+      [FormState.IDLE]: { [FormEvent.SUBMIT]: FormState.SUBMITTING },
+      [FormState.VALIDATING]: {
+        [FormEvent.VALIDATION_SUCCESS]: FormState.SUBMITTING,
+        [FormEvent.VALIDATION_ERROR]: FormState.ERROR,
+      },
+      [FormState.SUBMITTING]: {
+        [FormEvent.SUBMIT_SUCCESS]: FormState.SUCCESS,
+        [FormEvent.SUBMIT_ERROR]: FormState.ERROR,
+      },
+      [FormState.SUCCESS]: {
+        [FormEvent.SUBMIT]: FormState.SUBMITTING,
+        [FormEvent.RESET]: FormState.IDLE,
+      },
+      [FormState.ERROR]: {
+        [FormEvent.SUBMIT]: FormState.SUBMITTING,
+        [FormEvent.RESET]: FormState.IDLE,
+      },
+    },
+  });
+  const loading = loadMachine.state === LoadingState.LOADING;
+  const transferring = transferMachine.state === FormState.SUBMITTING;
+  const submitting = submitMachine.state === FormState.SUBMITTING;
 
   // Confirmation Modal State (for bank card)
   const [showConfirmModal, setShowConfirmModal] = useState(false);
@@ -398,7 +465,7 @@ const BalanceRecharge: React.FC<BalanceRechargeProps> = ({ initialAmount }) => {
       return;
     }
 
-    setSubmitting(true);
+    submitMachine.send(FormEvent.SUBMIT);
     try {
       const response = await submitRechargeOrder({
         company_account_id: matchedAccount.id,
@@ -421,6 +488,7 @@ const BalanceRecharge: React.FC<BalanceRechargeProps> = ({ initialAmount }) => {
         setLastFourDigits('');
         setViewState('input');
         navigate(-1);
+        submitMachine.send(FormEvent.SUBMIT_SUCCESS);
       } else {
         // ✅ 使用统一错误处理
         handleError(response, {
@@ -428,6 +496,7 @@ const BalanceRecharge: React.FC<BalanceRechargeProps> = ({ initialAmount }) => {
           customMessage: '充值订单提交失败，请重试',
           context: { amount, companyAccountId: matchedAccount?.id }
         });
+        submitMachine.send(FormEvent.SUBMIT_ERROR);
       }
     } catch (error: any) {
       // ✅ 使用统一错误处理
@@ -436,8 +505,9 @@ const BalanceRecharge: React.FC<BalanceRechargeProps> = ({ initialAmount }) => {
         customMessage: '网络错误，请重试',
         context: { amount, companyAccountId: matchedAccount?.id }
       });
+      submitMachine.send(FormEvent.SUBMIT_ERROR);
     } finally {
-      setSubmitting(false);
+      // 状态机已处理成功/失败
     }
   };
 
@@ -455,7 +525,7 @@ const BalanceRecharge: React.FC<BalanceRechargeProps> = ({ initialAmount }) => {
       return;
     }
 
-    setTransferring(true);
+    transferMachine.send(FormEvent.SUBMIT);
     try {
       const response = await transferIncomeToPurchase({
         amount: numAmount,
@@ -471,6 +541,7 @@ const BalanceRecharge: React.FC<BalanceRechargeProps> = ({ initialAmount }) => {
 
         // Reset form
         setTransferAmount('');
+        transferMachine.send(FormEvent.SUBMIT_SUCCESS);
       } else {
         // ✅ 使用统一错误处理
         handleError(response, {
@@ -478,6 +549,7 @@ const BalanceRecharge: React.FC<BalanceRechargeProps> = ({ initialAmount }) => {
           customMessage: response.msg || '余额划转失败，请重试',
           context: { amount: numAmount, remark: transferRemark }
         });
+        transferMachine.send(FormEvent.SUBMIT_ERROR);
       }
     } catch (error) {
       // ✅ 使用统一错误处理
@@ -486,8 +558,9 @@ const BalanceRecharge: React.FC<BalanceRechargeProps> = ({ initialAmount }) => {
         customMessage: '网络错误，请重试',
         context: { amount: numAmount, remark: transferRemark }
       });
+      transferMachine.send(FormEvent.SUBMIT_ERROR);
     } finally {
-      setTransferring(false);
+      // 状态机已处理成功/失败
     }
   };
 

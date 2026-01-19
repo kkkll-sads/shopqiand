@@ -11,14 +11,34 @@ import { getAllLog, AllLogItem } from '../../../services/wallet';
 import { getStoredToken } from '../../../services/client';
 import { extractData, extractError } from '../../../utils/apiHelpers';
 import { getBalanceTypeLabel } from '../../../constants/balanceTypes';
+import { useStateMachine } from '../../../hooks/useStateMachine';
+import { LoadingEvent, LoadingState } from '../../../types/states';
 
 const OrderFundDetail: React.FC = () => {
   const navigate = useNavigate();
-  const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [orderFundLogs, setOrderFundLogs] = useState<AllLogItem[]>([]);
   const [page, setPage] = useState<number>(1);
   const [hasMore, setHasMore] = useState<boolean>(false);
+  const loadMachine = useStateMachine<LoadingState, LoadingEvent>({
+    initial: LoadingState.IDLE,
+    transitions: {
+      [LoadingState.IDLE]: { [LoadingEvent.LOAD]: LoadingState.LOADING },
+      [LoadingState.LOADING]: {
+        [LoadingEvent.SUCCESS]: LoadingState.SUCCESS,
+        [LoadingEvent.ERROR]: LoadingState.ERROR,
+      },
+      [LoadingState.SUCCESS]: {
+        [LoadingEvent.LOAD]: LoadingState.LOADING,
+        [LoadingEvent.RETRY]: LoadingState.LOADING,
+      },
+      [LoadingState.ERROR]: {
+        [LoadingEvent.LOAD]: LoadingState.LOADING,
+        [LoadingEvent.RETRY]: LoadingState.LOADING,
+      },
+    },
+  });
+  const loading = loadMachine.state === LoadingState.LOADING;
 
   const loadData = async (pageNum: number, isRefresh = false) => {
     const token = getStoredToken();
@@ -27,7 +47,7 @@ const OrderFundDetail: React.FC = () => {
       return;
     }
 
-    setLoading(true);
+    loadMachine.send(LoadingEvent.LOAD);
     if (isRefresh) setError(null);
 
     try {
@@ -57,14 +77,17 @@ const OrderFundDetail: React.FC = () => {
           setOrderFundLogs(prev => [...prev, ...filteredList]);
         }
         setHasMore((data.list?.length || 0) >= 20 && (data.current_page || 1) * 20 < (data.total || 0));
+        loadMachine.send(LoadingEvent.SUCCESS);
       } else {
         if (isRefresh) setError(extractError(res, '获取订单资金明细失败'));
+        loadMachine.send(LoadingEvent.ERROR);
       }
     } catch (e: any) {
       console.error('[OrderFundDetail] 加载失败:', e);
       if (isRefresh) setError(e?.message || '加载数据失败');
+      loadMachine.send(LoadingEvent.ERROR);
     } finally {
-      setLoading(false);
+      // 状态机已处理成功/失败
     }
   };
 

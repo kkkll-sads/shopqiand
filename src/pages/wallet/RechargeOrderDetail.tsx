@@ -11,30 +11,54 @@ import { useNotification } from '../../../context/NotificationContext';
 import SubPageLayout from '../../../components/SubPageLayout';
 import { getRechargeOrderDetail, RechargeOrderDetail as RechargeOrderDetailType } from '../../../services/wallet';
 import { extractData, isSuccess } from '../../../utils/apiHelpers';
+import { useStateMachine } from '../../../hooks/useStateMachine';
+import { LoadingEvent, LoadingState } from '../../../types/states';
 
 const RechargeOrderDetail: React.FC = () => {
     const navigate = useNavigate();
     const { orderId } = useParams<{ orderId: string }>();
     const { showToast } = useNotification();
     const [order, setOrder] = useState<RechargeOrderDetailType | null>(null);
-    const [loading, setLoading] = useState(true);
+    const loadMachine = useStateMachine<LoadingState, LoadingEvent>({
+        initial: LoadingState.IDLE,
+        transitions: {
+            [LoadingState.IDLE]: { [LoadingEvent.LOAD]: LoadingState.LOADING },
+            [LoadingState.LOADING]: {
+                [LoadingEvent.SUCCESS]: LoadingState.SUCCESS,
+                [LoadingEvent.ERROR]: LoadingState.ERROR,
+            },
+            [LoadingState.SUCCESS]: {
+                [LoadingEvent.LOAD]: LoadingState.LOADING,
+                [LoadingEvent.RETRY]: LoadingState.LOADING,
+            },
+            [LoadingState.ERROR]: {
+                [LoadingEvent.LOAD]: LoadingState.LOADING,
+                [LoadingEvent.RETRY]: LoadingState.LOADING,
+            },
+        },
+    });
+    const loading = loadMachine.state === LoadingState.LOADING;
 
     useEffect(() => {
         const fetchDetail = async () => {
             if (!orderId) return;
             
             try {
+                loadMachine.send(LoadingEvent.LOAD);
                 const res = await getRechargeOrderDetail(orderId);
                 if (isSuccess(res)) {
                     setOrder(extractData(res));
+                    loadMachine.send(LoadingEvent.SUCCESS);
                 } else {
                     showToast('error', '获取详情失败', res.msg || '请稍后重试');
+                    loadMachine.send(LoadingEvent.ERROR);
                 }
             } catch (error) {
                 console.error('Fetch recharge detail failed:', error);
                 showToast('error', '加载失败', '网络错误，请稍后重试');
+                loadMachine.send(LoadingEvent.ERROR);
             } finally {
-                setLoading(false);
+                // 状态机已处理成功/失败
             }
         };
 

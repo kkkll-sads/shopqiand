@@ -9,6 +9,8 @@ import { useNotification } from '../../../context/NotificationContext';
 import { ShopOrderPayStatus, ShopOrderShippingStatus } from '../../../constants/statusEnums';
 import { isSuccess, extractError } from '../../../utils/apiHelpers';
 import { useErrorHandler } from '../../../hooks/useErrorHandler';
+import { useStateMachine } from '../../../hooks/useStateMachine';
+import { LoadingEvent, LoadingState } from '../../../types/states';
 
 const OrderDetail: React.FC = () => {
     const navigate = useNavigate();
@@ -26,7 +28,25 @@ const OrderDetail: React.FC = () => {
     const { handleError: handleOperationError } = useErrorHandler({ showToast: true, persist: false });
 
     const [order, setOrder] = useState<ShopOrderItem | null>(null);
-    const [loading, setLoading] = useState(true);
+    const loadMachine = useStateMachine<LoadingState, LoadingEvent>({
+        initial: LoadingState.IDLE,
+        transitions: {
+            [LoadingState.IDLE]: { [LoadingEvent.LOAD]: LoadingState.LOADING },
+            [LoadingState.LOADING]: {
+                [LoadingEvent.SUCCESS]: LoadingState.SUCCESS,
+                [LoadingEvent.ERROR]: LoadingState.ERROR,
+            },
+            [LoadingState.SUCCESS]: {
+                [LoadingEvent.LOAD]: LoadingState.LOADING,
+                [LoadingEvent.RETRY]: LoadingState.LOADING,
+            },
+            [LoadingState.ERROR]: {
+                [LoadingEvent.LOAD]: LoadingState.LOADING,
+                [LoadingEvent.RETRY]: LoadingState.LOADING,
+            },
+        },
+    });
+    const loading = loadMachine.state === LoadingState.LOADING;
 
     useEffect(() => {
         loadOrder();
@@ -34,13 +54,14 @@ const OrderDetail: React.FC = () => {
 
     const loadOrder = async () => {
         try {
-            setLoading(true);
+            loadMachine.send(LoadingEvent.LOAD);
             const token = getStoredToken();
             if (!token) return;
 
             const response = await getOrderDetail({ id: orderId, token });
             if (isSuccess(response) && response.data) {
                 setOrder(response.data);
+                loadMachine.send(LoadingEvent.SUCCESS);
             } else {
                 // 检查是否为订单不存在的情况
                 if (response.code === 0 && response.message === '订单不存在') {
@@ -49,6 +70,7 @@ const OrderDetail: React.FC = () => {
                     setTimeout(() => {
                         navigate('/orders/product/0');
                     }, 1500);
+                    loadMachine.send(LoadingEvent.ERROR);
                     return;
                 }
                 handleError(response, {
@@ -57,6 +79,7 @@ const OrderDetail: React.FC = () => {
                     customMessage: '获取订单详情失败',
                     context: { orderId }
                 });
+                loadMachine.send(LoadingEvent.ERROR);
             }
         } catch (err) {
             handleError(err, {
@@ -65,8 +88,9 @@ const OrderDetail: React.FC = () => {
                 customMessage: '网络请求失败',
                 context: { orderId }
             });
+            loadMachine.send(LoadingEvent.ERROR);
         } finally {
-            setLoading(false);
+            // 状态机已处理成功/失败
         }
     };
 

@@ -9,17 +9,37 @@ import { getMyWithdrawList, WithdrawRecordItem } from '../../../services/wallet'
 import { isSuccess } from '../../../utils/apiHelpers';
 import { useErrorHandler } from '../../../hooks/useErrorHandler';
 import { LoadingSpinner } from '../../../components/common';
+import { useStateMachine } from '../../../hooks/useStateMachine';
+import { LoadingEvent, LoadingState } from '../../../types/states';
 
 const WithdrawOrderList: React.FC = () => {
     const navigate = useNavigate();
     const [orders, setOrders] = useState<WithdrawRecordItem[]>([]);
-    const [loading, setLoading] = useState(false);
     const [page, setPage] = useState(1);
     const [hasMore, setHasMore] = useState(true);
     const [activeTab, setActiveTab] = useState<number | undefined>(undefined); // undefined=All, 0=Pending, 1=Approved, 2=Rejected, 3=Paid, 4=PayFailed
 
     const { handleError } = useErrorHandler({ showToast: true, persist: false });
     const loadRef = useRef(false);
+    const loadMachine = useStateMachine<LoadingState, LoadingEvent>({
+        initial: LoadingState.IDLE,
+        transitions: {
+            [LoadingState.IDLE]: { [LoadingEvent.LOAD]: LoadingState.LOADING },
+            [LoadingState.LOADING]: {
+                [LoadingEvent.SUCCESS]: LoadingState.SUCCESS,
+                [LoadingEvent.ERROR]: LoadingState.ERROR,
+            },
+            [LoadingState.SUCCESS]: {
+                [LoadingEvent.LOAD]: LoadingState.LOADING,
+                [LoadingEvent.RETRY]: LoadingState.LOADING,
+            },
+            [LoadingState.ERROR]: {
+                [LoadingEvent.LOAD]: LoadingState.LOADING,
+                [LoadingEvent.RETRY]: LoadingState.LOADING,
+            },
+        },
+    });
+    const loading = loadMachine.state === LoadingState.LOADING;
 
     // Tabs configuration
     const tabs = [
@@ -42,7 +62,7 @@ const WithdrawOrderList: React.FC = () => {
     const loadOrders = async (pageNum: number, refresh = false, status?: number) => {
         if (loadRef.current) return;
         loadRef.current = true;
-        setLoading(true);
+        loadMachine.send(LoadingEvent.LOAD);
 
         try {
             const res = await getMyWithdrawList({ page: pageNum, limit: 20, status });
@@ -54,13 +74,16 @@ const WithdrawOrderList: React.FC = () => {
                 setOrders(prev => refresh ? list : [...prev, ...list]);
                 setHasMore(more);
                 setPage(pageNum);
+                loadMachine.send(LoadingEvent.SUCCESS);
             } else {
                 handleError(res, { toastTitle: '加载失败', customMessage: '获取提现列表失败' });
+                loadMachine.send(LoadingEvent.ERROR);
             }
         } catch (err) {
             handleError(err, { toastTitle: '加载失败', customMessage: '网络请求失败' });
+            loadMachine.send(LoadingEvent.ERROR);
         } finally {
-            setLoading(false);
+            // 状态机已处理成功/失败
             loadRef.current = false;
         }
     };

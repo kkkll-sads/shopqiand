@@ -3,6 +3,8 @@ import { submitRightsDeclaration } from '../../../../services/rightsDeclaration'
 import { getStoredToken } from '../../../../services/client';
 import { ClaimFormState, ClaimFormValidation } from './useClaimForm';
 import { isSuccess, extractError } from '../../../../utils/apiHelpers';
+import { useStateMachine } from '../../../../hooks/useStateMachine';
+import { FormEvent, FormState } from '../../../../types/states';
 
 type ReviewStats = {
   pending_count: number;
@@ -33,7 +35,29 @@ export const useClaimSubmit = ({
   onNavigateHistory,
   showToast,
 }: UseClaimSubmitParams) => {
-  const [submitting, setSubmitting] = useState(false);
+  const submitMachine = useStateMachine<FormState, FormEvent>({
+    initial: FormState.IDLE,
+    transitions: {
+      [FormState.IDLE]: { [FormEvent.SUBMIT]: FormState.SUBMITTING },
+      [FormState.VALIDATING]: {
+        [FormEvent.VALIDATION_SUCCESS]: FormState.SUBMITTING,
+        [FormEvent.VALIDATION_ERROR]: FormState.ERROR,
+      },
+      [FormState.SUBMITTING]: {
+        [FormEvent.SUBMIT_SUCCESS]: FormState.SUCCESS,
+        [FormEvent.SUBMIT_ERROR]: FormState.ERROR,
+      },
+      [FormState.SUCCESS]: {
+        [FormEvent.SUBMIT]: FormState.SUBMITTING,
+        [FormEvent.RESET]: FormState.IDLE,
+      },
+      [FormState.ERROR]: {
+        [FormEvent.SUBMIT]: FormState.SUBMITTING,
+        [FormEvent.RESET]: FormState.IDLE,
+      },
+    },
+  });
+  const submitting = submitMachine.state === FormState.SUBMITTING;
 
   const submit = useCallback(async () => {
     const validation = validateForm();
@@ -60,7 +84,7 @@ export const useClaimSubmit = ({
       return;
     }
 
-    setSubmitting(true);
+    submitMachine.send(FormEvent.SUBMIT);
     try {
       const res = await submitRightsDeclaration(
         {
@@ -77,15 +101,18 @@ export const useClaimSubmit = ({
         resetForm();
         resetUploads();
         await Promise.all([loadHistory(token), loadReviewStats(token)]);
+        submitMachine.send(FormEvent.SUBMIT_SUCCESS);
       } else {
         showToast('error', '提交失败', extractError(res, '提交失败，请重试'));
+        submitMachine.send(FormEvent.SUBMIT_ERROR);
       }
     } catch (error: any) {
       console.error('提交申报失败:', error);
       const message = error?.message || error?.msg || '网络错误，请重试';
       showToast('error', '提交失败', message);
+      submitMachine.send(FormEvent.SUBMIT_ERROR);
     } finally {
-      setSubmitting(false);
+      // 状态机已处理成功/失败
     }
   }, [
     form.amount,

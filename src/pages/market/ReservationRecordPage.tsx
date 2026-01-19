@@ -13,6 +13,9 @@ import {
 import { Product } from '../../../types';
 import { getStoredToken } from '../../../services/client';
 import { ReservationStatus } from '../../../constants/statusEnums';
+import { extractError, isSuccess } from '../../../utils/apiHelpers';
+import { useStateMachine } from '../../../hooks/useStateMachine';
+import { LoadingEvent, LoadingState } from '../../../types/states';
 
 interface ReservationRecordPageProps {
     onProductSelect?: (product: Product) => void;
@@ -38,13 +41,49 @@ const ReservationRecordPage: React.FC<ReservationRecordPageProps> = ({
     const navigate = useNavigate();
     const [statusFilter, setStatusFilter] = useState<ReservationStatusType | undefined>(-1);
     const [records, setRecords] = useState<ReservationItem[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [loadingMore, setLoadingMore] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [isLoggedIn, setIsLoggedIn] = useState(false);
     const [page, setPage] = useState(1);
     const [hasMore, setHasMore] = useState(true);
     const containerRef = useRef<HTMLDivElement>(null);
+    const listMachine = useStateMachine<LoadingState, LoadingEvent>({
+        initial: LoadingState.IDLE,
+        transitions: {
+            [LoadingState.IDLE]: { [LoadingEvent.LOAD]: LoadingState.LOADING },
+            [LoadingState.LOADING]: {
+                [LoadingEvent.SUCCESS]: LoadingState.SUCCESS,
+                [LoadingEvent.ERROR]: LoadingState.ERROR,
+            },
+            [LoadingState.SUCCESS]: {
+                [LoadingEvent.LOAD]: LoadingState.LOADING,
+                [LoadingEvent.RETRY]: LoadingState.LOADING,
+            },
+            [LoadingState.ERROR]: {
+                [LoadingEvent.LOAD]: LoadingState.LOADING,
+                [LoadingEvent.RETRY]: LoadingState.LOADING,
+            },
+        },
+    });
+    const loadMoreMachine = useStateMachine<LoadingState, LoadingEvent>({
+        initial: LoadingState.IDLE,
+        transitions: {
+            [LoadingState.IDLE]: { [LoadingEvent.LOAD]: LoadingState.LOADING },
+            [LoadingState.LOADING]: {
+                [LoadingEvent.SUCCESS]: LoadingState.SUCCESS,
+                [LoadingEvent.ERROR]: LoadingState.ERROR,
+            },
+            [LoadingState.SUCCESS]: {
+                [LoadingEvent.LOAD]: LoadingState.LOADING,
+                [LoadingEvent.RETRY]: LoadingState.LOADING,
+            },
+            [LoadingState.ERROR]: {
+                [LoadingEvent.LOAD]: LoadingState.LOADING,
+                [LoadingEvent.RETRY]: LoadingState.LOADING,
+            },
+        },
+    });
+    const loading = listMachine.state === LoadingState.LOADING;
+    const loadingMore = loadMoreMachine.state === LoadingState.LOADING;
 
     // Check login status
     useEffect(() => {
@@ -59,16 +98,16 @@ const ReservationRecordPage: React.FC<ReservationRecordPageProps> = ({
             setRecords([]);
             loadRecords(1, false);
         } else {
-            setLoading(false);
+            listMachine.send(LoadingEvent.SUCCESS);
         }
     }, [statusFilter, isLoggedIn]);
 
     const loadRecords = async (pageNum: number, append: boolean = false) => {
         try {
             if (append) {
-                setLoadingMore(true);
+                loadMoreMachine.send(LoadingEvent.LOAD);
             } else {
-                setLoading(true);
+                listMachine.send(LoadingEvent.LOAD);
             }
             setError(null);
 
@@ -78,7 +117,7 @@ const ReservationRecordPage: React.FC<ReservationRecordPageProps> = ({
                 limit: PAGE_SIZE,
             });
 
-            if (Number(response.code) === 1 && response.data) {
+            if (isSuccess(response) && response.data) {
                 const newList = response.data.list || [];
                 const total = response.data.total || 0;
                 if (append) {
@@ -88,16 +127,30 @@ const ReservationRecordPage: React.FC<ReservationRecordPageProps> = ({
                 }
                 setPage(pageNum);
                 setHasMore(pageNum * PAGE_SIZE < total);
+                if (append) {
+                    loadMoreMachine.send(LoadingEvent.SUCCESS);
+                } else {
+                    listMachine.send(LoadingEvent.SUCCESS);
+                }
             } else {
-                setError(response.msg || '加载失败');
+                setError(extractError(response, '加载失败'));
+                if (append) {
+                    loadMoreMachine.send(LoadingEvent.ERROR);
+                } else {
+                    listMachine.send(LoadingEvent.ERROR);
+                }
             }
         } catch (err: any) {
             console.error('加载申购记录失败:', err);
             if (err?.name === 'NeedLoginError') return;
             setError(err?.msg || '网络连接异常');
+            if (append) {
+                loadMoreMachine.send(LoadingEvent.ERROR);
+            } else {
+                listMachine.send(LoadingEvent.ERROR);
+            }
         } finally {
-            setLoading(false);
-            setLoadingMore(false);
+            // 状态机已处理成功/失败
         }
     };
 

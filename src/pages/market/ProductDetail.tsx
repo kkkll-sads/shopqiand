@@ -24,6 +24,8 @@ import { bizLog, debugLog } from '../../../utils/logger';
 // ✅ 引入统一 API 处理工具
 import { isSuccess, extractData, extractError } from '../../../utils/apiHelpers';
 import { useErrorHandler } from '../../../hooks/useErrorHandler';
+import { useStateMachine } from '../../../hooks/useStateMachine';
+import { FormEvent, FormState, LoadingEvent, LoadingState } from '../../../types/states';
 
 // 全局预加载数据存储
 declare global {
@@ -85,9 +87,71 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, hideActions = fa
   const { handleError: handleBuyError } = useErrorHandler({ showToast: true, persist: false });
 
   const [detailData, setDetailData] = useState<CollectionItemDetailData | ShopProductDetailData | null>(initialData);
-  const [loading, setLoading] = useState(!initialData); // 如果有初始数据，不需要加载
-  const [buying, setBuying] = useState(false);
-  const [collectionBuying, setCollectionBuying] = useState(false);
+  const detailMachine = useStateMachine<LoadingState, LoadingEvent>({
+    initial: initialData ? LoadingState.SUCCESS : LoadingState.IDLE,
+    transitions: {
+      [LoadingState.IDLE]: { [LoadingEvent.LOAD]: LoadingState.LOADING },
+      [LoadingState.LOADING]: {
+        [LoadingEvent.SUCCESS]: LoadingState.SUCCESS,
+        [LoadingEvent.ERROR]: LoadingState.ERROR,
+      },
+      [LoadingState.SUCCESS]: {
+        [LoadingEvent.LOAD]: LoadingState.LOADING,
+        [LoadingEvent.RETRY]: LoadingState.LOADING,
+      },
+      [LoadingState.ERROR]: {
+        [LoadingEvent.LOAD]: LoadingState.LOADING,
+        [LoadingEvent.RETRY]: LoadingState.LOADING,
+      },
+    },
+  });
+  const shopBuyMachine = useStateMachine<FormState, FormEvent>({
+    initial: FormState.IDLE,
+    transitions: {
+      [FormState.IDLE]: { [FormEvent.SUBMIT]: FormState.SUBMITTING },
+      [FormState.VALIDATING]: {
+        [FormEvent.VALIDATION_SUCCESS]: FormState.SUBMITTING,
+        [FormEvent.VALIDATION_ERROR]: FormState.ERROR,
+      },
+      [FormState.SUBMITTING]: {
+        [FormEvent.SUBMIT_SUCCESS]: FormState.SUCCESS,
+        [FormEvent.SUBMIT_ERROR]: FormState.ERROR,
+      },
+      [FormState.SUCCESS]: {
+        [FormEvent.SUBMIT]: FormState.SUBMITTING,
+        [FormEvent.RESET]: FormState.IDLE,
+      },
+      [FormState.ERROR]: {
+        [FormEvent.SUBMIT]: FormState.SUBMITTING,
+        [FormEvent.RESET]: FormState.IDLE,
+      },
+    },
+  });
+  const collectionBuyMachine = useStateMachine<FormState, FormEvent>({
+    initial: FormState.IDLE,
+    transitions: {
+      [FormState.IDLE]: { [FormEvent.SUBMIT]: FormState.SUBMITTING },
+      [FormState.VALIDATING]: {
+        [FormEvent.VALIDATION_SUCCESS]: FormState.SUBMITTING,
+        [FormEvent.VALIDATION_ERROR]: FormState.ERROR,
+      },
+      [FormState.SUBMITTING]: {
+        [FormEvent.SUBMIT_SUCCESS]: FormState.SUCCESS,
+        [FormEvent.SUBMIT_ERROR]: FormState.ERROR,
+      },
+      [FormState.SUCCESS]: {
+        [FormEvent.SUBMIT]: FormState.SUBMITTING,
+        [FormEvent.RESET]: FormState.IDLE,
+      },
+      [FormState.ERROR]: {
+        [FormEvent.SUBMIT]: FormState.SUBMITTING,
+        [FormEvent.RESET]: FormState.IDLE,
+      },
+    },
+  });
+  const loading = detailMachine.state === LoadingState.LOADING;
+  const buying = shopBuyMachine.state === FormState.SUBMITTING;
+  const collectionBuying = collectionBuyMachine.state === FormState.SUBMITTING;
 
   // 交易须知公告弹窗状态
   const [showTradingNotice, setShowTradingNotice] = useState(false);
@@ -99,13 +163,13 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, hideActions = fa
     // 如果有初始数据，不需要请求 API
     if (initialData) {
       setDetailData(initialData);
-      setLoading(false);
+      detailMachine.send(LoadingEvent.SUCCESS);
       return;
     }
 
     const loadDetail = async () => {
       try {
-        setLoading(true);
+        detailMachine.send(LoadingEvent.LOAD);
         clearError();
 
         let response;
@@ -119,6 +183,7 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, hideActions = fa
         const data = extractData(response);
         if (data) {
           setDetailData(data);
+          detailMachine.send(LoadingEvent.SUCCESS);
         } else {
           // ✅ 使用统一错误处理
           handleError(response, {
@@ -126,6 +191,7 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, hideActions = fa
             showToast: false,
             customMessage: '获取证书详情失败'
           });
+          detailMachine.send(LoadingEvent.ERROR);
         }
       } catch (err: any) {
         // ✅ 使用统一错误处理
@@ -135,13 +201,18 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, hideActions = fa
           customMessage: '数据同步延迟，请重试',
           context: { productId: product.id }
         });
+        detailMachine.send(LoadingEvent.ERROR);
       } finally {
-        setLoading(false);
+        // 状态机已处理成功/失败
       }
     };
 
     loadDetail();
   }, [product.id, isShopProduct, initialData]);
+  useEffect(() => {
+    shopBuyMachine.send(FormEvent.RESET);
+    collectionBuyMachine.send(FormEvent.RESET);
+  }, [product.id]);
 
   // 加载交易须知公告
   useEffect(() => {
@@ -193,7 +264,7 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, hideActions = fa
       onConfirm: async () => {
         debugLog('productDetail.buy', '用户确认购买');
         try {
-          setBuying(true);
+          shopBuyMachine.send(FormEvent.SUBMIT);
           debugLog('productDetail.buy', '调用 createOrder', { productId: Number(product.id) });
           const response = await createOrder({
             items: [{ product_id: Number(product.id), quantity: 1 }],
@@ -225,6 +296,7 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, hideActions = fa
                 navigate(`/orders/${isShopProduct ? 'points' : 'product'}/0`);
               }, 1500);
             }
+            shopBuyMachine.send(FormEvent.SUBMIT_SUCCESS);
           } else {
             // ✅ 使用统一错误处理
             handleBuyError(response, {
@@ -232,6 +304,7 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, hideActions = fa
               customMessage: '订单创建失败',
               context: { productId: product.id }
             });
+            shopBuyMachine.send(FormEvent.SUBMIT_ERROR);
           }
         } catch (err: any) {
           // ✅ 使用统一错误处理
@@ -240,8 +313,9 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, hideActions = fa
             customMessage: '系统错误',
             context: { productId: product.id }
           });
+          shopBuyMachine.send(FormEvent.SUBMIT_ERROR);
         } finally {
-          setBuying(false);
+          // 状态机已处理成功/失败
         }
       }
     });

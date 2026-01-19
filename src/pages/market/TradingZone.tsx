@@ -20,6 +20,8 @@ import {
 } from '../../../services/api';
 import { isSuccess, extractError } from '../../../utils/apiHelpers';
 import { useErrorHandler } from '../../../hooks/useErrorHandler';
+import { useStateMachine } from '../../../hooks/useStateMachine';
+import { LoadingEvent, LoadingState } from '../../../types/states';
 
 
 interface TradingZoneProps {
@@ -166,12 +168,48 @@ const TradingZone: React.FC<TradingZoneProps> = ({
     const [now, setNow] = useState(new Date());
     const [selectedSession, setSelectedSession] = useState<TradingSession | null>(null);
     const [sessions, setSessions] = useState<TradingSession[]>([]);
-    const [loading, setLoading] = useState(true);
     const [status, setStatus] = useState<'preview' | 'active' | 'closed'>('preview');
     const [tradingItems, setTradingItems] = useState<TradingDisplayItem[]>([]);
-    const [itemsLoading, setItemsLoading] = useState(false);
     const [activePriceZone, setActivePriceZone] = useState<string>('all');
     const [navigating, setNavigating] = useState(false);
+    const sessionsMachine = useStateMachine<LoadingState, LoadingEvent>({
+        initial: LoadingState.IDLE,
+        transitions: {
+            [LoadingState.IDLE]: { [LoadingEvent.LOAD]: LoadingState.LOADING },
+            [LoadingState.LOADING]: {
+                [LoadingEvent.SUCCESS]: LoadingState.SUCCESS,
+                [LoadingEvent.ERROR]: LoadingState.ERROR,
+            },
+            [LoadingState.SUCCESS]: {
+                [LoadingEvent.LOAD]: LoadingState.LOADING,
+                [LoadingEvent.RETRY]: LoadingState.LOADING,
+            },
+            [LoadingState.ERROR]: {
+                [LoadingEvent.LOAD]: LoadingState.LOADING,
+                [LoadingEvent.RETRY]: LoadingState.LOADING,
+            },
+        },
+    });
+    const itemsMachine = useStateMachine<LoadingState, LoadingEvent>({
+        initial: LoadingState.IDLE,
+        transitions: {
+            [LoadingState.IDLE]: { [LoadingEvent.LOAD]: LoadingState.LOADING },
+            [LoadingState.LOADING]: {
+                [LoadingEvent.SUCCESS]: LoadingState.SUCCESS,
+                [LoadingEvent.ERROR]: LoadingState.ERROR,
+            },
+            [LoadingState.SUCCESS]: {
+                [LoadingEvent.LOAD]: LoadingState.LOADING,
+                [LoadingEvent.RETRY]: LoadingState.LOADING,
+            },
+            [LoadingState.ERROR]: {
+                [LoadingEvent.LOAD]: LoadingState.LOADING,
+                [LoadingEvent.RETRY]: LoadingState.LOADING,
+            },
+        },
+    });
+    const loading = sessionsMachine.state === LoadingState.LOADING;
+    const itemsLoading = itemsMachine.state === LoadingState.LOADING;
 
     // 使用ref追踪加载状态，防止重复调用
     const loadingSessionRef = useRef<string | null>(null);
@@ -193,7 +231,7 @@ const TradingZone: React.FC<TradingZoneProps> = ({
 
         try {
             loadingSessionRef.current = session.id;
-            setItemsLoading(true);
+            itemsMachine.send(LoadingEvent.LOAD);
             clearItemsError();
 
             // 获取商品列表（新 API：官方+寄售按 package_name + zone_id 统一归类）
@@ -258,11 +296,14 @@ const TradingZone: React.FC<TradingZoneProps> = ({
 
                 if (allItems.length > 0) {
                     setTradingItems(allItems);
+                    itemsMachine.send(LoadingEvent.SUCCESS);
                 } else {
                     handleItemsError('暂无上链资产', { persist: true, showToast: false });
+                    itemsMachine.send(LoadingEvent.ERROR);
                 }
             } else {
                 handleItemsError('暂无上链资产', { persist: true, showToast: false });
+                itemsMachine.send(LoadingEvent.ERROR);
             }
 
             setSelectedSession(session);
@@ -275,9 +316,10 @@ const TradingZone: React.FC<TradingZoneProps> = ({
                 context: { sessionId: session.id }
             });
             setSelectedSession(session);
+            itemsMachine.send(LoadingEvent.ERROR);
         } finally {
             loadingSessionRef.current = null;
-            setItemsLoading(false);
+            // 状态机已处理成功/失败
         }
     }, []); // 空依赖数组，函数不依赖外部变量
 
@@ -285,7 +327,7 @@ const TradingZone: React.FC<TradingZoneProps> = ({
         console.log('TradingZone mounted/updated with sessionId:', initialSessionId);
         const loadSessions = async () => {
             try {
-                setLoading(true);
+                sessionsMachine.send(LoadingEvent.LOAD);
                 clearSessionError();
                 const response = await fetchCollectionSessions();
                 if (isSuccess(response) && response.data?.list) {
@@ -319,6 +361,7 @@ const TradingZone: React.FC<TradingZoneProps> = ({
                             loadSessionItems(tempSession);
                         }
                     }
+                    sessionsMachine.send(LoadingEvent.SUCCESS);
                 } else {
                     // ✅ 使用统一错误处理
                     handleSessionError(response, {
@@ -326,6 +369,7 @@ const TradingZone: React.FC<TradingZoneProps> = ({
                         showToast: false,
                         customMessage: '获取数据资产池失败'
                     });
+                    sessionsMachine.send(LoadingEvent.ERROR);
                 }
             } catch (err: any) {
                 // ✅ 使用统一错误处理
@@ -334,8 +378,9 @@ const TradingZone: React.FC<TradingZoneProps> = ({
                     showToast: false,
                     customMessage: '网络连接异常'
                 });
+                sessionsMachine.send(LoadingEvent.ERROR);
             } finally {
-                setLoading(false);
+                // 状态机已处理成功/失败
             }
         };
         loadSessions();

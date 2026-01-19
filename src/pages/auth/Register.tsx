@@ -30,6 +30,8 @@ import { isSuccess, extractError } from '../../../utils/apiHelpers';
 import PopupAnnouncementModal from '../../../components/common/PopupAnnouncementModal';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../stores/authStore';
+import { useStateMachine } from '../../../hooks/useStateMachine';
+import { FormEvent, FormState } from '../../../types/states';
 
 /**
  * Register 注册页面组件
@@ -54,8 +56,30 @@ const Register: React.FC = () => {
   const [payPassword, setPayPassword] = useState('');
   const [verifyCode, setVerifyCode] = useState('');
   const [agreed, setAgreed] = useState(false);
-  const [loading, setLoading] = useState(false);
   const [countdown, setCountdown] = useState(0);
+  const submitMachine = useStateMachine<FormState, FormEvent>({
+    initial: FormState.IDLE,
+    transitions: {
+      [FormState.IDLE]: { [FormEvent.SUBMIT]: FormState.SUBMITTING },
+      [FormState.VALIDATING]: {
+        [FormEvent.VALIDATION_SUCCESS]: FormState.SUBMITTING,
+        [FormEvent.VALIDATION_ERROR]: FormState.ERROR,
+      },
+      [FormState.SUBMITTING]: {
+        [FormEvent.SUBMIT_SUCCESS]: FormState.SUCCESS,
+        [FormEvent.SUBMIT_ERROR]: FormState.ERROR,
+      },
+      [FormState.SUCCESS]: {
+        [FormEvent.SUBMIT]: FormState.SUBMITTING,
+        [FormEvent.RESET]: FormState.IDLE,
+      },
+      [FormState.ERROR]: {
+        [FormEvent.SUBMIT]: FormState.SUBMITTING,
+        [FormEvent.RESET]: FormState.IDLE,
+      },
+    },
+  });
+  const loading = submitMachine.state === FormState.SUBMITTING;
 
   // Password visibility states
   const [showPassword, setShowPassword] = useState(false);
@@ -171,7 +195,7 @@ const Register: React.FC = () => {
       return;
     }
 
-    setLoading(true);
+    submitMachine.send(FormEvent.SUBMIT);
     try {
       const params: RegisterParams = {
         mobile: phone,
@@ -197,6 +221,7 @@ const Register: React.FC = () => {
         if (!token) {
           showToast('warning', '注册成功', '但未获取到登录凭证，请手动登录');
           navigate('/login');
+          submitMachine.send(FormEvent.SUBMIT_ERROR);
           return;
         }
 
@@ -212,9 +237,11 @@ const Register: React.FC = () => {
 
         // ✅ 注册成功后跳转到首页
         navigate('/');
+        submitMachine.send(FormEvent.SUBMIT_SUCCESS);
       } else {
         const errorMsg = extractError(response, '注册失败，请稍后重试');
         showToast('error', '注册失败', errorMsg);
+        submitMachine.send(FormEvent.SUBMIT_ERROR);
       }
     } catch (error: any) {
       console.error('注册失败:', error);
@@ -225,8 +252,9 @@ const Register: React.FC = () => {
       } else {
         showToast('error', '注册失败', '请检查网络连接后重试');
       }
+      submitMachine.send(FormEvent.SUBMIT_ERROR);
     } finally {
-      setLoading(false);
+      // 状态机已处理成功/失败
     }
   };
 

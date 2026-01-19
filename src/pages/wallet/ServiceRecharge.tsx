@@ -11,16 +11,58 @@ import { useAuthStore } from '../../stores/authStore';
 import { UserInfo } from '../../../types';
 import { formatAmount } from '../../../utils/format';
 import { isSuccess, extractError } from '../../../utils/apiHelpers';
+import { useStateMachine } from '../../../hooks/useStateMachine';
+import { FormEvent, FormState, LoadingEvent, LoadingState } from '../../../types/states';
 
 const ServiceRecharge: React.FC = () => {
   const navigate = useNavigate();
   const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
   const [payType, setPayType] = useState<'money' | 'withdraw'>('money');
   const [amount, setAmount] = useState<string>('');
-  const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [showConfirmModal, setShowConfirmModal] = useState<boolean>(false);
+  const userInfoMachine = useStateMachine<LoadingState, LoadingEvent>({
+    initial: LoadingState.IDLE,
+    transitions: {
+      [LoadingState.IDLE]: { [LoadingEvent.LOAD]: LoadingState.LOADING },
+      [LoadingState.LOADING]: {
+        [LoadingEvent.SUCCESS]: LoadingState.SUCCESS,
+        [LoadingEvent.ERROR]: LoadingState.ERROR,
+      },
+      [LoadingState.SUCCESS]: {
+        [LoadingEvent.LOAD]: LoadingState.LOADING,
+        [LoadingEvent.RETRY]: LoadingState.LOADING,
+      },
+      [LoadingState.ERROR]: {
+        [LoadingEvent.LOAD]: LoadingState.LOADING,
+        [LoadingEvent.RETRY]: LoadingState.LOADING,
+      },
+    },
+  });
+  const submitMachine = useStateMachine<FormState, FormEvent>({
+    initial: FormState.IDLE,
+    transitions: {
+      [FormState.IDLE]: { [FormEvent.SUBMIT]: FormState.SUBMITTING },
+      [FormState.VALIDATING]: {
+        [FormEvent.VALIDATION_SUCCESS]: FormState.SUBMITTING,
+        [FormEvent.VALIDATION_ERROR]: FormState.ERROR,
+      },
+      [FormState.SUBMITTING]: {
+        [FormEvent.SUBMIT_SUCCESS]: FormState.SUCCESS,
+        [FormEvent.SUBMIT_ERROR]: FormState.ERROR,
+      },
+      [FormState.SUCCESS]: {
+        [FormEvent.SUBMIT]: FormState.SUBMITTING,
+        [FormEvent.RESET]: FormState.IDLE,
+      },
+      [FormState.ERROR]: {
+        [FormEvent.SUBMIT]: FormState.SUBMITTING,
+        [FormEvent.RESET]: FormState.IDLE,
+      },
+    },
+  });
+  const loading = submitMachine.state === FormState.SUBMITTING;
 
   useEffect(() => {
     loadUserInfo();
@@ -30,20 +72,23 @@ const ServiceRecharge: React.FC = () => {
     const token = getStoredToken();
     if (!token) return;
     try {
+      userInfoMachine.send(LoadingEvent.LOAD);
       const response = await fetchProfile(token);
       if (isSuccess(response) && response.data?.userInfo) {
         setUserInfo(response.data.userInfo);
         useAuthStore.getState().updateUser(response.data.userInfo);
+        userInfoMachine.send(LoadingEvent.SUCCESS);
       }
     } catch (err) {
       console.error(err);
+      userInfoMachine.send(LoadingEvent.ERROR);
     }
   };
 
   const handleRecharge = async () => {
     const token = getStoredToken();
     if (!token) return;
-    setLoading(true);
+    submitMachine.send(FormEvent.SUBMIT);
     try {
       const response = await rechargeServiceFee({
         amount: Number(amount),
@@ -60,15 +105,18 @@ const ServiceRecharge: React.FC = () => {
           setSuccess(null);
           navigate(-1);
         }, 1000);
+        submitMachine.send(FormEvent.SUBMIT_SUCCESS);
       } else {
         setError(extractError(response, '划转失败'));
         setShowConfirmModal(false);
+        submitMachine.send(FormEvent.SUBMIT_ERROR);
       }
     } catch (err: any) {
       setError(err?.message || '划转失败');
       setShowConfirmModal(false);
+      submitMachine.send(FormEvent.SUBMIT_ERROR);
     } finally {
-      setLoading(false);
+      // 状态机已处理成功/失败
     }
   };
 

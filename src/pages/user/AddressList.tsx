@@ -21,6 +21,8 @@ import { getStoredToken } from '../../../services/client';
 import { useNotification } from '../../../context/NotificationContext';
 import { isSuccess } from '../../../utils/apiHelpers';
 import { useErrorHandler } from '../../../hooks/useErrorHandler';
+import { useStateMachine } from '../../../hooks/useStateMachine';
+import { FormEvent, FormState, LoadingEvent, LoadingState } from '../../../types/states';
 
 type AddressFormValues = {
   name: string;
@@ -63,13 +65,49 @@ const AddressList: React.FC = () => {
   } = useErrorHandler();
 
   const [addresses, setAddresses] = useState<AddressItem[]>([]);
-  const [loading, setLoading] = useState<boolean>(false);
+  const loadMachine = useStateMachine<LoadingState, LoadingEvent>({
+    initial: LoadingState.IDLE,
+    transitions: {
+      [LoadingState.IDLE]: { [LoadingEvent.LOAD]: LoadingState.LOADING },
+      [LoadingState.LOADING]: {
+        [LoadingEvent.SUCCESS]: LoadingState.SUCCESS,
+        [LoadingEvent.ERROR]: LoadingState.ERROR,
+      },
+      [LoadingState.SUCCESS]: {
+        [LoadingEvent.LOAD]: LoadingState.LOADING,
+        [LoadingEvent.RETRY]: LoadingState.LOADING,
+      },
+      [LoadingState.ERROR]: {
+        [LoadingEvent.LOAD]: LoadingState.LOADING,
+        [LoadingEvent.RETRY]: LoadingState.LOADING,
+      },
+    },
+  });
+  const loading = loadMachine.state === LoadingState.LOADING;
   const [mode, setMode] = useState<'list' | 'add' | 'edit'>('list');
   const [editingId, setEditingId] = useState<string | number | null>(null);
   const [formValues, setFormValues] = useState<AddressFormValues>(() =>
     createInitialFormValues(),
   );
-  const [formLoading, setFormLoading] = useState<boolean>(false);
+  const formMachine = useStateMachine<FormState, FormEvent>({
+    initial: FormState.IDLE,
+    transitions: {
+      [FormState.IDLE]: { [FormEvent.SUBMIT]: FormState.SUBMITTING },
+      [FormState.SUBMITTING]: {
+        [FormEvent.SUBMIT_SUCCESS]: FormState.SUCCESS,
+        [FormEvent.SUBMIT_ERROR]: FormState.ERROR,
+      },
+      [FormState.SUCCESS]: {
+        [FormEvent.SUBMIT]: FormState.SUBMITTING,
+        [FormEvent.RESET]: FormState.IDLE,
+      },
+      [FormState.ERROR]: {
+        [FormEvent.SUBMIT]: FormState.SUBMITTING,
+        [FormEvent.RESET]: FormState.IDLE,
+      },
+    },
+  });
+  const formLoading = formMachine.state === FormState.SUBMITTING;
   const [notice, setNotice] = useState<string | null>(null);
   const [showRegionPicker, setShowRegionPicker] = useState(false);
 
@@ -80,17 +118,20 @@ const AddressList: React.FC = () => {
         persist: true,
         showToast: false
       });
+      loadMachine.send(LoadingEvent.ERROR);
       return;
     }
 
-    setLoading(true);
+    loadMachine.send(LoadingEvent.LOAD);
     try {
       const res = await fetchAddressList(token);
       if (isSuccess(res) && res.data?.list) {
         setAddresses(res.data.list);
         clearListError();
+        loadMachine.send(LoadingEvent.SUCCESS);
       } else {
         handleListError(res, { persist: true, showToast: false });
+        loadMachine.send(LoadingEvent.ERROR);
       }
     } catch (e) {
       handleListError(e, {
@@ -98,8 +139,9 @@ const AddressList: React.FC = () => {
         showToast: false,
         customMessage: '获取地址列表失败'
       });
+      loadMachine.send(LoadingEvent.ERROR);
     } finally {
-      setLoading(false);
+      // 状态机已处理成功/失败
     }
   };
 
@@ -134,7 +176,7 @@ const AddressList: React.FC = () => {
   const handleSetDefault = async (addr: AddressItem) => {
     if (isDefault(addr)) return;
 
-    setLoading(true);
+    loadMachine.send(LoadingEvent.LOAD);
     try {
       const res = await saveAddress({
         id: addr.id,
@@ -149,19 +191,22 @@ const AddressList: React.FC = () => {
 
       if (isSuccess(res)) {
         await loadAddresses();
+        loadMachine.send(LoadingEvent.SUCCESS);
       } else {
         handleListError(res, {
           persist: true,
           customMessage: '设置默认地址失败'
         });
+        loadMachine.send(LoadingEvent.ERROR);
       }
     } catch (e) {
       handleListError(e, {
         persist: true,
         customMessage: '设置默认地址失败'
       });
+      loadMachine.send(LoadingEvent.ERROR);
     } finally {
-      setLoading(false);
+      // 状态机已处理成功/失败
     }
   };
 
@@ -201,7 +246,7 @@ const AddressList: React.FC = () => {
       return handleFormError('请输入详细地址', { persist: true, showToast: false });
     }
 
-    setFormLoading(true);
+    formMachine.send(FormEvent.SUBMIT);
     try {
       const payloadId =
         mode === 'edit' && editingId !== null && editingId !== ''
@@ -225,12 +270,14 @@ const AddressList: React.FC = () => {
         setMode('list');
         setEditingId(null);
         await loadAddresses();
+        formMachine.send(FormEvent.SUBMIT_SUCCESS);
       } else {
         handleFormError(res, {
           persist: true,
           showToast: false,
           customMessage: '保存地址失败，请检查填写信息'
         });
+        formMachine.send(FormEvent.SUBMIT_ERROR);
       }
     } catch (e) {
       handleFormError(e, {
@@ -238,8 +285,9 @@ const AddressList: React.FC = () => {
         showToast: false,
         customMessage: '保存地址失败，请稍后重试'
       });
+      formMachine.send(FormEvent.SUBMIT_ERROR);
     } finally {
-      setFormLoading(false);
+      // 状态机已处理成功/失败
     }
   };
 

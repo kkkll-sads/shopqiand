@@ -12,6 +12,8 @@ import PageContainer from '../../../components/layout/PageContainer';
 import { LoadingSpinner, EmptyState, LazyImage } from '../../../components/common';
 import { Artist } from '../../../types';
 import { ArtistApiItem, fetchArtists, normalizeAssetUrl } from '../../../services/api';
+import { useStateMachine } from '../../../hooks/useStateMachine';
+import { LoadingEvent, LoadingState } from '../../../types/states';
 
 /**
  * ArtistShowcase 组件属性接口
@@ -26,7 +28,25 @@ interface ArtistShowcaseProps {
 const ArtistShowcase: React.FC<ArtistShowcaseProps> = ({ onArtistSelect }) => {
   const navigate = useNavigate();
   const [artists, setArtists] = useState<Artist[]>([]);
-  const [loading, setLoading] = useState(true);
+  const loadMachine = useStateMachine<LoadingState, LoadingEvent>({
+    initial: LoadingState.IDLE,
+    transitions: {
+      [LoadingState.IDLE]: { [LoadingEvent.LOAD]: LoadingState.LOADING },
+      [LoadingState.LOADING]: {
+        [LoadingEvent.SUCCESS]: LoadingState.SUCCESS,
+        [LoadingEvent.ERROR]: LoadingState.ERROR,
+      },
+      [LoadingState.SUCCESS]: {
+        [LoadingEvent.LOAD]: LoadingState.LOADING,
+        [LoadingEvent.RETRY]: LoadingState.LOADING,
+      },
+      [LoadingState.ERROR]: {
+        [LoadingEvent.LOAD]: LoadingState.LOADING,
+        [LoadingEvent.RETRY]: LoadingState.LOADING,
+      },
+    },
+  });
+  const loading = loadMachine.state === LoadingState.LOADING;
 
   // 加载艺术家数据
   useEffect(() => {
@@ -34,7 +54,7 @@ const ArtistShowcase: React.FC<ArtistShowcaseProps> = ({ onArtistSelect }) => {
 
     const load = async () => {
       try {
-        setLoading(true);
+        loadMachine.send(LoadingEvent.LOAD);
         const res = await fetchArtists();
         if (!isMounted) return;
 
@@ -47,11 +67,13 @@ const ArtistShowcase: React.FC<ArtistShowcaseProps> = ({ onArtistSelect }) => {
           bio: a.description,
         }));
         setArtists(mapped);
+        loadMachine.send(LoadingEvent.SUCCESS);
       } catch (e) {
         console.error('加载艺术家列表失败:', e);
         setArtists([]);
+        loadMachine.send(LoadingEvent.ERROR);
       } finally {
-        if (isMounted) setLoading(false);
+        // 状态机已处理成功/失败
       }
     };
 

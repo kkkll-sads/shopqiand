@@ -19,6 +19,8 @@ import { useErrorHandler } from '../../../hooks/useErrorHandler';
 import { sendSmsCode } from '../../../services/common';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../stores/authStore';
+import { useStateMachine } from '../../../hooks/useStateMachine';
+import { FormEvent, FormState } from '../../../types/states';
 
 // localStorage 存储键名
 const STORAGE_KEY_PHONE = 'login_remembered_phone';
@@ -40,12 +42,34 @@ const Login: React.FC = () => {
   const [password, setPassword] = useState('');
   const [agreed, setAgreed] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
   const [verifyCode, setVerifyCode] = useState('');
   const [loginType, setLoginType] = useState<'password' | 'code'>('password');
   const [countdown, setCountdown] = useState(0);
   const [rememberMe, setRememberMe] = useState(false);
   const [bottomPadding, setBottomPadding] = useState(48); // 默认48px (pb-12)
+  const submitMachine = useStateMachine<FormState, FormEvent>({
+    initial: FormState.IDLE,
+    transitions: {
+      [FormState.IDLE]: { [FormEvent.SUBMIT]: FormState.SUBMITTING },
+      [FormState.VALIDATING]: {
+        [FormEvent.VALIDATION_SUCCESS]: FormState.SUBMITTING,
+        [FormEvent.VALIDATION_ERROR]: FormState.ERROR,
+      },
+      [FormState.SUBMITTING]: {
+        [FormEvent.SUBMIT_SUCCESS]: FormState.SUCCESS,
+        [FormEvent.SUBMIT_ERROR]: FormState.ERROR,
+      },
+      [FormState.SUCCESS]: {
+        [FormEvent.SUBMIT]: FormState.SUBMITTING,
+        [FormEvent.RESET]: FormState.IDLE,
+      },
+      [FormState.ERROR]: {
+        [FormEvent.SUBMIT]: FormState.SUBMITTING,
+        [FormEvent.RESET]: FormState.IDLE,
+      },
+    },
+  });
+  const loading = submitMachine.state === FormState.SUBMITTING;
 
   /**
    * 动态计算底部padding，避免被浏览器导航栏遮挡
@@ -220,7 +244,7 @@ const Login: React.FC = () => {
       return;
     }
 
-    setLoading(true);
+    submitMachine.send(FormEvent.SUBMIT);
     try {
       const params: LoginParams = {
         mobile: phone.trim(),
@@ -238,6 +262,7 @@ const Login: React.FC = () => {
         const token = response.data?.userInfo?.token;
         if (!token) {
           showToast('error', '登录异常', '登录成功，但未获取到 token，无法继续');
+          submitMachine.send(FormEvent.SUBMIT_ERROR);
           return;
         }
 
@@ -296,6 +321,7 @@ const Login: React.FC = () => {
         
         // ✅ 登录成功后跳转到首页
         navigate('/');
+        submitMachine.send(FormEvent.SUBMIT_SUCCESS);
       } else {
         // ✅ 使用统一错误处理（自动记录日志、分类错误、显示Toast）
         handleError(response, {
@@ -303,6 +329,7 @@ const Login: React.FC = () => {
           customMessage: '登录失败，请稍后重试',
           context: { phone, loginType },
         });
+        submitMachine.send(FormEvent.SUBMIT_ERROR);
       }
     } catch (error: any) {
       // ✅ 使用统一错误处理
@@ -311,8 +338,9 @@ const Login: React.FC = () => {
         customMessage: error.isCorsError ? error.message : '请检查网络连接后重试',
         context: { phone, loginType },
       });
+      submitMachine.send(FormEvent.SUBMIT_ERROR);
     } finally {
-      setLoading(false);
+      // 状态机已处理成功/失败
     }
   };
 

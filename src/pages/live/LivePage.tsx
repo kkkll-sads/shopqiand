@@ -6,18 +6,56 @@ import { getStoredToken } from '../../../services/client';
 import { isSuccess, extractData } from '../../../utils/apiHelpers';
 import { LoadingSpinner, EmbeddedBrowser } from '../../../components/common';
 import { useErrorHandler } from '../../../hooks/useErrorHandler';
+import { useStateMachine } from '../../../hooks/useStateMachine';
+import { LoadingEvent, LoadingState } from '../../../types/states';
 
 const LivePage: React.FC = () => {
     const [activeTab, setActiveTab] = useState('live');
     const [liveUrl, setLiveUrl] = useState<string | null>(null);
-    const [loading, setLoading] = useState<boolean>(true);
+    const liveMachine = useStateMachine<LoadingState, LoadingEvent>({
+        initial: LoadingState.IDLE,
+        transitions: {
+            [LoadingState.IDLE]: { [LoadingEvent.LOAD]: LoadingState.LOADING },
+            [LoadingState.LOADING]: {
+                [LoadingEvent.SUCCESS]: LoadingState.SUCCESS,
+                [LoadingEvent.ERROR]: LoadingState.ERROR,
+            },
+            [LoadingState.SUCCESS]: {
+                [LoadingEvent.LOAD]: LoadingState.LOADING,
+                [LoadingEvent.RETRY]: LoadingState.LOADING,
+            },
+            [LoadingState.ERROR]: {
+                [LoadingEvent.LOAD]: LoadingState.LOADING,
+                [LoadingEvent.RETRY]: LoadingState.LOADING,
+            },
+        },
+    });
     const [showLiveBrowser, setShowLiveBrowser] = useState<boolean>(false);
     const [videoConfig, setVideoConfig] = useState<{
         video_url: string;
         title: string;
         description: string;
     } | null>(null);
-    const [videoLoading, setVideoLoading] = useState<boolean>(false);
+    const videoMachine = useStateMachine<LoadingState, LoadingEvent>({
+        initial: LoadingState.IDLE,
+        transitions: {
+            [LoadingState.IDLE]: { [LoadingEvent.LOAD]: LoadingState.LOADING },
+            [LoadingState.LOADING]: {
+                [LoadingEvent.SUCCESS]: LoadingState.SUCCESS,
+                [LoadingEvent.ERROR]: LoadingState.ERROR,
+            },
+            [LoadingState.SUCCESS]: {
+                [LoadingEvent.LOAD]: LoadingState.LOADING,
+                [LoadingEvent.RETRY]: LoadingState.LOADING,
+            },
+            [LoadingState.ERROR]: {
+                [LoadingEvent.LOAD]: LoadingState.LOADING,
+                [LoadingEvent.RETRY]: LoadingState.LOADING,
+            },
+        },
+    });
+    const loading = liveMachine.state === LoadingState.LOADING;
+    const videoLoading = videoMachine.state === LoadingState.LOADING;
     const [showVideoBrowser, setShowVideoBrowser] = useState<boolean>(false);
     const { handleError } = useErrorHandler();
 
@@ -30,44 +68,52 @@ const LivePage: React.FC = () => {
         const token = getStoredToken();
         if (!token) {
             handleError('未登录，请先登录', { showToast: true });
-            setLoading(false);
+            liveMachine.send(LoadingEvent.ERROR);
             return;
         }
 
         try {
-            setLoading(true);
+            liveMachine.send(LoadingEvent.LOAD);
             const response = await fetchProfile(token);
 
             if (isSuccess(response) && response.data) {
                 const data = extractData(response);
                 if (data?.liveUrl) {
                     setLiveUrl(data.liveUrl);
+                    liveMachine.send(LoadingEvent.SUCCESS);
                 } else {
                     handleError('直播间URL不存在', { showToast: true });
+                    liveMachine.send(LoadingEvent.ERROR);
                 }
             } else {
                 handleError(response, { showToast: true, customMessage: '获取直播间信息失败' });
+                liveMachine.send(LoadingEvent.ERROR);
             }
         } catch (error: any) {
             handleError(error, { showToast: true, customMessage: '加载直播间失败' });
+            liveMachine.send(LoadingEvent.ERROR);
         } finally {
-            setLoading(false);
+            // 状态机已处理成功/失败
         }
     };
 
     const loadVideoConfig = async () => {
         try {
-            setVideoLoading(true);
+            videoMachine.send(LoadingEvent.LOAD);
             const response = await fetchLiveVideoConfig();
 
             if (isSuccess(response) && response.data) {
                 setVideoConfig(response.data);
+                videoMachine.send(LoadingEvent.SUCCESS);
+            } else {
+                videoMachine.send(LoadingEvent.ERROR);
             }
         } catch (error: any) {
             // 广告视频获取失败不影响直播功能，不显示错误提示
             console.warn('获取广告视频配置失败:', error);
+            videoMachine.send(LoadingEvent.ERROR);
         } finally {
-            setVideoLoading(false);
+            // 状态机已处理成功/失败
         }
     };
 
@@ -108,6 +154,12 @@ const LivePage: React.FC = () => {
             <div className="flex-1 overflow-y-auto p-3 pb-safe">
                 {activeTab === 'live' && (
                     <div className="w-full space-y-4">
+                        {/* 广告视频加载状态 */}
+                        {videoLoading && !videoConfig && (
+                            <div className="flex items-center justify-center py-6">
+                                <LoadingSpinner text="加载视频..." />
+                            </div>
+                        )}
                         {/* 广告视频卡片 */}
                         {videoConfig && (
                             <div

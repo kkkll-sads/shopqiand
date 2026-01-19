@@ -12,6 +12,8 @@ import {
   normalizeAssetUrl,
   ShopProductItem,
 } from '../../../services/api';
+import { useStateMachine } from '../../../hooks/useStateMachine';
+import { LoadingEvent, LoadingState } from '../../../types/states';
 
 interface MarketProps {
   onProductSelect?: (product: Product) => void;
@@ -25,13 +27,49 @@ const Market: React.FC<MarketProps> = ({ onProductSelect }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [categoryList, setCategoryList] = useState<string[]>([]);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const containerRef = useRef<HTMLDivElement>(null);
+  const listMachine = useStateMachine<LoadingState, LoadingEvent>({
+    initial: LoadingState.IDLE,
+    transitions: {
+      [LoadingState.IDLE]: { [LoadingEvent.LOAD]: LoadingState.LOADING },
+      [LoadingState.LOADING]: {
+        [LoadingEvent.SUCCESS]: LoadingState.SUCCESS,
+        [LoadingEvent.ERROR]: LoadingState.ERROR,
+      },
+      [LoadingState.SUCCESS]: {
+        [LoadingEvent.LOAD]: LoadingState.LOADING,
+        [LoadingEvent.RETRY]: LoadingState.LOADING,
+      },
+      [LoadingState.ERROR]: {
+        [LoadingEvent.LOAD]: LoadingState.LOADING,
+        [LoadingEvent.RETRY]: LoadingState.LOADING,
+      },
+    },
+  });
+  const loadMoreMachine = useStateMachine<LoadingState, LoadingEvent>({
+    initial: LoadingState.IDLE,
+    transitions: {
+      [LoadingState.IDLE]: { [LoadingEvent.LOAD]: LoadingState.LOADING },
+      [LoadingState.LOADING]: {
+        [LoadingEvent.SUCCESS]: LoadingState.SUCCESS,
+        [LoadingEvent.ERROR]: LoadingState.ERROR,
+      },
+      [LoadingState.SUCCESS]: {
+        [LoadingEvent.LOAD]: LoadingState.LOADING,
+        [LoadingEvent.RETRY]: LoadingState.LOADING,
+      },
+      [LoadingState.ERROR]: {
+        [LoadingEvent.LOAD]: LoadingState.LOADING,
+        [LoadingEvent.RETRY]: LoadingState.LOADING,
+      },
+    },
+  });
+  const loading = listMachine.state === LoadingState.LOADING;
+  const loadingMore = loadMoreMachine.state === LoadingState.LOADING;
 
   // Categories Configuration（含“全部”+后端分类）
   const categories = useMemo(
@@ -88,9 +126,9 @@ const Market: React.FC<MarketProps> = ({ onProductSelect }) => {
   const loadProducts = useCallback(async (pageNum: number, append: boolean = false) => {
     try {
       if (append) {
-        setLoadingMore(true);
+        loadMoreMachine.send(LoadingEvent.LOAD);
       } else {
-        setLoading(true);
+        listMachine.send(LoadingEvent.LOAD);
       }
       setError(null);
 
@@ -115,12 +153,21 @@ const Market: React.FC<MarketProps> = ({ onProductSelect }) => {
       }
       setPage(pageNum);
       setHasMore(pageNum * PAGE_SIZE < total);
+      if (append) {
+        loadMoreMachine.send(LoadingEvent.SUCCESS);
+      } else {
+        listMachine.send(LoadingEvent.SUCCESS);
+      }
     } catch (e: any) {
       console.error('加载商品列表失败:', e);
       setError(e?.msg || e?.response?.msg || e?.message || '加载商品失败，请稍后重试');
+      if (append) {
+        loadMoreMachine.send(LoadingEvent.ERROR);
+      } else {
+        listMachine.send(LoadingEvent.ERROR);
+      }
     } finally {
-      setLoading(false);
-      setLoadingMore(false);
+      // 状态机已处理成功/失败
     }
   }, [activeFilter]);
 

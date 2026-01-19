@@ -22,12 +22,32 @@ import { getStoredToken } from '../../../services/client';
 import { UserInfo } from '../../../types';
 import { formatAmount } from '../../../utils/format';
 import { isSuccess, extractError } from '../../../utils/apiHelpers';
+import { useStateMachine } from '../../../hooks/useStateMachine';
+import { LoadingEvent, LoadingState } from '../../../types/states';
 
 const CumulativeRights: React.FC = () => {
   const navigate = useNavigate();
-  const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
+  const loadMachine = useStateMachine<LoadingState, LoadingEvent>({
+    initial: LoadingState.IDLE,
+    transitions: {
+      [LoadingState.IDLE]: { [LoadingEvent.LOAD]: LoadingState.LOADING },
+      [LoadingState.LOADING]: {
+        [LoadingEvent.SUCCESS]: LoadingState.SUCCESS,
+        [LoadingEvent.ERROR]: LoadingState.ERROR,
+      },
+      [LoadingState.SUCCESS]: {
+        [LoadingEvent.LOAD]: LoadingState.LOADING,
+        [LoadingEvent.RETRY]: LoadingState.LOADING,
+      },
+      [LoadingState.ERROR]: {
+        [LoadingEvent.LOAD]: LoadingState.LOADING,
+        [LoadingEvent.RETRY]: LoadingState.LOADING,
+      },
+    },
+  });
+  const loading = loadMachine.state === LoadingState.LOADING;
 
   // 加载用户数据
   useEffect(() => {
@@ -35,24 +55,27 @@ const CumulativeRights: React.FC = () => {
       const token = getStoredToken();
       if (!token) {
         setError('请先登录');
-        setLoading(false);
+        loadMachine.send(LoadingEvent.ERROR);
         return;
       }
 
-      setLoading(true);
+      loadMachine.send(LoadingEvent.LOAD);
       setError(null);
 
       try {
         const response = await fetchProfile(token);
         if (isSuccess(response) && response.data?.userInfo) {
           setUserInfo(response.data.userInfo);
+          loadMachine.send(LoadingEvent.SUCCESS);
         } else {
           setError(extractError(response, '获取权益信息失败'));
+          loadMachine.send(LoadingEvent.ERROR);
         }
       } catch (err: any) {
         setError(err?.message || '获取权益信息失败');
+        loadMachine.send(LoadingEvent.ERROR);
       } finally {
-        setLoading(false);
+        // 状态机已处理成功/失败
       }
     };
 

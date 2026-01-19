@@ -9,6 +9,8 @@ import { getMyRechargeOrders, RechargeOrderItem } from '../../../services/wallet
 import { isSuccess } from '../../../utils/apiHelpers';
 import { useErrorHandler } from '../../../hooks/useErrorHandler';
 import { LoadingSpinner } from '../../../components/common';
+import { useStateMachine } from '../../../hooks/useStateMachine';
+import { LoadingEvent, LoadingState } from '../../../types/states';
 
 interface RechargeOrderListProps {
     onOrderSelect?: (orderId: string) => void;
@@ -17,13 +19,31 @@ interface RechargeOrderListProps {
 const RechargeOrderList: React.FC<RechargeOrderListProps> = ({ onOrderSelect }) => {
     const navigate = useNavigate();
     const [orders, setOrders] = useState<RechargeOrderItem[]>([]);
-    const [loading, setLoading] = useState(false);
     const [page, setPage] = useState(1);
     const [hasMore, setHasMore] = useState(true);
     const [activeTab, setActiveTab] = useState<number | undefined>(undefined);
 
     const { handleError } = useErrorHandler({ showToast: true, persist: false });
     const loadRef = useRef(false);
+    const loadMachine = useStateMachine<LoadingState, LoadingEvent>({
+        initial: LoadingState.IDLE,
+        transitions: {
+            [LoadingState.IDLE]: { [LoadingEvent.LOAD]: LoadingState.LOADING },
+            [LoadingState.LOADING]: {
+                [LoadingEvent.SUCCESS]: LoadingState.SUCCESS,
+                [LoadingEvent.ERROR]: LoadingState.ERROR,
+            },
+            [LoadingState.SUCCESS]: {
+                [LoadingEvent.LOAD]: LoadingState.LOADING,
+                [LoadingEvent.RETRY]: LoadingState.LOADING,
+            },
+            [LoadingState.ERROR]: {
+                [LoadingEvent.LOAD]: LoadingState.LOADING,
+                [LoadingEvent.RETRY]: LoadingState.LOADING,
+            },
+        },
+    });
+    const loading = loadMachine.state === LoadingState.LOADING;
 
     useEffect(() => {
         setOrders([]);
@@ -36,7 +56,7 @@ const RechargeOrderList: React.FC<RechargeOrderListProps> = ({ onOrderSelect }) 
     const loadOrders = async (pageNum: number, refresh = false, status?: number, silent = false) => {
         if (loadRef.current) return;
         loadRef.current = true;
-        if (!silent) setLoading(true);
+        if (!silent) loadMachine.send(LoadingEvent.LOAD);
 
         try {
             const res = await getMyRechargeOrders({ page: pageNum, limit: 20, status });
@@ -50,13 +70,16 @@ const RechargeOrderList: React.FC<RechargeOrderListProps> = ({ onOrderSelect }) 
                 if (!silent || refresh) {
                     setPage(pageNum);
                 }
+                if (!silent) loadMachine.send(LoadingEvent.SUCCESS);
             } else {
                 if (!silent) handleError(res, { toastTitle: '加载失败', customMessage: '获取订单列表失败' });
+                if (!silent) loadMachine.send(LoadingEvent.ERROR);
             }
         } catch (err) {
             if (!silent) handleError(err, { toastTitle: '加载失败', customMessage: '网络错误' });
+            if (!silent) loadMachine.send(LoadingEvent.ERROR);
         } finally {
-            if (!silent) setLoading(false);
+            // 状态机已处理成功/失败
             loadRef.current = false;
         }
     };

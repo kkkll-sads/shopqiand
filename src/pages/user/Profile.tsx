@@ -42,6 +42,8 @@ import { STORAGE_KEYS } from '../../../constants/storageKeys';
 import { isSuccess, extractData, extractError } from '../../../utils/apiHelpers';
 import { useErrorHandler } from '../../../hooks/useErrorHandler';
 import { useNavigate } from 'react-router-dom';
+import { useStateMachine } from '../../../hooks/useStateMachine';
+import { LoadingEvent, LoadingState } from '../../../types/states';
 
 // Helper for custom coin icon
 const CoinsIcon = ({ size, className }: { size: number; className: string }) => (
@@ -71,9 +73,27 @@ const Profile: React.FC<{ unreadCount?: number }> = ({ unreadCount = 0 }) => {
 
   const storedUser = useAuthStore((state) => state.user);
   const [userInfo, setUserInfo] = useState<UserInfo | null>(storedUser);
-  const [loading, setLoading] = useState<boolean>(false);
   const [orderStats, setOrderStats] = useState<ShopOrderStatistics | null>(null);
   const [hasSignedToday, setHasSignedToday] = useState<boolean>(false); // Default to false to ensure red dot is visible initially
+  const loadMachine = useStateMachine<LoadingState, LoadingEvent>({
+    initial: LoadingState.IDLE,
+    transitions: {
+      [LoadingState.IDLE]: { [LoadingEvent.LOAD]: LoadingState.LOADING },
+      [LoadingState.LOADING]: {
+        [LoadingEvent.SUCCESS]: LoadingState.SUCCESS,
+        [LoadingEvent.ERROR]: LoadingState.ERROR,
+      },
+      [LoadingState.SUCCESS]: {
+        [LoadingEvent.LOAD]: LoadingState.LOADING,
+        [LoadingEvent.RETRY]: LoadingState.LOADING,
+      },
+      [LoadingState.ERROR]: {
+        [LoadingEvent.LOAD]: LoadingState.LOADING,
+        [LoadingEvent.RETRY]: LoadingState.LOADING,
+      },
+    },
+  });
+  const loading = loadMachine.state === LoadingState.LOADING;
 
   useEffect(() => {
     const token = getStoredToken();
@@ -88,7 +108,7 @@ const Profile: React.FC<{ unreadCount?: number }> = ({ unreadCount = 0 }) => {
 
     let isMounted = true;
     const loadProfile = async () => {
-      setLoading(true);
+      loadMachine.send(LoadingEvent.LOAD);
       try {
         const response = await fetchProfile(token);
         if (!isMounted) return;
@@ -97,6 +117,7 @@ const Profile: React.FC<{ unreadCount?: number }> = ({ unreadCount = 0 }) => {
           setUserInfo(response.data.userInfo);
           updateUser(response.data.userInfo);
           clearError(); // ✅ 使用统一错误清除
+          loadMachine.send(LoadingEvent.SUCCESS);
         } else {
           // ✅ 使用统一错误处理
           handleError(response, {
@@ -104,6 +125,7 @@ const Profile: React.FC<{ unreadCount?: number }> = ({ unreadCount = 0 }) => {
             showToast: false,
             customMessage: '获取用户信息失败',
           });
+          loadMachine.send(LoadingEvent.ERROR);
         }
       } catch (err: any) {
         if (!isMounted) return;
@@ -113,9 +135,10 @@ const Profile: React.FC<{ unreadCount?: number }> = ({ unreadCount = 0 }) => {
           showToast: false,
           customMessage: '获取个人信息失败',
         });
+        loadMachine.send(LoadingEvent.ERROR);
       } finally {
         if (isMounted) {
-          setLoading(false);
+          // 状态机已处理成功/失败
         }
       }
     };

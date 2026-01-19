@@ -22,6 +22,8 @@ import { extractData } from '../../../utils/apiHelpers';
 // ✅ 引入枚举常量替换魔法数字
 import { RechargeOrderStatus, WithdrawOrderStatus } from '../../../constants/statusEnums';
 import { STORAGE_KEYS } from '../../../constants/storageKeys';
+import { useStateMachine } from '../../../hooks/useStateMachine';
+import { LoadingEvent, LoadingState } from '../../../types/states';
 
 interface MessageItem {
   id: string;
@@ -39,10 +41,28 @@ interface MessageItem {
 
 const MessageCenter: React.FC = () => {
   const navigate = useNavigate();
-  const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [messages, setMessages] = useState<MessageItem[]>([]);
   const [activeTab, setActiveTab] = useState<'all' | 'unread'>('all');
+  const loadMachine = useStateMachine<LoadingState, LoadingEvent>({
+    initial: LoadingState.IDLE,
+    transitions: {
+      [LoadingState.IDLE]: { [LoadingEvent.LOAD]: LoadingState.LOADING },
+      [LoadingState.LOADING]: {
+        [LoadingEvent.SUCCESS]: LoadingState.SUCCESS,
+        [LoadingEvent.ERROR]: LoadingState.ERROR,
+      },
+      [LoadingState.SUCCESS]: {
+        [LoadingEvent.LOAD]: LoadingState.LOADING,
+        [LoadingEvent.RETRY]: LoadingState.LOADING,
+      },
+      [LoadingState.ERROR]: {
+        [LoadingEvent.LOAD]: LoadingState.LOADING,
+        [LoadingEvent.RETRY]: LoadingState.LOADING,
+      },
+    },
+  });
+  const loading = loadMachine.state === LoadingState.LOADING;
 
   // 缓存键
   const CACHE_KEY = 'message_center_cache';
@@ -168,18 +188,18 @@ const MessageCenter: React.FC = () => {
         });
 
         setMessages(syncedMessages);
-        setLoading(false);
+        loadMachine.send(LoadingEvent.SUCCESS);
         return;
       }
 
       const token = getStoredToken();
       if (!token) {
         setError('请先登录');
-        setLoading(false);
+        loadMachine.send(LoadingEvent.ERROR);
         return;
       }
 
-      setLoading(true);
+      loadMachine.send(LoadingEvent.LOAD);
       setError(null);
 
       try {
@@ -425,10 +445,12 @@ const MessageCenter: React.FC = () => {
         setMessages(allMessages);
         // 保存到缓存
         setCachedMessages(allMessages);
+        loadMachine.send(LoadingEvent.SUCCESS);
       } catch (err: any) {
         setError(err?.msg || err?.message || '获取消息失败');
+        loadMachine.send(LoadingEvent.ERROR);
       } finally {
-        setLoading(false);
+        // 状态机已处理成功/失败
       }
     };
 
@@ -439,7 +461,7 @@ const MessageCenter: React.FC = () => {
   const handleRefresh = () => {
     clearCache();
     setMessages([]);
-    setLoading(true);
+    loadMachine.send(LoadingEvent.LOAD);
     // 触发重新加载
     window.location.reload();
   };

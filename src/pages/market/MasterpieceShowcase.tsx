@@ -12,6 +12,8 @@ import PageContainer from '../../../components/layout/PageContainer';
 import { LoadingSpinner } from '../../../components/common';
 import GridShowcase from '../../../components/GridShowcase';
 import { normalizeAssetUrl, fetchShopProducts, ShopProductItem } from '../../../services/api';
+import { useStateMachine } from '../../../hooks/useStateMachine';
+import { LoadingEvent, LoadingState } from '../../../types/states';
 
 /**
  * MasterpieceShowcase 佳作鉴赏页面组件
@@ -19,7 +21,25 @@ import { normalizeAssetUrl, fetchShopProducts, ShopProductItem } from '../../../
 const MasterpieceShowcase: React.FC = () => {
   const navigate = useNavigate();
   const [items, setItems] = useState<ShopProductItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const loadMachine = useStateMachine<LoadingState, LoadingEvent>({
+    initial: LoadingState.IDLE,
+    transitions: {
+      [LoadingState.IDLE]: { [LoadingEvent.LOAD]: LoadingState.LOADING },
+      [LoadingState.LOADING]: {
+        [LoadingEvent.SUCCESS]: LoadingState.SUCCESS,
+        [LoadingEvent.ERROR]: LoadingState.ERROR,
+      },
+      [LoadingState.SUCCESS]: {
+        [LoadingEvent.LOAD]: LoadingState.LOADING,
+        [LoadingEvent.RETRY]: LoadingState.LOADING,
+      },
+      [LoadingState.ERROR]: {
+        [LoadingEvent.LOAD]: LoadingState.LOADING,
+        [LoadingEvent.RETRY]: LoadingState.LOADING,
+      },
+    },
+  });
+  const loading = loadMachine.state === LoadingState.LOADING;
 
   // 加载佳作数据
   useEffect(() => {
@@ -27,17 +47,19 @@ const MasterpieceShowcase: React.FC = () => {
 
     const load = async () => {
       try {
-        setLoading(true);
+        loadMachine.send(LoadingEvent.LOAD);
         const res = await fetchShopProducts({ page: 1, limit: 10 });
         if (!isMounted) return;
 
         const list = res.data?.list ?? [];
         // 取前12个作品展示
         setItems(list.slice(0, 12));
+        loadMachine.send(LoadingEvent.SUCCESS);
       } catch (e) {
         console.error('加载佳作鉴赏列表失败:', e);
+        loadMachine.send(LoadingEvent.ERROR);
       } finally {
-        if (isMounted) setLoading(false);
+        // 状态机已处理成功/失败
       }
     };
 

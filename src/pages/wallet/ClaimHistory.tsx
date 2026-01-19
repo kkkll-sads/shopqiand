@@ -9,6 +9,8 @@ import { getRightsDeclarationList, RightsDeclarationRecord } from '../../../serv
 import { getStoredToken } from '../../../services/client';
 import { useNotification } from '../../../context/NotificationContext';
 import { isSuccess, extractError } from '../../../utils/apiHelpers';
+import { useStateMachine } from '../../../hooks/useStateMachine';
+import { LoadingEvent, LoadingState } from '../../../types/states';
 import { useErrorHandler } from '../../../hooks/useErrorHandler';
 
 const ClaimHistory: React.FC = () => {
@@ -19,24 +21,44 @@ const ClaimHistory: React.FC = () => {
     const { handleError } = useErrorHandler({ showToast: true, persist: false });
 
     const [history, setHistory] = useState<RightsDeclarationRecord[]>([]);
-    const [loading, setLoading] = useState(true);
+    const loadMachine = useStateMachine<LoadingState, LoadingEvent>({
+        initial: LoadingState.IDLE,
+        transitions: {
+            [LoadingState.IDLE]: { [LoadingEvent.LOAD]: LoadingState.LOADING },
+            [LoadingState.LOADING]: {
+                [LoadingEvent.SUCCESS]: LoadingState.SUCCESS,
+                [LoadingEvent.ERROR]: LoadingState.ERROR,
+            },
+            [LoadingState.SUCCESS]: {
+                [LoadingEvent.LOAD]: LoadingState.LOADING,
+                [LoadingEvent.RETRY]: LoadingState.LOADING,
+            },
+            [LoadingState.ERROR]: {
+                [LoadingEvent.LOAD]: LoadingState.LOADING,
+                [LoadingEvent.RETRY]: LoadingState.LOADING,
+            },
+        },
+    });
+    const loading = loadMachine.state === LoadingState.LOADING;
 
     useEffect(() => {
         loadHistory();
     }, []);
 
     const loadHistory = async () => {
-        setLoading(true);
+        loadMachine.send(LoadingEvent.LOAD);
         try {
             const token = getStoredToken();
             if (!token) {
                 showToast('error', '登录过期', '请重新登录');
+                loadMachine.send(LoadingEvent.ERROR);
                 return;
             }
 
             const response = await getRightsDeclarationList({}, token);
             if (isSuccess(response) && response.data) {
                 setHistory(response.data.list);
+                loadMachine.send(LoadingEvent.SUCCESS);
             } else {
                 // ✅ 使用统一错误处理
                 handleError(response, {
@@ -44,6 +66,7 @@ const ClaimHistory: React.FC = () => {
                     customMessage: '获取历史记录失败',
                     context: { page: 'ClaimHistory' }
                 });
+                loadMachine.send(LoadingEvent.ERROR);
             }
         } catch (error: any) {
             // ✅ 使用统一错误处理
@@ -52,8 +75,9 @@ const ClaimHistory: React.FC = () => {
                 customMessage: '网络错误，请重试',
                 context: { page: 'ClaimHistory' }
             });
+            loadMachine.send(LoadingEvent.ERROR);
         } finally {
-            setLoading(false);
+            // 状态机已处理成功/失败
         }
     };
 

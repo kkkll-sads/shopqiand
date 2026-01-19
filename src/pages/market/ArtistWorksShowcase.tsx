@@ -16,6 +16,8 @@ import {
   fetchArtistAllWorks,
   normalizeAssetUrl,
 } from '../../../services/api';
+import { useStateMachine } from '../../../hooks/useStateMachine';
+import { LoadingEvent, LoadingState } from '../../../types/states';
 
 
 /**
@@ -36,18 +38,36 @@ function shuffleArray<T>(arr: T[]): T[] {
 const ArtistWorksShowcase: React.FC = () => {
   const navigate = useNavigate();
   const [works, setWorks] = useState<ArtistAllWorkItem[]>([]);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const limit = 20;
+  const loadMachine = useStateMachine<LoadingState, LoadingEvent>({
+    initial: LoadingState.IDLE,
+    transitions: {
+      [LoadingState.IDLE]: { [LoadingEvent.LOAD]: LoadingState.LOADING },
+      [LoadingState.LOADING]: {
+        [LoadingEvent.SUCCESS]: LoadingState.SUCCESS,
+        [LoadingEvent.ERROR]: LoadingState.ERROR,
+      },
+      [LoadingState.SUCCESS]: {
+        [LoadingEvent.LOAD]: LoadingState.LOADING,
+        [LoadingEvent.RETRY]: LoadingState.LOADING,
+      },
+      [LoadingState.ERROR]: {
+        [LoadingEvent.LOAD]: LoadingState.LOADING,
+        [LoadingEvent.RETRY]: LoadingState.LOADING,
+      },
+    },
+  });
+  const loading = loadMachine.state === LoadingState.LOADING;
 
   /**
    * 加载页面数据
    */
   const loadPage = async (targetPage: number) => {
     try {
-      setLoading(true);
+      loadMachine.send(LoadingEvent.LOAD);
       setError(null);
       const res = await fetchArtistAllWorks({ page: targetPage, limit: 10 });
       const data: ArtistAllWorksListData | undefined = res.data;
@@ -63,11 +83,13 @@ const ArtistWorksShowcase: React.FC = () => {
         }));
       setWorks(randomized);
       setPage(targetPage);
+      loadMachine.send(LoadingEvent.SUCCESS);
     } catch (e: any) {
       console.error('加载艺术佳作列表失败:', e);
       setError(e?.message || '加载佳作列表失败');
+      loadMachine.send(LoadingEvent.ERROR);
     } finally {
-      setLoading(false);
+      // 状态机已处理成功/失败
     }
   };
 

@@ -18,6 +18,8 @@ import {
 } from '../../../services/api';
 import { useNotification } from '../../../context/NotificationContext';
 import { isSuccess, extractError } from '../../../utils/apiHelpers';
+import { useStateMachine } from '../../../hooks/useStateMachine';
+import { LoadingEvent, LoadingState } from '../../../types/states';
 
 // 状态显示配置
 const STATUS_CONFIG: Record<MatchingPoolStatus, {
@@ -58,17 +60,35 @@ const MatchingPoolPage: React.FC = () => {
     // 状态管理
     const [activeTab, setActiveTab] = useState<'all' | MatchingPoolStatus>('all');
     const [matchingList, setMatchingList] = useState<MatchingPoolItem[]>([]);
-    const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [page, setPage] = useState(1);
     const [total, setTotal] = useState(0);
     const [hasMore, setHasMore] = useState(false);
     const [cancellingId, setCancellingId] = useState<number | null>(null);
+    const loadMachine = useStateMachine<LoadingState, LoadingEvent>({
+        initial: LoadingState.IDLE,
+        transitions: {
+            [LoadingState.IDLE]: { [LoadingEvent.LOAD]: LoadingState.LOADING },
+            [LoadingState.LOADING]: {
+                [LoadingEvent.SUCCESS]: LoadingState.SUCCESS,
+                [LoadingEvent.ERROR]: LoadingState.ERROR,
+            },
+            [LoadingState.SUCCESS]: {
+                [LoadingEvent.LOAD]: LoadingState.LOADING,
+                [LoadingEvent.RETRY]: LoadingState.LOADING,
+            },
+            [LoadingState.ERROR]: {
+                [LoadingEvent.LOAD]: LoadingState.LOADING,
+                [LoadingEvent.RETRY]: LoadingState.LOADING,
+            },
+        },
+    });
+    const loading = loadMachine.state === LoadingState.LOADING;
 
     // 加载撮合池数据
     const loadMatchingPool = async (pageNum: number, statusFilter?: MatchingPoolStatus) => {
         try {
-            setLoading(pageNum === 1);
+            loadMachine.send(LoadingEvent.LOAD);
             setError(null);
 
             const response = await fetchMatchingPool({
@@ -88,14 +108,17 @@ const MatchingPoolPage: React.FC = () => {
                 }
                 setTotal(response.data.total || 0);
                 setHasMore(newList.length === 20);
+                loadMachine.send(LoadingEvent.SUCCESS);
             } else {
                 setError(extractError(response, '加载失败'));
+                loadMachine.send(LoadingEvent.ERROR);
             }
         } catch (err: any) {
             console.error('加载撮合池列表失败:', err);
             setError(err?.msg || '网络连接异常');
+            loadMachine.send(LoadingEvent.ERROR);
         } finally {
-            setLoading(false);
+            // 状态机已处理成功/失败
         }
     };
 

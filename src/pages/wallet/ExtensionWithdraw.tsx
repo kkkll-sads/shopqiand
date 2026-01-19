@@ -20,6 +20,8 @@ import { useNotification } from '../../../context/NotificationContext';
 import { useAuthStore } from '../../stores/authStore';
 import { isSuccess, extractError } from '../../../utils/apiHelpers';
 import { useErrorHandler } from '../../../hooks/useErrorHandler';
+import { useStateMachine } from '../../../hooks/useStateMachine';
+import { FormEvent, FormState, LoadingEvent, LoadingState } from '../../../types/states';
 
 const ExtensionWithdraw: React.FC = () => {
   const navigate = useNavigate();
@@ -46,8 +48,48 @@ const ExtensionWithdraw: React.FC = () => {
   const [amount, setAmount] = useState<string>('');
   const [payPassword, setPayPassword] = useState<string>('');
   const [remark, setRemark] = useState<string>('');
-  const [loadingAccounts, setLoadingAccounts] = useState<boolean>(false);
-  const [submitting, setSubmitting] = useState<boolean>(false);
+  const accountsMachine = useStateMachine<LoadingState, LoadingEvent>({
+    initial: LoadingState.IDLE,
+    transitions: {
+      [LoadingState.IDLE]: { [LoadingEvent.LOAD]: LoadingState.LOADING },
+      [LoadingState.LOADING]: {
+        [LoadingEvent.SUCCESS]: LoadingState.SUCCESS,
+        [LoadingEvent.ERROR]: LoadingState.ERROR,
+      },
+      [LoadingState.SUCCESS]: {
+        [LoadingEvent.LOAD]: LoadingState.LOADING,
+        [LoadingEvent.RETRY]: LoadingState.LOADING,
+      },
+      [LoadingState.ERROR]: {
+        [LoadingEvent.LOAD]: LoadingState.LOADING,
+        [LoadingEvent.RETRY]: LoadingState.LOADING,
+      },
+    },
+  });
+  const submitMachine = useStateMachine<FormState, FormEvent>({
+    initial: FormState.IDLE,
+    transitions: {
+      [FormState.IDLE]: { [FormEvent.SUBMIT]: FormState.SUBMITTING },
+      [FormState.VALIDATING]: {
+        [FormEvent.VALIDATION_SUCCESS]: FormState.SUBMITTING,
+        [FormEvent.VALIDATION_ERROR]: FormState.ERROR,
+      },
+      [FormState.SUBMITTING]: {
+        [FormEvent.SUBMIT_SUCCESS]: FormState.SUCCESS,
+        [FormEvent.SUBMIT_ERROR]: FormState.ERROR,
+      },
+      [FormState.SUCCESS]: {
+        [FormEvent.SUBMIT]: FormState.SUBMITTING,
+        [FormEvent.RESET]: FormState.IDLE,
+      },
+      [FormState.ERROR]: {
+        [FormEvent.SUBMIT]: FormState.SUBMITTING,
+        [FormEvent.RESET]: FormState.IDLE,
+      },
+    },
+  });
+  const loadingAccounts = accountsMachine.state === LoadingState.LOADING;
+  const submitting = submitMachine.state === FormState.SUBMITTING;
 
   // 可提现余额
   const balance = userInfo?.static_income || '0';
@@ -78,7 +120,7 @@ const ExtensionWithdraw: React.FC = () => {
       const token = getStoredToken();
       if (!token) return;
 
-      setLoadingAccounts(true);
+      accountsMachine.send(LoadingEvent.LOAD);
       try {
         const res = await fetchPaymentAccountList(token);
         if (isSuccess(res) && res.data?.list) {
@@ -88,12 +130,14 @@ const ExtensionWithdraw: React.FC = () => {
             const defaultAccount = res.data.list.find((acc: PaymentAccountItem) => Number(acc.is_default) === 1);
             setSelectedAccount(defaultAccount || res.data.list[0]);
           }
+          accountsMachine.send(LoadingEvent.SUCCESS);
         } else {
           // ✅ 使用统一错误处理
           handleLoadError(res, {
             toastTitle: '加载失败',
             customMessage: '获取收款账户信息失败'
           });
+          accountsMachine.send(LoadingEvent.ERROR);
         }
       } catch (e: any) {
         // ✅ 使用统一错误处理
@@ -101,8 +145,9 @@ const ExtensionWithdraw: React.FC = () => {
           toastTitle: '加载失败',
           customMessage: '获取收款账户信息失败'
         });
+        accountsMachine.send(LoadingEvent.ERROR);
       } finally {
-        setLoadingAccounts(false);
+        // 状态机已处理成功/失败
       }
     };
 
@@ -146,13 +191,13 @@ const ExtensionWithdraw: React.FC = () => {
       return handleSubmitError('支付密码必须为6位数字', { persist: true, showToast: false });
     }
 
-    setSubmitting(true);
+    submitMachine.send(FormEvent.SUBMIT);
     clearSubmitError(); // ✅ 提交前清除错误
 
     const token = getStoredToken();
     if (!token) {
       handleSubmitError('未找到用户登录信息，请先登录', { persist: true, showToast: false });
-      setSubmitting(false);
+      submitMachine.send(FormEvent.SUBMIT_ERROR);
       return;
     }
 
@@ -178,6 +223,7 @@ const ExtensionWithdraw: React.FC = () => {
           setUserInfo(updatedResponse.data.userInfo);
           useAuthStore.getState().updateUser(updatedResponse.data.userInfo);
         }
+        submitMachine.send(FormEvent.SUBMIT_SUCCESS);
       } else {
         // ✅ 使用统一错误处理
         handleSubmitError(response, {
@@ -186,6 +232,7 @@ const ExtensionWithdraw: React.FC = () => {
           customMessage: '提交提现申请失败',
           context: { amount, accountId: selectedAccount?.id }
         });
+        submitMachine.send(FormEvent.SUBMIT_ERROR);
       }
     } catch (err: any) {
       // ✅ 使用统一错误处理
@@ -195,8 +242,9 @@ const ExtensionWithdraw: React.FC = () => {
         customMessage: '提交提现申请失败，请稍后重试',
         context: { amount, accountId: selectedAccount?.id }
       });
+      submitMachine.send(FormEvent.SUBMIT_ERROR);
     } finally {
-      setSubmitting(false);
+      // 状态机已处理成功/失败
     }
   };
 

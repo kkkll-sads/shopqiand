@@ -19,6 +19,8 @@ import { getStoredToken } from '../../../services/client';
 import { isSuccess, extractData } from '../../../utils/apiHelpers';
 import { useErrorHandler } from '../../../hooks/useErrorHandler';
 import { useNotification } from '../../../context/NotificationContext';
+import { useStateMachine } from '../../../hooks/useStateMachine';
+import { FormEvent, FormState, LoadingEvent, LoadingState } from '../../../types/states';
 
 type PaymentAccountFormValues = {
   type: string;
@@ -58,13 +60,49 @@ const CardManagement: React.FC = () => {
     clearError: clearFormError
   } = useErrorHandler();
 
-  const [loading, setLoading] = useState<boolean>(false);
+  const loadMachine = useStateMachine<LoadingState, LoadingEvent>({
+    initial: LoadingState.IDLE,
+    transitions: {
+      [LoadingState.IDLE]: { [LoadingEvent.LOAD]: LoadingState.LOADING },
+      [LoadingState.LOADING]: {
+        [LoadingEvent.SUCCESS]: LoadingState.SUCCESS,
+        [LoadingEvent.ERROR]: LoadingState.ERROR,
+      },
+      [LoadingState.SUCCESS]: {
+        [LoadingEvent.LOAD]: LoadingState.LOADING,
+        [LoadingEvent.RETRY]: LoadingState.LOADING,
+      },
+      [LoadingState.ERROR]: {
+        [LoadingEvent.LOAD]: LoadingState.LOADING,
+        [LoadingEvent.RETRY]: LoadingState.LOADING,
+      },
+    },
+  });
+  const loading = loadMachine.state === LoadingState.LOADING;
   const [accounts, setAccounts] = useState<PaymentAccountItem[]>([]);
   const [mode, setMode] = useState<'list' | 'add' | 'edit'>('list');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingWasDefault, setEditingWasDefault] = useState<boolean>(false);
   const [formValues, setFormValues] = useState<PaymentAccountFormValues>(() => createInitialFormValues());
-  const [formLoading, setFormLoading] = useState<boolean>(false);
+  const formMachine = useStateMachine<FormState, FormEvent>({
+    initial: FormState.IDLE,
+    transitions: {
+      [FormState.IDLE]: { [FormEvent.SUBMIT]: FormState.SUBMITTING },
+      [FormState.SUBMITTING]: {
+        [FormEvent.SUBMIT_SUCCESS]: FormState.SUCCESS,
+        [FormEvent.SUBMIT_ERROR]: FormState.ERROR,
+      },
+      [FormState.SUCCESS]: {
+        [FormEvent.SUBMIT]: FormState.SUBMITTING,
+        [FormEvent.RESET]: FormState.IDLE,
+      },
+      [FormState.ERROR]: {
+        [FormEvent.SUBMIT]: FormState.SUBMITTING,
+        [FormEvent.RESET]: FormState.IDLE,
+      },
+    },
+  });
+  const formLoading = formMachine.state === FormState.SUBMITTING;
   const [notice, setNotice] = useState<string | null>(null);
   const [showBankPicker, setShowBankPicker] = useState(false);
 
@@ -76,10 +114,11 @@ const CardManagement: React.FC = () => {
         showToast: false
       });
       setAccounts([]);
+      loadMachine.send(LoadingEvent.ERROR);
       return;
     }
 
-    setLoading(true);
+    loadMachine.send(LoadingEvent.LOAD);
     try {
       const timeoutMs = 10000;
       const res = await Promise.race([
@@ -96,12 +135,14 @@ const CardManagement: React.FC = () => {
       if (data) {
         setAccounts(data.list || []);
         clearListError();
+        loadMachine.send(LoadingEvent.SUCCESS);
       } else {
         handleListError(res, {
           persist: true,
           showToast: false,
           customMessage: '获取卡号列表失败'
         });
+        loadMachine.send(LoadingEvent.ERROR);
       }
     } catch (e: any) {
       handleListError(e, {
@@ -109,8 +150,9 @@ const CardManagement: React.FC = () => {
         showToast: false,
         customMessage: '获取卡号列表失败'
       });
+      loadMachine.send(LoadingEvent.ERROR);
     } finally {
-      setLoading(false);
+      // 状态机已处理成功/失败
     }
   }, [handleListError, clearListError]);
 
@@ -254,12 +296,12 @@ const CardManagement: React.FC = () => {
     if (type === 'bank_card' && !bank_name.trim()) return handleFormError('请选择或输入银行名称', { persist: true, showToast: false });
     if (type === 'usdt' && !bank_branch.trim()) return handleFormError('请输入 USDT 网络类型', { persist: true, showToast: false });
 
-    setFormLoading(true);
+    formMachine.send(FormEvent.SUBMIT);
     try {
       if (mode === 'edit') {
         if (!editingId) {
           handleFormError('缺少要编辑的账户 ID', { persist: true, showToast: false });
-          setFormLoading(false);
+          formMachine.send(FormEvent.SUBMIT_ERROR);
           return;
         }
 
@@ -282,12 +324,14 @@ const CardManagement: React.FC = () => {
           setEditingId(null);
           setEditingWasDefault(false);
           await loadAccounts();
+          formMachine.send(FormEvent.SUBMIT_SUCCESS);
         } else {
           handleFormError(res, {
             persist: true,
             showToast: false,
             customMessage: '保存失败，请检查填写信息'
           });
+          formMachine.send(FormEvent.SUBMIT_ERROR);
         }
       } else {
         const res = await addPaymentAccount({
@@ -305,12 +349,14 @@ const CardManagement: React.FC = () => {
           resetForm();
           setMode('list');
           await loadAccounts();
+          formMachine.send(FormEvent.SUBMIT_SUCCESS);
         } else {
           handleFormError(res, {
             persist: true,
             showToast: false,
             customMessage: '新增账户失败，请检查填写信息'
           });
+          formMachine.send(FormEvent.SUBMIT_ERROR);
         }
       }
     } catch (e: any) {
@@ -319,8 +365,9 @@ const CardManagement: React.FC = () => {
         showToast: false,
         customMessage: '提交失败，请稍后重试'
       });
+      formMachine.send(FormEvent.SUBMIT_ERROR);
     } finally {
-      setFormLoading(false);
+      // 状态机已处理成功/失败
     }
   };
 

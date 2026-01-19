@@ -9,31 +9,54 @@ import { fetchReservationDetail, ReservationDetailData } from '../../../services
 import { ReservationStatus } from '../../../constants/statusEnums';
 import { isSuccess, extractData } from '../../../utils/apiHelpers';
 import { LoadingSpinner } from '../../../components/common';
+import { useStateMachine } from '../../../hooks/useStateMachine';
+import { LoadingEvent, LoadingState } from '../../../types/states';
 
 const ReservationRecordDetailPage: React.FC = () => {
     const navigate = useNavigate();
     const { id: reservationId } = useParams<{ id: string }>();
     const [record, setRecord] = useState<ReservationDetailData | null>(null);
-    const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const loadMachine = useStateMachine<LoadingState, LoadingEvent>({
+        initial: LoadingState.IDLE,
+        transitions: {
+            [LoadingState.IDLE]: { [LoadingEvent.LOAD]: LoadingState.LOADING },
+            [LoadingState.LOADING]: {
+                [LoadingEvent.SUCCESS]: LoadingState.SUCCESS,
+                [LoadingEvent.ERROR]: LoadingState.ERROR,
+            },
+            [LoadingState.SUCCESS]: {
+                [LoadingEvent.LOAD]: LoadingState.LOADING,
+                [LoadingEvent.RETRY]: LoadingState.LOADING,
+            },
+            [LoadingState.ERROR]: {
+                [LoadingEvent.LOAD]: LoadingState.LOADING,
+                [LoadingEvent.RETRY]: LoadingState.LOADING,
+            },
+        },
+    });
+    const loading = loadMachine.state === LoadingState.LOADING;
 
     useEffect(() => {
         const loadDetail = async () => {
             try {
-                setLoading(true);
+                loadMachine.send(LoadingEvent.LOAD);
                 setError(null);
                 const response = await fetchReservationDetail(reservationId);
                 if (isSuccess(response)) {
                     const data = extractData(response);
                     setRecord(data);
+                    loadMachine.send(LoadingEvent.SUCCESS);
                 } else {
                     setError(response.msg || '加载失败');
+                    loadMachine.send(LoadingEvent.ERROR);
                 }
             } catch (err) {
                 console.error('加载预约详情失败:', err);
                 setError('加载失败，请稍后重试');
+                loadMachine.send(LoadingEvent.ERROR);
             } finally {
-                setLoading(false);
+                // 状态机已处理成功/失败
             }
         };
 

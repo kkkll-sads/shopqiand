@@ -13,6 +13,8 @@ import {
 import { getStoredToken } from '../../../services/client';
 import { isSuccess, extractData } from '../../../utils/apiHelpers';
 import { BALANCE_TYPE_OPTIONS, getBalanceTypeLabel } from '../../../constants/balanceTypes';
+import { useStateMachine } from '../../../hooks/useStateMachine';
+import { LoadingEvent, LoadingState } from '../../../types/states';
 
 const AssetHistory: React.FC = () => {
   const navigate = useNavigate();
@@ -30,11 +32,29 @@ const AssetHistory: React.FC = () => {
   const setRange = (v: string) => setFilters(prev => ({ ...prev, time: v }));
 
   // 数据状态
-  const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [allLogs, setAllLogs] = useState<AllLogItem[]>([]);
   const [page, setPage] = useState<number>(1);
   const [hasMore, setHasMore] = useState<boolean>(false);
+  const loadMachine = useStateMachine<LoadingState, LoadingEvent>({
+    initial: LoadingState.IDLE,
+    transitions: {
+      [LoadingState.IDLE]: { [LoadingEvent.LOAD]: LoadingState.LOADING },
+      [LoadingState.LOADING]: {
+        [LoadingEvent.SUCCESS]: LoadingState.SUCCESS,
+        [LoadingEvent.ERROR]: LoadingState.ERROR,
+      },
+      [LoadingState.SUCCESS]: {
+        [LoadingEvent.LOAD]: LoadingState.LOADING,
+        [LoadingEvent.RETRY]: LoadingState.LOADING,
+      },
+      [LoadingState.ERROR]: {
+        [LoadingEvent.LOAD]: LoadingState.LOADING,
+        [LoadingEvent.RETRY]: LoadingState.LOADING,
+      },
+    },
+  });
+  const loading = loadMachine.state === LoadingState.LOADING;
 
   // 重置并加载数据
   useEffect(() => {
@@ -56,10 +76,11 @@ const AssetHistory: React.FC = () => {
     const token = getStoredToken();
     if (!token) {
       setError('请先登录');
+      loadMachine.send(LoadingEvent.ERROR);
       return;
     }
 
-    setLoading(true);
+    loadMachine.send(LoadingEvent.LOAD);
     if (isRefresh) setError(null);
 
     try {
@@ -103,14 +124,17 @@ const AssetHistory: React.FC = () => {
           setAllLogs(prev => [...prev, ...(data.list || [])]);
         }
         setHasMore((data.list?.length || 0) >= 10 && (data.current_page || 1) * 10 < (data.total || 0));
+        loadMachine.send(LoadingEvent.SUCCESS);
       } else {
         if (isRefresh) setError(res.msg || '获取明细失败');
+        loadMachine.send(LoadingEvent.ERROR);
       }
     } catch (e: any) {
       console.error('[AssetHistory] 加载失败:', e);
       if (isRefresh) setError(e?.message || '加载数据失败');
+      loadMachine.send(LoadingEvent.ERROR);
     } finally {
-      setLoading(false);
+      // 状态机已处理成功/失败
     }
   };
 

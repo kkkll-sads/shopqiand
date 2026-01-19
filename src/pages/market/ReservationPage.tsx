@@ -9,7 +9,9 @@ import { Product, UserInfo } from '../../../types';
 import { fetchProfile, bidBuy, fetchCollectionItemDetail, fetchCollectionSessionDetail } from '../../../services/api';
 import { useNotification } from '../../../context/NotificationContext';
 import { getStoredToken } from '../../../services/client';
-import { isSuccess, extractData } from '../../../utils/apiHelpers';
+import { isSuccess, extractData, extractError } from '../../../utils/apiHelpers';
+import { useStateMachine } from '../../../hooks/useStateMachine';
+import { FormEvent, FormState, LoadingEvent, LoadingState } from '../../../types/states';
 
 // 全局预加载数据存储
 declare global {
@@ -55,8 +57,48 @@ const ReservationPage: React.FC<ReservationPageProps> = ({ product, preloadedUse
     const { showToast } = useNotification();
     const [extraHashrate, setExtraHashrate] = useState(0);
     const [showConfirmModal, setShowConfirmModal] = useState(false);
-    const [loading, setLoading] = useState(false);
-    const [userInfoLoading, setUserInfoLoading] = useState(true);
+    const userInfoMachine = useStateMachine<LoadingState, LoadingEvent>({
+        initial: LoadingState.LOADING,
+        transitions: {
+            [LoadingState.IDLE]: { [LoadingEvent.LOAD]: LoadingState.LOADING },
+            [LoadingState.LOADING]: {
+                [LoadingEvent.SUCCESS]: LoadingState.SUCCESS,
+                [LoadingEvent.ERROR]: LoadingState.ERROR,
+            },
+            [LoadingState.SUCCESS]: {
+                [LoadingEvent.LOAD]: LoadingState.LOADING,
+                [LoadingEvent.RETRY]: LoadingState.LOADING,
+            },
+            [LoadingState.ERROR]: {
+                [LoadingEvent.LOAD]: LoadingState.LOADING,
+                [LoadingEvent.RETRY]: LoadingState.LOADING,
+            },
+        },
+    });
+    const submitMachine = useStateMachine<FormState, FormEvent>({
+        initial: FormState.IDLE,
+        transitions: {
+            [FormState.IDLE]: { [FormEvent.SUBMIT]: FormState.SUBMITTING },
+            [FormState.VALIDATING]: {
+                [FormEvent.VALIDATION_SUCCESS]: FormState.SUBMITTING,
+                [FormEvent.VALIDATION_ERROR]: FormState.ERROR,
+            },
+            [FormState.SUBMITTING]: {
+                [FormEvent.SUBMIT_SUCCESS]: FormState.SUCCESS,
+                [FormEvent.SUBMIT_ERROR]: FormState.ERROR,
+            },
+            [FormState.SUCCESS]: {
+                [FormEvent.SUBMIT]: FormState.SUBMITTING,
+                [FormEvent.RESET]: FormState.IDLE,
+            },
+            [FormState.ERROR]: {
+                [FormEvent.SUBMIT]: FormState.SUBMITTING,
+                [FormEvent.RESET]: FormState.IDLE,
+            },
+        },
+    });
+    const userInfoLoading = userInfoMachine.state === LoadingState.LOADING;
+    const loading = submitMachine.state === FormState.SUBMITTING;
     // 新版预约需要后端提供的场次/分区/资产包，若入参缺失则尝试自动补全
     const [sessionId, setSessionId] = useState<number | string | undefined>(globalThis.__preloadedReservationData?.sessionId ?? product.sessionId);
     const [zoneId, setZoneId] = useState<number | string | undefined>(globalThis.__preloadedReservationData?.zoneId ?? product.zoneId);
@@ -275,12 +317,12 @@ const ReservationPage: React.FC<ReservationPageProps> = ({ product, preloadedUse
 
         // 始终发送请求获取最新的用户信息（算力和余额）
         const loadUserInfo = async () => {
-            setUserInfoLoading(true);
+            userInfoMachine.send(LoadingEvent.LOAD);
             const token = getStoredToken();
             if (!token) {
                 // 用户未登录，使用默认值
                 console.log('用户未登录，使用默认算力和余额');
-                setUserInfoLoading(false);
+                userInfoMachine.send(LoadingEvent.ERROR);
                 return;
             }
 
@@ -293,18 +335,21 @@ const ReservationPage: React.FC<ReservationPageProps> = ({ product, preloadedUse
                     setAvailableHashrate(latestHashrate);
                     setAccountBalance(latestBalance);
                     console.log('[Reservation] 用户信息已更新:', { latestHashrate, latestBalance });
+                    userInfoMachine.send(LoadingEvent.SUCCESS);
                 } else {
                     console.warn('[Reservation] 获取用户信息失败:', response.msg || '未知错误');
+                    userInfoMachine.send(LoadingEvent.ERROR);
                 }
             } catch (error: any) {
                 console.error('获取用户信息失败:', error);
                 if (error?.name === 'NeedLoginError') {
-                    setUserInfoLoading(false);
+                    userInfoMachine.send(LoadingEvent.ERROR);
                     return;
                 }
                 // 可以在这里设置错误状态或显示提示
+                userInfoMachine.send(LoadingEvent.ERROR);
             } finally {
-                setUserInfoLoading(false);
+                // 状态机已处理成功/失败
             }
         };
 
@@ -330,7 +375,7 @@ const ReservationPage: React.FC<ReservationPageProps> = ({ product, preloadedUse
 
     const confirmSubmit = async () => {
         try {
-            setLoading(true);
+            submitMachine.send(FormEvent.SUBMIT);
 
             // 统一使用 bidBuy 接口 (盲盒预约模式: session_id + zone_id)
             const finalSessionId = sessionId ?? product.sessionId;
@@ -354,21 +399,24 @@ const ReservationPage: React.FC<ReservationPageProps> = ({ product, preloadedUse
                 extra_hashrate: extraHashrate,
             });
 
-            if (Number(response.code) === 1) {
+            if (isSuccess(response)) {
                 setShowConfirmModal(false);
                 showToast('success', '预约成功', response.msg || '预约成功');
                 navigate('/reservation-record', { replace: true });
+                submitMachine.send(FormEvent.SUBMIT_SUCCESS);
             } else {
                 // 失败时完全使用后端返回的 msg
-                showToast('error', '预约失败', response.msg || '预约失败');
+                showToast('error', '预约失败', extractError(response, '预约失败'));
+                submitMachine.send(FormEvent.SUBMIT_ERROR);
             }
         } catch (error: any) {
             console.error('操作失败:', error);
             if (error?.name === 'NeedLoginError') return;
             // 异常时也使用后端/错误对象的 msg
             showToast('error', '操作失败', error?.msg || error?.message || '网络错误，请稍后重试');
+            submitMachine.send(FormEvent.SUBMIT_ERROR);
         } finally {
-            setLoading(false);
+            // 状态机已处理成功/失败
         }
     };
 
