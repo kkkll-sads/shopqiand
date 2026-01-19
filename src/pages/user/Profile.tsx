@@ -264,7 +264,7 @@ const Profile: React.FC<{ unreadCount?: number }> = ({ unreadCount = 0 }) => {
       <div className="absolute top-0 left-0 right-0 h-72 bg-gradient-to-b from-[#FFD6A5] to-gray-50 z-0"></div>
 
       {/* User Header - 参考淘宝布局 */}
-      <div className="pt-8 pb-2 px-4 relative z-10 text-gray-900">
+      <div className="pt-4 pb-2 px-6 relative z-10 text-gray-900">
         {/* 顶部操作栏：头像、名称、右侧按钮 */}
         <div className="flex items-center justify-between">
           {/* 左侧：头像 + 名称 + 标签 */}
@@ -314,7 +314,7 @@ const Profile: React.FC<{ unreadCount?: number }> = ({ unreadCount = 0 }) => {
           </div>
           
           {/* 右侧：功能按钮组 - 图标放大, 间隔加大 */}
-          <div className="flex items-center gap-6">
+          <div className="flex items-center gap-5">
             {/* 客服 */}
             <button
               onClick={() => navigate('/online-service')}
