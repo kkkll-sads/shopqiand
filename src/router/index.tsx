@@ -53,7 +53,6 @@ const UserAgreement = lazy(() => import('../pages/cms/UserAgreementWrapper'));
 
 // 市场/交易页面
 const ProductDetail = lazy(() => import('../pages/market/ProductDetailWrapper'));
-const PointsProductDetail = lazy(() => import('../pages/market/PointsProductDetailWrapper'));
 const TradingZone = lazy(() => import('../pages/market/TradingZoneWrapper'));
 const ArtistShowcase = lazy(() => import('../pages/market/ArtistShowcaseWrapper'));
 const ArtistDetail = lazy(() => import('../pages/market/ArtistDetailWrapper'));
@@ -259,10 +258,6 @@ const routes: RouteObject[] = [
       {
         path: '/product/:id',
         element: <LazyComponent component={ProductDetail} />,
-      },
-      {
-        path: '/points-product/:id',
-        element: <LazyComponent component={PointsProductDetail} />,
       },
       {
         path: '/trading-zone',

@@ -68,7 +68,6 @@ export const ROUTES = {
 export const generatePath = {
   newsDetail: (id: string) => `/news/${id}`,
   productDetail: (id: string) => `/product/${id}`,
-  pointsProductDetail: (id: string) => `/points-product/${id}`,
   artistDetail: (id: string) => `/artist/${id}`,
   artistWorks: (artistId: string) => `/artist-works/${artistId}`,
   friendDetail: (id: string) => `/friend-detail/${id}`,
