@@ -60,6 +60,8 @@ const ShopProductDetail: React.FC<ShopProductDetailProps> = ({
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isFavorite, setIsFavorite] = useState(false);
   const [activeTab, setActiveTab] = useState<'product' | 'reviews' | 'detail' | 'recommend'>('product');
+  const [scrollY, setScrollY] = useState(0);
+  const [headerStyle, setHeaderStyle] = useState<'transparent' | 'white'>('transparent');
   const imageContainerRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
@@ -192,6 +194,24 @@ const ShopProductDetail: React.FC<ShopProductDetailProps> = ({
     }
   };
 
+  // 页面滚动监听 - 导航栏跟随变化
+  useEffect(() => {
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY;
+      setScrollY(currentScrollY);
+      
+      // 滚动超过图片区域（约 300px）时，导航栏变为白色背景
+      if (currentScrollY > 300) {
+        setHeaderStyle('white');
+      } else {
+        setHeaderStyle('transparent');
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
   // 购买
   const handleBuy = async () => {
     if (buying) return;
@@ -281,15 +301,30 @@ const ShopProductDetail: React.FC<ShopProductDetailProps> = ({
 
   return (
     <div className="min-h-screen bg-[#f5f5f5] pb-[70px]" ref={scrollContainerRef}>
-      {/* 顶部Tab导航栏 */}
-      <header className="fixed top-0 left-0 right-0 z-50 bg-white">
-        <div className="flex items-center px-2 py-2 border-b border-gray-100">
-          <button onClick={() => navigate(-1)} className="p-2 -ml-1 rounded-full active:bg-gray-100">
-            <ChevronLeft size={22} className="text-gray-700" />
+      {/* 顶部Tab导航栏 - 滚动跟随变化 */}
+      <header 
+        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
+          headerStyle === 'white' 
+            ? 'bg-white shadow-sm' 
+            : 'bg-transparent'
+        }`}
+      >
+        <div className={`flex items-center px-2 py-2 ${headerStyle === 'white' ? 'border-b border-gray-100' : ''}`}>
+          <button 
+            onClick={() => navigate(-1)} 
+            className={`p-2 -ml-1 rounded-full transition-colors ${
+              headerStyle === 'white' 
+                ? 'active:bg-gray-100' 
+                : 'bg-black/20 active:bg-black/30'
+            }`}
+          >
+            <ChevronLeft size={22} className={headerStyle === 'white' ? 'text-gray-700' : 'text-white'} />
           </button>
           
-          {/* Tab导航 */}
-          <div className="flex-1 flex items-center justify-center gap-6">
+          {/* Tab导航 - 滚动后显示 */}
+          <div className={`flex-1 flex items-center justify-center gap-6 transition-opacity duration-300 ${
+            headerStyle === 'white' ? 'opacity-100' : 'opacity-0 pointer-events-none'
+          }`}>
             {[
               { key: 'product', label: '商品' },
               { key: 'reviews', label: '大家评' },
@@ -299,16 +334,31 @@ const ShopProductDetail: React.FC<ShopProductDetailProps> = ({
               <button
                 key={tab.key}
                 onClick={() => setActiveTab(tab.key as any)}
-                className={`text-sm py-1 ${activeTab === tab.key ? 'text-gray-900 font-bold' : 'text-gray-500'}`}
+                className={`text-sm py-1 relative ${activeTab === tab.key ? 'text-gray-900 font-bold' : 'text-gray-500'}`}
               >
                 {tab.label}
+                {activeTab === tab.key && (
+                  <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-4 h-0.5 bg-red-500 rounded-full" />
+                )}
               </button>
             ))}
           </div>
+
+          {/* 标题 - 滚动后显示 */}
+          {headerStyle === 'transparent' && (
+            <div className="flex-1" />
+          )}
           
           <div className="flex items-center gap-1">
-            <button className="p-2 rounded-full active:bg-gray-100">
-              <Heart size={20} className={isFavorite ? 'fill-red-500 text-red-500' : 'text-gray-500'} onClick={() => setIsFavorite(!isFavorite)} />
+            <button 
+              onClick={() => setIsFavorite(!isFavorite)}
+              className={`p-2 rounded-full transition-colors ${
+                headerStyle === 'white' 
+                  ? 'active:bg-gray-100' 
+                  : 'bg-black/20 active:bg-black/30'
+              }`}
+            >
+              <Heart size={20} className={isFavorite ? 'fill-red-500 text-red-500' : headerStyle === 'white' ? 'text-gray-500' : 'text-white'} />
             </button>
           </div>
         </div>
@@ -609,40 +659,40 @@ const ShopProductDetail: React.FC<ShopProductDetailProps> = ({
 
       {/* 底部操作栏 */}
       {!hideActions && (
-        <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 px-2 py-2 flex items-center z-50">
+        <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 px-3 py-2 flex items-center z-50">
           {/* 左侧图标按钮 */}
           <div className="flex items-center">
-            <button className="flex flex-col items-center justify-center w-14 py-1">
-              <Store size={18} className="text-gray-500" />
+            <button className="flex flex-col items-center justify-center w-12 py-1">
+              <Store size={20} className="text-gray-500" />
               <span className="text-[10px] text-gray-500 mt-0.5">店铺</span>
             </button>
             <button 
               onClick={() => navigate('/online-service')}
-              className="flex flex-col items-center justify-center w-14 py-1"
+              className="flex flex-col items-center justify-center w-12 py-1"
             >
-              <MessageCircle size={18} className="text-gray-500" />
+              <MessageCircle size={20} className="text-gray-500" />
               <span className="text-[10px] text-gray-500 mt-0.5">客服</span>
             </button>
-            <button className="flex flex-col items-center justify-center w-14 py-1 relative">
-              <ShoppingCart size={18} className="text-gray-500" />
+            <button className="flex flex-col items-center justify-center w-12 py-1 relative">
+              <ShoppingCart size={20} className="text-gray-500" />
               <span className="text-[10px] text-gray-500 mt-0.5">购物车</span>
-              <span className="absolute top-0 right-2 w-4 h-4 bg-red-500 text-white text-[10px] rounded-full flex items-center justify-center">
+              <span className="absolute top-0 right-1 w-4 h-4 bg-red-500 text-white text-[10px] rounded-full flex items-center justify-center">
                 2
               </span>
             </button>
           </div>
           
-          {/* 右侧按钮 */}
-          <div className="flex-1 flex gap-2 ml-2">
-            <button className="flex-1 bg-gradient-to-r from-[#ffa940] to-[#ff7a00] text-white py-3 rounded-full text-sm font-bold active:scale-[0.98] transition-transform">
+          {/* 右侧按钮 - 长方形设计 */}
+          <div className="flex-1 flex gap-0 ml-2">
+            <button className="flex-1 bg-gradient-to-r from-[#ffa940] to-[#ff7a00] text-white py-3.5 rounded-l-lg text-sm font-bold active:opacity-90 transition-opacity">
               加入购物车
             </button>
             <button
               onClick={handleBuy}
               disabled={buying}
-              className="flex-1 bg-gradient-to-r from-[#ff4d4f] to-[#e23c41] text-white py-3 rounded-full text-sm font-bold active:scale-[0.98] transition-transform disabled:opacity-70 flex flex-col items-center justify-center leading-tight"
+              className="flex-1 bg-gradient-to-r from-[#ff4d4f] to-[#e23c41] text-white py-3.5 rounded-r-lg text-sm font-bold active:opacity-90 transition-opacity disabled:opacity-70 flex flex-col items-center justify-center leading-tight"
             >
-              <span className="text-[10px] opacity-80">到手价 ¥{displayPrice.toLocaleString()}</span>
+              <span className="text-[10px] opacity-90">到手价 ¥{displayPrice.toLocaleString()}</span>
               <span>{buying ? '处理中...' : '立即购买'}</span>
             </button>
           </div>
