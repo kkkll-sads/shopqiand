@@ -379,15 +379,14 @@ const Profile: React.FC<{ unreadCount?: number }> = ({ unreadCount = 0 }) => {
               </div>
             </div>
 
-            {/* Bottom Grid: 2x2 Layout - 和总资产页面一致 */}
-            <div className="grid grid-cols-2 gap-y-3 gap-x-2 pt-3 border-t border-white/20">
-              {/* Row 1 */}
+            {/* Bottom Grid: 4 columns in one row */}
+            <div className="grid grid-cols-4 gap-1 pt-3 border-t border-white/20">
               <div
-                className="text-center border-r border-white/10 cursor-pointer active:opacity-70"
+                className="text-center cursor-pointer active:opacity-70"
                 onClick={() => navigate('/asset-view?tab=1')}
               >
-                <div className="text-xs text-white/80 mb-1">可调度收益</div>
-                <div className="text-lg font-bold font-[DINAlternate-Bold,Roboto,sans-serif]">
+                <div className="text-[10px] text-white/70 mb-1 whitespace-nowrap">可调度收益</div>
+                <div className="text-sm font-bold font-[DINAlternate-Bold,Roboto,sans-serif] truncate">
                   {formatPriceSmart(userInfo?.withdrawable_money)}
                 </div>
               </div>
@@ -396,31 +395,28 @@ const Profile: React.FC<{ unreadCount?: number }> = ({ unreadCount = 0 }) => {
                 className="text-center cursor-pointer active:opacity-70"
                 onClick={() => navigate('/market')}
               >
-                <div className="text-xs text-white/80 mb-1">消费金</div>
-                <div className="text-lg font-bold font-[DINAlternate-Bold,Roboto,sans-serif]">
+                <div className="text-[10px] text-white/70 mb-1 whitespace-nowrap">消费金</div>
+                <div className="text-sm font-bold font-[DINAlternate-Bold,Roboto,sans-serif] truncate">
                   {formatPriceSmart(userInfo?.score)}
                 </div>
               </div>
 
-              {/* Row 2 */}
               <div
-                className="text-center border-r border-white/10 border-t border-white/10 pt-3 cursor-pointer active:opacity-70"
+                className="text-center cursor-pointer active:opacity-70"
                 onClick={() => navigate('/hashrate-exchange')}
               >
-                <div className="text-xs text-white/80 mb-1 flex items-center justify-center gap-1">
-                  绿色算力 <Leaf size={10} className="text-white/70" />
-                </div>
-                <div className="text-lg font-bold font-[DINAlternate-Bold,Roboto,sans-serif]">
+                <div className="text-[10px] text-white/70 mb-1 whitespace-nowrap">绿色算力</div>
+                <div className="text-sm font-bold font-[DINAlternate-Bold,Roboto,sans-serif] truncate">
                   {formatPriceSmart(userInfo?.green_power)}
                 </div>
               </div>
 
               <div
-                className="text-center border-t border-white/10 pt-3 cursor-pointer active:opacity-70"
+                className="text-center cursor-pointer active:opacity-70"
                 onClick={() => navigate('/asset-view?tab=3')}
               >
-                <div className="text-xs text-white/80 mb-1">确权金</div>
-                <div className="text-lg font-bold font-[DINAlternate-Bold,Roboto,sans-serif]">
+                <div className="text-[10px] text-white/70 mb-1 whitespace-nowrap">确权金</div>
+                <div className="text-sm font-bold font-[DINAlternate-Bold,Roboto,sans-serif] truncate">
                   {formatPriceSmart(userInfo?.service_fee_balance)}
                 </div>
               </div>
