@@ -20,6 +20,7 @@ import { getStoredToken } from '../../../services/client';
 import { useNotification } from '../../../context/NotificationContext';
 import { useStateMachine } from '../../../hooks/useStateMachine';
 import { LoadingEvent, LoadingState } from '../../../types/states';
+import { errorLog } from '../../../utils/logger';
 
 const CollectionOrderDetail: React.FC = () => {
   const navigate = useNavigate();
@@ -87,7 +88,7 @@ const CollectionOrderDetail: React.FC = () => {
         loadMachine.send(LoadingEvent.ERROR);
       }
     } catch (e: any) {
-      console.error('[CollectionOrderDetail] 加载失败:', e);
+      errorLog('CollectionOrderDetail', '加载失败', e);
       setError(e?.message || '加载数据失败');
       loadMachine.send(LoadingEvent.ERROR);
     } finally {

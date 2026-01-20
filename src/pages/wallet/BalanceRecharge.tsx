@@ -6,7 +6,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, Zap, Radar, CheckCircle, Shield, AlertTriangle, AlertCircle, X, Wallet, CreditCard, Banknote, Upload, Image as ImageIcon } from 'lucide-react';
 
-import { LoadingSpinner, EmbeddedBrowser } from '../../../components/common';
+import { LoadingSpinner, PaymentRedirect } from '../../../components/common';
 import { fetchCompanyAccountList, CompanyAccountItem, submitRechargeOrder, transferIncomeToPurchase, updateRechargeOrderRemark } from '../../../services/api';
 import { fetchProfile } from '../../../services/user';
 import { getStoredToken } from '../../../services/client';
@@ -16,6 +16,7 @@ import { useErrorHandler } from '../../../hooks/useErrorHandler';
 import { copyToClipboard } from '../../../utils/clipboard';
 import { useStateMachine } from '../../../hooks/useStateMachine';
 import { FormEvent, FormState, LoadingEvent, LoadingState } from '../../../types/states';
+import { debugLog, warnLog, errorLog } from '../../../utils/logger';
 
 import RechargeOrderList from './RechargeOrderList'; // Import the new component
 import RechargeOrderDetail from './RechargeOrderDetail'; // Import the detail component
@@ -114,11 +115,11 @@ const BalanceRecharge: React.FC<BalanceRechargeProps> = ({ initialAmount }) => {
     if (viewState === 'matched' && selectedMethod === 'bank_card') {
       // 启用复制
       document.body.setAttribute('data-allow-copy', 'true');
-      console.log('[BalanceRecharge] 已启用复制功能');
+      debugLog('BalanceRecharge', '已启用复制功能');
     } else {
       // 禁用复制
       document.body.setAttribute('data-allow-copy', 'false');
-      console.log('[BalanceRecharge] 已禁用复制功能');
+      debugLog('BalanceRecharge', '已禁用复制功能');
     }
 
     // 清理函数：组件卸载时恢复默认状态
@@ -185,7 +186,7 @@ const BalanceRecharge: React.FC<BalanceRechargeProps> = ({ initialAmount }) => {
       }
     } catch (err) {
       // 静默失败，不显示错误提示，因为这不是核心功能
-      console.warn('Failed to load user balance:', err);
+      warnLog('BalanceRecharge', 'Failed to load user balance', err);
     }
   };
 
@@ -223,7 +224,7 @@ const BalanceRecharge: React.FC<BalanceRechargeProps> = ({ initialAmount }) => {
   const [lastFourDigits, setLastFourDigits] = useState<string>('');
 
   // Payment Result Confirmation Modal State (for WeChat/Alipay)
-  const [showPaymentResultModal, setShowPaymentResultModal] = useState(false);
+  // showPaymentResultModal 已移除 - 支付结果确认逻辑移至 PaymentRedirect
   const [paymentResultRemark, setPaymentResultRemark] = useState<string>('');
   const [pendingOrderId, setPendingOrderId] = useState<string | null>(null);
 
@@ -240,7 +241,7 @@ const BalanceRecharge: React.FC<BalanceRechargeProps> = ({ initialAmount }) => {
         }
       }
     } catch (e) {
-      console.warn('Failed to parse range:', rangeStr, e);
+      warnLog('BalanceRecharge', 'Failed to parse range', { rangeStr, error: e });
     }
     return true;
   };
@@ -568,7 +569,7 @@ const BalanceRecharge: React.FC<BalanceRechargeProps> = ({ initialAmount }) => {
   const renderInputView = () => (
     <>
       {/* 1. Header */}
-      <div className="bg-gradient-to-b from-orange-100 to-gray-50 px-4 py-5 pt-4">
+      <div className="bg-gradient-to-b from-red-100 to-gray-50 px-4 py-5 pt-4">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
             <button onClick={() => navigate(-1)} className="w-8 h-8 flex items-center justify-center bg-white rounded-full shadow-sm text-gray-700">
@@ -578,33 +579,34 @@ const BalanceRecharge: React.FC<BalanceRechargeProps> = ({ initialAmount }) => {
           </div>
           <button
             onClick={() => setViewState('history')}
-            className="text-xs font-bold text-orange-600 bg-white/50 px-3 py-1.5 rounded-full border border-orange-100 flex items-center gap-1 hover:bg-white transition-colors"
+            className="text-xs font-bold text-red-600 bg-white/50 px-3 py-1.5 rounded-full border border-red-100 flex items-center gap-1 hover:bg-white transition-colors"
           >
             <Banknote size={14} />
             充值记录
           </button>
         </div>
 
-        <div className="bg-white rounded-[24px] p-6 shadow-xl shadow-orange-100/50 mb-4 border border-white">
-          <div className="flex items-center gap-2 mb-4">
-            <Wallet className="text-orange-500" size={20} />
+        <div className="bg-white rounded-[24px] p-6 shadow-xl shadow-red-100/50 mb-4 border border-white">
+          <div className="flex items-center gap-2 mb-3">
+            <Wallet className="text-red-600" size={20} />
             <span className="text-sm font-bold text-gray-800">申购金额</span>
           </div>
-          <div className="flex items-end gap-2 border-b-2 border-orange-50 pb-2">
-            <span className="text-3xl font-bold text-gray-900">¥</span>
+          <div className="flex items-center gap-1 pb-3 border-b-2 border-gray-100 focus-within:border-red-500 transition-colors">
+            <span className="text-2xl font-bold text-gray-400">¥</span>
             <input
               type="number"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
-              placeholder="0.00"
-              className="flex-1 w-full min-w-0 text-4xl font-bold bg-transparent border-none focus:ring-0 outline-none p-0 placeholder-gray-200"
+              placeholder="0"
+              className="flex-1 w-full min-w-0 text-[36px] font-bold bg-transparent border-none focus:ring-0 outline-none p-0 placeholder-gray-200 text-gray-900 leading-tight"
+              style={{ fontSize: '36px' }}
             />
             {amount && (
               <button
                 onClick={() => setAmount('')}
                 className="text-gray-400 hover:text-gray-600 p-1"
               >
-                <X size={18} />
+                <X size={20} />
               </button>
             )}
           </div>
@@ -616,7 +618,7 @@ const BalanceRecharge: React.FC<BalanceRechargeProps> = ({ initialAmount }) => {
                 key={val}
                 onClick={() => setAmount(String(val))}
                 className={`py-2 rounded-lg text-sm font-bold transition-all ${amount === String(val)
-                  ? 'bg-orange-50 text-orange-600 border border-orange-200 shadow-sm'
+                  ? 'bg-red-50 text-red-600 border border-red-200 shadow-sm'
                   : 'bg-gray-50 text-gray-500 hover:bg-gray-100 border border-transparent'
                   }`}
               >
@@ -644,21 +646,22 @@ const BalanceRecharge: React.FC<BalanceRechargeProps> = ({ initialAmount }) => {
             </div>
           </div>
 
-          <div className="flex items-end gap-2 border-b-2 border-blue-50 pb-2 mb-4">
-            <span className="text-3xl font-bold text-gray-900">¥</span>
+          <div className="flex items-center gap-1 pb-3 border-b-2 border-gray-100 focus-within:border-blue-500 transition-colors mb-4">
+            <span className="text-2xl font-bold text-gray-400">¥</span>
             <input
               type="number"
               value={transferAmount}
               onChange={(e) => setTransferAmount(e.target.value)}
-              placeholder="0.00"
-              className="flex-1 w-full min-w-0 text-4xl font-bold bg-transparent border-none focus:ring-0 outline-none p-0 placeholder-gray-200"
+              placeholder="0"
+              className="flex-1 w-full min-w-0 text-[36px] font-bold bg-transparent border-none focus:ring-0 outline-none p-0 placeholder-gray-200 text-gray-900 leading-tight"
+              style={{ fontSize: '36px' }}
             />
             {transferAmount && (
               <button
                 onClick={() => setTransferAmount('')}
                 className="text-gray-400 hover:text-gray-600 p-1"
               >
-                <X size={18} />
+                <X size={20} />
               </button>
             )}
           </div>
@@ -679,7 +682,7 @@ const BalanceRecharge: React.FC<BalanceRechargeProps> = ({ initialAmount }) => {
             onClick={handleTransfer}
             disabled={!transferAmount || transferring}
             className={`w-full py-3 rounded-xl font-bold text-base transition-all flex items-center justify-center gap-2 ${transferAmount && !transferring
-              ? 'bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-lg shadow-orange-200 active:scale-[0.98]'
+              ? 'bg-gradient-to-r from-red-600 to-red-500 text-white shadow-lg shadow-red-200 active:scale-[0.98]'
               : 'bg-gray-200 text-gray-400 cursor-not-allowed shadow-none'
               }`}
           >
@@ -706,13 +709,13 @@ const BalanceRecharge: React.FC<BalanceRechargeProps> = ({ initialAmount }) => {
       {/* 2. Payment Method Selection */}
       <div className="px-4 flex-1">
         <h2 className="text-sm font-bold text-gray-900 mb-4 flex items-center gap-2">
-          <span className="w-1 h-4 bg-orange-500 rounded-full"></span>
+          <span className="w-1 h-4 bg-red-600 rounded-full"></span>
           选择支付通道
         </h2>
 
         {loading ? (
           <div className="flex items-center justify-center py-8">
-            <LoadingSpinner size="md" className="text-orange-500" />
+            <LoadingSpinner size="md" className="text-red-500" />
           </div>
         ) : availableMethods.length > 0 ? (
           <div className="grid grid-cols-2 gap-3 mb-6">
@@ -721,8 +724,8 @@ const BalanceRecharge: React.FC<BalanceRechargeProps> = ({ initialAmount }) => {
                 key={method.id}
                 onClick={() => setSelectedMethod(method.id)}
                 className={`relative p-4 rounded-2xl border-2 transition-all duration-300 flex flex-col items-center gap-3 ${selectedMethod === method.id
-                  ? `bg-orange-50 text-orange-600 border-orange-200 shadow-lg scale-[1.02]`
-                  : 'bg-white border-gray-100 text-gray-600 hover:border-orange-100 hover:shadow-md'
+                  ? `bg-red-50 text-red-600 border-red-200 shadow-lg scale-[1.02]`
+                  : 'bg-white border-gray-100 text-gray-600 hover:border-red-100 hover:shadow-md'
                   }`}
               >
                 <div className="w-12 h-12 rounded-full bg-white flex items-center justify-center shadow-sm relative overflow-hidden">
@@ -737,7 +740,7 @@ const BalanceRecharge: React.FC<BalanceRechargeProps> = ({ initialAmount }) => {
                       }}
                     />
                   )}
-                  <CreditCard size={24} className={`text-orange-500 absolute transition-opacity ${method.icon ? 'opacity-0' : ''}`} />
+                  <CreditCard size={24} className={`text-red-600 absolute transition-opacity ${method.icon ? 'opacity-0' : ''}`} />
                 </div>
                 <span className="font-bold text-sm">{method.name}</span>
                 {selectedMethod === method.id && (
@@ -759,7 +762,7 @@ const BalanceRecharge: React.FC<BalanceRechargeProps> = ({ initialAmount }) => {
       <div className="px-4 py-5 safe-area-bottom bg-white/80 backdrop-blur border-t border-gray-100">
         <button
           onClick={startMatching}
-          className="w-full py-4 rounded-xl bg-gradient-to-r from-[#FF6B35] to-[#FF9F2E] text-white font-bold text-lg shadow-lg shadow-orange-200 active:scale-[0.98] transition-transform flex items-center justify-center gap-2"
+          className="w-full py-4 rounded-xl bg-gradient-to-r from-red-600 to-red-500 text-white font-bold text-lg shadow-lg shadow-red-200 active:scale-[0.98] transition-transform flex items-center justify-center gap-2"
         >
           <Zap size={20} fill="currentColor" />
           立即接入匹配 · Match
@@ -774,27 +777,27 @@ const BalanceRecharge: React.FC<BalanceRechargeProps> = ({ initialAmount }) => {
   const renderMatchingView = () => (
     <div className="flex-1 flex items-center justify-center bg-gradient-to-br from-gray-900 to-black p-6 relative overflow-hidden">
       {/* Background Effects */}
-      <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-orange-900/20 via-black to-black"></div>
+      <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-red-900/20 via-black to-black"></div>
 
       <div className="relative z-10 text-center flex flex-col items-center w-full max-w-sm">
         {/* Radar Animation */}
         <div className="relative w-64 h-64 mb-12">
-          <div className="absolute inset-0 bg-orange-500/10 rounded-full animate-ping [animation-duration:2s]"></div>
-          <div className="absolute inset-0 border border-orange-500/20 rounded-full"></div>
-          <div className="absolute inset-[15%] border border-orange-500/30 rounded-full"></div>
-          <div className="absolute inset-[30%] border border-orange-500/40 rounded-full"></div>
-          <div className="absolute inset-[45%] bg-orange-500/10 rounded-full blur-xl"></div>
+          <div className="absolute inset-0 bg-red-600/10 rounded-full animate-ping [animation-duration:2s]"></div>
+          <div className="absolute inset-0 border border-red-600/20 rounded-full"></div>
+          <div className="absolute inset-[15%] border border-red-600/30 rounded-full"></div>
+          <div className="absolute inset-[30%] border border-red-600/40 rounded-full"></div>
+          <div className="absolute inset-[45%] bg-red-600/10 rounded-full blur-xl"></div>
 
           {/* Scanning Line */}
-          <div className="absolute top-1/2 left-1/2 w-[50%] h-[2px] bg-gradient-to-r from-transparent via-orange-400 to-orange-500 origin-left animate-[spin_1.5s_linear_infinite] shadow-[0_0_15px_rgba(251,146,60,0.8)]"></div>
+          <div className="absolute top-1/2 left-1/2 w-[50%] h-[2px] bg-gradient-to-r from-transparent via-red-400 to-red-600 origin-left animate-[spin_1.5s_linear_infinite] shadow-[0_0_15px_rgba(220,38,38,0.8)]"></div>
 
           <div className="absolute inset-0 flex items-center justify-center">
-            <Radar size={64} className="text-orange-500 animate-pulse drop-shadow-[0_0_10px_rgba(251,146,60,0.8)]" />
+            <Radar size={64} className="text-red-500 animate-pulse drop-shadow-[0_0_10px_rgba(220,38,38,0.8)]" />
           </div>
 
           {/* Decorative particles */}
-          <div className="absolute top-1/4 left-1/4 w-1 h-1 bg-orange-400 rounded-full animate-pulse"></div>
-          <div className="absolute bottom-1/3 right-1/4 w-1.5 h-1.5 bg-orange-300 rounded-full animate-pulse [animation-delay:0.5s]"></div>
+          <div className="absolute top-1/4 left-1/4 w-1 h-1 bg-red-400 rounded-full animate-pulse"></div>
+          <div className="absolute bottom-1/3 right-1/4 w-1.5 h-1.5 bg-red-300 rounded-full animate-pulse [animation-delay:0.5s]"></div>
         </div>
 
         <h3 className="text-2xl font-bold text-white mb-3 tracking-wide">正在接入区域结算...</h3>
@@ -809,7 +812,7 @@ const BalanceRecharge: React.FC<BalanceRechargeProps> = ({ initialAmount }) => {
     matchedAccount && (
       <div className="flex flex-col min-h-screen bg-gray-50">
         {/* Header */}
-        <div className="bg-[#FF6B35] px-4 py-5 pt-8 text-white relative overflow-hidden shrink-0">
+        <div className="bg-red-600 px-4 py-5 pt-8 text-white relative overflow-hidden shrink-0">
           <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
 
           <div className="relative z-10">
@@ -823,7 +826,7 @@ const BalanceRecharge: React.FC<BalanceRechargeProps> = ({ initialAmount }) => {
             </div>
 
             <div className="flex flex-col items-center justify-center py-4">
-              <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center text-[#FF6B35] shadow-lg mb-3 animate-in zoom-in duration-300">
+              <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center text-red-600 shadow-lg mb-3 animate-in zoom-in duration-300">
                 <CheckCircle size={32} />
               </div>
               <h2 className="text-2xl font-bold mb-1">已分配专属专员</h2>
@@ -847,7 +850,7 @@ const BalanceRecharge: React.FC<BalanceRechargeProps> = ({ initialAmount }) => {
           {/* Account Info Card */}
           <div className="bg-white rounded-2xl p-4 shadow-xl shadow-orange-100/20 border border-gray-100 mb-4">
             <div className="flex items-center gap-3 mb-4 pb-4 border-b border-gray-50">
-              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#FF6B35] to-[#FF9F2E] text-white flex items-center justify-center text-base font-bold shadow-md shadow-orange-200">
+              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-red-600 to-red-500 text-white flex items-center justify-center text-base font-bold shadow-md shadow-orange-200">
                 {matchedAccount.account_name.charAt(0)}
               </div>
               <div className="flex-1 min-w-0">
@@ -1050,7 +1053,7 @@ const BalanceRecharge: React.FC<BalanceRechargeProps> = ({ initialAmount }) => {
             }}
             disabled={!uploadedImage || submitting}
             className={`w-full py-4 rounded-xl font-bold text-base transition-all shadow-lg flex items-center justify-center gap-2 mb-4 ${uploadedImage && !submitting
-              ? 'bg-gradient-to-r from-[#FF6B35] to-[#FF9F2E] text-white shadow-orange-200 active:scale-[0.98]'
+              ? 'bg-gradient-to-r from-red-600 to-red-500 text-white shadow-orange-200 active:scale-[0.98]'
               : 'bg-gray-200 text-gray-400 cursor-not-allowed shadow-none'
               }`}
           >
@@ -1130,7 +1133,7 @@ const BalanceRecharge: React.FC<BalanceRechargeProps> = ({ initialAmount }) => {
                     onClick={handleSubmitOrder}
                     disabled={lastFourDigits.length !== 4 || submitting}
                     className={`flex-1 py-3 px-4 rounded-xl font-bold transition-all ${lastFourDigits.length === 4 && !submitting
-                      ? 'bg-gradient-to-r from-[#FF6B35] to-[#FF9F2E] text-white shadow-lg shadow-orange-200'
+                      ? 'bg-gradient-to-r from-red-600 to-red-500 text-white shadow-lg shadow-orange-200'
                       : 'bg-gray-200 text-gray-400 cursor-not-allowed'
                       }`}
                   >
@@ -1169,122 +1172,65 @@ const BalanceRecharge: React.FC<BalanceRechargeProps> = ({ initialAmount }) => {
         />
       )}
 
-      {/* Embedded Payment Browser */}
-      <EmbeddedBrowser
+      {/* 支付跳转组件 - 替代 EmbeddedBrowser 以支持第三方支付 */}
+      <PaymentRedirect
         isOpen={showPaymentBrowser}
         url={paymentUrl}
         title="支付收银台"
+        amount={amount}
+        orderNo={pendingOrderId || undefined}
+        timeout={300}
         onClose={() => {
           setShowPaymentBrowser(false);
           setPaymentUrl('');
-          // Show payment result confirmation modal
-          setShowPaymentResultModal(true);
+          // 返回时不显示确认弹窗，回到输入页面
+          setViewState('input');
+        }}
+        onSuccess={async () => {
+          // 只有点击支付成功才发送 API
+          const remark = '用户确认支付成功';
+          if (pendingOrderId) {
+            try {
+              const token = getStoredToken();
+              await updateRechargeOrderRemark({
+                order_id: pendingOrderId,
+                user_remark: remark,
+                token: token || undefined,
+              });
+            } catch (error) {
+              errorLog('BalanceRecharge', 'Failed to update order remark', error);
+            }
+          }
+          
+          setShowPaymentBrowser(false);
+          setPaymentUrl('');
+          loadUserBalance();
+          showToast('success', '支付状态已提交', '请等待系统确认');
+          setViewState('history');
+        }}
+        onRefreshUrl={async () => {
+          // 重新获取支付链接
+          if (!selectedMethod || !matchedAccount) return null;
+          
+          try {
+            const response = await submitRechargeOrder({
+              company_account_id: matchedAccount.id,
+              amount: Number(amount),
+              payment_type: selectedMethod,
+              payment_method: 'online',
+            });
+            
+            if (isSuccess(response) && response.data?.pay_url) {
+              setPendingOrderId(response.data.order_id || response.data.order_no || null);
+              return response.data.pay_url;
+            }
+          } catch (error) {
+            errorLog('BalanceRecharge', 'Failed to refresh payment URL', error);
+          }
+          return null;
         }}
       />
 
-      {/* Payment Result Confirmation Modal */}
-      {showPaymentResultModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm animate-in zoom-in duration-200">
-            <div className="p-6">
-              <div className="flex flex-col items-center mb-6">
-                <div className="w-16 h-16 rounded-full bg-orange-100 flex items-center justify-center mb-4">
-                  <AlertCircle size={32} className="text-orange-600" />
-                </div>
-                <h3 className="text-lg font-bold text-gray-900 mb-2">支付结果确认</h3>
-                <p className="text-sm text-gray-600 text-center">
-                  请确认您是否已完成支付？
-                </p>
-              </div>
-
-              <div className="flex flex-col gap-3">
-                <button
-                  onClick={async () => {
-                    const remark = '用户确认支付成功';
-                    setPaymentResultRemark(remark);
-                    setShowPaymentResultModal(false);
-
-                    // 调用 API 更新订单备注
-                    if (pendingOrderId) {
-                      try {
-                        const token = getStoredToken();
-                        await updateRechargeOrderRemark({
-                          order_id: pendingOrderId,
-                          user_remark: remark,
-                          token: token || undefined,
-                        });
-                      } catch (error) {
-                        console.error('Failed to update order remark:', error);
-                      }
-                    }
-
-                    showToast('success', '已记录', '支付状态已提交，请等待系统确认');
-                    setViewState('history');
-                  }}
-                  className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-green-500 to-green-600 text-white font-bold shadow-lg shadow-green-200 hover:shadow-xl transition-all">
-                  ✓ 支付成功
-                </button>
-                <button
-                  onClick={async () => {
-                    const remark = '用户反馈支付失败';
-                    setPaymentResultRemark(remark);
-                    setShowPaymentResultModal(false);
-
-                    // 调用 API 更新订单备注
-                    if (pendingOrderId) {
-                      try {
-                        const token = getStoredToken();
-                        await updateRechargeOrderRemark({
-                          order_id: pendingOrderId,
-                          user_remark: remark,
-                          token: token || undefined,
-                        });
-                      } catch (error) {
-                        console.error('Failed to update order remark:', error);
-                      }
-                    }
-
-                    showToast('info', '已记录', '支付未完成，您可以重新发起支付');
-                    setViewState('input');
-                    // Reset states
-                    setAmount('');
-                    setSelectedMethod(null);
-                    setPendingOrderId(null);
-                  }}
-                  className="w-full py-3 px-4 rounded-xl bg-gray-100 text-gray-700 font-medium hover:bg-gray-200 transition-colors">
-                  ✗ 支付失败/未完成
-                </button>
-                <button
-                  onClick={async () => {
-                    const remark = '用户反馈支付中';
-                    setPaymentResultRemark(remark);
-                    setShowPaymentResultModal(false);
-
-                    // 调用 API 更新订单备注
-                    if (pendingOrderId) {
-                      try {
-                        const token = getStoredToken();
-                        await updateRechargeOrderRemark({
-                          order_id: pendingOrderId,
-                          user_remark: remark,
-                          token: token || undefined,
-                        });
-                      } catch (error) {
-                        console.error('Failed to update order remark:', error);
-                      }
-                    }
-
-                    showToast('info', '已记录', '请稍后在订单列表中查看支付状态');
-                    setViewState('history');
-                  }}
-                  className="w-full py-3 px-4 rounded-xl border-2 border-gray-200 text-gray-600 font-medium hover:bg-gray-50 transition-colors">
-                  ⏱ 不确定/稍后查看
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

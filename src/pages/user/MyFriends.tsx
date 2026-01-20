@@ -19,6 +19,7 @@ import { extractData, extractError } from '../../../utils/apiHelpers';
 import { useNavigate } from 'react-router-dom';
 import { useStateMachine } from '../../../hooks/useStateMachine';
 import { LoadingEvent, LoadingState } from '../../../types/states';
+import { useInfiniteScroll } from '../../hooks/useInfiniteScroll';
 
 const PAGE_SIZE = 10;
 
@@ -73,60 +74,14 @@ const MyFriends: React.FC = () => {
   const loading = loadMachine.state === LoadingState.LOADING;
   const loadingMore = loadMoreMachine.state === LoadingState.LOADING;
 
-  // 获取滚动容器 - 尝试多种方式找到正确的滚动容器
-  const getScrollContainer = useCallback(() => {
-    // 方法1: 通过 containerRef 的父元素查找（PageContainer的内容区域）
-    let scrollContainer = containerRef.current?.closest('.overflow-y-auto') as HTMLElement;
-    
-    // 方法2: 如果找不到，尝试查找父级元素
-    if (!scrollContainer) {
-      scrollContainer = containerRef.current?.parentElement?.parentElement as HTMLElement;
+  // Infinite Scroll Handler
+  const handleLoadMore = () => {
+    if (!loading && hasMore) {
+      setPage(prev => prev + 1);
     }
-    
-    // 方法3: 如果还是找不到，尝试查找具有 overflow-y-auto 或 overflow-y-scroll 的元素
-    if (!scrollContainer || scrollContainer.scrollHeight <= scrollContainer.clientHeight) {
-      const allElements = document.querySelectorAll('*');
-      for (const el of allElements) {
-        const style = window.getComputedStyle(el);
-        if ((style.overflowY === 'auto' || style.overflowY === 'scroll') && el.contains(containerRef.current)) {
-          const htmlEl = el as HTMLElement;
-          if (htmlEl.scrollHeight > htmlEl.clientHeight) {
-            scrollContainer = htmlEl;
-            break;
-          }
-        }
-      }
-    }
-    
-    return scrollContainer;
-  }, []);
+  };
 
-  // 自动滚动到底部的函数
-  const scrollToBottom = useCallback(() => {
-    const scrollContainer = getScrollContainer();
-    if (!scrollContainer) {
-      return;
-    }
-
-    // 使用 setTimeout 确保DOM已更新
-    setTimeout(() => {
-      // 留出一些空间，让用户可以继续滚动触发下一次加载
-      const scrollBuffer = 300; // 留出300px的空间，确保大于检测阈值
-      const newScrollTop = Math.max(0, scrollContainer.scrollHeight - scrollContainer.clientHeight - scrollBuffer);
-
-
-      scrollContainer.scrollTop = newScrollTop;
-
-      // 再次检查滚动是否成功
-      setTimeout(() => {
-        const actualScrollTop = scrollContainer.scrollTop;
-        if (Math.abs(actualScrollTop - newScrollTop) > 10) {
-          scrollContainer.scrollTop = newScrollTop;
-          scrollContainer.scrollTo({ top: newScrollTop, behavior: 'smooth' });
-        }
-      }, 50);
-    }, 100);
-  }, [getScrollContainer]);
+  const bottomRef = useInfiniteScroll(handleLoadMore, hasMore, loading);
 
   // 加载好友列表
   const loadTeamMembers = useCallback(async (pageNum: number, append: boolean = false) => {
@@ -148,14 +103,7 @@ const MyFriends: React.FC = () => {
 
 
         if (append) {
-          setFriends(prev => {
-            const updated = [...prev, ...newList];
-            return updated;
-          });
-          // 追加数据后自动滚动到底部
-          setTimeout(() => {
-            scrollToBottom();
-          }, 150);
+          setFriends(prev => [...prev, ...newList]);
         } else {
           setFriends(newList);
         }
@@ -185,30 +133,9 @@ const MyFriends: React.FC = () => {
     } finally {
       // 状态机已处理成功/失败
     }
-  }, [activeTab, scrollToBottom]);
+  }, [activeTab]);
 
-  // 滑动加载更多
-  const handleScroll = useCallback(() => {
-    if (loadingMore || !hasMore) return;
-    
-    const scrollContainer = getScrollContainer();
-    if (!scrollContainer) return;
 
-    let scrollTop: number;
-    let scrollHeight: number;
-    let clientHeight: number;
-
-    // 获取滚动位置信息
-    const el = scrollContainer as HTMLElement;
-    scrollTop = el.scrollTop;
-    scrollHeight = el.scrollHeight;
-    clientHeight = el.clientHeight;
-
-    // 当距离底部200px时就开始加载，给用户更多滚动空间
-    if (scrollTop + clientHeight >= scrollHeight - 200) {
-      loadTeamMembers(page + 1, true);
-    }
-  }, [getScrollContainer, loadingMore, hasMore, page, loadTeamMembers]);
 
   // 切换tab时重置状态并重新加载
   useEffect(() => {
@@ -225,18 +152,10 @@ const MyFriends: React.FC = () => {
     // 初始加载已在 activeTab 的 useEffect 中处理，这里不需要重复加载
   }, []);
 
-  // 动态添加滚动事件监听器
+  // 初始加载（仅在组件挂载时）
   useEffect(() => {
-    const scrollContainer = getScrollContainer();
-    if (!scrollContainer) return;
-
-    const handleScrollEvent = () => handleScroll();
-    scrollContainer.addEventListener('scroll', handleScrollEvent, { passive: true });
-
-    return () => {
-      scrollContainer.removeEventListener('scroll', handleScrollEvent);
-    };
-  }, [handleScroll, getScrollContainer]);
+    // 初始加载已在 activeTab 的 useEffect 中处理，这里不需要重复加载
+  }, []);
 
   /**
    * 格式化日期
@@ -281,7 +200,7 @@ const MyFriends: React.FC = () => {
         {/* 邀请好友入口 */}
         <ListItem
           icon={
-            <div className="w-10 h-10 rounded-full bg-orange-50 text-orange-600 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-full bg-red-50 text-red-600 flex items-center justify-center">
               <UserPlus size={20} />
             </div>
           }
@@ -340,52 +259,43 @@ const MyFriends: React.FC = () => {
               // 生成唯一的key
               const key = `${friend.id}-${index}-${activeTab}`;
               return (
-              <div
-                key={key}
-                className="bg-white p-3 rounded-xl shadow-sm flex items-center gap-3"
-              >
-                <img
-                  src={
-                    normalizeAssetUrl(friend.avatar) ||
-                    '/static/images/avatar.png'
-                  }
-                  alt={friend.username || friend.nickname || '用户'}
-                  className="w-10 h-10 rounded-full object-cover"
-                  onError={(e) => {
-                    const target = e.target as HTMLImageElement;
-                    target.src = '/static/images/avatar.png';
-                  }}
-                />
-                <div className="flex-1">
-                  <div className="text-sm font-medium text-gray-800">
-                    {friend.username || friend.nickname || '用户'}
-                  </div>
-                  <div className="text-xs text-gray-400">
-                    加入时间: {formatDate(friend)}
-                  </div>
-                </div>
-                <button
-                  onClick={() => navigate(`/friend-detail/${friend.id}`)}
-                  className="text-xs bg-gray-100 text-gray-600 px-3 py-1.5 rounded-full"
+                <div
+                  key={key}
+                  className="bg-white p-3 rounded-xl shadow-sm flex items-center gap-3"
                 >
-                  查看
-                </button>
-              </div>
+                  <img
+                    src={
+                      normalizeAssetUrl(friend.avatar) ||
+                      '/static/images/avatar.png'
+                    }
+                    alt={friend.username || friend.nickname || '用户'}
+                    className="w-10 h-10 rounded-full object-cover"
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement;
+                      target.src = '/static/images/avatar.png';
+                    }}
+                  />
+                  <div className="flex-1">
+                    <div className="text-sm font-medium text-gray-800">
+                      {friend.username || friend.nickname || '用户'}
+                    </div>
+                    <div className="text-xs text-gray-400">
+                      加入时间: {formatDate(friend)}
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => navigate(`/friend-detail/${friend.id}`)}
+                    className="text-xs bg-gray-100 text-gray-600 px-3 py-1.5 rounded-full"
+                  >
+                    查看
+                  </button>
+                </div>
               );
             })}
 
-            {/* 加载更多按钮 */}
-            {!loadingMore && hasMore && friends.length > 0 && (
-              <button
-                onClick={() => loadTeamMembers(page + 1, true)}
-                disabled={loadingMore}
-                className="w-full mt-4 py-3 text-sm font-medium text-gray-700 bg-white border-2 border-gray-200 rounded-xl hover:border-orange-300 hover:text-orange-600 hover:bg-orange-50/50 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-sm hover:shadow-md active:scale-[0.98]"
-              >
-                加载更多
-              </button>
-            )}
+            {/* 加载更多指示器 - sentinel */}
+            <div ref={bottomRef} className="h-4" />
 
-            {/* 加载更多指示器 */}
             {loadingMore && (
               <div className="py-3 flex items-center justify-center text-gray-400 text-xs">
                 <Loader2 size={16} className="animate-spin mr-2" />

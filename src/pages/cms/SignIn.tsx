@@ -22,6 +22,7 @@ import { isSuccess, extractData, extractError } from '../../../utils/apiHelpers'
 import { STORAGE_KEYS } from '../../../constants/storageKeys';
 import { useStateMachine } from '../../../hooks/useStateMachine';
 import { LoadingEvent, LoadingState } from '../../../types/states';
+import { errorLog } from '../../../utils/logger';
 
 const SignIn: React.FC = () => {
     const navigate = useNavigate();
@@ -148,7 +149,7 @@ const SignIn: React.FC = () => {
                 }
                 loadMachine.send(LoadingEvent.SUCCESS);
             } catch (error: any) {
-                console.error('加载签到数据失败:', error);
+                errorLog('SignIn', '加载签到数据失败', error);
                 showToast('error', '加载失败', '加载数据失败，请重试');
                 loadMachine.send(LoadingEvent.ERROR);
             } finally {
@@ -218,14 +219,14 @@ const SignIn: React.FC = () => {
                             }
                         }
                     } catch (error) {
-                        console.error('刷新进度信息失败:', error);
+                        errorLog('SignIn', '刷新进度信息失败', error);
                     }
                 }
             } else {
                 showToast('error', '签到失败', extractError(res, '请重试'));
             }
         } catch (error: any) {
-            console.error('签到失败:', error);
+            errorLog('SignIn', '签到失败', error);
             showToast('error', '签到失败', error?.msg || error?.message || '请重试');
         }
     };
@@ -242,7 +243,7 @@ const SignIn: React.FC = () => {
             showToast('warning', '余额不足', `余额不足 ${minAmount.toFixed(2)} 元，暂不可提现`);
             return;
         }
-        
+
         // 跳转到提现页面
         navigate('/balance-withdraw');
     };
@@ -371,7 +372,7 @@ const SignIn: React.FC = () => {
             <div className="px-4 -mt-20 relative z-10 space-y-4">
                 {/* Balance Card */}
                 <div className="bg-white rounded-xl p-6 shadow-lg text-center relative overflow-hidden">
-                    <div className="absolute top-0 right-0 bg-orange-100 text-orange-600 text-xs px-2 py-1 rounded-bl-lg">
+                    <div className="absolute top-0 right-0 bg-red-100 text-red-600 text-xs px-2 py-1 rounded-bl-lg">
                         已邀请 {inviteCount} 人
                     </div>
                     <div className="text-gray-500 text-sm mb-2">当前累计奖励 (元)</div>
@@ -382,7 +383,7 @@ const SignIn: React.FC = () => {
                             onClick={handleSignIn}
                             className={`flex items-center justify-center gap-2 py-3 rounded-lg font-bold text-sm transition-all ${hasSignedIn
                                 ? 'bg-red-50 text-red-600 border border-red-200'
-                                : 'bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-md active:scale-95'
+                                : 'bg-gradient-to-r from-red-500 to-red-600 text-white shadow-md active:scale-95'
                                 }`}
                         >
                             {hasSignedIn ? <History size={18} /> : <CalendarCheck size={18} />}
@@ -402,14 +403,14 @@ const SignIn: React.FC = () => {
                 <div className="bg-white rounded-xl p-4 shadow-sm">
                     <div className="flex items-center justify-between mb-4">
                         <div className="flex items-center gap-2 font-bold text-gray-800">
-                            <Wallet className="text-orange-500" size={20} />
+                            <Wallet className="text-red-500" size={20} />
                             <span>提现申请</span>
                         </div>
                         <span className="text-xs text-gray-400">T+1 到账</span>
                     </div>
 
                     {/* 余额显示优化 */}
-                    <div className="bg-gradient-to-br from-red-50 to-orange-50 rounded-xl p-5 mb-4 relative overflow-hidden border border-red-100">
+                    <div className="bg-gradient-to-br from-red-50 to-red-50/50 rounded-xl p-5 mb-4 relative overflow-hidden border border-red-100">
                         <div className="absolute -right-3 -top-3 opacity-5 transform rotate-12">
                             <Wallet size={80} className="text-red-500" />
                         </div>
@@ -436,7 +437,7 @@ const SignIn: React.FC = () => {
                                 onClick={canWithdraw ? handleWithdrawClick : undefined}
                                 disabled={!canWithdraw}
                                 className={`w-full py-3 rounded-lg font-bold text-sm transition-all shadow-sm ${canWithdraw
-                                    ? 'bg-gradient-to-r from-orange-500 to-red-500 text-white active:scale-[0.98] active:opacity-90'
+                                    ? 'bg-gradient-to-r from-red-500 to-red-600 text-white active:scale-[0.98] active:opacity-90'
                                     : 'bg-gray-100 text-gray-400 cursor-not-allowed'
                                     }`}
                             >
@@ -456,7 +457,7 @@ const SignIn: React.FC = () => {
                         {activityInfo?.rules?.map((rule, index) => (
                             <div key={index} className="flex items-start gap-3 bg-gray-50 rounded-lg p-3">
                                 <div className="w-24 shrink-0 flex justify-center">
-                                    <span className={`text-xs px-2 py-0.5 rounded-md w-full text-center font-medium block ${rule.key === 'daily_reward' ? 'bg-orange-100 text-orange-600' :
+                                    <span className={`text-xs px-2 py-0.5 rounded-md w-full text-center font-medium block ${rule.key === 'daily_reward' ? 'bg-red-100 text-red-600' :
                                         rule.key === 'register_reward' ? 'bg-green-100 text-green-600' :
                                             rule.key === 'invite_reward' ? 'bg-purple-100 text-purple-600' :
                                                 'bg-blue-100 text-blue-600'
@@ -475,7 +476,7 @@ const SignIn: React.FC = () => {
                             <>
                                 <div className="flex items-start gap-3 bg-gray-50 rounded-lg p-3">
                                     <div className="w-24 shrink-0 flex justify-center">
-                                        <span className="text-xs px-2 py-0.5 rounded-md w-full text-center font-medium block bg-orange-100 text-orange-600">每日签到奖励</span>
+                                        <span className="text-xs px-2 py-0.5 rounded-md w-full text-center font-medium block bg-red-100 text-red-600">每日签到奖励</span>
                                     </div>
                                     <p className="text-sm text-gray-600 flex-1 leading-relaxed">每日首次签到可获得 <span className="text-red-500 font-bold">0.20 - 0.50</span> 元随机金额奖励</p>
                                 </div>

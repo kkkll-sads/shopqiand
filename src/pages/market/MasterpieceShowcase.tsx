@@ -14,6 +14,7 @@ import GridShowcase from '../../../components/GridShowcase';
 import { normalizeAssetUrl, fetchShopProducts, ShopProductItem } from '../../../services/api';
 import { useStateMachine } from '../../../hooks/useStateMachine';
 import { LoadingEvent, LoadingState } from '../../../types/states';
+import { errorLog } from '../../../utils/logger';
 
 /**
  * MasterpieceShowcase 佳作鉴赏页面组件
@@ -56,7 +57,7 @@ const MasterpieceShowcase: React.FC = () => {
         setItems(list.slice(0, 12));
         loadMachine.send(LoadingEvent.SUCCESS);
       } catch (e) {
-        console.error('加载佳作鉴赏列表失败:', e);
+        errorLog('MasterpieceShowcase', '加载佳作鉴赏列表失败', e);
         loadMachine.send(LoadingEvent.ERROR);
       } finally {
         // 状态机已处理成功/失败

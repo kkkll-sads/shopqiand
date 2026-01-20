@@ -12,6 +12,7 @@ import { getStoredToken } from '../../../services/client';
 import { isSuccess, extractData, extractError } from '../../../utils/apiHelpers';
 import { useStateMachine } from '../../../hooks/useStateMachine';
 import { FormEvent, FormState, LoadingEvent, LoadingState } from '../../../types/states';
+import { debugLog, warnLog, errorLog } from '../../../utils/logger';
 
 // 全局预加载数据存储
 declare global {
@@ -160,7 +161,7 @@ const ReservationPage: React.FC<ReservationPageProps> = ({ product, preloadedUse
         setTriedFillFromDetail(true);
         if (!product?.id) return { sessionId, zoneId, packageId };
 
-        console.log('[Reservation] Starting auto-fill check for session/zone...');
+        debugLog('ReservationPage', 'Starting auto-fill check for session/zone');
 
         try {
             // 1. 先获取商品详情，看看有没有直接带回 zone_id
@@ -207,7 +208,7 @@ const ReservationPage: React.FC<ReservationPageProps> = ({ product, preloadedUse
                     data.packageId ??
                     data.package?.id;
 
-                console.log('[Reservation] Item detail fetched:', {
+                debugLog('ReservationPage', 'Item detail fetched', {
                     detailSessionId,
                     detailZoneId,
                     detailPackageId,
@@ -220,7 +221,7 @@ const ReservationPage: React.FC<ReservationPageProps> = ({ product, preloadedUse
                 // (强制校验: 防止 item data 中 zone_id 与 price_zone 不一致)
                 if (detailSessionId && (data.price_zone || !detailZoneId || Number(detailZoneId) === 0)) {
                     try {
-                        console.log('[Reservation] Zone ID missing, fetching session details to map price_zone...');
+                        debugLog('ReservationPage', 'Zone ID missing, fetching session details to map price_zone');
                         const sessionRes = await fetchCollectionSessionDetail(Number(detailSessionId));
                         const sessionData = extractData(sessionRes);
 
@@ -252,14 +253,14 @@ const ReservationPage: React.FC<ReservationPageProps> = ({ product, preloadedUse
                             }
 
                             if (matchedZone) {
-                                console.log('[Reservation] Found matching zone from session:', matchedZone);
+                                debugLog('ReservationPage', 'Found matching zone from session', matchedZone);
                                 detailZoneId = matchedZone.id;
                             } else {
-                                console.warn('[Reservation] Could not match any zone in session:', detailSessionId);
+                                warnLog('ReservationPage', 'Could not match any zone in session', detailSessionId);
                             }
                         }
                     } catch (err) {
-                        console.error('[Reservation] Failed to fetch session details for zone mapping', err);
+                        errorLog('ReservationPage', 'Failed to fetch session details for zone mapping', err);
                     }
                 }
 
@@ -279,7 +280,7 @@ const ReservationPage: React.FC<ReservationPageProps> = ({ product, preloadedUse
                 };
             }
         } catch (error) {
-            console.warn('补全场次/分区失败', error);
+            warnLog('ReservationPage', '补全场次/分区失败', error);
         }
         return { sessionId: sessionId ?? product.sessionId, zoneId: zoneId ?? product.zoneId, packageId: packageId ?? (product as any).packageId ?? (product as any).package_id };
     };
@@ -306,7 +307,7 @@ const ReservationPage: React.FC<ReservationPageProps> = ({ product, preloadedUse
 
         // 检查全局预加载数据
         if (globalThis.__preloadedReservationData?.userInfo) {
-            console.log('[Reservation] 使用预加载的用户信息', globalThis.__preloadedReservationData.userInfo);
+            debugLog('ReservationPage', '使用预加载的用户信息', globalThis.__preloadedReservationData.userInfo);
             setAvailableHashrate(globalThis.__preloadedReservationData.userInfo.availableHashrate);
             setAccountBalance(globalThis.__preloadedReservationData.userInfo.accountBalance);
             // 清理预加载数据中的用户信息，但保留其他数据（如分区信息）
@@ -321,7 +322,7 @@ const ReservationPage: React.FC<ReservationPageProps> = ({ product, preloadedUse
             const token = getStoredToken();
             if (!token) {
                 // 用户未登录，使用默认值
-                console.log('用户未登录，使用默认算力和余额');
+                debugLog('ReservationPage', '用户未登录，使用默认算力和余额');
                 userInfoMachine.send(LoadingEvent.ERROR);
                 return;
             }
@@ -334,14 +335,14 @@ const ReservationPage: React.FC<ReservationPageProps> = ({ product, preloadedUse
                     const latestBalance = Number(response.data.userInfo.balance_available) || 0;
                     setAvailableHashrate(latestHashrate);
                     setAccountBalance(latestBalance);
-                    console.log('[Reservation] 用户信息已更新:', { latestHashrate, latestBalance });
+                    debugLog('ReservationPage', '用户信息已更新', { latestHashrate, latestBalance });
                     userInfoMachine.send(LoadingEvent.SUCCESS);
                 } else {
-                    console.warn('[Reservation] 获取用户信息失败:', response.msg || '未知错误');
+                    warnLog('ReservationPage', '获取用户信息失败', response.msg || '未知错误');
                     userInfoMachine.send(LoadingEvent.ERROR);
                 }
             } catch (error: any) {
-                console.error('获取用户信息失败:', error);
+                errorLog('ReservationPage', '获取用户信息失败', error);
                 if (error?.name === 'NeedLoginError') {
                     userInfoMachine.send(LoadingEvent.ERROR);
                     return;
@@ -410,7 +411,7 @@ const ReservationPage: React.FC<ReservationPageProps> = ({ product, preloadedUse
                 submitMachine.send(FormEvent.SUBMIT_ERROR);
             }
         } catch (error: any) {
-            console.error('操作失败:', error);
+            errorLog('ReservationPage', '操作失败', error);
             if (error?.name === 'NeedLoginError') return;
             // 异常时也使用后端/错误对象的 msg
             showToast('error', '操作失败', error?.msg || error?.message || '网络错误，请稍后重试');

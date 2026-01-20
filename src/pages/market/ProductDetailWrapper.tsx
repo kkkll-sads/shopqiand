@@ -12,6 +12,7 @@ import { useAppStore } from '../../stores/appStore';
 import { fetchShopProductDetail } from '../../../services/api';
 import { isSuccess, extractData } from '../../../utils/apiHelpers';
 import { LoadingSpinner } from '../../../components/common';
+import { errorLog } from '../../../utils/logger';
 import type { Product } from '../../../types';
 
 const ProductDetailWrapper: React.FC = () => {
@@ -58,7 +59,7 @@ const ProductDetailWrapper: React.FC = () => {
           setError('商品不存在或已下架');
         }
       } catch (err) {
-        console.error('加载商品失败:', err);
+        errorLog('ProductDetailWrapper', '加载商品失败', err);
         setError('网络错误，请稍后重试');
       } finally {
         setLoading(false);

@@ -272,3 +272,60 @@ export const formatNumber = (num: number | string | null | undefined): string =>
         return String(n);
     }
 };
+
+/**
+ * 智能格式化价格（去除尾部多余零）
+ * 
+ * @param value - 金额值（数字或字符串）
+ * @param options - 格式化选项
+ * @returns 格式化后的金额字符串（整数不显示小数点，小数去除尾零）
+ * 
+ * @example
+ * formatPriceSmart(100.00) // '100'
+ * formatPriceSmart(100.50) // '100.5'
+ * formatPriceSmart(100.56) // '100.56'
+ * formatPriceSmart(100.00, { prefix: '¥' }) // '¥100'
+ */
+export const formatPriceSmart = (
+    value: number | string | null | undefined,
+    options: {
+        /** 前缀符号，如 '¥' */
+        prefix?: string;
+        /** 最大小数位数，默认 2 */
+        maxDecimals?: number;
+        /** 是否显示千分位分隔符，默认 false */
+        thousandSeparator?: boolean;
+    } = {}
+): string => {
+    const { prefix = '', maxDecimals = 2, thousandSeparator = false } = options;
+
+    // 处理空值
+    if (value === null || value === undefined || value === '') {
+        return prefix + '0';
+    }
+
+    // 转换为数字
+    const numValue = typeof value === 'string' ? parseFloat(value) : value;
+
+    // 检查是否为有效数字
+    if (isNaN(numValue)) {
+        return prefix + '0';
+    }
+
+    // 格式化数字，保留最多 maxDecimals 位小数，自动去除尾部零
+    let formatted: string;
+    
+    // 先保留指定位数小数
+    const fixed = numValue.toFixed(maxDecimals);
+    // 转换为数字再转回字符串，自动去除尾部零
+    formatted = String(parseFloat(fixed));
+
+    // 添加千分位分隔符
+    if (thousandSeparator) {
+        const parts = formatted.split('.');
+        parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+        formatted = parts.join('.');
+    }
+
+    return prefix + formatted;
+};

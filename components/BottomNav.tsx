@@ -68,8 +68,8 @@ const BottomNav: React.FC<BottomNavProps> = ({ activeTab, onTabChange }) => {
             <button
               key={item.id}
               onClick={() => onTabChange(item.id as Tab)}
-              className={`flex flex-col items-center justify-center py-0.5 min-w-[56px] ${
-                isActive ? 'text-orange-500' : 'text-gray-800'
+              className={`flex flex-col items-center justify-center py-0.5 min-w-[56px] transition-colors ${
+                isActive ? 'text-red-600' : 'text-gray-600'
               }`}
             >
               <item.Icon active={isActive} />

@@ -15,6 +15,8 @@ import { isSuccess, extractData } from '../../../utils/apiHelpers';
 import { BALANCE_TYPE_OPTIONS, getBalanceTypeLabel } from '../../../constants/balanceTypes';
 import { useStateMachine } from '../../../hooks/useStateMachine';
 import { LoadingEvent, LoadingState } from '../../../types/states';
+import { useInfiniteScroll } from '../../hooks/useInfiniteScroll';
+import { errorLog } from '../../../utils/logger';
 
 const AssetHistory: React.FC = () => {
   const navigate = useNavigate();
@@ -71,6 +73,8 @@ const AssetHistory: React.FC = () => {
       loadData(page + 1);
     }
   };
+
+  const bottomRef = useInfiniteScroll(handleLoadMore, hasMore, loading);
 
   const loadData = async (pageNum: number, isRefresh = false) => {
     const token = getStoredToken();
@@ -130,7 +134,7 @@ const AssetHistory: React.FC = () => {
         loadMachine.send(LoadingEvent.ERROR);
       }
     } catch (e: any) {
-      console.error('[AssetHistory] 加载失败:', e);
+      errorLog('AssetHistory', '加载失败', e);
       if (isRefresh) setError(e?.message || '加载数据失败');
       loadMachine.send(LoadingEvent.ERROR);
     } finally {
@@ -162,6 +166,27 @@ const AssetHistory: React.FC = () => {
     });
   };
 
+  // 获取类型标签的颜色样式
+  const getTypeTagStyle = (type: string, fieldType?: string): string => {
+    const typeToCheck = fieldType || type;
+    if (typeToCheck === 'green_power' || typeToCheck === '绿色能量' || typeToCheck === '算力') {
+      return 'bg-emerald-50 text-emerald-600';
+    }
+    if (typeToCheck === 'balance_available' || typeToCheck === 'balance' || typeToCheck === '余额') {
+      return 'bg-blue-50 text-blue-600';
+    }
+    if (typeToCheck === 'withdrawable_money' || typeToCheck === '可提现余额') {
+      return 'bg-indigo-50 text-indigo-600';
+    }
+    if (typeToCheck === 'service_fee_balance' || typeToCheck === '服务费') {
+      return 'bg-amber-50 text-amber-600';
+    }
+    if (typeToCheck === 'score' || typeToCheck === '积分' || typeToCheck === '消费金') {
+      return 'bg-purple-50 text-purple-600';
+    }
+    return 'bg-gray-100 text-gray-500';
+  };
+
   const renderLogItem = (item: AllLogItem) => {
     const isGreenPower = item.field_type === 'green_power' || item.type === 'green_power';
     const isScore = item.type === 'score';
@@ -182,24 +207,20 @@ const AssetHistory: React.FC = () => {
     }
 
     const typeLabel = getTypeLabel(item.type, item.field_type);
+    const typeTagStyle = getTypeTagStyle(item.type, item.field_type);
 
     return (
-      <div 
-        key={`log-${item.id}`} 
-        className="bg-white rounded-xl p-4 mb-3 border border-gray-100 shadow-sm relative cursor-pointer active:bg-gray-50 transition-colors"
+      <div
+        key={`log-${item.id}`}
+        className="bg-white rounded-xl p-4 mb-3 border border-gray-100 shadow-sm relative cursor-pointer active:bg-gray-50 active:scale-[0.99] transition-all"
         onClick={() => handleItemClick(item)}
       >
         <div className="flex justify-between items-start mb-2">
           {/* 左侧：标题与标签 */}
           <div className="flex-1 pr-4 min-w-0">
             <div className="flex items-center gap-2 mb-1.5">
-              {/* Type Category Tag */}
-              <span className={`text-[10px] px-1.5 py-0.5 rounded flex-shrink-0 ${item.type === 'balance_available' ? 'bg-orange-50 text-orange-600' :
-                item.type === 'withdrawable_money' ? 'bg-blue-50 text-blue-600' :
-                  item.type === 'service_fee_balance' ? 'bg-purple-50 text-purple-600' :
-                    item.type === 'score' ? 'bg-yellow-50 text-yellow-600' :
-                      'bg-gray-100 text-gray-500'
-                }`}>
+              {/* Type Category Tag - 统一颜色方案 */}
+              <span className={`text-[10px] px-1.5 py-0.5 rounded flex-shrink-0 font-medium ${typeTagStyle}`}>
                 {typeLabel}
               </span>
               <span className="text-sm text-gray-700 font-medium truncate">
@@ -214,7 +235,10 @@ const AssetHistory: React.FC = () => {
           {/* 右侧：金额和箭头 */}
           <div className="flex items-center gap-2 flex-shrink-0">
             <div className="text-right">
-              <div className={`text-base font-bold font-[DINAlternate-Bold,Roboto,sans-serif] ${isPositive ? 'text-[#FF6B00]' : 'text-gray-900'}`}>
+              <div className={`text-base font-bold font-[DINAlternate-Bold,Roboto,sans-serif] ${
+                isGreenPower ? (isPositive ? 'text-emerald-500' : 'text-emerald-600') :
+                isPositive ? 'text-red-600' : 'text-gray-900'
+              }`}>
                 {isPositive ? '+' : ''}{Math.abs(amountVal).toFixed(2)}
                 <span className="text-xs font-normal ml-0.5 text-gray-400">
                   {isGreenPower ? '算力' : isScore ? '' : '元'}
@@ -225,12 +249,14 @@ const AssetHistory: React.FC = () => {
           </div>
         </div>
 
-        {/* 底部：余额 */}
+        {/* 底部：余额变化 */}
         <div className="mt-2 pt-2 border-t border-gray-50 flex justify-end">
-          <span className="text-xs text-gray-400 flex items-center">
-            余额: {Number(item.before_value).toFixed(2)}
-            <span className="mx-1">→</span>
-            {Number(item.after_value || item.after_balance).toFixed(2)}
+          <span className="text-xs text-gray-400 flex items-center font-mono">
+            {Number(item.before_value).toFixed(2)}
+            <span className="mx-1.5 text-gray-300">→</span>
+            <span className={isPositive ? (isGreenPower ? 'text-emerald-500' : 'text-red-500') : 'text-gray-600'}>
+              {Number(item.after_value || item.after_balance).toFixed(2)}
+            </span>
           </span>
         </div>
       </div>
@@ -282,14 +308,13 @@ const AssetHistory: React.FC = () => {
           <div className="space-y-3 pb-safe">
             {allLogs.map(renderLogItem)}
 
-            {hasMore && (
-              <button
-                onClick={handleLoadMore}
-                disabled={loading}
-                className="w-full py-3 text-xs text-gray-400 text-center disabled:opacity-50"
-              >
-                {loading ? '加载中...' : '点击加载更多'}
-              </button>
+            {/* sentinel for infinite scroll */}
+            <div ref={bottomRef} className="h-4" />
+
+            {loading && hasMore && (
+              <div className="text-center py-4 text-xs text-gray-400">
+                加载中...
+              </div>
             )}
 
             {!hasMore && allLogs.length > 5 && (

@@ -10,6 +10,7 @@ import { isSuccess, extractData } from '../../../utils/apiHelpers';
 import { LoadingSpinner } from '../../../components/common';
 import { useStateMachine } from '../../../hooks/useStateMachine';
 import { LoadingEvent, LoadingState } from '../../../types/states';
+import { errorLog } from '../../../utils/logger';
 
 const ReservationRecordDetailPage: React.FC = () => {
     const navigate = useNavigate();
@@ -51,7 +52,7 @@ const ReservationRecordDetailPage: React.FC = () => {
                     loadMachine.send(LoadingEvent.ERROR);
                 }
             } catch (err) {
-                console.error('加载预约详情失败:', err);
+                errorLog('ReservationRecordDetailPage', '加载预约详情失败', err);
                 setError('加载失败，请稍后重试');
                 loadMachine.send(LoadingEvent.ERROR);
             }
@@ -343,14 +344,14 @@ const ReservationRecordDetailPage: React.FC = () => {
             </div>
 
             {/* 底部按钮 */}
-            {record.status === ReservationStatus.APPROVED && record.product_id && (
+            {record.status === ReservationStatus.APPROVED && (
                 <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-gray-100 safe-area-bottom">
                     <button
-                        onClick={() => navigate(`/product/${record.product_id}`, { state: { productType: 'collection' } })}
-                        className="w-full py-3.5 bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-xl font-bold shadow-lg shadow-orange-200 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+                        onClick={() => navigate('/my-collection')}
+                        className="w-full py-3.5 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-xl font-bold shadow-lg shadow-red-200 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
                     >
                         <Award size={18} />
-                        查看藏品证书
+                        去持仓查看
                     </button>
                 </div>
             )}

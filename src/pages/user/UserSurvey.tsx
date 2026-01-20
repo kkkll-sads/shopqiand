@@ -19,6 +19,7 @@ import { uploadImage } from '../../../services/common';
 import { getStoredToken } from '../../../services/client';
 import { useStateMachine } from '../../../hooks/useStateMachine';
 import { FormEvent, FormState, LoadingEvent, LoadingState } from '../../../types/states';
+import { errorLog } from '../../../utils/logger';
 
 interface ImageUploadState {
   file: File;
@@ -110,7 +111,7 @@ const UserSurvey: React.FC = () => {
         loadMachine.send(LoadingEvent.ERROR);
       }
     } catch (error) {
-      console.error('Failed to load questionnaire history:', error);
+      errorLog('UserSurvey', 'Failed to load questionnaire history', error);
       showToast('error', '加载失败', '无法获取问卷记录');
       loadMachine.send(LoadingEvent.ERROR);
     } finally {
@@ -174,7 +175,7 @@ const UserSurvey: React.FC = () => {
           throw new Error(extractError(res, '上传失败'));
         }
       } catch (error: any) {
-        console.error('图片上传失败:', error);
+        errorLog('UserSurvey', '图片上传失败', error);
         setUploadStates((prev) =>
           prev.map((s) =>
             s.file === state.file ? { ...s, uploading: false, error: error?.message || '上传失败' } : s
@@ -225,7 +226,7 @@ const UserSurvey: React.FC = () => {
         submitMachine.send(FormEvent.SUBMIT_ERROR);
       }
     } catch (error) {
-      console.error('Submit error:', error);
+      errorLog('UserSurvey', 'Submit error', error);
       showToast('error', '提交失败', '网络请求失败');
       submitMachine.send(FormEvent.SUBMIT_ERROR);
     } finally {

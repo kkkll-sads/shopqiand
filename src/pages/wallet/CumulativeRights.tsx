@@ -104,8 +104,8 @@ const CumulativeRights: React.FC = () => {
       icon: Gift,
       label: '可提现余额',
       value: formatAmount(userInfo?.withdrawable_money || 0),
-      color: 'text-orange-600',
-      bgColor: 'bg-orange-50',
+      color: 'text-red-600',
+      bgColor: 'bg-red-50',
       description: '收益/分红/奖励，可申请提现',
     },
     {
@@ -136,8 +136,24 @@ const CumulativeRights: React.FC = () => {
 
   return (
     <PageContainer title="权益总览" onBack={() => navigate(-1)}>
-      {/* 加载状态 */}
-      {loading && <LoadingSpinner text="加载中..." />}
+      {/* 加载状态 - 骨架屏 */}
+      {loading && (
+        <div className="space-y-6">
+          {/* 头部卡片骨架 */}
+          <div className="skeleton h-40 rounded-2xl" />
+          {/* 权益网格骨架 */}
+          <div className="grid grid-cols-2 gap-4">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="bg-white rounded-xl p-4 shadow-sm">
+                <div className="skeleton w-10 h-10 rounded-full mb-2" />
+                <div className="skeleton h-3 w-16 rounded mb-1" />
+                <div className="skeleton h-6 w-24 rounded mb-1" />
+                <div className="skeleton h-2 w-full rounded" />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* 错误状态 */}
       {!loading && error && (
@@ -153,7 +169,7 @@ const CumulativeRights: React.FC = () => {
       {!loading && !error && (
         <>
           {/* 权益概览卡片 */}
-          <div className="bg-gradient-to-br from-orange-400 to-orange-600 rounded-2xl p-6 text-white shadow-lg mb-6 relative overflow-hidden">
+          <div className="bg-gradient-to-br from-red-500 to-red-600 rounded-2xl p-6 text-white shadow-lg mb-6 relative overflow-hidden">
             <div className="absolute top-0 right-0 w-32 h-32 bg-white opacity-5 rounded-full -translate-y-1/2 translate-x-1/2" />
             <div className="relative z-10">
               <div className="flex items-center gap-2 mb-2">
@@ -185,7 +201,7 @@ const CumulativeRights: React.FC = () => {
           <div className="mb-6">
             <button
               onClick={() => navigate('/order-fund-detail')}
-              className="w-full bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-xl p-4 shadow-lg hover:shadow-xl transition-all active:scale-[0.98] flex items-center justify-between"
+              className="w-full bg-gradient-to-r from-red-600 to-red-500 text-white rounded-xl p-4 shadow-lg hover:shadow-xl transition-all active:scale-[0.98] flex items-center justify-between"
             >
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-lg bg-white/20 flex items-center justify-center">
@@ -202,7 +218,7 @@ const CumulativeRights: React.FC = () => {
 
           {/* 权益说明 */}
           <div className="bg-white rounded-xl p-4 shadow-sm">
-            <div className="text-sm font-bold text-gray-800 mb-3 border-l-4 border-orange-400 pl-2">
+            <div className="text-sm font-bold text-gray-800 mb-3 border-l-4 border-red-500 pl-2">
               资金说明
             </div>
             <div className="space-y-2 text-xs text-gray-600">
@@ -215,7 +231,7 @@ const CumulativeRights: React.FC = () => {
                 <div>专项金：主要用于购买藏品，优先扣除。</div>
               </div>
               <div className="flex items-start gap-2">
-                <div className="w-1.5 h-1.5 rounded-full bg-orange-500 mt-1.5 flex-shrink-0" />
+                <div className="w-1.5 h-1.5 rounded-full bg-red-500 mt-1.5 flex-shrink-0" />
                 <div>可提现：所有的成交回款、分红收益、现金奖励均进入此账户，可直接提现。</div>
               </div>
               <div className="flex items-start gap-2">

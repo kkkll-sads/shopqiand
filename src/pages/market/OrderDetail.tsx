@@ -240,10 +240,14 @@ const OrderDetail: React.FC = () => {
     };
 
     if (loading) return (
-        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-50 via-white to-amber-50">
+        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-red-50 via-white to-gray-50">
             <div className="text-center">
-                <LoadingSpinner />
-                <p className="mt-3 text-sm text-gray-500 animate-pulse">加载订单详情...</p>
+                {/* 骨架屏 */}
+                <div className="space-y-4 w-80">
+                    <div className="skeleton h-32 rounded-2xl" />
+                    <div className="skeleton h-24 rounded-2xl" />
+                    <div className="skeleton h-40 rounded-2xl" />
+                </div>
             </div>
         </div>
     );
@@ -255,7 +259,7 @@ const OrderDetail: React.FC = () => {
             <p className="text-gray-500 text-center">{errorMessage || '订单不存在'}</p>
             <button 
                 onClick={() => navigate(-1)}
-                className="mt-6 px-6 py-2.5 bg-orange-500 text-white rounded-full text-sm font-medium shadow-lg shadow-orange-500/30 active:scale-95 transition-transform"
+                className="mt-6 px-6 py-2.5 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-full text-sm font-medium shadow-lg shadow-red-500/30 active:scale-95 transition-transform"
             >
                 返回
             </button>
@@ -276,9 +280,9 @@ const OrderDetail: React.FC = () => {
     const currentStep = orderSteps.filter(s => s.active).length;
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-orange-50/50 via-white to-amber-50/30 max-w-[480px] mx-auto pb-safe">
-            {/* 顶部渐变背景装饰 */}
-            <div className="absolute top-0 left-0 right-0 h-48 bg-gradient-to-br from-orange-500 via-orange-400 to-amber-500 opacity-90" />
+        <div className="min-h-screen bg-gradient-to-br from-red-50/50 via-white to-gray-50/30 max-w-[480px] mx-auto pb-safe">
+            {/* 顶部渐变背景装饰 - 京东红 */}
+            <div className="absolute top-0 left-0 right-0 h-48 bg-gradient-to-br from-red-500 via-red-500 to-red-600 opacity-95" />
             <div className="absolute top-0 left-0 right-0 h-48 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-white/20 via-transparent to-transparent" />
             
             {/* Header */}
@@ -295,7 +299,7 @@ const OrderDetail: React.FC = () => {
                 </div>
                 
                 {/* 订单状态卡片 */}
-                <div className="mx-4 mt-2 p-4 bg-white/95 backdrop-blur-md rounded-2xl shadow-xl shadow-orange-500/10 border border-white/50">
+                <div className="mx-4 mt-2 p-4 bg-white/95 backdrop-blur-md rounded-2xl shadow-xl shadow-red-500/10 border border-white/50">
                     <div className="flex items-center justify-between">
                         <div>
                             <p className="text-xs text-gray-500 mb-1">订单状态</p>
@@ -307,7 +311,7 @@ const OrderDetail: React.FC = () => {
                                     key={step}
                                     className={`w-2 h-2 rounded-full transition-all ${
                                         step <= currentStep 
-                                            ? 'bg-gradient-to-r from-orange-500 to-amber-500 scale-110' 
+                                            ? 'bg-gradient-to-r from-red-500 to-red-600 scale-110' 
                                             : 'bg-gray-200'
                                     }`}
                                 />
@@ -321,7 +325,7 @@ const OrderDetail: React.FC = () => {
                 {/* Order Progress */}
                 <div className="bg-white/80 backdrop-blur-sm mx-4 mt-0 rounded-2xl shadow-lg shadow-gray-200/50 border border-white p-6 mb-4">
                     <div className="flex items-center gap-2.5 mb-6">
-                        <div className="w-1 h-5 bg-gradient-to-b from-orange-500 to-orange-400 rounded-full" />
+                        <div className="w-1 h-5 bg-gradient-to-b from-red-500 to-red-600 rounded-full" />
                         <h2 className="font-semibold text-gray-900 text-base">物流进度</h2>
                     </div>
 
@@ -332,7 +336,7 @@ const OrderDetail: React.FC = () => {
                                 {index < orderSteps.length - 1 && (
                                     <div className={`absolute left-3 top-8 w-0.5 h-full transition-colors z-0 ${
                                         step.active 
-                                            ? 'bg-gradient-to-b from-orange-500 to-orange-300' 
+                                            ? 'bg-gradient-to-b from-red-500 to-red-400' 
                                             : 'bg-gray-200'
                                     }`} />
                                 )}
@@ -340,7 +344,7 @@ const OrderDetail: React.FC = () => {
                                 {/* Node - 固定在左边 */}
                                 <div className={`relative z-10 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all flex-shrink-0 ${
                                     step.active
-                                        ? 'bg-gradient-to-br from-orange-500 to-orange-400 border-orange-500 shadow-lg shadow-orange-500/30 scale-110'
+                                        ? 'bg-gradient-to-br from-red-500 to-red-600 border-red-500 shadow-lg shadow-red-500/30 scale-110'
                                         : 'bg-white border-gray-300'
                                 }`}>
                                     {step.active && (
@@ -372,8 +376,8 @@ const OrderDetail: React.FC = () => {
                 {order.shipping_company && (
                     <div className="bg-white/80 backdrop-blur-sm mx-4 rounded-2xl shadow-lg shadow-gray-200/50 border border-white p-5 mb-4">
                         <div className="flex items-center gap-2.5 mb-5">
-                            <div className="w-8 h-8 rounded-lg bg-orange-50 flex items-center justify-center">
-                                <Truck className="w-4 h-4 text-orange-500" />
+                            <div className="w-8 h-8 rounded-lg bg-red-50 flex items-center justify-center">
+                                <Truck className="w-4 h-4 text-red-500" />
                             </div>
                             <h2 className="font-semibold text-gray-900 text-base">物流信息</h2>
                         </div>
@@ -539,7 +543,7 @@ const OrderDetail: React.FC = () => {
                             <div className="flex justify-between items-center py-2 border-t border-gray-50 pt-4">
                                 <span className="text-sm text-gray-500">支付方式</span>
                                 <div className="flex items-center gap-1.5">
-                                    <Gift className="w-4 h-4 text-orange-500" />
+                                    <Gift className="w-4 h-4 text-red-500" />
                                     <span className="text-sm text-gray-900 font-medium">{order.pay_type_text}</span>
                                 </div>
                             </div>
@@ -579,7 +583,7 @@ const OrderDetail: React.FC = () => {
                             </button>
                             <button
                                 onClick={() => handlePayOrder(order.id)}
-                                className="flex-1 h-12 rounded-xl bg-gradient-to-r from-orange-500 to-orange-400 text-white hover:from-orange-600 hover:to-orange-500 font-semibold shadow-lg shadow-orange-500/30 transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+                                className="flex-1 h-12 rounded-xl bg-gradient-to-r from-red-500 to-red-600 text-white hover:from-red-600 hover:to-red-600 font-semibold shadow-lg shadow-red-500/30 transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                                 立即支付
                             </button>
@@ -602,7 +606,7 @@ const OrderDetail: React.FC = () => {
                             </button>
                             <button
                                 onClick={() => handleConfirmReceipt(order.id)}
-                                className="flex-1 h-12 rounded-xl bg-gradient-to-r from-orange-500 to-orange-400 text-white hover:from-orange-600 hover:to-orange-500 font-semibold shadow-lg shadow-orange-500/30 transition-all active:scale-[0.98]"
+                                className="flex-1 h-12 rounded-xl bg-gradient-to-r from-red-500 to-red-600 text-white hover:from-red-600 hover:to-red-600 font-semibold shadow-lg shadow-red-500/30 transition-all active:scale-[0.98]"
                             >
                                 确认收货
                             </button>
@@ -624,13 +628,13 @@ const OrderDetail: React.FC = () => {
                                         navigate(`/submit-review?${params.toString()}`);
                                     }
                                 }}
-                                className="flex-1 h-12 rounded-xl border-2 border-orange-200 bg-orange-50 text-orange-600 hover:border-orange-300 hover:bg-orange-100 font-semibold transition-all active:scale-[0.98] flex items-center justify-center gap-2"
+                                className="flex-1 h-12 rounded-xl border-2 border-red-200 bg-red-50 text-red-600 hover:border-red-300 hover:bg-red-100 font-semibold transition-all active:scale-[0.98] flex items-center justify-center gap-2"
                             >
                                 <Star size={18} />
                                 去评价
                             </button>
                             <button
-                                className="flex-1 h-12 rounded-xl bg-gradient-to-r from-orange-500 to-orange-400 text-white hover:from-orange-600 hover:to-orange-500 font-semibold shadow-lg shadow-orange-500/30 transition-all active:scale-[0.98]"
+                                className="flex-1 h-12 rounded-xl bg-gradient-to-r from-red-500 to-red-600 text-white hover:from-red-600 hover:to-red-600 font-semibold shadow-lg shadow-red-500/30 transition-all active:scale-[0.98]"
                             >
                                 再次购买
                             </button>

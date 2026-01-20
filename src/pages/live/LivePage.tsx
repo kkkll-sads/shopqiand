@@ -4,10 +4,11 @@ import { fetchProfile } from '../../../services/user';
 import { fetchLiveVideoConfig } from '../../../services/common';
 import { getStoredToken } from '../../../services/client';
 import { isSuccess, extractData } from '../../../utils/apiHelpers';
-import { LoadingSpinner, EmbeddedBrowser } from '../../../components/common';
+import { LoadingSpinner, MediaBrowser } from '../../../components/common';
 import { useErrorHandler } from '../../../hooks/useErrorHandler';
 import { useStateMachine } from '../../../hooks/useStateMachine';
 import { LoadingEvent, LoadingState } from '../../../types/states';
+import { warnLog } from '../../../utils/logger';
 
 const LivePage: React.FC = () => {
     const [activeTab, setActiveTab] = useState('live');
@@ -110,7 +111,7 @@ const LivePage: React.FC = () => {
             }
         } catch (error: any) {
             // 广告视频获取失败不影响直播功能，不显示错误提示
-            console.warn('获取广告视频配置失败:', error);
+            warnLog('LivePage', '获取广告视频配置失败', error);
             videoMachine.send(LoadingEvent.ERROR);
         } finally {
             // 状态机已处理成功/失败
@@ -126,8 +127,8 @@ const LivePage: React.FC = () => {
 
     return (
         <div className="min-h-screen bg-gray-50 flex flex-col overflow-hidden">
-            {/* Header with Tabs */}
-            <div className="bg-gradient-to-r from-orange-500 to-orange-600 sticky top-0 z-20 text-white shadow-lg">
+            {/* Header with Tabs - 京东红主题 */}
+            <div className="bg-gradient-to-r from-red-500 to-red-600 sticky top-0 z-20 text-white shadow-lg">
                 {/* Tab Navigation */}
                 <div className="flex items-center justify-center px-4 pt-4 pb-2">
                     <div className="flex justify-center space-x-12 text-base font-medium">
@@ -137,12 +138,12 @@ const LivePage: React.FC = () => {
                                 onClick={() => setActiveTab(tab.id)}
                                 className={`relative px-2 py-2 transition-colors duration-200 whitespace-nowrap ${activeTab === tab.id
                                     ? 'text-white text-lg font-bold'
-                                    : 'text-orange-100/90'
+                                    : 'text-red-100/90'
                                     }`}
                             >
                                 {tab.label}
                                 {activeTab === tab.id && (
-                                    <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-6 h-1 bg-white rounded-full" />
+                                    <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-6 h-1 bg-white rounded-full shadow-sm" />
                                 )}
                             </button>
                         ))}
@@ -197,21 +198,30 @@ const LivePage: React.FC = () => {
                         {/* 直播卡片 */}
                         {loading ? (
                             <div className="flex items-center justify-center py-20">
-                                <LoadingSpinner text="加载中..." />
+                                {/* 骨架屏 */}
+                                <div className="w-full space-y-4">
+                                  <div className="bg-white rounded-2xl overflow-hidden shadow-sm">
+                                    <div className="skeleton aspect-video" />
+                                    <div className="p-4 space-y-2">
+                                      <div className="skeleton h-5 w-24 rounded" />
+                                      <div className="skeleton h-4 w-40 rounded" />
+                                    </div>
+                                  </div>
+                                </div>
                             </div>
                         ) : liveUrl ? (
                             /* 直播卡片视图 */
                             <div
                                 onClick={() => setShowLiveBrowser(true)}
-                                className="bg-white rounded-xl overflow-hidden shadow-md active:scale-[0.98] transition-transform cursor-pointer border border-gray-100"
+                                className="bg-white rounded-2xl overflow-hidden shadow-lg active:scale-[0.98] transition-all cursor-pointer border border-gray-100"
                             >
                                 {/* 封面图片区域 */}
-                                <div className="relative bg-gradient-to-br from-orange-500 to-red-500 aspect-video flex items-center justify-center">
+                                <div className="relative bg-gradient-to-br from-red-500 to-red-600 aspect-video flex items-center justify-center">
                                     {/* 渐变背景 */}
                                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
 
                                     {/* Live Badge */}
-                                    <div className="absolute top-4 left-4 z-10 flex items-center gap-1.5 bg-orange-600/90 backdrop-blur-sm px-3 py-1 rounded-full text-sm text-white font-medium">
+                                    <div className="absolute top-4 left-4 z-10 flex items-center gap-1.5 bg-red-600/90 backdrop-blur-sm px-3 py-1.5 rounded-full text-sm text-white font-medium shadow-lg">
                                         <span className="relative flex h-2 w-2">
                                             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
                                             <span className="relative inline-flex rounded-full h-2 w-2 bg-white"></span>
@@ -221,10 +231,10 @@ const LivePage: React.FC = () => {
 
                                     {/* 播放按钮 */}
                                     <div className="relative z-10 flex flex-col items-center gap-3">
-                                        <div className="w-16 h-16 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center shadow-xl">
-                                            <PlayCircle size={36} className="text-orange-600 ml-0.5" fill="currentColor" />
+                                        <div className="w-18 h-18 bg-white/95 backdrop-blur-sm rounded-full flex items-center justify-center shadow-2xl">
+                                            <PlayCircle size={40} className="text-red-600 ml-0.5" fill="currentColor" />
                                         </div>
-                                        <span className="text-white text-base font-semibold drop-shadow-lg">点击观看直播</span>
+                                        <span className="text-white text-base font-bold drop-shadow-lg">点击观看直播</span>
                                     </div>
                                 </div>
 
@@ -259,19 +269,21 @@ const LivePage: React.FC = () => {
                 )}
             </div>
 
-            {/* Embedded Live Browser */}
-            <EmbeddedBrowser
+            {/* 直播浏览器 - 使用独立的 MediaBrowser */}
+            <MediaBrowser
                 isOpen={showLiveBrowser}
                 url={liveUrl || ''}
                 title="直播间"
+                type="live"
                 onClose={() => setShowLiveBrowser(false)}
             />
 
-            {/* Embedded Video Browser */}
-            <EmbeddedBrowser
+            {/* 视频浏览器 - 使用独立的 MediaBrowser */}
+            <MediaBrowser
                 isOpen={showVideoBrowser}
                 url={videoConfig?.video_url || ''}
                 title={videoConfig?.title || '广告视频'}
+                type="video"
                 onClose={() => setShowVideoBrowser(false)}
             />
         </div>

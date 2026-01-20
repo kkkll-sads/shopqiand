@@ -54,9 +54,6 @@ const UserAgreement = lazy(() => import('../pages/cms/UserAgreementWrapper'));
 // 市场/交易页面
 const ProductDetail = lazy(() => import('../pages/market/ProductDetailWrapper'));
 const TradingZone = lazy(() => import('../pages/market/TradingZoneWrapper'));
-const ArtistShowcase = lazy(() => import('../pages/market/ArtistShowcaseWrapper'));
-const ArtistDetail = lazy(() => import('../pages/market/ArtistDetailWrapper'));
-const ArtistWorksShowcase = lazy(() => import('../pages/market/ArtistWorksShowcaseWrapper'));
 const MasterpieceShowcase = lazy(() => import('../pages/market/MasterpieceShowcaseWrapper'));
 const ReservationPage = lazy(() => import('../pages/market/ReservationPageWrapper'));
 const ReservationRecordPage = lazy(() => import('../pages/market/ReservationRecordPageWrapper'));
@@ -263,18 +260,6 @@ const routes: RouteObject[] = [
       {
         path: '/trading-zone',
         element: <LazyComponent component={TradingZone} />,
-      },
-      {
-        path: '/artist-showcase',
-        element: <LazyComponent component={ArtistShowcase} />,
-      },
-      {
-        path: '/artist/:id',
-        element: <LazyComponent component={ArtistDetail} />,
-      },
-      {
-        path: '/artist-works/:artistId',
-        element: <LazyComponent component={ArtistWorksShowcase} />,
       },
       {
         path: '/masterpiece-showcase',

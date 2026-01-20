@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronRight, Search, Wallet, Vault, Zap, FileBadge, ClipboardList, Clock, CheckCircle2, AlertCircle } from 'lucide-react';
-import { Banner, Artist, NewsItem } from '../../../types';
-import { fetchBanners, fetchArtists, normalizeAssetUrl, ArtistApiItem, fetchReservations, ReservationItem } from '../../../services/api';
+import { Banner, NewsItem } from '../../../types';
+import { fetchBanners, normalizeAssetUrl, fetchReservations, ReservationItem } from '../../../services/api';
 import { isSuccess } from '../../../utils/apiHelpers';
+import { SkeletonSubscriptionCard } from '../../../components/common';
+import { errorLog } from '../../../utils/logger';
 
 interface HomeProps {
   announcements?: NewsItem[];
@@ -14,7 +16,6 @@ const Home: React.FC<HomeProps> = ({ announcements = [] }) => {
   const [currentBanner, setCurrentBanner] = useState(0);
   const [noticeIndex, setNoticeIndex] = useState(0);
   const [banners, setBanners] = useState<Banner[]>([]);
-  const [artists, setArtists] = useState<Artist[]>([]);
   const [reservationRecords, setReservationRecords] = useState<ReservationItem[]>([]);
   const [loadingRecords, setLoadingRecords] = useState(true);
   const touchStartRef = useRef(0);
@@ -97,17 +98,12 @@ const Home: React.FC<HomeProps> = ({ announcements = [] }) => {
     };
   }, [banners.length]);
 
-  // 加载轮播图与艺术家数据
+  // 加载轮播图数据
   useEffect(() => {
     const load = async () => {
       try {
-        // 并行请求，提高首屏速度
-        const [bannerRes, artistRes] = await Promise.all([
-          fetchBanners({ page: 1, limit: 10 }),
-          fetchArtists(),
-        ]);
+        const bannerRes = await fetchBanners({ page: 1, limit: 10 });
 
-        // 轮播图
         if (isSuccess(bannerRes) && bannerRes.data?.list?.length) {
           const mappedBanners: Banner[] = bannerRes.data.list.map((item) => ({
             id: String(item.id),
@@ -121,22 +117,10 @@ const Home: React.FC<HomeProps> = ({ announcements = [] }) => {
           setBanners([]);
           setCurrentBanner(0);
         }
-
-        // 首页展示前四位艺术家
-        const artistList: ArtistApiItem[] = artistRes.data?.list ?? [];
-        const mappedArtists: Artist[] = artistList.slice(0, 4).map((a) => ({
-          id: String(a.id),
-          name: a.name,
-          image: normalizeAssetUrl(a.avatar), // avatar -> image
-          title: a.title,
-          bio: a.description, // description -> bio
-        }));
-        setArtists(mappedArtists);
       } catch (error) {
-        console.error('加载首页数据失败:', error);
+        errorLog('Home', '加载首页数据失败', error);
         setBanners([]);
         setCurrentBanner(0);
-        setArtists([]);
       }
     };
 
@@ -160,7 +144,7 @@ const Home: React.FC<HomeProps> = ({ announcements = [] }) => {
           setReservationRecords([]);
         }
       } catch (error) {
-        console.error('加载申购记录失败:', error);
+        errorLog('Home', '加载申购记录失败', error);
         // 如果未登录，静默失败
         setReservationRecords([]);
       } finally {
@@ -210,48 +194,48 @@ const Home: React.FC<HomeProps> = ({ announcements = [] }) => {
     {
       label: '专项金申购',
       icon: Wallet,
-      color: 'text-orange-500',
-      bgColor: 'bg-orange-50',
+      color: 'text-red-600',
+      bgColor: 'bg-red-50',
       action: () => handleNavigate('balance-recharge')
     },
     {
       label: '收益提现',
       icon: Vault,
-      color: 'text-orange-500',
-      bgColor: 'bg-orange-50',
+      color: 'text-red-600',
+      bgColor: 'bg-red-50',
       action: () => handleNavigate('balance-withdraw')
     },
     {
       label: '算力补充',
       icon: Zap,
-      color: 'text-orange-500',
-      bgColor: 'bg-orange-50',
+      color: 'text-red-600',
+      bgColor: 'bg-red-50',
       action: () => handleNavigate('hashrate-exchange')
     },
     {
       label: '确权申报',
       icon: FileBadge,
-      color: 'text-orange-500',
-      bgColor: 'bg-orange-50',
+      color: 'text-red-600',
+      bgColor: 'bg-red-50',
       action: () => handleNavigate('cumulative-rights')
     },
   ];
 
   return (
     <div className="pb-24 bg-gray-50 min-h-screen">
-      {/* Top Background Gradient - 更柔和的渐变 */}
-      <div className="absolute top-0 left-0 right-0 h-72 bg-gradient-to-b from-orange-100 via-orange-50 to-gray-50 z-0" />
+      {/* Top Background Gradient - 京东红渐变 */}
+      <div className="absolute top-0 left-0 right-0 h-72 bg-gradient-to-b from-red-50 via-red-50/50 to-gray-50 z-0" />
 
       {/* Header - Fixed Positioning */}
       <header className="px-4 py-3 fixed top-0 left-0 right-0 z-20 max-w-md mx-auto">
         {/* 搜索栏 - 毛玻璃效果 */}
         <div
-          className="flex items-center bg-white/90 backdrop-blur-md rounded-full p-1.5 pl-4 shadow-lg shadow-orange-500/10 cursor-pointer active:scale-[0.98] transition-all border border-white/50"
+          className="flex items-center bg-white/90 backdrop-blur-md rounded-full p-1.5 pl-4 shadow-lg shadow-red-500/10 cursor-pointer active:scale-[0.98] transition-all border border-white/50"
           onClick={() => handleNavigate('search')}
         >
-          <Search size={18} className="text-orange-400 mr-2 flex-shrink-0" />
+          <Search size={18} className="text-red-400 mr-2 flex-shrink-0" />
           <span className="text-sm text-gray-400 flex-1 truncate">搜索数据资产、藏品...</span>
-          <div className="bg-gradient-to-r from-orange-500 to-orange-400 text-white text-xs font-semibold px-5 py-2 rounded-full flex-shrink-0 ml-2 shadow-md shadow-orange-500/30">
+          <div className="bg-gradient-to-r from-red-600 to-red-500 text-white text-xs font-semibold px-5 py-2 rounded-full flex-shrink-0 ml-2 shadow-md shadow-red-500/30">
             搜索
           </div>
         </div>
@@ -296,7 +280,7 @@ const Home: React.FC<HomeProps> = ({ announcements = [] }) => {
 
         {/* Scrolling Notice - 公告栏 */}
         <div
-          className={`flex items-center mt-3 text-xs bg-white rounded-xl p-2.5 shadow-sm border border-orange-100/50 ${announcements.length ? 'cursor-pointer active:bg-orange-50/50' : 'opacity-60'}`}
+          className={`flex items-center mt-3 text-xs bg-white rounded-xl p-2.5 shadow-sm border border-red-100/50 ${announcements.length ? 'cursor-pointer active:bg-red-50/50' : 'opacity-60'}`}
           onClick={() => {
             if (announcements.length) {
               const targetId = announcements[noticeIndex]?.id;
@@ -306,7 +290,7 @@ const Home: React.FC<HomeProps> = ({ announcements = [] }) => {
             }
           }}
         >
-          <span className="bg-gradient-to-r from-orange-500 to-orange-400 text-white px-2 py-0.5 rounded-md text-[10px] mr-2.5 flex-shrink-0 font-semibold shadow-sm">公告</span>
+          <span className="bg-gradient-to-r from-red-600 to-red-500 text-white px-2 py-0.5 rounded-md text-[10px] mr-2.5 flex-shrink-0 font-semibold shadow-sm">公告</span>
           <div className="flex-1 h-5 overflow-hidden relative">
             <div
               className="absolute w-full transition-transform duration-500 ease-in-out"
@@ -319,7 +303,7 @@ const Home: React.FC<HomeProps> = ({ announcements = [] }) => {
               ))}
             </div>
           </div>
-          <ChevronRight size={16} className="text-orange-400 flex-shrink-0 ml-1" />
+          <ChevronRight size={16} className="text-red-400 flex-shrink-0 ml-1" />
         </div>
       </div>
 
@@ -346,7 +330,7 @@ const Home: React.FC<HomeProps> = ({ announcements = [] }) => {
       {/* Trading Zone Entrance - 交易专区入口 */}
       <div className="px-4 mb-3 relative z-0">
         <div
-          className="w-full h-20 rounded-2xl overflow-hidden relative cursor-pointer active:scale-[0.98] transition-transform bg-gradient-to-r from-orange-500 via-orange-400 to-amber-400 shadow-lg shadow-orange-500/25"
+          className="w-full h-20 rounded-2xl overflow-hidden relative cursor-pointer active:scale-[0.98] transition-transform bg-gradient-to-r from-red-600 via-red-500 to-rose-500 shadow-lg shadow-red-500/25"
           onClick={() => handleNavigate('trading-zone')}
         >
           {/* 装饰性背景元素 */}
@@ -370,12 +354,12 @@ const Home: React.FC<HomeProps> = ({ announcements = [] }) => {
         {/* 标题栏 */}
         <div className="flex justify-between items-center p-4 pb-3">
           <div className="flex items-center gap-2">
-            <div className="w-1 h-5 bg-gradient-to-b from-orange-500 to-orange-400 rounded-full" />
+            <div className="w-1 h-5 bg-gradient-to-b from-red-600 to-red-500 rounded-full" />
             <h2 className="font-bold text-gray-800 text-base">申购记录</h2>
           </div>
           <button
             onClick={() => handleNavigate('reservation-record')}
-            className="text-orange-500 flex items-center text-xs font-medium active:opacity-70"
+            className="text-red-600 flex items-center text-xs font-medium active:opacity-70"
           >
             全部 <ChevronRight size={16} />
           </button>
@@ -383,11 +367,10 @@ const Home: React.FC<HomeProps> = ({ announcements = [] }) => {
 
         <div className="px-4 pb-4">
           {loadingRecords ? (
-            <div className="text-center py-10 text-gray-400">
-              <div className="w-10 h-10 mx-auto mb-3 rounded-full bg-orange-50 flex items-center justify-center">
-                <Clock size={20} className="text-orange-400 animate-pulse" />
-              </div>
-              <p className="text-sm">加载中...</p>
+            <div className="space-y-2.5">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <SkeletonSubscriptionCard key={i} />
+              ))}
             </div>
           ) : reservationRecords.length === 0 ? (
             <div className="text-center py-10 text-gray-400">
@@ -404,7 +387,7 @@ const Home: React.FC<HomeProps> = ({ announcements = [] }) => {
                   switch (item.status) {
                     case 0: // 待撮合
                       return (
-                        <span className="text-[10px] font-semibold px-2 py-1 rounded-lg flex items-center gap-1 whitespace-nowrap text-orange-600 bg-orange-50">
+                        <span className="text-[10px] font-semibold px-2 py-1 rounded-lg flex items-center gap-1 whitespace-nowrap text-amber-600 bg-amber-50">
                           <Clock size={10} /> 待撮合
                         </span>
                       );
@@ -438,7 +421,7 @@ const Home: React.FC<HomeProps> = ({ announcements = [] }) => {
                     <div className="flex justify-between items-start">
                       <div className="flex flex-col gap-1">
                         <h3 className="font-bold text-gray-800 text-sm">{record.status_text || '待撮合'}</h3>
-                        <span className="text-[10px] text-orange-500 bg-orange-50 px-2 py-0.5 rounded-md font-medium w-fit">
+                        <span className="text-[10px] text-red-600 bg-red-50 px-2 py-0.5 rounded-md font-medium w-fit">
                           {record.session_id ? `场次 ${record.session_id}` : '盲盒预约'}
                         </span>
                       </div>
@@ -446,7 +429,7 @@ const Home: React.FC<HomeProps> = ({ announcements = [] }) => {
                     </div>
                     <div className="flex justify-between items-center text-xs pt-1 border-t border-gray-100">
                       <span className="text-gray-500">
-                        冻结 <span className="text-orange-600 font-bold">¥{Number(record.freeze_amount || 0).toLocaleString()}</span>
+                        冻结 <span className="text-red-600 font-bold">¥{Number(record.freeze_amount || 0).toLocaleString()}</span>
                       </span>
                       <span className="text-gray-400 flex items-center gap-1">
                         <Zap size={10} className="text-yellow-500" /> 算力 {record.power_used || 5}

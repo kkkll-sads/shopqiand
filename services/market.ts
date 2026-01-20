@@ -20,6 +20,11 @@ export {
     type FetchShopProductsParams,
     type ShopProductDetailData,
     type ShopProductCategoriesData,
+    // SKU 相关类型（新增）
+    type SkuSpecValue,
+    type SkuSpec,
+    type Sku,
+    type PriceRange,
     // 商品接口
     fetchShopProducts,
     fetchShopProductDetail,

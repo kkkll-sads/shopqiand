@@ -16,6 +16,7 @@ import { ReservationStatus } from '../../../constants/statusEnums';
 import { extractError, isSuccess } from '../../../utils/apiHelpers';
 import { useStateMachine } from '../../../hooks/useStateMachine';
 import { LoadingEvent, LoadingState } from '../../../types/states';
+import { errorLog } from '../../../utils/logger';
 
 interface ReservationRecordPageProps {
     onProductSelect?: (product: Product) => void;
@@ -141,7 +142,7 @@ const ReservationRecordPage: React.FC<ReservationRecordPageProps> = ({
                 }
             }
         } catch (err: any) {
-            console.error('加载申购记录失败:', err);
+            errorLog('ReservationRecordPage', '加载申购记录失败', err);
             if (err?.name === 'NeedLoginError') return;
             setError(err?.msg || '网络连接异常');
             if (append) {
@@ -165,7 +166,7 @@ const ReservationRecordPage: React.FC<ReservationRecordPageProps> = ({
         switch (item.status) {
             case ReservationStatus.PENDING:
                 return (
-                    <span className="text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1.5 bg-gradient-to-r from-amber-500/10 to-orange-500/10 text-amber-600 border border-amber-200/50 shadow-sm">
+                    <span className="text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1.5 bg-gradient-to-r from-amber-500/10 to-red-500/10 text-amber-600 border border-amber-200/50 shadow-sm">
                         <Clock size={12} className="animate-pulse" /> 待撮合
                     </span>
                 );
@@ -241,7 +242,7 @@ const ReservationRecordPage: React.FC<ReservationRecordPageProps> = ({
     return (
         <div className="min-h-screen bg-gray-50 pb-20">
             {/* Header */}
-            <header className="sticky top-0 z-20 bg-gradient-to-r from-orange-500 to-orange-600 px-4 py-3 flex items-center justify-between text-white shadow-lg">
+            <header className="sticky top-0 z-20 bg-gradient-to-r from-red-500 to-red-600 px-4 py-3 flex items-center justify-between text-white shadow-lg">
                 <button
                     onClick={() => navigate(-1)}
                     className="p-2 -ml-2 rounded-full active:bg-white/20 transition-all"
@@ -256,15 +257,15 @@ const ReservationRecordPage: React.FC<ReservationRecordPageProps> = ({
             <div className="mx-4 mt-4 p-4 bg-white rounded-xl shadow-sm border border-gray-100">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-lg bg-orange-100 flex items-center justify-center">
-                            <FileText size={20} className="text-orange-600" />
+                        <div className="w-10 h-10 rounded-lg bg-red-100 flex items-center justify-center">
+                            <FileText size={20} className="text-red-600" />
                         </div>
                         <div>
                             <p className="text-xs text-gray-500">申购记录</p>
                             <p className="text-lg font-bold text-gray-900">{records.length} <span className="text-sm font-normal text-gray-400">条</span></p>
                         </div>
                     </div>
-                    <Sparkles size={18} className="text-orange-400" />
+                    <Sparkles size={18} className="text-red-400" />
                 </div>
             </div>
 
@@ -282,7 +283,7 @@ const ReservationRecordPage: React.FC<ReservationRecordPageProps> = ({
                             onClick={() => setStatusFilter(status.key)}
                             className={`flex-1 py-2 text-xs font-medium rounded-lg transition-all flex items-center justify-center gap-1 ${
                                 statusFilter === status.key
-                                    ? 'bg-orange-500 text-white shadow-sm'
+                                    ? 'bg-red-500 text-white shadow-sm'
                                     : 'text-gray-500'
                             }`}
                         >
@@ -297,21 +298,21 @@ const ReservationRecordPage: React.FC<ReservationRecordPageProps> = ({
             <div ref={containerRef} onScroll={handleScroll} className="p-4 space-y-3 h-[calc(100vh-220px)] overflow-y-auto">
                 {!isLoggedIn ? (
                     <div className="py-16 text-center">
-                        <div className="w-20 h-20 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                            <AlertCircle size={32} className="text-orange-500" />
+                        <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <AlertCircle size={32} className="text-red-500" />
                         </div>
                         <h3 className="text-lg font-bold text-gray-900 mb-2">请先登录</h3>
                         <p className="text-sm text-gray-500 mb-6">登录后即可查看您的申购记录</p>
                         <button
                             onClick={() => navigate('/login')}
-                            className="px-8 py-3 bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-xl font-bold shadow-lg shadow-orange-200 active:scale-95 transition-all"
+                            className="px-8 py-3 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-xl font-bold shadow-lg shadow-red-200 active:scale-95 transition-all"
                         >
                             去登录
                         </button>
                     </div>
                 ) : loading ? (
                     <div className="py-20 text-center">
-                        <div className="w-12 h-12 border-4 border-orange-100 border-t-orange-500 rounded-full animate-spin mx-auto mb-4" />
+                        <div className="w-12 h-12 border-4 border-red-100 border-t-orange-500 rounded-full animate-spin mx-auto mb-4" />
                         <p className="text-sm text-gray-500">加载中...</p>
                     </div>
                 ) : error ? (
@@ -322,7 +323,7 @@ const ReservationRecordPage: React.FC<ReservationRecordPageProps> = ({
                         <p className="text-red-500 text-sm mb-4">{error}</p>
                         <button
                             onClick={() => loadRecords(1, false)}
-                            className="px-6 py-2 bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-lg text-sm font-bold shadow-lg active:scale-95 transition-transform"
+                            className="px-6 py-2 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-lg text-sm font-bold shadow-lg active:scale-95 transition-transform"
                         >
                             重试
                         </button>
@@ -337,11 +338,8 @@ const ReservationRecordPage: React.FC<ReservationRecordPageProps> = ({
                 ) : (
                     records.map((record, index) => {
                         const handleCardClick = () => {
-                            if (record.status === ReservationStatus.APPROVED && record.product_id) {
-                                navigate(`/product/${record.product_id}`, { state: { productType: 'collection' } });
-                            } else {
-                                navigate(`/reservation-record/${record.id}`);
-                            }
+                            // 点击卡片进入申购记录详情
+                            navigate(`/reservation-record/${record.id}`);
                         };
                         
                         return (
@@ -363,7 +361,7 @@ const ReservationRecordPage: React.FC<ReservationRecordPageProps> = ({
                                 <div className="mb-3">
                                     <div className="flex items-center gap-2 mb-1">
                                         <h3 className="text-gray-900 font-bold text-sm">{record.session_title || '盲盒预约'}</h3>
-                                        <span className="text-[10px] bg-orange-50 text-orange-600 px-2 py-0.5 rounded-full font-medium">
+                                        <span className="text-[10px] bg-red-50 text-red-600 px-2 py-0.5 rounded-full font-medium">
                                             {record.zone_name || `分区${record.zone_id}`}
                                         </span>
                                     </div>
@@ -381,7 +379,7 @@ const ReservationRecordPage: React.FC<ReservationRecordPageProps> = ({
                                         <span className="text-[10px] text-gray-400 flex items-center gap-1 mb-0.5">
                                             <Wallet size={10} /> 冻结金额
                                         </span>
-                                        <span className="text-sm font-bold text-orange-600">
+                                        <span className="text-sm font-bold text-red-600">
                                             ¥{Number(record.freeze_amount || 0).toLocaleString()}
                                         </span>
                                     </div>
@@ -423,15 +421,13 @@ const ReservationRecordPage: React.FC<ReservationRecordPageProps> = ({
                                         <button
                                             onClick={(e) => {
                                                 e.stopPropagation();
-                                                if (record.product_id) {
-                                                    navigate(`/product/${record.product_id}`, { state: { productType: 'collection' } });
-                                                } else {
-                                                    navigate('/my-collection');
-                                                }
+                                                // 跳转到我的藏品页面查看持仓
+                                                // 注意：申购系统和藏品系统是两个独立系统，product_id 不是藏品 ID
+                                                navigate('/my-collection');
                                             }}
-                                            className="text-xs font-medium text-white flex items-center gap-1 bg-gradient-to-r from-orange-500 to-orange-600 pl-3 pr-2 py-1.5 rounded-full shadow-sm"
+                                            className="text-xs font-medium text-white flex items-center gap-1 bg-gradient-to-r from-red-500 to-red-600 pl-3 pr-2 py-1.5 rounded-full shadow-sm"
                                         >
-                                            {record.product_id ? '查看证书' : '去持仓'} <ArrowRight size={12} />
+                                            去持仓 <ArrowRight size={12} />
                                         </button>
                                     )}
                                 </div>

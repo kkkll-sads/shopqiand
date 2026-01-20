@@ -431,7 +431,7 @@ const PasswordForm: React.FC<PasswordFormProps> = ({
                     {(currentType === 'reset_login' || currentType === 'reset_pay') && (
                         <button
                             type="button"
-                            className="absolute right-0 text-sm text-orange-600 font-medium active:opacity-70"
+                            className="absolute right-0 text-sm text-red-600 font-medium active:opacity-70"
                             onClick={() => {
                                 if (currentType === 'reset_pay') {
                                     setCurrentType('reset_pay_sms');
@@ -455,16 +455,16 @@ const PasswordForm: React.FC<PasswordFormProps> = ({
             {/* 表单内容 */}
             <main className="pt-2">
                 {currentType === 'reset_pay' && (
-                    <div className="mx-4 mb-4 rounded-xl bg-orange-50 p-4">
+                    <div className="mx-4 mb-4 rounded-xl bg-red-50 p-4">
                         <div className="flex gap-3">
-                            <div className="text-orange-500 mt-0.5">
+                            <div className="text-red-500 mt-0.5">
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                                     <path d="M12 22C17.5 22 22 17.5 22 12C22 6.5 17.5 2 12 2C6.5 2 2 6.5 2 12C2 17.5 6.5 22 12 22Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                                     <path d="M12 8V13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                                     <path d="M11.9945 16H12.0035" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                                 </svg>
                             </div>
-                            <p className="text-sm text-orange-700 leading-relaxed">
+                            <p className="text-sm text-red-700 leading-relaxed">
                                 支持通过短信验证码重置交易密码；若忘记旧支付密码，请点击右上角“短信重置”。
                             </p>
                         </div>
@@ -505,7 +505,7 @@ const PasswordForm: React.FC<PasswordFormProps> = ({
                                     type="button"
                                     className={`text-sm font-medium transition-opacity whitespace-nowrap ${countdown > 0 || loading
                                         ? 'text-gray-400 cursor-not-allowed'
-                                        : 'text-orange-600 active:opacity-70'
+                                        : 'text-red-600 active:opacity-70'
                                         }`}
                                     onClick={handleSendCode}
                                     disabled={loading || countdown > 0}
@@ -608,7 +608,7 @@ const PasswordForm: React.FC<PasswordFormProps> = ({
                     <button
                         type="submit"
                         onClick={handleSubmit}
-                        className="w-full rounded-full bg-gradient-to-r from-orange-500 to-orange-600 py-3.5 text-base font-bold text-white shadow-lg shadow-orange-500/20 active:scale-[0.98] active:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none transition-all duration-200"
+                        className="w-full rounded-full bg-gradient-to-r from-red-600 to-red-700 py-3.5 text-base font-bold text-white shadow-lg shadow-red-500/20 active:scale-[0.98] active:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none transition-all duration-200"
                         disabled={loading}
                     >
                         {loading ? (

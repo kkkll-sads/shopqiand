@@ -29,7 +29,7 @@ interface OrderSectionProps {
  */
 const OrderSection: React.FC<OrderSectionProps> = ({ title, items, onItemClick }) => (
   <div className="bg-white rounded-xl p-4 mb-4 shadow-sm">
-    <div className="flex items-center mb-4 border-l-4 border-orange-600 pl-2">
+    <div className="flex items-center mb-4 border-l-4 border-red-600 pl-2">
       <h3 className="font-bold text-gray-800 text-sm">{title}</h3>
     </div>
     <div className={`grid grid-cols-${items.length > 4 ? 4 : items.length} gap-4`}>
@@ -39,8 +39,8 @@ const OrderSection: React.FC<OrderSectionProps> = ({ title, items, onItemClick }
           className="flex flex-col items-center cursor-pointer active:opacity-70"
           onClick={() => onItemClick(item.actionKey)}
         >
-          <div className="w-10 h-10 rounded-full bg-orange-50 flex items-center justify-center mb-2">
-            <item.icon size={20} className="text-orange-500" />
+          <div className="w-10 h-10 rounded-full bg-red-50 flex items-center justify-center mb-2">
+            <item.icon size={20} className="text-red-500" />
           </div>
           <span className="text-xs text-gray-600">{item.label}</span>
         </div>

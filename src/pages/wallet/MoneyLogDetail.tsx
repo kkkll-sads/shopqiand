@@ -17,6 +17,7 @@ import { normalizeAssetUrl } from '../../../services/config';
 import { BizTypeMap, BizType } from '../../../constants/statusEnums';
 import { useStateMachine } from '../../../hooks/useStateMachine';
 import { LoadingEvent, LoadingState } from '../../../types/states';
+import { errorLog } from '../../../utils/logger';
 
 const MoneyLogDetail: React.FC = () => {
   const navigate = useNavigate();
@@ -94,7 +95,7 @@ const MoneyLogDetail: React.FC = () => {
         showToast('error', '复制失败', '请长按流水号手动复制');
       }
     } catch (err) {
-      console.error('Copy failed:', err);
+      errorLog('MoneyLogDetail', 'Copy failed', err);
       showToast('error', '复制失败', '请长按流水号手动复制');
     }
   };
@@ -136,7 +137,7 @@ const MoneyLogDetail: React.FC = () => {
         loadMachine.send(LoadingEvent.ERROR);
       }
     } catch (e: any) {
-      console.error('[MoneyLogDetail] 加载失败:', e);
+      errorLog('MoneyLogDetail', '加载失败', e);
       setError(e?.message || '加载数据失败');
       loadMachine.send(LoadingEvent.ERROR);
     } finally {
@@ -190,7 +191,7 @@ const MoneyLogDetail: React.FC = () => {
         {/* 基本信息 */}
         <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
           <div className="flex items-center gap-2 mb-4 pb-3 border-b border-gray-100">
-            <Receipt className="w-5 h-5 text-blue-600" />
+            <Receipt className="w-5 h-5 text-red-600" />
             <h2 className="font-semibold text-gray-900 text-base">基本信息</h2>
           </div>
 
@@ -202,7 +203,7 @@ const MoneyLogDetail: React.FC = () => {
               </div>
               <button
                 onClick={() => handleCopyFlowNo(detail.flow_no || '')}
-                className="flex items-center gap-1.5 text-sm font-mono text-gray-900 hover:text-blue-600 active:scale-95 transition-all px-2 py-1 -mr-2 rounded-md hover:bg-blue-50"
+                className="flex items-center gap-1.5 text-sm font-mono text-gray-900 hover:text-red-600 active:scale-95 transition-all px-2 py-1 -mr-2 rounded-md hover:bg-red-50"
                 title="点击复制"
               >
                 <span>{detail.flow_no || '-'}</span>
@@ -264,7 +265,7 @@ const MoneyLogDetail: React.FC = () => {
         {detail.memo && (
           <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
             <div className="flex items-center gap-2 mb-3">
-              <FileText className="w-5 h-5 text-blue-600" />
+              <FileText className="w-5 h-5 text-red-600" />
               <h2 className="font-semibold text-gray-900 text-base">备注说明</h2>
             </div>
             <p className="text-sm text-gray-700 leading-relaxed">{detail.memo}</p>
@@ -275,7 +276,7 @@ const MoneyLogDetail: React.FC = () => {
         {(detail.title_snapshot || detail.image_snapshot) && (
           <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
             <div className="flex items-center gap-2 mb-3">
-              <Package className="w-5 h-5 text-blue-600" />
+              <Package className="w-5 h-5 text-red-600" />
               <h2 className="font-semibold text-gray-900 text-base">商品信息</h2>
             </div>
             <div className="flex gap-3">
@@ -301,7 +302,7 @@ const MoneyLogDetail: React.FC = () => {
         {detail.breakdown && typeof detail.breakdown === 'object' && Object.keys(detail.breakdown).length > 0 && (
           <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
             <div className="flex items-center gap-2 mb-3">
-              <TrendingDown className="w-5 h-5 text-blue-600" />
+              <TrendingDown className="w-5 h-5 text-red-600" />
               <h2 className="font-semibold text-gray-900 text-base">详细信息</h2>
             </div>
             <div className="space-y-2">

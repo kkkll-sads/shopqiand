@@ -25,8 +25,17 @@ export { default as ConfirmModal } from './ConfirmModal';
 // 结果弹窗组件
 export { default as ResultModal } from './ResultModal';
 
-// 内嵌浏览器组件
+// 内嵌浏览器组件（用于普通网页）
 export * from './EmbeddedBrowser';
+
+// 媒体浏览器组件（用于直播/视频）
+export { default as MediaBrowser } from './MediaBrowser';
+
+// 支付跳转组件（用于第三方支付）
+export { default as PaymentRedirect } from './PaymentRedirect';
+
+// 在线客服组件
+export { default as ChatWidget, openChatWidget, closeChatWidget, toggleChatWidget, isChatWidgetOpen } from './ChatWidget';
 
 // 卡片组件
 export { default as Card } from './Card';
@@ -51,3 +60,22 @@ export { default as BankPicker } from './BankPicker';
 
 // 版本更新提示弹窗组件
 export { default as UpdatePromptModal } from './UpdatePromptModal';
+
+// 骨架屏组件系统
+export {
+  SkeletonBase,
+  SkeletonText,
+  SkeletonTitle,
+  SkeletonCircle,
+  SkeletonRect,
+  SkeletonProductCard,
+  SkeletonTransactionCard,
+  SkeletonListItem,
+  SkeletonGridCard,
+  SkeletonAssetHeader,
+  SkeletonSubscriptionCard,
+  SkeletonCollectionList,
+  SkeletonAssetPage,
+  SkeletonHomePage,
+  SkeletonProductGrid,
+} from './Skeleton';

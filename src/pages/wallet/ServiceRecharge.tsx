@@ -13,6 +13,7 @@ import { formatAmount } from '../../../utils/format';
 import { isSuccess, extractError } from '../../../utils/apiHelpers';
 import { useStateMachine } from '../../../hooks/useStateMachine';
 import { FormEvent, FormState, LoadingEvent, LoadingState } from '../../../types/states';
+import { errorLog } from '../../../utils/logger';
 
 const ServiceRecharge: React.FC = () => {
   const navigate = useNavigate();
@@ -80,7 +81,7 @@ const ServiceRecharge: React.FC = () => {
         userInfoMachine.send(LoadingEvent.SUCCESS);
       }
     } catch (err) {
-      console.error(err);
+      errorLog('ServiceRecharge', '加载用户信息失败', err);
       userInfoMachine.send(LoadingEvent.ERROR);
     }
   };
@@ -127,21 +128,21 @@ const ServiceRecharge: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col font-sans text-gray-900 pb-safe">
       {/* Header */}
-      <div className="bg-gradient-to-b from-orange-100 to-gray-50 p-5 pt-4">
+      <div className="bg-gradient-to-b from-red-50 to-gray-50 p-5 pt-4">
         <div className="flex items-center gap-3 mb-6">
           <button onClick={() => navigate(-1)} className="w-8 h-8 flex items-center justify-center bg-white rounded-full shadow-sm text-gray-700">
             <ChevronLeft size={20} />
           </button>
           <h1 className="text-xl font-bold text-gray-900">确权金划转</h1>
-          <div className="ml-auto text-xs text-orange-600 font-medium bg-white/50 px-3 py-1 rounded-full backdrop-blur-sm border border-orange-100/50 flex items-center gap-1">
-            <ShieldCheck size={12} fill="currentColor" className="text-orange-500" />
+          <div className="ml-auto text-xs text-red-600 font-medium bg-white/50 px-3 py-1 rounded-full backdrop-blur-sm border border-red-100/50 flex items-center gap-1">
+            <ShieldCheck size={12} fill="currentColor" className="text-red-500" />
             安全存管中
           </div>
         </div>
 
         {/* Amount Card */}
-        <div className="bg-white rounded-[24px] p-6 shadow-xl shadow-orange-100/50 mb-6 border border-orange-50 relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-24 h-24 bg-orange-50 rounded-bl-[100px] -z-0 opacity-50"></div>
+        <div className="bg-white rounded-[24px] p-6 shadow-xl shadow-red-100/50 mb-6 border border-red-50 relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-24 h-24 bg-red-50 rounded-bl-[100px] -z-0 opacity-50"></div>
 
           <div className="relative z-10">
             <div className="flex justify-between items-center mb-4">
@@ -154,7 +155,7 @@ const ServiceRecharge: React.FC = () => {
               </div>
             </div>
 
-            <div className="flex items-baseline gap-2 border-b-2 border-orange-50 pb-2 focus-within:border-orange-500 transition-colors">
+            <div className="flex items-baseline gap-2 border-b-2 border-red-50 pb-2 focus-within:border-red-500 transition-colors">
               <span className="text-3xl font-bold text-gray-900">¥</span>
               <input
                 type="number"
@@ -175,18 +176,17 @@ const ServiceRecharge: React.FC = () => {
       {/* Payment Method */}
       <div className="px-5 flex-1 space-y-4">
         <h2 className="text-sm font-bold text-gray-900 flex items-center gap-2">
-          <span className="w-1 h-4 bg-orange-500 rounded-full"></span>
+          <span className="w-1 h-4 bg-red-500 rounded-full"></span>
           划转来源
         </h2>
 
         <div className="grid grid-cols-1 gap-3">
           <div
-            onClick={() => setPayType('money')}
-            className={`p-4 rounded-xl border flex items-center justify-between cursor-pointer transition-all ${payType === 'money' ? 'bg-orange-50 border-orange-500 shadow-sm' : 'bg-white border-gray-100 hover:bg-gray-50'
+            className={`p-4 rounded-xl border flex items-center justify-between cursor-pointer transition-all ${payType === 'money' ? 'bg-red-50 border-red-500 shadow-sm' : 'bg-white border-gray-100 hover:bg-gray-50'
               }`}
           >
             <div className="flex items-center gap-3">
-              <div className={`w-10 h-10 rounded-full flex items-center justify-center ${payType === 'money' ? 'bg-orange-100 text-orange-600' : 'bg-gray-100 text-gray-400'}`}>
+              <div className={`w-10 h-10 rounded-full flex items-center justify-center ${payType === 'money' ? 'bg-red-100 text-red-600' : 'bg-gray-100 text-gray-400'}`}>
                 <Wallet size={20} />
               </div>
               <div>
@@ -194,18 +194,18 @@ const ServiceRecharge: React.FC = () => {
                 <div className="text-xs text-gray-500 mt-0.5">可用: ¥ {formatAmount(userInfo?.money)}</div>
               </div>
             </div>
-            <div className={`w-5 h-5 rounded-full border flex items-center justify-center ${payType === 'money' ? 'border-orange-500 bg-orange-500' : 'border-gray-300'}`}>
+            <div className={`w-5 h-5 rounded-full border flex items-center justify-center ${payType === 'money' ? 'border-red-500 bg-red-500' : 'border-gray-300'}`}>
               {payType === 'money' && <div className="w-2 h-2 bg-white rounded-full" />}
             </div>
           </div>
 
           <div
             onClick={() => setPayType('withdraw')}
-            className={`p-4 rounded-xl border flex items-center justify-between cursor-pointer transition-all ${payType === 'withdraw' ? 'bg-orange-50 border-orange-500 shadow-sm' : 'bg-white border-gray-100 hover:bg-gray-50'
+            className={`p-4 rounded-xl border flex items-center justify-between cursor-pointer transition-all ${payType === 'withdraw' ? 'bg-red-50 border-red-500 shadow-sm' : 'bg-white border-gray-100 hover:bg-gray-50'
               }`}
           >
             <div className="flex items-center gap-3">
-              <div className={`w-10 h-10 rounded-full flex items-center justify-center ${payType === 'withdraw' ? 'bg-orange-100 text-orange-600' : 'bg-gray-100 text-gray-400'}`}>
+              <div className={`w-10 h-10 rounded-full flex items-center justify-center ${payType === 'withdraw' ? 'bg-red-100 text-red-600' : 'bg-gray-100 text-gray-400'}`}>
                 <CreditCard size={20} />
               </div>
               <div>
@@ -213,16 +213,16 @@ const ServiceRecharge: React.FC = () => {
                 <div className="text-xs text-gray-500 mt-0.5">可用: ¥ {formatAmount(userInfo?.withdrawable_money)}</div>
               </div>
             </div>
-            <div className={`w-5 h-5 rounded-full border flex items-center justify-center ${payType === 'withdraw' ? 'border-orange-500 bg-orange-500' : 'border-gray-300'}`}>
+            <div className={`w-5 h-5 rounded-full border flex items-center justify-center ${payType === 'withdraw' ? 'border-red-500 bg-red-500' : 'border-gray-300'}`}>
               {payType === 'withdraw' && <div className="w-2 h-2 bg-white rounded-full" />}
             </div>
           </div>
         </div>
 
         {/* Tip */}
-        <div className="bg-orange-50 p-3 rounded-xl flex items-start gap-2">
-          <AlertCircle size={16} className="text-orange-500 shrink-0 mt-0.5" />
-          <p className="text-xs text-orange-600 leading-tight">
+        <div className="bg-red-50 p-3 rounded-xl flex items-start gap-2">
+          <AlertCircle size={16} className="text-red-500 shrink-0 mt-0.5" />
+          <p className="text-xs text-red-600 leading-tight">
             服务费仅用于订单寄售时使用，无法提现和转出，请按需充值。
           </p>
         </div>
@@ -243,7 +243,7 @@ const ServiceRecharge: React.FC = () => {
             }
             setShowConfirmModal(true);
           }}
-          className="w-full py-4 rounded-xl bg-gradient-to-r from-[#FF6B35] to-[#FF9F2E] text-white font-bold text-lg shadow-lg shadow-orange-200 active:scale-[0.98] transition-transform flex items-center justify-center gap-2"
+          className="w-full py-4 rounded-xl bg-gradient-to-r from-red-600 to-red-500 text-white font-bold text-lg shadow-lg shadow-red-200 active:scale-[0.98] transition-transform flex items-center justify-center gap-2"
           disabled={loading}
         >
           {loading ? '处理中...' : '确认划转'}
@@ -265,7 +265,7 @@ const ServiceRecharge: React.FC = () => {
               <button onClick={() => setShowConfirmModal(false)} className="flex-1 py-3 rounded-xl bg-gray-100 text-gray-600 font-bold text-sm">取消</button>
               <button
                 onClick={handleRecharge}
-                className="flex-1 py-3 rounded-xl bg-orange-600 text-white font-bold text-sm shadow-lg shadow-orange-200"
+                className="flex-1 py-3 rounded-xl bg-red-600 text-white font-bold text-sm shadow-lg shadow-red-200"
                 disabled={loading}
               >
                 {loading ? <Loader2 className="animate-spin mx-auto" size={20} /> : '确定'}

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   ChevronRight,
   Settings,
@@ -27,7 +27,7 @@ import {
   Truck,
   CheckCircle,
 } from 'lucide-react';
-import { formatAmount } from '../../../utils/format';
+import { formatAmount, formatPriceSmart } from '../../../utils/format';
 import {
   fetchProfile,
   normalizeAssetUrl,
@@ -44,6 +44,7 @@ import { useErrorHandler } from '../../../hooks/useErrorHandler';
 import { useNavigate } from 'react-router-dom';
 import { useStateMachine } from '../../../hooks/useStateMachine';
 import { LoadingEvent, LoadingState } from '../../../types/states';
+import { debugLog, warnLog, errorLog } from '../../../utils/logger';
 
 // Helper for custom coin icon
 const CoinsIcon = ({ size, className }: { size: number; className: string }) => (
@@ -152,34 +153,34 @@ const Profile: React.FC<{ unreadCount?: number }> = ({ unreadCount = 0 }) => {
           setOrderStats(res.data);
         }
       } catch (e) {
-        console.error('加载订单统计失败', e);
+        errorLog('Profile', '加载订单统计失败', e);
       }
     };
     loadOrderStats();
 
     const loadSignInStatus = async () => {
       try {
-        console.log('[Profile] 开始加载签到状态...');
+        debugLog('Profile', '开始加载签到状态');
 
         // 1. 优先检查本地存储
         const todayStr = new Date().toISOString().split('T')[0];
         const lastSignedDate = localStorage.getItem(STORAGE_KEYS.LAST_SIGN_IN_DATE_KEY);
 
         if (lastSignedDate === todayStr) {
-          console.log('[Profile] 本地缓存显示今日已签到，跳过API请求');
+          debugLog('Profile', '本地缓存显示今日已签到，跳过API请求');
           setHasSignedToday(true);
           return;
         }
 
         // 2. 本地无记录或日期不匹配，才请求API
         const res = await fetchSignInInfo(token);
-        console.log('[Profile] 签到状态API响应:', res);
+        debugLog('Profile', '签到状态API响应', res);
 
         // 使用统一的API响应处理
         const signInData = extractData(res);
         if (signInData) {
           const hasSign = signInData.today_signed || false;
-          console.log('[Profile] 今日是否已签到:', hasSign);
+          debugLog('Profile', '今日是否已签到', hasSign);
           setHasSignedToday(hasSign);
 
           // 如果API确认已签到，更新本地存储
@@ -187,12 +188,12 @@ const Profile: React.FC<{ unreadCount?: number }> = ({ unreadCount = 0 }) => {
             localStorage.setItem(STORAGE_KEYS.LAST_SIGN_IN_DATE_KEY, todayStr);
           }
         } else {
-          console.warn('[Profile] 签到状态API返回异常:', res);
+          warnLog('Profile', '签到状态API返回异常', res);
           // Default to false to show red dot (safer to show when uncertain)
           setHasSignedToday(false);
         }
       } catch (e) {
-        console.error('[Profile] 加载签到状态失败:', e);
+        errorLog('Profile', '加载签到状态失败', e);
         // Default to false to show red dot on error
         setHasSignedToday(false);
       }
@@ -249,19 +250,11 @@ const Profile: React.FC<{ unreadCount?: number }> = ({ unreadCount = 0 }) => {
   };
   const displayId = getUserTypeLabel(userInfo?.user_type);
 
-  const stats = useMemo(
-    () => [
-      { label: '供应链专项金', val: formatAmount(userInfo?.money) },
-      { label: '可调度收益', val: formatAmount(userInfo?.withdrawable_money) },
-      { label: '确权金', val: formatAmount(userInfo?.service_fee_balance) },
-    ],
-    [userInfo]
-  );
 
   return (
     <div className="pb-24 min-h-screen bg-gray-50">
       {/* Top Background Gradient - Match Home Page (Pastel Orange) */}
-      <div className="absolute top-0 left-0 right-0 h-72 bg-gradient-to-b from-[#FFD6A5] to-gray-50 z-0"></div>
+      <div className="absolute top-0 left-0 right-0 h-72 bg-gradient-to-b from-red-100 to-gray-50 z-0"></div>
 
       {/* User Header - 参考淘宝布局 */}
       <div className="pt-4 pb-2 px-6 relative z-10 text-gray-900">
@@ -269,7 +262,7 @@ const Profile: React.FC<{ unreadCount?: number }> = ({ unreadCount = 0 }) => {
         <div className="flex items-center justify-between">
           {/* 左侧：头像 + 名称 + 标签 */}
           <div className="flex items-center gap-3">
-            <div className="w-16 h-16 rounded-full bg-orange-100 border-2 border-white flex items-center justify-center text-xl font-bold text-orange-600 overflow-hidden shadow-sm">
+            <div className="w-16 h-16 rounded-full bg-red-100 border-2 border-white flex items-center justify-center text-xl font-bold text-red-600 overflow-hidden shadow-sm">
               {displayAvatarUrl ? (
                 <img src={displayAvatarUrl} alt="用户头像" className="w-full h-full object-cover" />
               ) : (
@@ -282,7 +275,7 @@ const Profile: React.FC<{ unreadCount?: number }> = ({ unreadCount = 0 }) => {
               <div className="flex items-center gap-2">
                 {/* 用户类型标签 - 胶囊样式 */}
                 <div className="flex items-center bg-gray-900/5 backdrop-blur-sm rounded-full px-2 py-0.5 border border-gray-200/50">
-                  <div className="w-3.5 h-3.5 rounded-full bg-gradient-to-br from-orange-400 to-red-500 flex items-center justify-center mr-1 shadow-sm">
+                  <div className="w-3.5 h-3.5 rounded-full bg-gradient-to-br from-red-400 to-red-600 flex items-center justify-center mr-1 shadow-sm">
                     {(() => {
                       const statusConfig = {
                         0: { icon: Sprout },
@@ -312,7 +305,7 @@ const Profile: React.FC<{ unreadCount?: number }> = ({ unreadCount = 0 }) => {
               </div>
             </div>
           </div>
-          
+
           {/* 右侧：功能按钮组 - 图标放大, 间隔加大 */}
           <div className="flex items-center gap-5">
             {/* 客服 */}
@@ -335,7 +328,7 @@ const Profile: React.FC<{ unreadCount?: number }> = ({ unreadCount = 0 }) => {
                 <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white box-content"></span>
               )}
             </button>
-            
+
             {/* 设置 */}
             <button
               onClick={() => navigate('/settings')}
@@ -350,18 +343,18 @@ const Profile: React.FC<{ unreadCount?: number }> = ({ unreadCount = 0 }) => {
 
       {/* Digital Rights Card - 独立区块 */}
       <div className="px-4 relative z-10">
-        <div className="bg-white rounded-2xl px-5 py-5 shadow-sm relative overflow-hidden">
+        <div className="bg-gradient-to-br from-[#FF7A45] via-[#FF5722] to-[#E64A19] rounded-2xl px-5 py-5 shadow-lg relative overflow-hidden text-white">
           <div className="relative z-10">
-            <div className="flex justify-between items-start mb-5">
+            <div className="flex justify-between items-start mb-3">
               <div className="flex items-center gap-2">
-                <span className="text-sm text-gray-500 font-medium">供应链专项金</span>
-                <span className="bg-orange-50 text-orange-600 text-[10px] px-2 py-0.5 rounded-full font-bold">
+                <span className="text-sm font-medium text-white/90">供应链专项金</span>
+                <span className="bg-white/20 text-white text-[10px] px-2 py-0.5 rounded-full font-bold">
                   采购本金
                 </span>
               </div>
               <button
                 onClick={() => navigate('/balance-recharge')}
-                className="text-orange-600 text-sm font-medium flex items-center gap-1 active:opacity-70"
+                className="text-white/90 text-sm font-medium flex items-center gap-0.5 active:opacity-70"
               >
                 去充值 <ChevronRight size={14} />
               </button>
@@ -369,59 +362,62 @@ const Profile: React.FC<{ unreadCount?: number }> = ({ unreadCount = 0 }) => {
 
             {/* Main Big Number: Supply Chain Special Fund (balance_available) */}
             <div
-              className="text-3xl font-[DINAlternate-Bold,Roboto,sans-serif] font-bold text-gray-900 tracking-tight mb-5 cursor-pointer active:opacity-70 transition-opacity"
+              className="mb-4 cursor-pointer active:opacity-70 transition-opacity"
               onClick={() => navigate('/asset-view?tab=0')}
             >
-              <span className="text-xl mr-1">¥</span>
-              {/* Display balance_available without commas */}
-              {String(userInfo?.balance_available || '0.00')}
+              <div className="flex items-baseline">
+                <span className="text-2xl font-medium mr-0.5">¥</span>
+                <span className="text-[32px] font-bold font-[DINAlternate-Bold,Roboto,sans-serif] tracking-tight leading-none">
+                  {formatPriceSmart(userInfo?.balance_available)}
+                </span>
+              </div>
             </div>
 
-            {/* Bottom Grid: 2x2 Layout */}
-            <div className="grid grid-cols-4 gap-x-2">
+            {/* Bottom Grid: 4 columns */}
+            <div className="grid grid-cols-4 gap-1 pt-3 border-t border-white/15">
               {/* Withdrawable */}
               <div
-                className="flex flex-col cursor-pointer active:opacity-70 transition-opacity"
+                className="text-center cursor-pointer active:opacity-70 transition-opacity"
                 onClick={() => navigate('/asset-view?tab=1')}
               >
-                <div className="text-xs text-gray-400 mb-1">可调度收益</div>
-                <div className="text-sm font-bold text-gray-800 font-[DINAlternate-Bold,Roboto,sans-serif] leading-tight">
-                  {formatAmount(userInfo?.withdrawable_money)}
+                <div className="text-[10px] text-white/70 mb-1 whitespace-nowrap">可调度收益</div>
+                <div className="text-sm font-bold font-[DINAlternate-Bold,Roboto,sans-serif] truncate">
+                  {formatPriceSmart(userInfo?.withdrawable_money)}
                 </div>
               </div>
 
               {/* Consumer Points */}
               <div
-                className="flex flex-col cursor-pointer active:opacity-70 transition-opacity"
+                className="text-center cursor-pointer active:opacity-70 transition-opacity"
                 onClick={() => navigate('/market')}
               >
-                <div className="text-xs text-gray-400 mb-1">消费金</div>
-                <div className="text-sm font-bold text-gray-800 font-[DINAlternate-Bold,Roboto,sans-serif] leading-tight">
-                  {userInfo?.score || 0}
+                <div className="text-[10px] text-white/70 mb-1 whitespace-nowrap">消费金</div>
+                <div className="text-sm font-bold font-[DINAlternate-Bold,Roboto,sans-serif] truncate">
+                  {formatPriceSmart(userInfo?.score)}
                 </div>
               </div>
 
               {/* Green Power */}
               <div
-                className="flex flex-col cursor-pointer active:opacity-70 transition-opacity"
+                className="text-center cursor-pointer active:opacity-70 transition-opacity"
                 onClick={() => navigate('/hashrate-exchange')}
               >
-                <div className="text-xs text-gray-400 mb-1 flex items-center gap-1">
-                  绿色算力 <Leaf size={10} className="text-green-500" />
+                <div className="text-[10px] text-white/70 mb-1 whitespace-nowrap flex items-center justify-center">
+                  绿色算力 <Leaf size={10} className="text-emerald-200 ml-0.5" />
                 </div>
-                <div className="text-sm font-bold text-gray-800 font-[DINAlternate-Bold,Roboto,sans-serif] leading-tight">
-                  {userInfo?.green_power || 0}
+                <div className="text-sm font-bold font-[DINAlternate-Bold,Roboto,sans-serif] text-emerald-200 truncate">
+                  {formatPriceSmart(userInfo?.green_power)}
                 </div>
               </div>
 
               {/* Rights Fund */}
               <div
-                className="flex flex-col cursor-pointer active:opacity-70 transition-opacity"
+                className="text-center cursor-pointer active:opacity-70 transition-opacity"
                 onClick={() => navigate('/asset-view?tab=3')}
               >
-                <div className="text-xs text-gray-400 mb-1">确权金</div>
-                <div className="text-sm font-bold text-gray-800 font-[DINAlternate-Bold,Roboto,sans-serif] leading-tight">
-                  {formatAmount(userInfo?.service_fee_balance)}
+                <div className="text-[10px] text-white/70 mb-1 whitespace-nowrap">确权金</div>
+                <div className="text-sm font-bold font-[DINAlternate-Bold,Roboto,sans-serif] truncate">
+                  {formatPriceSmart(userInfo?.service_fee_balance)}
                 </div>
               </div>
             </div>
@@ -439,7 +435,7 @@ const Profile: React.FC<{ unreadCount?: number }> = ({ unreadCount = 0 }) => {
         {/* Convenient Services - Micro Texture Icons */}
         <div className="bg-white rounded-2xl p-4 shadow-sm">
           <div className="font-bold text-gray-800 text-sm mb-4 flex items-center gap-2">
-            <div className="w-1 h-4 bg-orange-500 rounded-full"></div>
+            <div className="w-1 h-4 bg-red-500 rounded-full"></div>
             便捷服务
           </div>
           <div className="grid grid-cols-4 gap-4">
@@ -447,8 +443,8 @@ const Profile: React.FC<{ unreadCount?: number }> = ({ unreadCount = 0 }) => {
               {
                 label: '专项金充值',
                 icon: Wallet,
-                color: 'text-orange-600',
-                bg: 'bg-orange-50',
+                color: 'text-red-600',
+                bg: 'bg-red-50',
                 action: () => navigate('/balance-recharge'),
               },
               {
@@ -461,8 +457,8 @@ const Profile: React.FC<{ unreadCount?: number }> = ({ unreadCount = 0 }) => {
               {
                 label: '收益提现',
                 icon: Receipt,
-                color: 'text-orange-500',
-                bg: 'bg-orange-50',
+                color: 'text-red-500',
+                bg: 'bg-red-50',
                 action: () => navigate('/balance-withdraw'),
               },
               {
@@ -500,7 +496,7 @@ const Profile: React.FC<{ unreadCount?: number }> = ({ unreadCount = 0 }) => {
         {/* Rights Management */}
         <div className="bg-white rounded-2xl p-4 shadow-sm">
           <div className="font-bold text-gray-800 text-sm mb-4 flex items-center gap-2">
-            <div className="w-1 h-4 bg-orange-500 rounded-full"></div>
+            <div className="w-1 h-4 bg-red-500 rounded-full"></div>
             权益管理
           </div>
           <div className="grid grid-cols-4 gap-4">
@@ -560,7 +556,7 @@ const Profile: React.FC<{ unreadCount?: number }> = ({ unreadCount = 0 }) => {
         {/* 消费金订单 */}
         <div className="bg-white rounded-2xl p-4 shadow-sm">
           <div className="font-bold text-gray-800 text-sm mb-4 flex items-center gap-2">
-            <div className="w-1 h-4 bg-orange-500 rounded-full"></div>
+            <div className="w-1 h-4 bg-red-500 rounded-full"></div>
             消费金订单
           </div>
           <div className="grid grid-cols-4 gap-4">
@@ -568,8 +564,8 @@ const Profile: React.FC<{ unreadCount?: number }> = ({ unreadCount = 0 }) => {
               {
                 label: '待付款',
                 icon: Coins,
-                color: 'text-orange-500',
-                bg: 'bg-orange-50',
+                color: 'text-red-500',
+                bg: 'bg-red-50',
                 action: () => navigate('/orders/points/0'),
                 badge: orderStats?.pending_count || 0,
               },
@@ -622,7 +618,7 @@ const Profile: React.FC<{ unreadCount?: number }> = ({ unreadCount = 0 }) => {
         {/* Service Management */}
         <div className="bg-white rounded-2xl p-4 shadow-sm">
           <div className="font-bold text-gray-800 text-sm mb-4 flex items-center gap-2">
-            <div className="w-1 h-4 bg-orange-500 rounded-full"></div>
+            <div className="w-1 h-4 bg-red-500 rounded-full"></div>
             服务管理
           </div>
           <div className="grid grid-cols-4 gap-y-6 gap-x-4">

@@ -9,6 +9,7 @@ import { MapPin, Clock, Truck, Package, Home, ChevronRight, Plus, Check, Loader2
 import { fetchAddressList, AddressItem } from '../../services/api';
 import { getStoredToken } from '../../services/client';
 import { isSuccess } from '../../utils/apiHelpers';
+import { errorLog } from '../../utils/logger';
 
 interface Address {
   id: string;
@@ -86,7 +87,7 @@ const AddressSheet: React.FC<AddressSheetProps> = ({
           }
         }
       } catch (error) {
-        console.error('加载地址列表失败:', error);
+        errorLog('AddressSheet', '加载地址列表失败', error);
       } finally {
         setLoading(false);
       }

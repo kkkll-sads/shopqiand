@@ -5,6 +5,8 @@
 import React from 'react';
 import { Outlet, useLocation, useNavigate, Navigate } from 'react-router-dom';
 import BottomNav from '../../components/BottomNav';
+import ScrollToTop from '../components/ScrollToTop';
+import { ChatWidget } from '../../components/common';
 import { useAuthStore } from '../stores/authStore';
 import type { Tab } from '../../types';
 
@@ -38,7 +40,6 @@ const publicRoutes = [
   '/help-center',
   '/online-service',
   '/news',
-  '/artist-showcase',
   '/masterpiece-showcase',
 ];
 
@@ -82,6 +83,9 @@ const MainLayout: React.FC = () => {
 
   return (
     <div className="bg-gray-100 min-h-screen-dynamic font-sans antialiased text-gray-900 max-w-md mx-auto relative shadow-2xl">
+      <ScrollToTop />
+      {/* 在线客服组件 */}
+      <ChatWidget autoOpen={0} />
       <div className="min-h-screen-dynamic bg-gray-50 pb-safe">
         <Outlet />
       </div>

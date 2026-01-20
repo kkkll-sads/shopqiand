@@ -47,7 +47,7 @@ const WithdrawOrderList: React.FC = () => {
         { value: 0, label: '待审核' },
         { value: 1, label: '已通过' },
         { value: 2, label: '已拒绝' },
-      
+
     ];
 
     // Reload when tab changes
@@ -96,7 +96,7 @@ const WithdrawOrderList: React.FC = () => {
 
     const getStatusColor = (status: number) => {
         const colorMap: Record<number, string> = {
-            0: 'text-orange-600 bg-orange-50 border-orange-200', // 待审核
+            0: 'text-red-600 bg-red-50 border-red-200', // 待审核
             1: 'text-green-600 bg-green-50 border-green-200',   // 审核通过
             2: 'text-red-600 bg-red-50 border-red-200',         // 审核拒绝
             3: 'text-blue-600 bg-blue-50 border-blue-200',      // 已打款
@@ -146,13 +146,13 @@ const WithdrawOrderList: React.FC = () => {
                             key={String(tab.value)}
                             onClick={() => setActiveTab(tab.value)}
                             className={`flex-1 py-3 text-sm font-medium relative whitespace-nowrap transition-colors ${activeTab === tab.value
-                                ? 'text-orange-600'
+                                ? 'text-red-600'
                                 : 'text-gray-500 hover:text-gray-700'
                                 }`}
                         >
                             {tab.label}
                             {activeTab === tab.value && (
-                                <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-6 h-0.5 bg-orange-500 rounded-full" />
+                                <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-6 h-0.5 bg-red-600 rounded-full" />
                             )}
                         </button>
                     ))}
@@ -163,38 +163,38 @@ const WithdrawOrderList: React.FC = () => {
                 {orders
                     .filter(order => activeTab === undefined || order.status === activeTab)
                     .map(order => (
-                    <div
-                        key={order.id}
-                        className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 cursor-pointer active:bg-gray-50 transition-colors"
-                        onClick={() => navigate(`/withdraw-order/${order.id}`)}
-                    >
-                        <div className="flex justify-between items-start mb-3">
-                            <div>
-                                <div className="text-xs text-gray-400 mb-1">{order.account_type_text} • {order.account_name}</div>
-                                <div className="text-sm font-medium text-gray-900 flex items-center gap-2">
-                                    <span className="font-bold text-lg">¥{order.amount}</span>
-                                    <span className="text-xs px-2 py-0.5 bg-gray-100 text-gray-500 rounded text-[10px]">
-                                        到账 ¥{order.actual_amount}
-                                    </span>
+                        <div
+                            key={order.id}
+                            className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 cursor-pointer active:bg-gray-50 transition-colors"
+                            onClick={() => navigate(`/withdraw-order/${order.id}`)}
+                        >
+                            <div className="flex justify-between items-start mb-3">
+                                <div>
+                                    <div className="text-xs text-gray-400 mb-1">{order.account_type_text} • {order.account_name}</div>
+                                    <div className="text-sm font-medium text-gray-900 flex items-center gap-2">
+                                        <span className="font-bold text-lg">¥{order.amount}</span>
+                                        <span className="text-xs px-2 py-0.5 bg-gray-100 text-gray-500 rounded text-[10px]">
+                                            到账 ¥{order.actual_amount}
+                                        </span>
+                                    </div>
+                                </div>
+                                <div className={`px-2 py-1 rounded-lg text-xs font-bold flex items-center gap-1 border ${getStatusColor(order.status)}`}>
+                                    {getStatusIcon(order.status)}
+                                    {order.status_text}
                                 </div>
                             </div>
-                            <div className={`px-2 py-1 rounded-lg text-xs font-bold flex items-center gap-1 border ${getStatusColor(order.status)}`}>
-                                {getStatusIcon(order.status)}
-                                {order.status_text}
+
+                            <div className="flex items-center justify-between text-xs text-gray-400 border-t border-gray-50 pt-3 mt-1">
+                                <span>{order.create_time_text || formatTime(order.create_time)}</span>
+                                {order.audit_reason && (
+                                    <span className="flex items-center gap-1 text-red-400 max-w-[60%] truncate">
+                                        <AlertTriangle size={12} />
+                                        {order.audit_reason}
+                                    </span>
+                                )}
                             </div>
                         </div>
-
-                        <div className="flex items-center justify-between text-xs text-gray-400 border-t border-gray-50 pt-3 mt-1">
-                            <span>{order.create_time_text || formatTime(order.create_time)}</span>
-                            {order.audit_reason && (
-                                <span className="flex items-center gap-1 text-red-400 max-w-[60%] truncate">
-                                    <AlertTriangle size={12} />
-                                    {order.audit_reason}
-                                </span>
-                            )}
-                        </div>
-                    </div>
-                ))}
+                    ))}
 
                 {loading && (
                     <div className="py-8">

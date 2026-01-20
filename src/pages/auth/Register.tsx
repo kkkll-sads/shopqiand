@@ -32,6 +32,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../stores/authStore';
 import { useStateMachine } from '../../../hooks/useStateMachine';
 import { FormEvent, FormState } from '../../../types/states';
+import { debugLog, errorLog } from '../../../utils/logger';
 
 /**
  * Register 注册页面组件
@@ -93,16 +94,13 @@ const Register: React.FC = () => {
   // 组件加载时从URL参数中读取邀请码
   useEffect(() => {
     const urlInviteCode = getInviteCodeFromUrl();
-    console.log('[Register] URL invite_code:', urlInviteCode);
-    console.log(
-      '[Register] Current URL:',
-      typeof window !== 'undefined' ? window.location.href : 'SSR'
-    );
+    debugLog('Register', 'URL invite_code', urlInviteCode);
+    debugLog('Register', 'Current URL', typeof window !== 'undefined' ? window.location.href : 'SSR');
     if (urlInviteCode) {
-      console.log('[Register] Setting invite code from URL:', urlInviteCode);
+      debugLog('Register', 'Setting invite code from URL', urlInviteCode);
       setInviteCode(urlInviteCode);
     } else {
-      console.log('[Register] No invite code in URL, using default');
+      debugLog('Register', 'No invite code in URL, using default');
     }
   }, []);
 
@@ -130,7 +128,7 @@ const Register: React.FC = () => {
           }
         }
       } catch (error) {
-        console.error('加载注册须知失败:', error);
+        errorLog('Register', '加载注册须知失败', error);
       }
     };
 
@@ -206,8 +204,8 @@ const Register: React.FC = () => {
       };
 
       const response = await register(params);
-      console.log('注册接口响应:', response);
-      console.log('response.data:', response.data);
+      debugLog('Register', '注册接口响应', response);
+      debugLog('Register', 'response.data', response.data);
 
       // ✅ 使用统一API响应处理
       if (isSuccess(response)) {
@@ -215,8 +213,8 @@ const Register: React.FC = () => {
         const userInfo = response.data?.userInfo || null;
         const token = userInfo?.token || '';
 
-        console.log('提取的userInfo:', userInfo);
-        console.log('提取的token:', token);
+        debugLog('Register', '提取的userInfo', userInfo);
+        debugLog('Register', '提取的token', token);
 
         if (!token) {
           showToast('warning', '注册成功', '但未获取到登录凭证，请手动登录');
@@ -234,7 +232,7 @@ const Register: React.FC = () => {
           userInfo,
         });
 
-        console.log('自动登录成功，跳转到首页');
+        debugLog('Register', '自动登录成功，跳转到首页');
 
         // ✅ 注册成功后跳转到首页
         navigate('/');
@@ -246,7 +244,7 @@ const Register: React.FC = () => {
         submitMachine.send(FormEvent.RESET);
       }
     } catch (error: any) {
-      console.error('注册失败:', error);
+      errorLog('Register', '注册失败', error);
       if (error.isCorsError) {
         showToast('error', '网络错误', error.message);
       } else if (error.message) {
@@ -262,7 +260,7 @@ const Register: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col px-5 pt-6 pb-safe bg-gradient-to-b from-orange-50 via-white to-gray-50">
+    <div className="min-h-screen flex flex-col px-5 pt-6 pb-safe bg-gradient-to-b from-red-50 via-white to-gray-50">
       {/* 顶部导航 */}
       <div className="flex items-center mb-6 relative">
         <button onClick={() => navigate(-1)} className="absolute left-0 -ml-2 p-2">
@@ -280,7 +278,7 @@ const Register: React.FC = () => {
       {/* 表单 */}
       <div className="space-y-3 mb-6">
         {/* 邀请码 */}
-        <div className="bg-white rounded-xl flex items-center px-4 py-3 border border-gray-100 shadow-sm focus-within:border-orange-200 focus-within:ring-2 focus-within:ring-orange-100 transition-all">
+        <div className="bg-white rounded-xl flex items-center px-4 py-3 border border-gray-100 shadow-sm focus-within:border-red-200 focus-within:ring-2 focus-within:ring-red-50 transition-all">
           <User className="text-gray-400 mr-3" size={20} />
           <input
             type="text"
@@ -297,7 +295,7 @@ const Register: React.FC = () => {
         </div>
 
         {/* 手机号 */}
-        <div className="bg-white rounded-xl flex items-center px-4 py-3 border border-gray-100 shadow-sm focus-within:border-orange-200 focus-within:ring-2 focus-within:ring-orange-100 transition-all">
+        <div className="bg-white rounded-xl flex items-center px-4 py-3 border border-gray-100 shadow-sm focus-within:border-red-200 focus-within:ring-2 focus-within:ring-red-50 transition-all">
           <Smartphone className="text-gray-400 mr-3" size={20} />
           <input
             type="tel"
@@ -309,7 +307,7 @@ const Register: React.FC = () => {
         </div>
 
         {/* 登录密码 */}
-        <div className="bg-white rounded-xl flex items-center px-4 py-3 border border-gray-100 shadow-sm focus-within:border-orange-200 focus-within:ring-2 focus-within:ring-orange-100 transition-all">
+        <div className="bg-white rounded-xl flex items-center px-4 py-3 border border-gray-100 shadow-sm focus-within:border-red-200 focus-within:ring-2 focus-within:ring-red-50 transition-all">
           <Lock className="text-gray-400 mr-3" size={20} />
           <input
             type={showPassword ? 'text' : 'password'}
@@ -324,7 +322,7 @@ const Register: React.FC = () => {
         </div>
 
         {/* 支付密码 */}
-        <div className="bg-white rounded-xl flex items-center px-4 py-3 border border-gray-100 shadow-sm focus-within:border-orange-200 focus-within:ring-2 focus-within:ring-orange-100 transition-all">
+        <div className="bg-white rounded-xl flex items-center px-4 py-3 border border-gray-100 shadow-sm focus-within:border-red-200 focus-within:ring-2 focus-within:ring-red-50 transition-all">
           <CreditCard className="text-gray-400 mr-3" size={20} />
           <input
             type={showPayPassword ? 'text' : 'password'}
@@ -339,7 +337,7 @@ const Register: React.FC = () => {
         </div>
 
         {/* 验证码 */}
-        <div className="bg-white rounded-xl flex items-center px-4 py-3 border border-gray-100 shadow-sm focus-within:border-orange-200 focus-within:ring-2 focus-within:ring-orange-100 transition-all">
+        <div className="bg-white rounded-xl flex items-center px-4 py-3 border border-gray-100 shadow-sm focus-within:border-red-200 focus-within:ring-2 focus-within:ring-red-50 transition-all">
           <ShieldCheck className="text-gray-400 mr-3" size={20} />
           <input
             type="text"
@@ -351,7 +349,7 @@ const Register: React.FC = () => {
           <button
             onClick={handleSendCode}
             disabled={countdown > 0}
-            className={`text-sm font-medium whitespace-nowrap pl-3 border-l border-gray-200 ${countdown > 0 ? 'text-gray-400' : 'text-orange-500'}`}
+            className={`text-sm font-medium whitespace-nowrap pl-3 border-l border-gray-200 ${countdown > 0 ? 'text-gray-400' : 'text-red-600'}`}
           >
             {countdown > 0 ? `${countdown}s 后重试` : '获取验证码'}
           </button>
@@ -362,7 +360,7 @@ const Register: React.FC = () => {
       <button
         onClick={handleRegister}
         disabled={loading}
-        className="w-full bg-gradient-to-r from-orange-500 to-orange-600 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-orange-200 active:scale-[0.98] transition-all text-base mb-4 disabled:opacity-70 disabled:cursor-not-allowed"
+        className="w-full bg-gradient-to-r from-red-600 to-red-500 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-red-200 active:scale-[0.98] transition-all text-base mb-4 disabled:opacity-70 disabled:cursor-not-allowed"
       >
         {loading ? '注册中...' : '完成并登录'}
       </button>
@@ -370,23 +368,23 @@ const Register: React.FC = () => {
       {/* 协议 */}
       <div className="flex items-center justify-center gap-2 text-xs text-gray-500 mb-6">
         <div
-          className={`w-4 h-4 rounded border flex-shrink-0 flex items-center justify-center cursor-pointer transition-colors ${agreed ? 'bg-orange-500 border-orange-500' : 'border-gray-300 bg-white'}`}
+          className={`w-4 h-4 rounded border flex-shrink-0 flex items-center justify-center cursor-pointer transition-colors ${agreed ? 'bg-red-600 border-red-600' : 'border-gray-300 bg-white'}`}
           onClick={() => setAgreed(!agreed)}
         >
           {agreed && <Check size={10} className="text-white" />}
         </div>
         <div className="leading-relaxed flex items-center flex-wrap">
           <span>阅读并同意</span>
-          <button type="button" className="text-orange-500 mx-0.5" onClick={() => navigate('/user-agreement')}>《用户协议》</button>
+          <button type="button" className="text-red-600 mx-0.5" onClick={() => navigate('/user-agreement')}>《用户协议》</button>
           <span>及</span>
-          <button type="button" className="text-orange-500 mx-0.5" onClick={() => navigate('/privacy-policy')}>《隐私政策》</button>
+          <button type="button" className="text-red-600 mx-0.5" onClick={() => navigate('/privacy-policy')}>《隐私政策》</button>
         </div>
       </div>
 
       {/* 登录链接 */}
       <div className="mt-auto text-center pb-4 flex items-center justify-center gap-1 text-sm">
         <span className="text-gray-500">已有账户？</span>
-        <button onClick={() => navigate('/login')} className="text-orange-500 font-medium">
+        <button onClick={() => navigate('/login')} className="text-red-600 font-medium">
           立即登录
         </button>
       </div>

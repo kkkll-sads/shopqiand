@@ -89,7 +89,7 @@ const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
                 strokeWidth="2"
                 strokeLinecap="round"
                 strokeLinejoin="round"
-                className={`animate-spin ${!color && 'text-orange-500'}`}
+                className={`animate-spin ${!color && 'text-red-600'}`}
                 aria-hidden="true"
             >
                 <path d="M21 12a9 9 0 1 1-6.219-8.56" />

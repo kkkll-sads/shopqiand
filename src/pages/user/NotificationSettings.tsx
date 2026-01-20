@@ -9,6 +9,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import PageContainer from '../../../components/layout/PageContainer';
+import { warnLog } from '../../../utils/logger';
 
 /**
  * 通知设置键类型
@@ -48,7 +49,7 @@ const NotificationSettings: React.FC = () => {
         return { ...defaultState, ...JSON.parse(cached) };
       }
     } catch (error) {
-      console.warn('读取通知设置失败:', error);
+      warnLog('NotificationSettings', '读取通知设置失败', error);
     }
     return defaultState;
   });
@@ -58,7 +59,7 @@ const NotificationSettings: React.FC = () => {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
     } catch (error) {
-      console.warn('保存通知设置失败:', error);
+      warnLog('NotificationSettings', '保存通知设置失败', error);
     }
   }, [settings]);
 

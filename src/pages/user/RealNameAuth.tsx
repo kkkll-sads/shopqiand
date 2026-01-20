@@ -68,7 +68,7 @@ const RealNameAuth: React.FC = () => {
           {/* 已认证状态 */}
           {showSuccess && (
             <div className="flex flex-col items-center pt-8 pb-8">
-              <CheckCircle size={64} className="text-orange-500 mb-4" />
+              <CheckCircle size={64} className="text-red-500 mb-4" />
               <h2 className="text-xl font-bold text-gray-800 mb-2">已完成实名认证</h2>
               <p className="text-sm text-gray-500 mb-8 text-center max-w-[240px]">
                 您的身份信息已通过审核，现在可以享受平台的全部服务
@@ -90,16 +90,16 @@ const RealNameAuth: React.FC = () => {
           {/* 待审核状态 */}
           {showPending && (
             <div className="flex flex-col items-center pt-8 pb-8">
-              <Clock size={64} className="text-orange-400 mb-4" />
+              <Clock size={64} className="text-red-400 mb-4" />
               <h2 className="text-xl font-bold text-gray-800 mb-2">实名认证审核中</h2>
               <p className="text-sm text-gray-500 mb-8 text-center max-w-[240px]">
                 您的资料已提交，工作人员正在加急审核中，请您耐心等待
               </p>
 
-              <div className="w-full bg-orange-50 rounded-xl border border-orange-100 overflow-hidden">
+              <div className="w-full bg-red-50 rounded-xl border border-red-100 overflow-hidden">
                 <div className="p-4 flex items-start gap-3">
-                  <AlertCircle size={18} className="text-orange-500 mt-0.5 flex-shrink-0" />
-                  <p className="text-xs text-orange-700 leading-5">
+                  <AlertCircle size={18} className="text-red-500 mt-0.5 flex-shrink-0" />
+                  <p className="text-xs text-red-700 leading-5">
                     审核通常在1-3个工作日内完成。审核结果将通过站内消息通知您，请留意查看。
                   </p>
                 </div>
@@ -120,7 +120,7 @@ const RealNameAuth: React.FC = () => {
                   </div>
                 </div>
               ) : (
-                <div className="bg-orange-50 border border-orange-100 text-orange-700 text-xs rounded-lg p-3 mb-4">
+                <div className="bg-red-50 border border-red-100 text-red-700 text-xs rounded-lg p-3 mb-4">
                   根据国家相关法规要求，为了保障您的账户安全，使用相关服务前请先完成实名认证。
                 </div>
               )}
@@ -166,7 +166,7 @@ const RealNameAuth: React.FC = () => {
 
               {/* 提交按钮 */}
               <button
-                className="w-full bg-gradient-to-r from-orange-500 to-orange-600 text-white text-base font-bold py-3.5 rounded-xl shadow-lg shadow-orange-200 active:scale-[0.98] transition-all disabled:opacity-60 disabled:cursor-not-allowed disabled:shadow-none"
+                className="w-full bg-gradient-to-r from-red-600 to-red-500 text-white text-base font-bold py-3.5 rounded-xl shadow-lg shadow-red-200 active:scale-[0.98] transition-all disabled:opacity-60 disabled:cursor-not-allowed disabled:shadow-none"
                 onClick={handleSubmit}
                 disabled={!canSubmit}
               >
@@ -180,13 +180,13 @@ const RealNameAuth: React.FC = () => {
             <div className="flex flex-col gap-3">
               <button
                 onClick={handleRetry}
-                className="w-full bg-gradient-to-r from-orange-500 to-orange-600 text-white text-base font-bold py-3.5 rounded-xl shadow-lg shadow-orange-200 active:scale-[0.98] transition-all"
+                className="w-full bg-gradient-to-r from-red-600 to-red-500 text-white text-base font-bold py-3.5 rounded-xl shadow-lg shadow-red-200 active:scale-[0.98] transition-all"
               >
                 返回表单
               </button>
               <button
                 onClick={handleRetryLoad}
-                className="w-full bg-white text-orange-600 text-base font-bold py-3.5 rounded-xl border-2 border-orange-500 active:scale-[0.98] transition-all"
+                className="w-full bg-white text-red-600 text-base font-bold py-3.5 rounded-xl border-2 border-red-500 active:scale-[0.98] transition-all"
               >
                 刷新状态
               </button>

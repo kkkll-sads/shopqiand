@@ -11,6 +11,7 @@ import { LoadingSpinner } from '../../../components/common';
 import ProductDetail from './ProductDetail';
 import { Product } from '../../../types';
 import { isSuccess, extractError } from '../../../utils/apiHelpers';
+import { errorLog } from '../../../utils/logger';
 
 const SEARCH_HISTORY_KEY = 'search_history';
 const MAX_HISTORY_COUNT = 10;
@@ -45,7 +46,7 @@ const SearchPage: React.FC = () => {
                 setSearchHistory(JSON.parse(history));
             }
         } catch (error) {
-            console.error('加载搜索历史失败:', error);
+            errorLog('SearchPage', '加载搜索历史失败', error);
         }
     };
 
@@ -64,7 +65,7 @@ const SearchPage: React.FC = () => {
             setSearchHistory(newHistory);
             localStorage.setItem(SEARCH_HISTORY_KEY, JSON.stringify(newHistory));
         } catch (error) {
-            console.error('保存搜索历史失败:', error);
+            errorLog('SearchPage', '保存搜索历史失败', error);
         }
     };
 
@@ -74,7 +75,7 @@ const SearchPage: React.FC = () => {
             setSearchHistory([]);
             showToast('success', '已清空搜索历史');
         } catch (error) {
-            console.error('清空搜索历史失败:', error);
+            errorLog('SearchPage', '清空搜索历史失败', error);
         }
     };
 
@@ -96,7 +97,7 @@ const SearchPage: React.FC = () => {
                 showToast('error', '查询失败', extractError(response, '未找到匹配的藏品'));
             }
         } catch (error: any) {
-            console.error('搜索失败:', error);
+            errorLog('SearchPage', '搜索失败', error);
             showToast('error', '查询失败', error.message || '网络错误，请稍后重试');
         } finally {
             setSearching(false);
@@ -144,7 +145,7 @@ const SearchPage: React.FC = () => {
                     >
                         <ChevronLeft size={20} className="text-gray-700" />
                     </button>
-                    
+
                     <div className="flex-1 flex items-center gap-2 bg-gray-100 rounded-full px-4 py-2">
                         <Search size={18} className="text-gray-400" />
                         <input
@@ -172,7 +173,7 @@ const SearchPage: React.FC = () => {
                     <button
                         onClick={() => handleSearch()}
                         disabled={searching}
-                        className="px-4 py-2 bg-orange-500 text-white rounded-full text-sm font-medium hover:bg-orange-600 transition-colors disabled:opacity-50"
+                        className="px-4 py-2 bg-red-600 text-white rounded-full text-sm font-medium hover:bg-red-700 transition-colors disabled:opacity-50"
                     >
                         {searching ? <LoadingSpinner size="sm" color="white" /> : '搜索'}
                     </button>
@@ -195,7 +196,7 @@ const SearchPage: React.FC = () => {
                                 清空
                             </button>
                         </div>
-                        
+
                         <div className="space-y-2">
                             {searchHistory.map((code, index) => (
                                 <div

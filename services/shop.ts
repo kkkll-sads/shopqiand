@@ -57,28 +57,80 @@ export async function fetchShopProducts(
   });
 }
 
-// 商品规格定义
+// ============================================================================
+// SKU 相关类型定义（根据后端API文档 v1.0）
+// ============================================================================
+
+/**
+ * 规格值定义
+ */
+export interface SkuSpecValue {
+  id: number;           // 规格值ID
+  value: string;        // 规格值，如"红色"、"M"
+  image?: string;       // 规格图片URL（可选）
+}
+
+/**
+ * 规格定义
+ */
+export interface SkuSpec {
+  id: number;           // 规格ID
+  name: string;         // 规格名称，如"颜色"、"尺寸"
+  values: SkuSpecValue[]; // 规格值列表
+}
+
+/**
+ * SKU 定义
+ */
+export interface Sku {
+  id: number;                  // SKU ID（购买时需传此ID）
+  spec_value_ids: string;      // 规格值ID组合（逗号分隔，如"1,3"）
+  spec_value_names: string;    // 规格值名称组合（用于显示，如"红色 / M"）
+  sku_code?: string;           // SKU编码（可选）
+  price: number;               // 销售价格
+  original_price?: number;     // 原价/划线价（可选）
+  stock: number;               // 库存数量
+  image?: string;              // SKU图片URL（可选）
+}
+
+/**
+ * 价格范围（多规格商品）
+ */
+export interface PriceRange {
+  min: number;  // 最低价格
+  max: number;  // 最高价格
+}
+
+// 兼容旧版规格定义（向后兼容）
 export interface ProductSpecOption {
   id: string;
   name: string;
-  image?: string;  // 规格对应的图片
-  price_diff?: number;  // 价格差异
-  stock?: number;  // 该规格的库存
+  image?: string;
+  price_diff?: number;
+  stock?: number;
 }
 
 export interface ProductSpec {
   id: string;
-  name: string;  // 规格名称，如"颜色"、"尺寸"
-  values: string[];  // 规格值列表，如["红色", "蓝色"]
-  options?: ProductSpecOption[];  // 详细选项（包含图片、价格等）
+  name: string;
+  values: string[];
+  options?: ProductSpecOption[];
 }
 
+/**
+ * 商品详情数据（支持多规格SKU）
+ */
 export interface ShopProductDetailData extends ShopProductItem {
   images?: string[];
   description?: string;
-  specs?: ProductSpec[];  // 商品规格列表
-  detail_images?: string[];  // 商品详情图片
-  max_purchase?: number;  // 最大购买数量
+  specs?: ProductSpec[];        // 旧版规格列表（向后兼容）
+  detail_images?: string[];     // 商品详情图片
+  max_purchase?: number;        // 最大购买数量
+  // SKU 相关字段（新增）
+  has_sku?: '0' | '1';          // 是否多规格商品："0"单规格，"1"多规格
+  sku_specs?: SkuSpec[];        // 规格列表（仅多规格商品返回）
+  skus?: Sku[];                 // SKU列表（仅多规格商品返回）
+  price_range?: PriceRange | null; // 价格范围（仅多规格商品返回）
 }
 
 export async function fetchShopProductDetail(
@@ -341,6 +393,7 @@ export async function getOrderDetail(params: {
 export interface CreateOrderItem {
   product_id: number;
   quantity: number;
+  sku_id?: number;  // SKU ID（多规格商品必填）
 }
 
 export interface CreateOrderParams {
@@ -375,7 +428,18 @@ export async function createOrder(params: CreateOrderParams): Promise<ApiRespons
     if (!Number.isFinite(quantity) || quantity <= 0) {
       throw new Error('商品数量必须大于0');
     }
-    return { product_id: productId, quantity };
+    const result: { product_id: number; quantity: number; sku_id?: number } = {
+      product_id: productId,
+      quantity,
+    };
+    // 如果有 sku_id，添加到请求中（多规格商品必填）
+    if (item.sku_id !== undefined && item.sku_id !== null) {
+      const skuId = Number(item.sku_id);
+      if (Number.isFinite(skuId) && skuId > 0) {
+        result.sku_id = skuId;
+      }
+    }
+    return result;
   });
 
   let addressId = params.address_id;
@@ -423,7 +487,7 @@ export async function createOrder(params: CreateOrderParams): Promise<ApiRespons
 }
 
 export interface BuyShopOrderParams {
-  items: CreateOrderItem[];
+  items: CreateOrderItem[];  // CreateOrderItem 已支持 sku_id
   pay_type: 'money' | 'score';
   address_id?: number | null;
   remark?: string;
@@ -454,7 +518,18 @@ export async function buyShopOrder(params: BuyShopOrderParams): Promise<ApiRespo
     if (!Number.isFinite(quantity) || quantity <= 0) {
       throw new Error('商品数量必须大于0');
     }
-    return { product_id: productId, quantity };
+    const result: { product_id: number; quantity: number; sku_id?: number } = {
+      product_id: productId,
+      quantity,
+    };
+    // 如果有 sku_id，添加到请求中（多规格商品必填）
+    if (item.sku_id !== undefined && item.sku_id !== null) {
+      const skuId = Number(item.sku_id);
+      if (Number.isFinite(skuId) && skuId > 0) {
+        result.sku_id = skuId;
+      }
+    }
+    return result;
   });
 
   let isPhysicalProduct = false;
@@ -522,4 +597,126 @@ export async function buyShopOrder(params: BuyShopOrderParams): Promise<ApiRespo
     errorLog('api.shop.buy', '购买商品失败', error);
     throw error;
   }
+}
+
+// ============================================================================
+// 商品评价相关接口
+// ============================================================================
+
+/**
+ * 评价项接口
+ */
+export interface ReviewItem {
+  id: number;
+  user_id: number;
+  user_name: string;
+  user_avatar: string;
+  rating: number;
+  content: string;
+  images: string[];
+  video?: string;
+  likes: number;
+  is_liked: boolean;
+  has_reply: boolean;
+  reply_content?: string;
+  reply_time?: number;
+  follow_up_content?: string;
+  follow_up_time?: number;
+  create_time: number;
+}
+
+/**
+ * 评价统计
+ */
+export interface ReviewStats {
+  all: number;
+  with_media: number;
+  follow_up: number;
+}
+
+/**
+ * 评价列表响应
+ */
+export interface ReviewListData {
+  list: ReviewItem[];
+  total: number;
+  page: number;
+  limit: number;
+  good_rate: number;
+  stats: ReviewStats;
+}
+
+/**
+ * 评价摘要响应
+ */
+export interface ReviewSummaryData {
+  total: number;
+  good_rate: number;
+  with_media_count: number;
+  follow_up_count: number;
+  preview: Pick<ReviewItem, 'id' | 'user_name' | 'rating' | 'content' | 'create_time'>[];
+}
+
+export interface FetchReviewsParams {
+  product_id: number | string;
+  page?: number;
+  limit?: number;
+  filter?: 'all' | 'with_media' | 'follow_up';
+}
+
+/**
+ * 获取商品评价列表
+ */
+export async function fetchProductReviews(
+  params: FetchReviewsParams
+): Promise<ApiResponse<ReviewListData>> {
+  const search = new URLSearchParams();
+  search.set('product_id', String(params.product_id));
+  if (params.page !== undefined) search.set('page', String(params.page));
+  if (params.limit !== undefined) search.set('limit', String(params.limit));
+  if (params.filter) search.set('filter', params.filter);
+
+  const path = `${API_ENDPOINTS.shopProduct.reviews}?${search.toString()}`;
+  return authedFetch<ReviewListData>(path, {
+    method: 'GET',
+  });
+}
+
+/**
+ * 获取商品评价摘要
+ */
+export async function fetchReviewSummary(
+  productId: number | string
+): Promise<ApiResponse<ReviewSummaryData>> {
+  const search = new URLSearchParams();
+  search.set('product_id', String(productId));
+
+  const path = `${API_ENDPOINTS.shopProduct.reviewSummary}?${search.toString()}`;
+  return authedFetch<ReviewSummaryData>(path, {
+    method: 'GET',
+  });
+}
+
+export interface LikeReviewParams {
+  review_id: number;
+  action: 'like' | 'unlike';
+  token?: string;
+}
+
+/**
+ * 点赞/取消点赞评价
+ */
+export async function likeReview(
+  params: LikeReviewParams
+): Promise<ApiResponse<{ likes: number; is_liked: boolean }>> {
+  const token = params.token ?? getStoredToken();
+  
+  return authedFetch(API_ENDPOINTS.shopProduct.likeReview, {
+    method: 'POST',
+    body: JSON.stringify({
+      review_id: params.review_id,
+      action: params.action,
+    }),
+    token,
+  });
 }

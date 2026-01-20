@@ -29,6 +29,7 @@ import {
 } from '../../services/api';
 import { isSuccess, extractError } from '../../utils/apiHelpers';
 import { APP_VERSION } from '../../constants';
+import { errorLog } from '../../utils/logger';
 
 /**
  * 页面类型枚举
@@ -143,7 +144,7 @@ const StaticContentPage: React.FC<StaticContentPageProps> = ({
             } catch (e: any) {
                 if (cancelled) return;
 
-                console.error(`加载${defaultTitle}失败:`, e);
+                errorLog('StaticContentPage', `加载${defaultTitle}失败`, e);
                 setError('网络异常，请检查网络后重试');
             } finally {
                 if (!cancelled) {

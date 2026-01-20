@@ -8,6 +8,7 @@ import PageContainer from '../../../components/layout/PageContainer';
 import { LoadingSpinner, EmptyState } from '../../../components/common';
 import { fetchHelpCategories, fetchHelpQuestions, HelpCategoryItem, HelpQuestionItem } from '../../../services/api';
 import { extractData } from '../../../utils/apiHelpers';
+import { warnLog, errorLog } from '../../../utils/logger';
 
 /**
  * 帮助分类接口
@@ -56,10 +57,10 @@ const HelpCenter: React.FC = () => {
           }));
           setCategories(list);
         } else {
-          console.warn('获取帮助中心分类失败:', res);
+          warnLog('HelpCenter', '获取帮助中心分类失败', res);
         }
       } catch (error) {
-        console.error('获取帮助中心分类接口异常:', error);
+        errorLog('HelpCenter', '获取帮助中心分类接口异常', error);
       } finally {
         setLoadingCategories(false);
       }
@@ -107,7 +108,7 @@ const HelpCenter: React.FC = () => {
           }));
         }
       } catch (error) {
-        console.error('获取帮助中心问题列表接口异常:', error);
+        errorLog('HelpCenter', '获取帮助中心问题列表接口异常', error);
         setQuestionsByCategory((prev) => ({
           ...prev,
           [cat.id]: [],

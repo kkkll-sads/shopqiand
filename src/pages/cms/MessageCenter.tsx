@@ -24,6 +24,8 @@ import { RechargeOrderStatus, WithdrawOrderStatus } from '../../../constants/sta
 import { STORAGE_KEYS } from '../../../constants/storageKeys';
 import { useStateMachine } from '../../../hooks/useStateMachine';
 import { LoadingEvent, LoadingState } from '../../../types/states';
+import { useInfiniteScroll } from '../../hooks/useInfiniteScroll';
+import { debugLog, errorLog } from '../../../utils/logger';
 
 interface MessageItem {
   id: string;
@@ -63,6 +65,17 @@ const MessageCenter: React.FC = () => {
     },
   });
   const loading = loadMachine.state === LoadingState.LOADING;
+
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+
+  const handleLoadMore = () => {
+    if (!loading && hasMore) {
+      setPage(prev => prev + 1);
+    }
+  };
+
+  const bottomRef = useInfiniteScroll(handleLoadMore, hasMore, loading);
 
   // 缓存键
   const CACHE_KEY = 'message_center_cache';
@@ -151,319 +164,309 @@ const MessageCenter: React.FC = () => {
     }
   };
 
-  useEffect(() => {
-    const loadData = async () => {
-      // 先检查缓存
-      // 先检查缓存
-      const cachedMessages = getCachedMessages();
-      if (cachedMessages) {
-        console.log('[MessageCenter] 使用缓存数据');
+  const loadMessages = async (pageNum: number, append: boolean = false) => {
+    const token = getStoredToken();
+    if (!token) {
+      setError('请先登录');
+      loadMachine.send(LoadingEvent.ERROR);
+      return;
+    }
 
-        // 即使使用缓存，也要同步最新的已读状态
-        const readMsgIds = getReadMessageIds();
+    // Only set loading state if not appending (initial load) or handling handled by infinite scroll hook
+    if (!append) {
+      loadMachine.send(LoadingEvent.LOAD);
+    }
+    setError(null);
+
+    try {
+      const readIds = getReadMessageIds();
+      const allMessages: MessageItem[] = [];
+
+      // 1. 加载公告和动态
+      try {
+        const [announcementRes, dynamicRes] = await Promise.all([
+          fetchAnnouncements({ page: pageNum, limit: 10, type: 'normal' }),
+          fetchAnnouncements({ page: pageNum, limit: 10, type: 'important' }),
+        ]);
 
         // 读取全局的新闻已读状态
-        let newsReadIds: string[] = [];
-        try {
-          const storedNewsReadIds = localStorage.getItem(STORAGE_KEYS.READ_NEWS_IDS_KEY);
-          newsReadIds = storedNewsReadIds ? JSON.parse(storedNewsReadIds) : [];
-        } catch { }
+        const storedNewsReadIds = localStorage.getItem(STORAGE_KEYS.READ_NEWS_IDS_KEY);
+        const newsReadIds: string[] = storedNewsReadIds ? JSON.parse(storedNewsReadIds) : [];
 
-        const syncedMessages = cachedMessages.map(msg => {
-          let isRead = msg.isRead;
+        // 处理平台公告
+        const announcementData = extractData(announcementRes) as any;
+        const announcementList = announcementData?.data || announcementData?.list || [];
+        if (announcementList.length > 0) {
+          announcementList.forEach((item: AnnouncementItem) => {
+            const id = `announcement-${item.id}`;
+            const timestamp = item.createtime ? new Date(item.createtime).getTime() : Date.now();
+            const isRead = newsReadIds.includes(String(item.id));
 
-          // 检查普通消息已读
-          if (readMsgIds.includes(msg.id)) {
-            isRead = true;
-          }
+            allMessages.push({
+              id,
+              type: 'notice',
+              title: '平台公告',
+              content: item.title || '',
+              time: item.createtime || '',
+              timestamp,
+              isRead: isRead,
+              icon: AlertCircle,
+              color: 'text-red-600',
+              bgColor: 'bg-red-50',
+              sourceId: item.id,
+            });
+          });
+        }
 
-          // 检查新闻/公告已读
-          if ((msg.type === 'notice' || msg.type === 'activity') && msg.sourceId) {
-            if (newsReadIds.includes(String(msg.sourceId))) {
-              isRead = true;
-            }
-          }
+        // 处理平台动态
+        const dynamicData = extractData(dynamicRes) as any;
+        const dynamicList = dynamicData?.data || dynamicData?.list || [];
+        if (dynamicList.length > 0) {
+          dynamicList.forEach((item: AnnouncementItem) => {
+            const id = `dynamic-${item.id}`;
+            const timestamp = item.createtime ? new Date(item.createtime).getTime() : Date.now();
+            const isRead = newsReadIds.includes(String(item.id));
 
-          return { ...msg, isRead };
-        });
-
-        setMessages(syncedMessages);
-        loadMachine.send(LoadingEvent.SUCCESS);
-        return;
+            allMessages.push({
+              id,
+              type: 'activity',
+              title: '平台动态',
+              content: item.title || '',
+              time: item.createtime || '',
+              timestamp,
+              isRead: isRead,
+              icon: Info,
+              color: 'text-red-600',
+              bgColor: 'bg-red-50',
+              sourceId: item.id,
+            });
+          });
+        }
+      } catch (err) {
+        errorLog('MessageCenter', '加载公告失败', err);
       }
 
-      const token = getStoredToken();
-      if (!token) {
-        setError('请先登录');
-        loadMachine.send(LoadingEvent.ERROR);
-        return;
-      }
-
-      loadMachine.send(LoadingEvent.LOAD);
-      setError(null);
-
+      // 2. 加载充值订单
       try {
-        const readIds = getReadMessageIds();
-        const allMessages: MessageItem[] = [];
+        const rechargeRes = await getMyOrderList({ page: pageNum, limit: 5, token });
+        const rechargeData = extractData(rechargeRes) as any;
+        const rechargeList = rechargeData?.data || rechargeData?.list || [];
+        if (rechargeList.length > 0) {
+          rechargeList.forEach((item: RechargeOrderItem) => {
+            const id = `recharge-${item.id}`;
+            const timestamp = item.create_time ? item.create_time * 1000 : Date.now();
 
-        // 1. 加载公告和动态
-        try {
-          const [announcementRes, dynamicRes] = await Promise.all([
-            fetchAnnouncements({ page: 1, limit: 10, type: 'normal' }),
-            fetchAnnouncements({ page: 1, limit: 10, type: 'important' }),
-          ]);
-
-          // 读取全局的新闻已读状态
-          const storedNewsReadIds = localStorage.getItem(STORAGE_KEYS.READ_NEWS_IDS_KEY);
-          const newsReadIds: string[] = storedNewsReadIds ? JSON.parse(storedNewsReadIds) : [];
-
-          // 处理平台公告
-          // ✅ 使用统一判断
-          const announcementData = extractData(announcementRes) as any;
-          const announcementList = announcementData?.data || announcementData?.list || [];
-          if (announcementList.length > 0) {
-            announcementList.forEach((item: AnnouncementItem) => {
-              const id = `announcement-${item.id}`;
-              const timestamp = item.createtime ? new Date(item.createtime).getTime() : Date.now();
-              // 优先使用全局的新闻已读状态判断
-              const isRead = newsReadIds.includes(String(item.id));
-
-              allMessages.push({
-                id,
-                type: 'notice',
-                title: '平台公告',
-                content: item.title || '',
-                time: item.createtime || '',
-                timestamp,
-                isRead: isRead,
-                icon: AlertCircle,
-                color: 'text-red-600',
-                bgColor: 'bg-red-50',
-                sourceId: item.id,
-              });
-            });
-          }
-
-          // 处理平台动态
-          // ✅ 使用统一判断
-          const dynamicData = extractData(dynamicRes) as any;
-          const dynamicList = dynamicData?.data || dynamicData?.list || [];
-          if (dynamicList.length > 0) {
-            dynamicList.forEach((item: AnnouncementItem) => {
-              const id = `dynamic-${item.id}`;
-              const timestamp = item.createtime ? new Date(item.createtime).getTime() : Date.now();
-              // 优先使用全局的新闻已读状态判断
-              const isRead = newsReadIds.includes(String(item.id));
-
-              allMessages.push({
-                id,
-                type: 'activity',
-                title: '平台动态',
-                content: item.title || '',
-                time: item.createtime || '',
-                timestamp,
-                isRead: isRead,
-                icon: Info,
-                color: 'text-orange-600',
-                bgColor: 'bg-orange-50',
-                sourceId: item.id,
-              });
-            });
-          }
-        } catch (err) {
-          console.error('加载公告失败:', err);
-        }
-
-        // 2. 加载充值订单（最近的状态变更）
-        try {
-          const rechargeRes = await getMyOrderList({ page: 1, limit: 5, token });
-          // ✅ 使用统一判断
-          const rechargeData = extractData(rechargeRes) as any;
-          // Fix: API returns data in 'data' property, not 'list'
-          const rechargeList = rechargeData?.data || rechargeData?.list || [];
-          if (rechargeList.length > 0) {
-            rechargeList.forEach((item: RechargeOrderItem) => {
-              const id = `recharge-${item.id}`;
-              const timestamp = item.create_time ? item.create_time * 1000 : Date.now();
-
-              // 只显示需要用户关注的状态（待审核、已通过、已拒绝）
-              if (item.status === RechargeOrderStatus.PENDING || item.status === RechargeOrderStatus.APPROVED || item.status === RechargeOrderStatus.REJECTED) {
-                let content = '';
-                if (item.status === RechargeOrderStatus.PENDING) {
-                  content = `您的充值订单 ${item.order_no} 待审核，金额：¥${item.amount}`;
-                } else if (item.status === RechargeOrderStatus.APPROVED) {
-                  content = `您的充值订单 ${item.order_no} 审核通过，金额：¥${item.amount}`;
-                } else if (item.status === RechargeOrderStatus.REJECTED) {
-                  content = `您的充值订单 ${item.order_no} 审核未通过`;
-                }
-
-                allMessages.push({
-                  id,
-                  type: 'recharge',
-                  title: '充值通知',
-                  content,
-                  time: item.create_time_text || '',
-                  timestamp,
-                  isRead: readIds.includes(id),
-                  icon: Wallet,
-                  color: 'text-blue-600',
-                  bgColor: 'bg-blue-50',
-                  sourceId: item.id,
-                });
+            if (item.status === RechargeOrderStatus.PENDING || item.status === RechargeOrderStatus.APPROVED || item.status === RechargeOrderStatus.REJECTED) {
+              let content = '';
+              if (item.status === RechargeOrderStatus.PENDING) {
+                content = `您的充值订单 ${item.order_no} 待审核，金额：¥${item.amount}`;
+              } else if (item.status === RechargeOrderStatus.APPROVED) {
+                content = `您的充值订单 ${item.order_no} 审核通过，金额：¥${item.amount}`;
+              } else if (item.status === RechargeOrderStatus.REJECTED) {
+                content = `您的充值订单 ${item.order_no} 审核未通过`;
               }
-            });
-          }
-        } catch (err) {
-          console.error('加载充值订单失败:', err);
-        }
 
-        // 3. 加载提现记录（最近的状态变更）
-        try {
-          const withdrawRes = await getMyWithdrawList({ page: 1, limit: 5, token });
-          // ✅ 使用统一判断
-          const withdrawData = extractData(withdrawRes) as any;
-          const withdrawList = withdrawData?.data || withdrawData?.list || [];
-          if (withdrawList.length > 0) {
-            withdrawList.forEach((item: WithdrawOrderItem) => {
-              const id = `withdraw-${item.id}`;
-              const timestamp = item.create_time ? item.create_time * 1000 : Date.now();
-
-              // 只显示需要用户关注的状态
-              if (item.status === WithdrawOrderStatus.PENDING || item.status === WithdrawOrderStatus.APPROVED || item.status === WithdrawOrderStatus.REJECTED) {
-                let content = '';
-                if (item.status === WithdrawOrderStatus.PENDING) {
-                  content = `您的提现申请待审核，金额：¥${item.amount}`;
-                } else if (item.status === WithdrawOrderStatus.APPROVED) {
-                  content = `您的提现申请已通过，金额：¥${item.amount}，已到账：¥${item.actual_amount}`;
-                } else if (item.status === WithdrawOrderStatus.REJECTED) {
-                  content = `您的提现申请未通过${item.audit_reason ? `：${item.audit_reason}` : ''}`;
-                }
-
-                allMessages.push({
-                  id,
-                  type: 'withdraw',
-                  title: '提现通知',
-                  content,
-                  time: item.create_time_text || '',
-                  timestamp,
-                  isRead: readIds.includes(id),
-                  icon: Receipt,
-                  color: 'text-green-600',
-                  bgColor: 'bg-green-50',
-                  sourceId: item.id,
-                });
-              }
-            });
-          }
-        } catch (err) {
-          console.error('加载提现记录失败:', err);
-        }
-
-        // 4. 加载消费金商城订单（待付款、待发货、待确认收货）
-        try {
-          const [pendingPayRes, pendingShipRes, pendingConfirmRes] = await Promise.all([
-            fetchPendingPayOrders({ page: 1, limit: 3, token }),
-            fetchPendingShipOrders({ page: 1, limit: 3, token }),
-            fetchPendingConfirmOrders({ page: 1, limit: 3, token }),
-          ]);
-
-          // 待付款订单
-          // ✅ 使用统一判断
-          const pendingPayData = extractData(pendingPayRes);
-          if (pendingPayData?.list) {
-            pendingPayData.list.forEach((item: ShopOrderItem) => {
-              const id = `shop-order-pay-${item.id}`;
-              const timestamp = item.create_time ? (typeof item.create_time === 'string' ? parseInt(item.create_time) * 1000 : item.create_time * 1000) : Date.now();
               allMessages.push({
                 id,
-                type: 'shop_order',
-                title: '订单提醒',
-                content: `您有订单 ${item.order_no || item.id} 待付款，请及时支付`,
+                type: 'recharge',
+                title: '充值通知',
+                content,
                 time: item.create_time_text || '',
                 timestamp,
                 isRead: readIds.includes(id),
-                icon: Package,
-                color: 'text-yellow-600',
-                bgColor: 'bg-yellow-50',
-                sourceId: item.id,
-              });
-            });
-          }
-
-          // 待发货订单
-          // ✅ 使用统一判断
-          const pendingShipData = extractData(pendingShipRes);
-          if (pendingShipData?.list) {
-            pendingShipData.list.forEach((item: ShopOrderItem) => {
-              const id = `shop-order-ship-${item.id}`;
-              const timestamp = item.pay_time ? (typeof item.pay_time === 'string' ? parseInt(item.pay_time) * 1000 : item.pay_time * 1000) : Date.now();
-              allMessages.push({
-                id,
-                type: 'shop_order',
-                title: '订单通知',
-                content: `您的订单 ${item.order_no || item.id} 已付款，等待商家发货`,
-                time: item.pay_time_text || item.create_time_text || '',
-                timestamp,
-                isRead: readIds.includes(id),
-                icon: CheckCircle,
+                icon: Wallet,
                 color: 'text-blue-600',
                 bgColor: 'bg-blue-50',
                 sourceId: item.id,
               });
-            });
-          }
+            }
+          });
+        }
+      } catch (err) {
+        errorLog('MessageCenter', '加载充值订单失败', err);
+      }
 
-          // 待确认收货订单
-          // ✅ 使用统一判断
-          const pendingConfirmData = extractData(pendingConfirmRes);
-          if (pendingConfirmData?.list) {
-            pendingConfirmData.list.forEach((item: ShopOrderItem) => {
-              const id = `shop-order-confirm-${item.id}`;
-              const timestamp = item.ship_time ? (typeof item.ship_time === 'string' ? parseInt(item.ship_time) * 1000 : item.ship_time * 1000) : Date.now();
+      // 3. 加载提现记录
+      try {
+        const withdrawRes = await getMyWithdrawList({ page: pageNum, limit: 5, token });
+        const withdrawData = extractData(withdrawRes) as any;
+        const withdrawList = withdrawData?.data || withdrawData?.list || [];
+        if (withdrawList.length > 0) {
+          withdrawList.forEach((item: WithdrawOrderItem) => {
+            const id = `withdraw-${item.id}`;
+            const timestamp = item.create_time ? item.create_time * 1000 : Date.now();
+
+            if (item.status === WithdrawOrderStatus.PENDING || item.status === WithdrawOrderStatus.APPROVED || item.status === WithdrawOrderStatus.REJECTED) {
+              let content = '';
+              if (item.status === WithdrawOrderStatus.PENDING) {
+                content = `您的提现申请待审核，金额：¥${item.amount}`;
+              } else if (item.status === WithdrawOrderStatus.APPROVED) {
+                content = `您的提现申请已通过，金额：¥${item.amount}，已到账：¥${item.actual_amount}`;
+              } else if (item.status === WithdrawOrderStatus.REJECTED) {
+                content = `您的提现申请未通过${item.audit_reason ? `：${item.audit_reason}` : ''}`;
+              }
+
               allMessages.push({
                 id,
-                type: 'shop_order',
-                title: '订单通知',
-                content: `您的订单 ${item.order_no || item.id} 已发货${item.shipping_no ? `，物流单号：${item.shipping_no}` : ''}，请及时确认收货`,
-                time: item.ship_time_text || item.create_time_text || '',
+                type: 'withdraw',
+                title: '提现通知',
+                content,
+                time: item.create_time_text || '',
                 timestamp,
                 isRead: readIds.includes(id),
-                icon: Truck,
+                icon: Receipt,
                 color: 'text-green-600',
                 bgColor: 'bg-green-50',
                 sourceId: item.id,
               });
+            }
+          });
+        }
+      } catch (err) {
+        errorLog('MessageCenter', '加载提现记录失败', err);
+      }
+
+      // 4. 加载消费金商城订单
+      try {
+        const [pendingPayRes, pendingShipRes, pendingConfirmRes] = await Promise.all([
+          fetchPendingPayOrders({ page: pageNum, limit: 3, token }),
+          fetchPendingShipOrders({ page: pageNum, limit: 3, token }),
+          fetchPendingConfirmOrders({ page: pageNum, limit: 3, token }),
+        ]);
+
+        const pendingPayData = extractData(pendingPayRes);
+        if (pendingPayData?.list) {
+          pendingPayData.list.forEach((item: ShopOrderItem) => {
+            const id = `shop-order-pay-${item.id}`;
+            const timestamp = item.create_time ? (typeof item.create_time === 'string' ? parseInt(item.create_time) * 1000 : item.create_time * 1000) : Date.now();
+            allMessages.push({
+              id,
+              type: 'shop_order',
+              title: '订单提醒',
+              content: `您有订单 ${item.order_no || item.id} 待付款，请及时支付`,
+              time: item.create_time_text || '',
+              timestamp,
+              isRead: readIds.includes(id),
+              icon: Package,
+              color: 'text-yellow-600',
+              bgColor: 'bg-yellow-50',
+              sourceId: item.id,
             });
-          }
-        } catch (err) {
-          console.error('加载商城订单失败:', err);
+          });
         }
 
-        // 按时间戳降序排序（最新的在前）
-        allMessages.sort((a, b) => b.timestamp - a.timestamp);
+        const pendingShipData = extractData(pendingShipRes);
+        if (pendingShipData?.list) {
+          pendingShipData.list.forEach((item: ShopOrderItem) => {
+            const id = `shop-order-ship-${item.id}`;
+            const timestamp = item.pay_time ? (typeof item.pay_time === 'string' ? parseInt(item.pay_time) * 1000 : item.pay_time * 1000) : Date.now();
+            allMessages.push({
+              id,
+              type: 'shop_order',
+              title: '订单通知',
+              content: `您的订单 ${item.order_no || item.id} 已付款，等待商家发货`,
+              time: item.pay_time_text || item.create_time_text || '',
+              timestamp,
+              isRead: readIds.includes(id),
+              icon: CheckCircle,
+              color: 'text-blue-600',
+              bgColor: 'bg-blue-50',
+              sourceId: item.id,
+            });
+          });
+        }
 
-        setMessages(allMessages);
-        // 保存到缓存
-        setCachedMessages(allMessages);
-        loadMachine.send(LoadingEvent.SUCCESS);
-      } catch (err: any) {
-        setError(err?.msg || err?.message || '获取消息失败');
-        loadMachine.send(LoadingEvent.ERROR);
-      } finally {
-        // 状态机已处理成功/失败
+        const pendingConfirmData = extractData(pendingConfirmRes);
+        if (pendingConfirmData?.list) {
+          pendingConfirmData.list.forEach((item: ShopOrderItem) => {
+            const id = `shop-order-confirm-${item.id}`;
+            const timestamp = item.ship_time ? (typeof item.ship_time === 'string' ? parseInt(item.ship_time) * 1000 : item.ship_time * 1000) : Date.now();
+            allMessages.push({
+              id,
+              type: 'shop_order',
+              title: '订单通知',
+              content: `您的订单 ${item.order_no || item.id} 已发货${item.shipping_no ? `，物流单号：${item.shipping_no}` : ''}，请及时确认收货`,
+              time: item.ship_time_text || item.create_time_text || '',
+              timestamp,
+              isRead: readIds.includes(id),
+              icon: Truck,
+              color: 'text-green-600',
+              bgColor: 'bg-green-50',
+              sourceId: item.id,
+            });
+          });
+        }
+      } catch (err) {
+        errorLog('MessageCenter', '加载商城订单失败', err);
       }
-    };
 
-    loadData();
+      // 按时间戳降序排序
+      // Note: when appending, we might disrupt the global sort order if simpler merging is used.
+      // Ideally we re-sort the whole list, but simplistic append is usually acceptable for "load more" history.
+      // However, here we merge and sort the NEW batch.
+      allMessages.sort((a, b) => b.timestamp - a.timestamp);
+
+      if (append) {
+        setMessages(prev => [...prev, ...allMessages]);
+      } else {
+        setMessages(allMessages);
+        // 保存到缓存 (only for first page)
+        if (pageNum === 1) {
+          setCachedMessages(allMessages);
+        }
+      }
+
+      // Check if we received any data to determine if there might be more
+      setHasMore(allMessages.length > 0);
+
+      loadMachine.send(LoadingEvent.SUCCESS);
+    } catch (err: any) {
+      setError(err?.msg || err?.message || '获取消息失败');
+      loadMachine.send(LoadingEvent.ERROR);
+    }
+  };
+
+  useEffect(() => {
+    // Check cache first ONLY on initial load
+    const cachedMessages = getCachedMessages();
+    if (cachedMessages) {
+      debugLog('MessageCenter', '使用缓存数据');
+      const readMsgIds = getReadMessageIds();
+      let newsReadIds: string[] = [];
+      try {
+        const storedNewsReadIds = localStorage.getItem(STORAGE_KEYS.READ_NEWS_IDS_KEY);
+        newsReadIds = storedNewsReadIds ? JSON.parse(storedNewsReadIds) : [];
+      } catch { }
+
+      const syncedMessages = cachedMessages.map(msg => {
+        let isRead = msg.isRead;
+        if (readMsgIds.includes(msg.id)) isRead = true;
+        if ((msg.type === 'notice' || msg.type === 'activity') && msg.sourceId) {
+          if (newsReadIds.includes(String(msg.sourceId))) isRead = true;
+        }
+        return { ...msg, isRead };
+      });
+      setMessages(syncedMessages);
+      loadMachine.send(LoadingEvent.SUCCESS);
+    } else {
+      loadMessages(1, false);
+    }
   }, []);
+
+  useEffect(() => {
+    if (page > 1) {
+      loadMessages(page, true);
+    }
+  }, [page]);
 
   // 手动刷新功能
   const handleRefresh = () => {
     clearCache();
     setMessages([]);
-    loadMachine.send(LoadingEvent.LOAD);
-    // 触发重新加载
-    window.location.reload();
+    setPage(1);
+    setHasMore(true);
+    // 重置状态机状态? 其实 loadMessages 会发送 LOAD 事件
+    loadMessages(1, false);
   };
 
   const formatTime = (timeStr: string | number) => {
@@ -534,7 +537,7 @@ const MessageCenter: React.FC = () => {
           localStorage.setItem(STORAGE_KEYS.READ_NEWS_IDS_KEY, JSON.stringify(newIds));
         }
       } catch (e) {
-        console.error('保存新闻已读状态失败', e);
+        errorLog('MessageCenter', '保存新闻已读状态失败', e);
       }
     }
 
@@ -573,7 +576,7 @@ const MessageCenter: React.FC = () => {
 
       localStorage.setItem(STORAGE_KEYS.READ_NEWS_IDS_KEY, JSON.stringify(newNewsIds));
     } catch (e) {
-      console.error('批量保存新闻已读状态失败', e);
+      errorLog('MessageCenter', '批量保存新闻已读状态失败', e);
     }
 
     // 3. 更新状态和缓存
@@ -631,9 +634,9 @@ const MessageCenter: React.FC = () => {
     >
       <div className="p-4">
         {/* 统计卡片 */}
-        <div className="bg-gradient-to-br from-[#FF884D] to-[#FF5500] rounded-2xl p-6 text-white shadow-lg mb-6 relative overflow-hidden">
+        <div className="bg-gradient-to-br from-red-500 to-red-600 rounded-2xl p-6 text-white shadow-lg mb-6 relative overflow-hidden">
           <div className="absolute top-0 right-0 w-32 h-32 bg-white opacity-10 rounded-full -translate-y-1/2 translate-x-1/2 blur-2xl"></div>
-          <div className="absolute bottom-0 left-0 w-24 h-24 bg-orange-300 opacity-20 rounded-full translate-y-1/2 -translate-x-1/4 blur-xl"></div>
+          <div className="absolute bottom-0 left-0 w-24 h-24 bg-red-300 opacity-20 rounded-full translate-y-1/2 -translate-x-1/4 blur-xl"></div>
           <div className="relative z-10">
             <div className="flex items-center gap-2 mb-2">
               <MessageSquare size={24} className="opacity-90" />
@@ -651,7 +654,7 @@ const MessageCenter: React.FC = () => {
           <button
             onClick={() => setActiveTab('all')}
             className={`flex-1 py-2 text-sm font-medium rounded-lg transition-all ${activeTab === 'all'
-              ? 'bg-white text-orange-600 shadow-sm'
+              ? 'bg-white text-red-600 shadow-sm'
               : 'text-gray-500 hover:text-gray-600'
               }`}
           >
@@ -660,7 +663,7 @@ const MessageCenter: React.FC = () => {
           <button
             onClick={() => setActiveTab('unread')}
             className={`flex-1 py-2 text-sm font-medium rounded-lg transition-all relative ${activeTab === 'unread'
-              ? 'bg-white text-orange-600 shadow-sm'
+              ? 'bg-white text-red-600 shadow-sm'
               : 'text-gray-500 hover:text-gray-600'
               }`}
           >
@@ -673,7 +676,21 @@ const MessageCenter: React.FC = () => {
 
         {/* 消息列表 */}
         {loading ? (
-          <LoadingSpinner text="加载消息中..." />
+          <div className="space-y-3">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="bg-white rounded-xl p-4 shadow-sm">
+                <div className="flex items-start gap-3">
+                  <div className="skeleton w-10 h-10 rounded-full flex-shrink-0" />
+                  <div className="flex-1 space-y-2">
+                    <div className="skeleton h-4 w-24 rounded" />
+                    <div className="skeleton h-3 w-full rounded" />
+                    <div className="skeleton h-3 w-3/4 rounded" />
+                    <div className="skeleton h-3 w-20 rounded" />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
         ) : error ? (
           <EmptyState
             icon={<FileText size={48} className="text-gray-300" />}
@@ -691,7 +708,7 @@ const MessageCenter: React.FC = () => {
             {filteredMessages.map((message) => (
               <div
                 key={message.id}
-                className={`bg-white rounded-xl p-4 shadow-sm cursor-pointer active:bg-gray-50 transition-colors relative overflow-hidden ${!message.isRead ? 'bg-orange-50/30' : ''
+                className={`bg-white rounded-xl p-4 shadow-sm cursor-pointer active:bg-gray-50 transition-colors relative overflow-hidden ${!message.isRead ? 'bg-red-50/30' : ''
                   }`}
                 onClick={() => handleMessageClick(message)}
               >
@@ -729,6 +746,12 @@ const MessageCenter: React.FC = () => {
               </div>
             ))}
           </div>
+        )}
+
+        {/* Infinite Scroll Sentinel */}
+        <div ref={bottomRef} className="h-4" />
+        {loading && hasMore && (
+          <div className="py-4 text-center text-xs text-gray-400">加载中...</div>
         )}
       </div>
     </SubPageLayout>

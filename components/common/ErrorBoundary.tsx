@@ -19,6 +19,7 @@
 
 import React, { Component, ErrorInfo, ReactNode } from 'react';
 import ErrorFallback from './ErrorFallback';
+import { errorLog } from '../../utils/logger';
 
 /**
  * ErrorBoundary 组件属性接口
@@ -97,8 +98,8 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
      */
     componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
         // 打印错误信息到控制台（开发阶段）
-        console.error('ErrorBoundary 捕获到错误:', error);
-        console.error('组件栈信息:', errorInfo.componentStack);
+        errorLog('ErrorBoundary', '捕获到错误', error);
+        errorLog('ErrorBoundary', '组件栈信息', errorInfo.componentStack);
 
         // 调用外部错误处理回调（可用于错误上报）
         this.props.onError?.(error, errorInfo);

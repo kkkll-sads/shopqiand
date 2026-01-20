@@ -1,7 +1,19 @@
-import React, { useState } from 'react';
+/**
+ * BuySpecSheet - 商品规格选择弹窗
+ * 
+ * 支持多规格 SKU 选择，实现：
+ * - 规格值动态可选/禁用
+ * - 价格和库存实时更新
+ * - SKU 匹配算法
+ * 
+ * @version 2.0.0 - 支持 SKU 多规格
+ */
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { Minus, Plus, X } from 'lucide-react';
 import { LazyImage } from '../../../components/common';
+import { SkuSpec, Sku, PriceRange } from '../../../services/shop';
 
+// 兼容旧版规格接口
 export interface ProductSpec {
   id: string;
   name: string;
@@ -19,8 +31,19 @@ export interface BuySpecSheetProps {
   balanceAvailableAmount?: number;
   stock: number;
   maxPurchase?: number;
+  // 旧版规格（向后兼容）
   specs?: ProductSpec[];
-  onConfirm: (quantity: number, selectedSpecs?: Record<string, string>) => void;
+  // 新版 SKU 规格（优先使用）
+  hasSku?: boolean;
+  skuSpecs?: SkuSpec[];
+  skus?: Sku[];
+  priceRange?: PriceRange | null;
+  // 回调
+  onConfirm: (
+    quantity: number, 
+    selectedSpecs?: Record<string, string>,
+    skuId?: number
+  ) => void;
 }
 
 const BuySpecSheet: React.FC<BuySpecSheetProps> = ({
@@ -35,13 +58,135 @@ const BuySpecSheet: React.FC<BuySpecSheetProps> = ({
   stock,
   maxPurchase = 99,
   specs = [],
+  hasSku = false,
+  skuSpecs = [],
+  skus = [],
+  priceRange = null,
   onConfirm,
 }) => {
   const [quantity, setQuantity] = useState(1);
+  // 旧版：记录选中的规格名称和值
   const [selectedSpecs, setSelectedSpecs] = useState<Record<string, string>>({});
+  // 新版：记录选中的规格值ID（specId -> valueId）
+  const [selectedValueIds, setSelectedValueIds] = useState<Record<number, number>>({});
+
+  // 重置状态
+  useEffect(() => {
+    if (visible) {
+      setQuantity(1);
+      setSelectedSpecs({});
+      setSelectedValueIds({});
+    }
+  }, [visible]);
+
+  // 判断是否使用新版 SKU 模式
+  const useSkuMode = hasSku && skuSpecs.length > 0 && skus.length > 0;
+
+  /**
+   * 根据已选规格值ID查找匹配的 SKU
+   */
+  const findMatchedSku = useCallback((selections: Record<number, number>): Sku | null => {
+    if (!useSkuMode) return null;
+    
+    // 获取所有已选的规格值ID并排序
+    const selectedIds = skuSpecs
+      .map(spec => selections[spec.id])
+      .filter(id => id !== undefined);
+    
+    // 如果还没选完所有规格，返回 null
+    if (selectedIds.length !== skuSpecs.length) return null;
+    
+    // 排序后生成 spec_value_ids 字符串
+    const targetIds = selectedIds.join(',');
+    
+    return skus.find(sku => sku.spec_value_ids === targetIds && sku.stock > 0) || null;
+  }, [useSkuMode, skuSpecs, skus]);
+
+  /**
+   * 检查某个规格值是否可选（有库存）
+   */
+  const isValueSelectable = useCallback((specId: number, valueId: number): boolean => {
+    if (!useSkuMode) return true;
+    
+    // 创建一个测试选择
+    const testSelections = { ...selectedValueIds, [specId]: valueId };
+    
+    // 获取当前规格的索引
+    const specIndex = skuSpecs.findIndex(s => s.id === specId);
+    if (specIndex === -1) return false;
+    
+    // 检查是否有任意 SKU 匹配这个组合且有库存
+    return skus.some(sku => {
+      if (sku.stock <= 0) return false;
+      
+      const skuValueIds = sku.spec_value_ids.split(',').map(Number);
+      
+      // 检查每个已选的规格值是否匹配
+      for (let i = 0; i < skuSpecs.length; i++) {
+        const spec = skuSpecs[i];
+        const selectedId = testSelections[spec.id];
+        
+        // 如果这个规格已选，检查是否匹配
+        if (selectedId !== undefined && skuValueIds[i] !== selectedId) {
+          return false;
+        }
+      }
+      
+      return true;
+    });
+  }, [useSkuMode, selectedValueIds, skuSpecs, skus]);
+
+  // 当前匹配的 SKU
+  const matchedSku = useMemo(() => {
+    return findMatchedSku(selectedValueIds);
+  }, [findMatchedSku, selectedValueIds]);
+
+  // 计算当前显示的价格
+  const displayPrice = useMemo(() => {
+    if (useSkuMode) {
+      if (matchedSku) {
+        return matchedSku.price;
+      }
+      if (priceRange) {
+        if (priceRange.min === priceRange.max) {
+          return priceRange.min;
+        }
+        return null; // 返回 null 表示显示价格区间
+      }
+    }
+    return price;
+  }, [useSkuMode, matchedSku, priceRange, price]);
+
+  // 计算当前显示的库存
+  const displayStock = useMemo(() => {
+    if (useSkuMode && matchedSku) {
+      return matchedSku.stock;
+    }
+    return stock;
+  }, [useSkuMode, matchedSku, stock]);
+
+  // 计算当前显示的图片
+  const displayImage = useMemo(() => {
+    if (useSkuMode && matchedSku && matchedSku.image) {
+      return matchedSku.image;
+    }
+    // 检查选中的规格值是否有图片
+    if (useSkuMode) {
+      for (const spec of skuSpecs) {
+        const selectedId = selectedValueIds[spec.id];
+        if (selectedId) {
+          const value = spec.values.find(v => v.id === selectedId);
+          if (value && value.image) {
+            return value.image;
+          }
+        }
+      }
+    }
+    return productImage;
+  }, [useSkuMode, matchedSku, skuSpecs, selectedValueIds, productImage]);
 
   // 计算实际限购数量
-  const actualMax = Math.min(stock, maxPurchase);
+  const actualMax = Math.min(displayStock, maxPurchase);
 
   const handleDecrease = () => {
     if (quantity > 1) {
@@ -68,6 +213,7 @@ const BuySpecSheet: React.FC<BuySpecSheetProps> = ({
     }
   };
 
+  // 旧版规格选择
   const handleSelectSpec = (specName: string, value: string) => {
     setSelectedSpecs(prev => ({
       ...prev,
@@ -75,27 +221,98 @@ const BuySpecSheet: React.FC<BuySpecSheetProps> = ({
     }));
   };
 
+  // 新版 SKU 规格值选择
+  const handleSelectSkuValue = (specId: number, valueId: number) => {
+    setSelectedValueIds(prev => ({
+      ...prev,
+      [specId]: valueId,
+    }));
+    // 重置数量为1
+    setQuantity(1);
+  };
+
   const handleConfirm = () => {
-    onConfirm(quantity, specs.length > 0 ? selectedSpecs : undefined);
+    if (useSkuMode) {
+      // 新版 SKU 模式：构建选中的规格文本
+      const specsText: Record<string, string> = {};
+      skuSpecs.forEach(spec => {
+        const valueId = selectedValueIds[spec.id];
+        if (valueId) {
+          const value = spec.values.find(v => v.id === valueId);
+          if (value) {
+            specsText[spec.name] = value.value;
+          }
+        }
+      });
+      onConfirm(quantity, specsText, matchedSku?.id);
+    } else {
+      // 旧版规格模式
+      onConfirm(quantity, specs.length > 0 ? selectedSpecs : undefined);
+    }
   };
 
   // 检查是否所有规格都已选择
-  const allSpecsSelected = specs.length === 0 || specs.every(spec => selectedSpecs[spec.name]);
+  const allSpecsSelected = useMemo(() => {
+    if (useSkuMode) {
+      return skuSpecs.every(spec => selectedValueIds[spec.id] !== undefined);
+    }
+    return specs.length === 0 || specs.every(spec => selectedSpecs[spec.name]);
+  }, [useSkuMode, skuSpecs, selectedValueIds, specs, selectedSpecs]);
+
+  // 检查是否可以购买（有匹配的 SKU 且有库存）
+  const canBuy = useMemo(() => {
+    if (useSkuMode) {
+      return allSpecsSelected && matchedSku && matchedSku.stock > 0;
+    }
+    return allSpecsSelected && stock > 0;
+  }, [useSkuMode, allSpecsSelected, matchedSku, stock]);
+
+  // 获取选中的规格文本
+  const selectedSpecsText = useMemo(() => {
+    if (useSkuMode) {
+      if (matchedSku) {
+        return matchedSku.spec_value_names;
+      }
+      const parts: string[] = [];
+      skuSpecs.forEach(spec => {
+        const valueId = selectedValueIds[spec.id];
+        if (valueId) {
+          const value = spec.values.find(v => v.id === valueId);
+          if (value) {
+            parts.push(value.value);
+          }
+        }
+      });
+      return parts.length > 0 ? parts.join(' / ') : '';
+    }
+    return Object.values(selectedSpecs).join(' / ');
+  }, [useSkuMode, matchedSku, skuSpecs, selectedValueIds, selectedSpecs]);
 
   // 渲染价格显示
   const renderPriceDisplay = () => {
     const parts: React.ReactNode[] = [];
-    
+
     // 现金价格
-    if (price > 0) {
+    if (displayPrice !== null && displayPrice > 0) {
       parts.push(
         <span key="price" className="text-red-500">
           <span className="text-sm">¥</span>
-          <span className="text-2xl font-bold">{price.toFixed(2)}</span>
+          <span className="text-2xl font-bold font-[DINAlternate-Bold]">{displayPrice.toFixed(2)}</span>
+        </span>
+      );
+    } else if (useSkuMode && priceRange && priceRange.min !== priceRange.max) {
+      // 显示价格区间
+      parts.push(
+        <span key="price-range" className="text-red-500">
+          <span className="text-sm">¥</span>
+          <span className="text-xl font-bold font-[DINAlternate-Bold]">{priceRange.min.toFixed(2)}</span>
+          <span className="text-sm mx-1">-</span>
+          <span className="text-sm">¥</span>
+          <span className="text-xl font-bold font-[DINAlternate-Bold]">{priceRange.max.toFixed(2)}</span>
         </span>
       );
     }
-    
+
     // 绿色能量
     if (greenPowerAmount > 0) {
       if (parts.length > 0) parts.push(<span key="plus1" className="text-gray-400 mx-1">+</span>);
@@ -103,7 +320,7 @@ const BuySpecSheet: React.FC<BuySpecSheetProps> = ({
         <span key="green" className="text-green-500 text-sm">{greenPowerAmount}绿色能量</span>
       );
     }
-    
+
     // 余额可用金额
     if (balanceAvailableAmount > 0) {
       if (parts.length > 0) parts.push(<span key="plus2" className="text-gray-400 mx-1">+</span>);
@@ -111,7 +328,7 @@ const BuySpecSheet: React.FC<BuySpecSheetProps> = ({
         <span key="balance" className="text-blue-500 text-sm">{balanceAvailableAmount}余额</span>
       );
     }
-    
+
     // 消费金
     if (scorePrice > 0) {
       if (parts.length > 0) parts.push(<span key="plus3" className="text-gray-400 mx-1">+</span>);
@@ -122,12 +339,12 @@ const BuySpecSheet: React.FC<BuySpecSheetProps> = ({
         </span>
       );
     }
-    
+
     // 如果全为0，显示免费
     if (parts.length === 0) {
       return <span className="text-red-500 text-xl font-bold">免费</span>;
     }
-    
+
     return <>{parts}</>;
   };
 
@@ -136,11 +353,11 @@ const BuySpecSheet: React.FC<BuySpecSheetProps> = ({
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center">
       {/* 遮罩层 */}
-      <div 
+      <div
         className="absolute inset-0 bg-black/50 transition-opacity"
         onClick={onClose}
       />
-      
+
       {/* 弹窗内容 */}
       <div className="relative w-full max-w-[480px] bg-white rounded-t-2xl animate-slide-up overflow-hidden">
         {/* 关闭按钮 */}
@@ -150,31 +367,80 @@ const BuySpecSheet: React.FC<BuySpecSheetProps> = ({
         >
           <X size={18} className="text-gray-500" />
         </button>
-        
+
         {/* 商品信息区 */}
         <div className="flex gap-3 p-4 pb-3">
           {/* 商品图片 */}
           <div className="w-24 h-24 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
             <LazyImage
-              src={productImage}
+              src={displayImage}
               alt={productName}
               className="w-full h-full object-cover"
             />
           </div>
-          
+
           {/* 价格和库存 */}
           <div className="flex-1 flex flex-col justify-end pt-6">
             <div className="flex items-baseline flex-wrap">
               {renderPriceDisplay()}
             </div>
             <div className="text-gray-400 text-xs mt-1.5">
-              库存 {stock} 件 {maxPurchase && maxPurchase < stock && `· 限购${maxPurchase}件`}
+              库存 {displayStock} 件 {maxPurchase && maxPurchase < displayStock && `· 限购${maxPurchase}件`}
             </div>
+            {selectedSpecsText && (
+              <div className="text-gray-600 text-xs mt-1">
+                已选：{selectedSpecsText}
+              </div>
+            )}
           </div>
         </div>
-        
-        {/* 规格选择区 */}
-        {specs.length > 0 && (
+
+        {/* SKU 规格选择区（新版） */}
+        {useSkuMode && (
+          <div className="px-4 py-3 border-t border-gray-100 max-h-[240px] overflow-y-auto">
+            {skuSpecs.map((spec) => (
+              <div key={spec.id} className="mb-4 last:mb-0">
+                <div className="text-sm text-gray-700 mb-2 font-medium">{spec.name}</div>
+                <div className="flex flex-wrap gap-2">
+                  {spec.values.map((value) => {
+                    const isSelected = selectedValueIds[spec.id] === value.id;
+                    const selectable = isValueSelectable(spec.id, value.id);
+                    
+                    return (
+                      <button
+                        key={value.id}
+                        onClick={() => selectable && handleSelectSkuValue(spec.id, value.id)}
+                        disabled={!selectable}
+                        className={`relative px-4 py-1.5 rounded-full text-sm border transition-all ${
+                          isSelected
+                            ? 'border-red-500 bg-red-50 text-red-500'
+                            : selectable
+                              ? 'border-gray-200 text-gray-700 hover:border-gray-300 active:scale-95'
+                              : 'border-gray-100 text-gray-300 cursor-not-allowed bg-gray-50'
+                        }`}
+                      >
+                        {value.image && (
+                          <span className="inline-block w-4 h-4 rounded mr-1 overflow-hidden align-middle">
+                            <img src={value.image} alt="" className="w-full h-full object-cover" />
+                          </span>
+                        )}
+                        {value.value}
+                        {!selectable && (
+                          <span className="absolute inset-0 flex items-center justify-center">
+                            <span className="w-full h-[1px] bg-gray-300 transform rotate-[-20deg]" />
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* 旧版规格选择区 */}
+        {!useSkuMode && specs.length > 0 && (
           <div className="px-4 py-3 border-t border-gray-100 max-h-[200px] overflow-y-auto">
             {specs.map((spec) => (
               <div key={spec.id} className="mb-4 last:mb-0">
@@ -184,11 +450,10 @@ const BuySpecSheet: React.FC<BuySpecSheetProps> = ({
                     <button
                       key={value}
                       onClick={() => handleSelectSpec(spec.name, value)}
-                      className={`px-4 py-1.5 rounded-full text-sm border transition-all ${
-                        selectedSpecs[spec.name] === value
+                      className={`px-4 py-1.5 rounded-full text-sm border transition-all ${selectedSpecs[spec.name] === value
                           ? 'border-red-500 bg-red-50 text-red-500'
                           : 'border-gray-200 text-gray-700 hover:border-gray-300'
-                      }`}
+                        }`}
                     >
                       {value}
                     </button>
@@ -198,7 +463,7 @@ const BuySpecSheet: React.FC<BuySpecSheetProps> = ({
             ))}
           </div>
         )}
-        
+
         {/* 数量选择区 */}
         <div className="px-4 py-3 border-t border-gray-100">
           <div className="flex items-center justify-between">
@@ -207,11 +472,10 @@ const BuySpecSheet: React.FC<BuySpecSheetProps> = ({
               <button
                 onClick={handleDecrease}
                 disabled={quantity <= 1}
-                className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${
-                  quantity <= 1
+                className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${quantity <= 1
                     ? 'bg-gray-100 text-gray-300 cursor-not-allowed'
                     : 'bg-gray-100 text-gray-600 hover:bg-gray-200 active:scale-95'
-                }`}
+                  }`}
               >
                 <Minus size={16} />
               </button>
@@ -224,38 +488,38 @@ const BuySpecSheet: React.FC<BuySpecSheetProps> = ({
               <button
                 onClick={handleIncrease}
                 disabled={quantity >= actualMax}
-                className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${
-                  quantity >= actualMax
+                className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${quantity >= actualMax
                     ? 'bg-gray-100 text-gray-300 cursor-not-allowed'
                     : 'bg-gray-100 text-gray-600 hover:bg-gray-200 active:scale-95'
-                }`}
+                  }`}
               >
                 <Plus size={16} />
               </button>
             </div>
           </div>
         </div>
-        
+
         {/* 底部按钮 */}
         <div className="p-4 pb-safe border-t border-gray-100">
           <button
             onClick={handleConfirm}
-            disabled={!allSpecsSelected || stock === 0}
-            className={`w-full py-3 rounded-xl text-white font-semibold text-base transition-all ${
-              allSpecsSelected && stock > 0
-                ? 'bg-gradient-to-r from-red-500 to-orange-500 active:opacity-90'
+            disabled={!canBuy}
+            className={`w-full py-3 rounded-xl text-white font-semibold text-base transition-all ${canBuy
+                ? 'bg-gradient-to-r from-red-600 to-red-500 active:opacity-90'
                 : 'bg-gray-300 cursor-not-allowed'
-            }`}
+              }`}
           >
-            {stock === 0 
-              ? '暂时缺货' 
-              : !allSpecsSelected 
-                ? '请选择规格' 
-                : '确认'}
+            {displayStock === 0
+              ? '暂时缺货'
+              : !allSpecsSelected
+                ? '请选择规格'
+                : useSkuMode && !matchedSku
+                  ? '该规格暂无库存'
+                  : '确认'}
           </button>
         </div>
       </div>
-      
+
       <style>{`
         @keyframes slide-up {
           from {

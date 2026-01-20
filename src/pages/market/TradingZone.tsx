@@ -4,7 +4,7 @@
  */
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Clock, Globe, Database, Zap, Cpu, Activity, Lock, ArrowRight, ArrowLeft, Layers, Gem, Coins, TrendingUp, ClipboardList } from 'lucide-react';
+import { Clock, Globe, Database, Zap, Cpu, Activity, Lock, ArrowRight, ArrowLeft, Layers, Gem, Coins, TrendingUp, ClipboardList, Award } from 'lucide-react';
 import PageContainer from '../../../components/layout/PageContainer';
 import { LoadingSpinner, LazyImage } from '../../../components/common';
 import PopupAnnouncementModal from '../../../components/common/PopupAnnouncementModal';
@@ -22,6 +22,7 @@ import { isSuccess, extractError } from '../../../utils/apiHelpers';
 import { useErrorHandler } from '../../../hooks/useErrorHandler';
 import { useStateMachine } from '../../../hooks/useStateMachine';
 import { LoadingEvent, LoadingState } from '../../../types/states';
+import { debugLog, errorLog } from '../../../utils/logger';
 
 
 interface TradingZoneProps {
@@ -84,11 +85,11 @@ const POOL_THEME_PRESETS: Record<string, any> = {
         roi: '+8.2%',
         quota: '500万',
         icon: Coins,
-        themeColor: 'text-orange-600',
-        gradient: 'from-orange-500 to-red-500',
-        softBg: 'bg-orange-50',
-        dataBg: 'bg-[#FFF7F0]',
-        buttonClass: 'bg-gradient-to-r from-orange-500 to-red-500 shadow-orange-200',
+        themeColor: 'text-red-600',
+        gradient: 'from-red-500 to-red-600',
+        softBg: 'bg-red-50',
+        dataBg: 'bg-[#FFF5F5]',
+        buttonClass: 'bg-gradient-to-r from-red-500 to-red-600 shadow-red-200',
     },
     evening: {
         code: 'Pool-C',
@@ -109,7 +110,7 @@ const POOL_THEME_PRESETS: Record<string, any> = {
         subName: '虚拟资产确权体验专区',
         roi: '+3.0%',
         quota: '不限',
-        icon: Crown,
+        icon: Award,
         themeColor: 'text-purple-600',
         gradient: 'from-purple-600 to-pink-500',
         softBg: 'bg-purple-50',
@@ -225,7 +226,7 @@ const TradingZone: React.FC<TradingZoneProps> = ({
     const loadSessionItems = useCallback(async (session: TradingSession) => {
         // 防止重复加载同一个session
         if (loadingSessionRef.current === session.id) {
-            console.log('Session already loading, skipping:', session.id);
+            debugLog('TradingZone', 'Session already loading, skipping', session.id);
             return;
         }
 
@@ -237,8 +238,8 @@ const TradingZone: React.FC<TradingZoneProps> = ({
             // 获取商品列表（新 API：官方+寄售按 package_name + zone_id 统一归类）
             const response = await fetchCollectionItemsBySession(session.id, { page: 1, limit: 10 });
 
-            console.log('API Response:', response);
-            console.log('Items list:', response.data?.list);
+            debugLog('TradingZone', 'API Response', response);
+            debugLog('TradingZone', 'Items list', response.data?.list);
 
             if (isSuccess(response) && response.data?.list) {
                 const allItems = response.data.list.map((item: any) => {
@@ -260,7 +261,8 @@ const TradingZone: React.FC<TradingZoneProps> = ({
                     // 总可用数量
                     const totalAvailable = item.total_available ?? ((item.official_stock || 0) + (item.consignment_count || 0));
 
-                    console.log('Processing item:', item.id || item.package_name, {
+                    debugLog('TradingZone', 'Processing item', {
+                        id: item.id || item.package_name,
                         official_stock: item.official_stock,
                         consignment_count: item.consignment_count,
                         total_available: totalAvailable,
@@ -286,7 +288,7 @@ const TradingZone: React.FC<TradingZoneProps> = ({
                     } as TradingDisplayItem;
                 });
 
-                console.log('Processed items:', allItems.map(item => ({
+                debugLog('TradingZone', 'Processed items', allItems.map(item => ({
                     id: item.id,
                     package_name: item.package_name,
                     source: item.source,
@@ -324,7 +326,7 @@ const TradingZone: React.FC<TradingZoneProps> = ({
     }, []); // 空依赖数组，函数不依赖外部变量
 
     useEffect(() => {
-        console.log('TradingZone mounted/updated with sessionId:', initialSessionId);
+        debugLog('TradingZone', 'mounted/updated with sessionId', initialSessionId);
         const loadSessions = async () => {
             try {
                 sessionsMachine.send(LoadingEvent.LOAD);
@@ -419,7 +421,7 @@ const TradingZone: React.FC<TradingZoneProps> = ({
                     }
                 }
             } catch (error) {
-                console.error('加载交易须知失败:', error);
+                errorLog('TradingZone', '加载交易须知失败', error);
             }
         };
 
@@ -559,14 +561,14 @@ const TradingZone: React.FC<TradingZoneProps> = ({
                     {/* 列表头部 */}
                     <div className="flex items-center justify-between mb-5 px-2">
                         <div className="text-lg font-bold text-gray-900 flex items-center gap-2">
-                            <span className="w-1 h-5 rounded-full bg-orange-500"></span>
+                            <span className="w-1 h-5 rounded-full bg-red-500"></span>
                             <span>资产申购列表</span>
                         </div>
                         <div className="flex items-center gap-2">
                             <button
                                 type="button"
                                 onClick={() => navigate('/reservation-record')}
-                                className="flex items-center gap-1.5 bg-orange-50 text-orange-600 px-3 py-1.5 rounded-full text-xs font-bold border border-orange-100 active:scale-95 transition-transform"
+                                className="flex items-center gap-1.5 bg-red-50 text-red-600 px-3 py-1.5 rounded-full text-xs font-bold border border-red-100 active:scale-95 transition-transform"
                             >
                                 <ClipboardList size={14} />
                                 <span>申购记录</span>
@@ -596,7 +598,7 @@ const TradingZone: React.FC<TradingZoneProps> = ({
                                     key={zone}
                                     onClick={() => setActivePriceZone(zone)}
                                     className={`px-4 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all ${activePriceZone === zone
-                                        ? 'bg-orange-500 text-white shadow-md shadow-orange-200'
+                                        ? 'bg-red-500 text-white shadow-md shadow-red-200'
                                         : 'bg-white text-gray-500 border border-gray-100 hover:bg-gray-50'
                                         }`}
                                 >
@@ -626,7 +628,7 @@ const TradingZone: React.FC<TradingZoneProps> = ({
                                         key={item.displayKey}
                                         className="bg-white rounded-2xl overflow-hidden shadow-[0_4px_20px_rgb(0,0,0,0.03)] border border-gray-100 hover:border-gray-200 hover:shadow-lg transition-all active:scale-[0.98] group"
                                         onClick={() => {
-                                            console.log('Clicking item:', {
+                                            debugLog('TradingZone', 'Clicking item', {
                                                 id: item.id,
                                                 source: item.source,
                                                 consignment_id: item.consignment_id,
@@ -649,7 +651,7 @@ const TradingZone: React.FC<TradingZoneProps> = ({
                                                     : {})
                                             };
 
-                                            console.log('Product data to pass:', productData);
+                                            debugLog('TradingZone', 'Product data to pass', productData);
 
                                             // 如果当前在详情页（有 selectedSession），传递自定义返回路由回到该详情页
                                             const customBackRoute = selectedSession ? {
@@ -673,14 +675,14 @@ const TradingZone: React.FC<TradingZoneProps> = ({
                                             <h3 className="text-gray-900 text-sm font-bold line-clamp-1 mb-1">{item.title}</h3>
                                             <div className="text-[10px] text-gray-400 font-mono mb-2">
                                                 {item.price_zone && (
-                                                    <span className="inline-block px-1.5 py-0.5 bg-orange-50 text-orange-600 rounded">{item.price_zone}</span>
+                                                    <span className="inline-block px-1.5 py-0.5 bg-red-50 text-red-600 rounded">{item.price_zone}</span>
                                                 )}
                                             </div>
                                             <div className="flex justify-between items-center">
                                                 <div className="text-red-500 font-extrabold text-base flex items-baseline gap-0.5">
                                                     <span>{item.price_zone}</span>
                                                 </div>
-                                                <button type="button" className="bg-gradient-to-r from-orange-500 to-red-500 text-white text-xs font-bold px-4 py-1.5 rounded-full shadow-md shadow-orange-200 active:scale-95 transition-transform">
+                                                <button type="button" className="bg-gradient-to-r from-red-500 to-red-600 text-white text-xs font-bold px-4 py-1.5 rounded-full shadow-md shadow-red-200 active:scale-95 transition-transform">
                                                     申购
                                                 </button>
                                             </div>
@@ -696,9 +698,9 @@ const TradingZone: React.FC<TradingZoneProps> = ({
 
     // 2. 列表页渲染 (主界面)
     return (
-        <div className="min-h-screen bg-gradient-to-br from-amber-50/50 via-white to-orange-50/30 text-gray-900 font-sans pb-safe">
+        <div className="min-h-screen bg-gradient-to-br from-red-50/50 via-white to-pink-50/30 text-gray-900 font-sans pb-safe">
             {/* 顶部背景渐变 */}
-            <div className="absolute top-0 left-0 right-0 h-72 bg-gradient-to-br from-orange-500 via-amber-500 to-yellow-500 opacity-90 z-0" />
+            <div className="absolute top-0 left-0 right-0 h-72 bg-gradient-to-br from-red-500 via-pink-500 to-rose-500 opacity-90 z-0" />
             <div className="absolute top-0 left-0 right-0 h-72 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-white/20 via-transparent to-transparent z-0" />
 
             {/* 顶部导航区 */}

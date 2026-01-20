@@ -2,11 +2,14 @@
  * AssetView - 资产总览页面
  * 已迁移: 使用 React Router 导航
  */
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FileText, ShoppingBag, X, AlertCircle, CheckCircle, ArrowRight } from 'lucide-react';
+import { FileText, ShoppingBag, X, AlertCircle, CheckCircle, ArrowRight, RefreshCw } from 'lucide-react';
 import PageContainer from '../../../components/layout/PageContainer';
 import { FilterBar } from '../../../components/FilterBar';
+import { SkeletonAssetPage, SkeletonTransactionCard } from '../../../components/common';
+import { useInfiniteScroll } from '../../hooks/useInfiniteScroll';
+import PullToRefresh from '../../components/PullToRefresh';
 import {
   getAllLog,
   AllLogItem,
@@ -22,6 +25,7 @@ import AssetHeaderCard from './components/asset/AssetHeaderCard';
 import AssetActionsGrid from './components/asset/AssetActionsGrid';
 import { extractData } from '../../../utils/apiHelpers';
 import { ConsignmentStatus, DeliveryStatus } from '../../../constants/statusEnums';
+import { debugLog, errorLog } from '../../../utils/logger';
 import { useAssetActionModal } from '../../../hooks/useAssetActionModal';
 import { useAssetTabs, TabConfig } from '../../../hooks/useAssetTabs';
 import { BALANCE_TYPE_OPTIONS, getBalanceTypeLabel } from '../../../constants/balanceTypes';
@@ -54,7 +58,7 @@ const AssetView: React.FC<AssetViewProps> = ({ onProductSelect, initialTab = 0 }
 
   // 调试寄售券数量变化
   useEffect(() => {
-    console.log('寄售券数量变化:', consignmentTicketCount);
+    debugLog('AssetView', '寄售券数量变化', consignmentTicketCount);
   }, [consignmentTicketCount]);
 
   // Tab Configs
@@ -162,19 +166,19 @@ const AssetView: React.FC<AssetViewProps> = ({ onProductSelect, initialTab = 0 }
       try {
         const response = await fetchProfile(token);
         const profileData = extractData(response);
-        console.log('API响应数据:', profileData);
+        debugLog('AssetView', 'API响应数据', profileData);
         if (profileData?.userInfo) {
-          console.log('用户信息:', profileData.userInfo);
-          console.log('API中的寄售券数量:', profileData.userInfo.consignment_coupon);
+          debugLog('AssetView', '用户信息', profileData.userInfo);
+          debugLog('AssetView', 'API中的寄售券数量', profileData.userInfo.consignment_coupon);
           setUserInfo(profileData.userInfo);
           useAuthStore.getState().updateUser(profileData.userInfo);
           // 从用户信息中获取寄售券数量
           const couponCount = profileData.userInfo.consignment_coupon || 0;
-          console.log('设置寄售券数量为:', couponCount);
+          debugLog('AssetView', '设置寄售券数量为', couponCount);
           setConsignmentTicketCount(couponCount);
         }
       } catch (err) {
-        console.error('加载用户信息失败:', err);
+        errorLog('AssetView', '加载用户信息失败', err);
       }
     };
     loadUserInfo();
@@ -188,21 +192,39 @@ const AssetView: React.FC<AssetViewProps> = ({ onProductSelect, initialTab = 0 }
     });
   };
 
+  // 无限滚动加载
+  const handleLoadMore = useCallback(() => {
+    if (tabs.hasMore && !tabs.isLoading) {
+      tabs.loadMore();
+    }
+  }, [tabs.hasMore, tabs.isLoading, tabs.loadMore]);
+
+  const bottomRef = useInfiniteScroll(handleLoadMore, tabs.hasMore, tabs.isLoading);
+
   const renderAllLogItem = (item: AllLogItem, index: number = 0) => {
     const amountVal = Number(item.amount);
     const isPositive = amountVal > 0;
     const typeText = getBalanceTypeLabel(item.type);
 
+    // 根据类型确定标签颜色
+    const getTypeColor = (type: string) => {
+      if (type === 'balance' || type === '余额') return 'bg-blue-50 text-blue-600';
+      if (type === 'green_power' || type === '绿色能量' || type === '算力') return 'bg-emerald-50 text-emerald-600';
+      if (type === 'service_fee' || type === '服务费') return 'bg-amber-50 text-amber-600';
+      if (type === 'score' || type === '积分' || type === '消费金') return 'bg-purple-50 text-purple-600';
+      return 'bg-gray-100 text-gray-500';
+    };
+
     return (
       <div
         key={item.id}
-        className="bg-white/80 backdrop-blur-sm rounded-2xl p-4 mb-3 shadow-lg border border-white/50 cursor-pointer hover:shadow-xl active:scale-[0.99] transition-all"
+        className="bg-white rounded-2xl p-4 mb-3 shadow-sm border border-gray-100 cursor-pointer active:scale-[0.99] transition-all"
         onClick={() => {
           if (item.id) {
             navigate(`/money-log/${item.id}`);
           }
         }}
-        style={{ animation: `slideUp 0.3s ease-out ${index * 0.05}s both` }}
+        style={{ animation: index < 10 ? `slideUp 0.3s ease-out ${index * 0.03}s both` : undefined }}
       >
         <div className="flex justify-between items-start mb-3">
           <div className="flex-1">
@@ -213,10 +235,10 @@ const AssetView: React.FC<AssetViewProps> = ({ onProductSelect, initialTab = 0 }
             {isPositive ? '+' : ''}{Number(amountVal).toFixed(2)}
           </div>
         </div>
-        <div className="flex justify-between items-center text-xs text-gray-400 pt-3 border-t border-gray-100">
-          <span className="px-2 py-0.5 bg-gray-100 rounded-full text-gray-500 text-[10px]">{typeText}</span>
-          <span className="flex items-center gap-1 font-mono">
-            <span className="text-gray-400">{Number(item.before_value).toFixed(2)}</span>
+        <div className="flex justify-between items-center text-xs pt-3 border-t border-gray-100">
+          <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${getTypeColor(item.type)}`}>{typeText}</span>
+          <span className="flex items-center gap-1 font-mono text-gray-400">
+            <span>{Number(item.before_value).toFixed(2)}</span>
             <span className="text-gray-300">→</span>
             <span className={isPositive ? 'text-emerald-500' : 'text-rose-500'}>{Number(item.after_value || item.after_balance).toFixed(2)}</span>
           </span>
@@ -233,18 +255,18 @@ const AssetView: React.FC<AssetViewProps> = ({ onProductSelect, initialTab = 0 }
       if (item.consignment_status === 2) {
         return { text: '已售出', gradient: 'from-emerald-500 to-green-500', bg: 'bg-emerald-50', border: 'border-emerald-200', textColor: 'text-emerald-600' };
       } else if (item.consignment_status === 1) {
-        return { text: '寄售中', gradient: 'from-amber-500 to-orange-500', bg: 'bg-amber-50', border: 'border-amber-200', textColor: 'text-amber-600' };
+        return { text: '寄售中', gradient: 'from-amber-500 to-red-500', bg: 'bg-amber-50', border: 'border-amber-200', textColor: 'text-amber-600' };
       }
       return { text: '持有中', gradient: 'from-gray-400 to-gray-500', bg: 'bg-gray-50', border: 'border-gray-200', textColor: 'text-gray-600' };
     };
     const statusConfig = getStatusConfig();
 
     return (
-      <div 
-        key={item.id} 
-        className="bg-white/80 backdrop-blur-sm rounded-2xl p-4 mb-3 shadow-lg cursor-pointer hover:shadow-xl active:scale-[0.99] transition-all border border-white/50" 
+      <div
+        key={item.id}
+        className="bg-white/80 backdrop-blur-sm rounded-2xl p-4 mb-3 shadow-lg cursor-pointer hover:shadow-xl active:scale-[0.99] transition-all border border-white/50"
         onClick={() => handleItemClick(item)}
-        style={{ animation: `slideUp 0.3s ease-out ${index * 0.05}s both` }}
+        style={{ animation: index < 10 ? `slideUp 0.3s ease-out ${index * 0.03}s both` : undefined }}
       >
         <div className="flex gap-4">
           <div className="w-24 h-24 rounded-xl overflow-hidden flex-shrink-0 shadow-md border border-gray-100 bg-gradient-to-br from-gray-50 to-slate-50">
@@ -284,9 +306,10 @@ const AssetView: React.FC<AssetViewProps> = ({ onProductSelect, initialTab = 0 }
   const renderContent = () => {
     if (tabs.isLoading && tabs.data.length === 0) {
       return (
-        <div className="py-16 text-center">
-          <div className="w-12 h-12 border-4 border-orange-100 border-t-orange-500 rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-sm text-gray-500 animate-pulse">加载中...</p>
+        <div className="space-y-3">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <SkeletonTransactionCard key={i} />
+          ))}
         </div>
       );
     }
@@ -321,14 +344,29 @@ const AssetView: React.FC<AssetViewProps> = ({ onProductSelect, initialTab = 0 }
         `}</style>
         {tabs.activeTab === 0 && tabs.data.map((item, index) => renderAllLogItem(item, index))}
         {tabs.activeTab === 1 && tabs.data.map((item, index) => renderCollectionItem(item, index))}
-        {tabs.hasMore && (
-          <button 
-            onClick={tabs.loadMore} 
-            disabled={tabs.isLoading} 
-            className="w-full py-3 text-sm font-medium text-orange-600 bg-orange-50 rounded-xl hover:bg-orange-100 transition-colors disabled:opacity-50"
-          >
-            {tabs.isLoading ? '加载中...' : '加载更多'}
-          </button>
+        
+        {/* 无限滚动触发器 */}
+        <div ref={bottomRef} className="h-4" />
+        
+        {/* 加载更多指示器 */}
+        {tabs.isLoading && tabs.data.length > 0 && (
+          <div className="flex justify-center py-4">
+            <div className="flex items-center gap-2 text-sm text-gray-400">
+              <div className="w-4 h-4 border-2 border-gray-200 border-t-red-500 rounded-full animate-spin" />
+              加载中...
+            </div>
+          </div>
+        )}
+        
+        {/* 没有更多数据 */}
+        {!tabs.hasMore && tabs.data.length > 0 && (
+          <div className="py-4 text-center text-gray-400 text-xs">
+            <div className="inline-flex items-center gap-2">
+              <div className="w-8 h-px bg-gray-200" />
+              <span>已加载全部</span>
+              <div className="w-8 h-px bg-gray-200" />
+            </div>
+          </div>
         )}
       </div>
     );
@@ -337,7 +375,7 @@ const AssetView: React.FC<AssetViewProps> = ({ onProductSelect, initialTab = 0 }
 
 
   return (
-    <PageContainer title="数字资产总权益" onBack={() => navigate(-1)} rightAction={<button onClick={() => navigate('/asset-history/all')} className="text-sm text-orange-600">历史记录</button>} padding={false}>
+    <PageContainer title="数字资产总权益" onBack={() => navigate(-1)} rightAction={<button onClick={() => navigate('/asset-history/all')} className="text-sm text-red-600">历史记录</button>} padding={false}>
       <div className="p-3 pb-20">
         <AssetHeaderCard userInfo={userInfo} />
         <AssetActionsGrid />
@@ -379,8 +417,8 @@ const AssetView: React.FC<AssetViewProps> = ({ onProductSelect, initialTab = 0 }
               if (isConsigning(item) || hasConsignedSuccessfully(item) || isDelivered(item) || hasConsignedBefore(item)) return null;
               return (
                 <div className="flex bg-gray-100 p-1 rounded-lg mb-4">
-                  <button onClick={actionModal.switchToDelivery} className={`flex-1 py-2 text-xs rounded-md transition-colors ${actionModal.context.actionType === 'delivery' ? 'bg-white text-orange-600 font-medium shadow-sm' : 'text-gray-600'}`}>权益分割</button>
-                  <button onClick={actionModal.switchToConsignment} className={`flex-1 py-2 text-xs rounded-md transition-colors ${actionModal.context.actionType === 'consignment' ? 'bg-white text-orange-600 font-medium shadow-sm' : 'text-gray-600'}`}>寄售</button>
+                  <button onClick={actionModal.switchToDelivery} className={`flex-1 py-2 text-xs rounded-md transition-colors ${actionModal.context.actionType === 'delivery' ? 'bg-white text-red-600 font-medium shadow-sm' : 'text-gray-600'}`}>权益分割</button>
+                  <button onClick={actionModal.switchToConsignment} className={`flex-1 py-2 text-xs rounded-md transition-colors ${actionModal.context.actionType === 'consignment' ? 'bg-white text-red-600 font-medium shadow-sm' : 'text-gray-600'}`}>寄售</button>
                 </div>
               );
             })()}
@@ -396,7 +434,7 @@ const AssetView: React.FC<AssetViewProps> = ({ onProductSelect, initialTab = 0 }
                     {!actionModal.deliveryCheckResult.isConsigning && !actionModal.deliveryCheckResult.hasConsignedSuccessfully && !actionModal.deliveryCheckResult.isDelivered && (
                       actionModal.deliveryCheckResult.can48Hours ?
                         <div className="flex items-center gap-2 text-xs text-green-600 bg-green-50 px-3 py-2 rounded-lg"><CheckCircle size={16} /><span>已满足48小时提货条件</span></div> :
-                        <div className="flex items-center gap-2 text-xs text-orange-600 bg-orange-50 px-3 py-2 rounded-lg"><AlertCircle size={16} /><span>还需等待 {actionModal.deliveryCheckResult.hoursLeft} 小时才能提货</span></div>
+                        <div className="flex items-center gap-2 text-xs text-red-600 bg-red-50 px-3 py-2 rounded-lg"><AlertCircle size={16} /><span>还需等待 {actionModal.deliveryCheckResult.hoursLeft} 小时才能提货</span></div>
                     )}
                     {!actionModal.deliveryCheckResult.isConsigning && !actionModal.deliveryCheckResult.hasConsignedSuccessfully && !actionModal.deliveryCheckResult.isDelivered && actionModal.deliveryCheckResult.hasConsignedBefore && <div className="flex items-center gap-2 text-xs text-red-600 bg-red-50 px-3 py-2 rounded-lg"><AlertCircle size={16} /><span>该藏品曾经寄售过，将执行强制提货</span></div>}
                   </>
@@ -410,16 +448,16 @@ const AssetView: React.FC<AssetViewProps> = ({ onProductSelect, initialTab = 0 }
                     {!actionModal.deliveryCheckResult.isConsigning && !actionModal.deliveryCheckResult.hasConsignedSuccessfully && (
                       actionModal.consignmentCheckResult.unlocked ?
                         <div className="flex items-center gap-2 text-xs text-green-600 bg-green-50 px-3 py-2 rounded-lg"><CheckCircle size={16} /><span>已满足48小时寄售条件</span></div> :
-                        <div className="bg-orange-50 px-3 py-2 rounded-lg">
-                          <div className="flex items-center gap-2 text-xs text-orange-600 mb-1"><AlertCircle size={16} /><span>距离可寄售时间还有：</span></div>
-                          {actionModal.consignmentCheckResult.remainingText ? <div className="text-sm font-bold text-orange-700 text-center">{actionModal.consignmentCheckResult.remainingText}</div> :
-                            actionModal.context.countdown ? <div className="text-sm font-bold text-orange-700 text-center">{String(actionModal.context.countdown.hours).padStart(2, '0')}:{String(actionModal.context.countdown.minutes).padStart(2, '0')}:{String(actionModal.context.countdown.seconds).padStart(2, '0')}</div> :
-                              <div className="text-sm font-bold text-orange-700 text-center">{Math.floor((actionModal.consignmentCheckResult.remainingSeconds || 0) / 3600)}h {Math.floor(((actionModal.consignmentCheckResult.remainingSeconds || 0) % 3600) / 60)}m {(actionModal.consignmentCheckResult.remainingSeconds || 0) % 60}s</div>}
+                        <div className="bg-red-50 px-3 py-2 rounded-lg">
+                          <div className="flex items-center gap-2 text-xs text-red-600 mb-1"><AlertCircle size={16} /><span>距离可寄售时间还有：</span></div>
+                          {actionModal.consignmentCheckResult.remainingText ? <div className="text-sm font-bold text-red-700 text-center">{actionModal.consignmentCheckResult.remainingText}</div> :
+                            actionModal.context.countdown ? <div className="text-sm font-bold text-red-700 text-center">{String(actionModal.context.countdown.hours).padStart(2, '0')}:{String(actionModal.context.countdown.minutes).padStart(2, '0')}:{String(actionModal.context.countdown.seconds).padStart(2, '0')}</div> :
+                              <div className="text-sm font-bold text-red-700 text-center">{Math.floor((actionModal.consignmentCheckResult.remainingSeconds || 0) / 3600)}h {Math.floor(((actionModal.consignmentCheckResult.remainingSeconds || 0) % 3600) / 60)}m {(actionModal.consignmentCheckResult.remainingSeconds || 0) % 60}s</div>}
                         </div>
                     )}
                     {!actionModal.deliveryCheckResult.isConsigning && !actionModal.deliveryCheckResult.hasConsignedSuccessfully && (
-                      <div className="bg-orange-50 px-3 py-2 rounded-lg">
-                        <div className="flex items-center justify-between"><div className="flex items-center gap-2 text-xs text-orange-600"><ShoppingBag size={16} /><span>我的寄售券：</span></div><div className="text-sm font-bold text-orange-700">{consignmentTicketCount} 张</div></div>
+                      <div className="bg-red-50 px-3 py-2 rounded-lg">
+                        <div className="flex items-center justify-between"><div className="flex items-center gap-2 text-xs text-red-600"><ShoppingBag size={16} /><span>我的寄售券：</span></div><div className="text-sm font-bold text-red-700">{consignmentTicketCount} 张</div></div>
                         {consignmentTicketCount === 0 && <div className="text-xs text-red-600 mt-1">您没有寄售券，无法进行寄售</div>}
                       </div>
                     )}
@@ -429,7 +467,7 @@ const AssetView: React.FC<AssetViewProps> = ({ onProductSelect, initialTab = 0 }
             </div>
 
             {actionModal.context.error && <div className="text-xs text-red-600 mb-2">{actionModal.context.error}</div>}
-            <button onClick={actionModal.handleSubmit} disabled={actionModal.isSubmitting || !actionModal.canSubmit} className={`w-full py-3 rounded-lg text-sm font-medium transition-colors ${!actionModal.isSubmitting && actionModal.canSubmit ? 'bg-orange-600 text-white active:bg-orange-700' : 'bg-gray-300 text-gray-500 cursor-not-allowed'}`}>
+            <button onClick={actionModal.handleSubmit} disabled={actionModal.isSubmitting || !actionModal.canSubmit} className={`w-full py-3 rounded-lg text-sm font-medium transition-colors ${!actionModal.isSubmitting && actionModal.canSubmit ? 'bg-red-600 text-white active:bg-red-700' : 'bg-gray-300 text-gray-500 cursor-not-allowed'}`}>
               {actionModal.isSubmitting ? '提交中...' : actionModal.context.actionType === 'delivery' ? '权益分割' : '确认寄售'}
             </button>
           </div>

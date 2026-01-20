@@ -12,6 +12,7 @@ import { getActivityList, ActivityItem } from '../../../services/activity';
 import { isSuccess } from '../../../utils/apiHelpers';
 import { useStateMachine } from '../../../hooks/useStateMachine';
 import { LoadingEvent, LoadingState } from '../../../types/states';
+import { errorLog } from '../../../utils/logger';
 
 const ActivityCenter: React.FC = () => {
     const navigate = useNavigate();
@@ -52,7 +53,7 @@ const ActivityCenter: React.FC = () => {
                 loadMachine.send(LoadingEvent.ERROR);
             }
         } catch (error) {
-            console.error('Failed to load activities:', error);
+            errorLog('ActivityCenter', 'Failed to load activities', error);
             showToast('error', '加载失败', '无法获取活动列表');
             loadMachine.send(LoadingEvent.ERROR);
         } finally {
@@ -94,7 +95,7 @@ const ActivityCenter: React.FC = () => {
 
     const getIcon = (key: string) => {
         switch (key) {
-            case 'first_trade': return <ShoppingBag size={20} className="text-orange-500" />;
+            case 'first_trade': return <ShoppingBag size={20} className="text-red-500" />;
             case 'invite': return <Users size={20} className="text-blue-500" />;
             case 'recharge': return <CreditCard size={20} className="text-purple-500" />;
             case 'questionnaire': return <FileText size={20} className="text-green-500" />;
@@ -107,7 +108,7 @@ const ActivityCenter: React.FC = () => {
         <PageContainer title="活动中心" onBack={() => navigate(-1)}>
             <div className="p-4 space-y-4 pb-safe">
                 {/* 顶部 Banner */}
-                <div className="bg-gradient-to-r from-orange-500 to-red-500 rounded-2xl p-6 text-white shadow-lg shadow-orange-200 mb-6 relative overflow-hidden">
+                <div className="bg-gradient-to-r from-red-500 to-red-600 rounded-2xl p-6 text-white shadow-lg shadow-red-200 mb-6 relative overflow-hidden">
                     <div className="relative z-10">
                         <h1 className="text-2xl font-bold mb-1 flex items-center gap-2">
                             <Trophy className="text-yellow-300" />
@@ -135,7 +136,7 @@ const ActivityCenter: React.FC = () => {
                                 <h3 className="font-bold text-gray-900 text-sm mb-1">{item.title}</h3>
                                 <div className="flex flex-wrap gap-2">
                                     {item.rewards.map((reward, idx) => (
-                                        <span key={idx} className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 bg-orange-50 text-orange-600 rounded border border-orange-100 font-medium">
+                                        <span key={idx} className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 bg-red-50 text-red-600 rounded border border-red-100 font-medium">
                                             {reward.type === 'score' && <Zap size={10} />}
                                             {reward.name} +{reward.value}
                                         </span>
@@ -150,7 +151,7 @@ const ActivityCenter: React.FC = () => {
                                     ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
                                     : item.status === 1
                                         ? 'bg-green-500 text-white shadow-md shadow-green-200 active:scale-95'
-                                        : 'bg-orange-500 text-white shadow-md shadow-orange-200 active:scale-95'
+                                        : 'bg-red-500 text-white shadow-md shadow-red-200 active:scale-95'
                                     }`}
                             >
                                 {item.status === 2 ? (

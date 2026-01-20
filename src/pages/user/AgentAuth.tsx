@@ -24,6 +24,7 @@ import { isSuccess } from '../../../utils/apiHelpers';
 import { useErrorHandler } from '../../../hooks/useErrorHandler';
 import { useStateMachine } from '../../../hooks/useStateMachine';
 import { FormEvent, FormState, LoadingEvent, LoadingState } from '../../../types/states';
+import { errorLog, warnLog } from '../../../utils/logger';
 
 /**
  * AgentAuth 代理商申请页面组件
@@ -188,7 +189,7 @@ const AgentAuth: React.FC = () => {
       showToast('success', res?.msg || '上传成功');
       uploadMachine.send(LoadingEvent.SUCCESS);
     } catch (err: any) {
-      console.error('营业执照上传失败:', err);
+      errorLog('AgentAuth', '营业执照上传失败', err);
       const errorMsg = err?.msg || err?.response?.msg || err?.message || '营业执照上传失败，请稍后重试';
       showToast('error', '上传失败', errorMsg);
       uploadMachine.send(LoadingEvent.ERROR);
@@ -229,11 +230,11 @@ const AgentAuth: React.FC = () => {
           setStatus(res.data as AgentReviewStatusData);
         }
       } catch (e) {
-        console.warn('刷新代理商状态失败:', e);
+        warnLog('AgentAuth', '刷新代理商状态失败', e);
       }
       submitMachine.send(FormEvent.SUBMIT_SUCCESS);
     } catch (e: any) {
-      console.error('提交代理商申请失败:', e);
+      errorLog('AgentAuth', '提交代理商申请失败', e);
       const errorMsg = e?.message || '提交代理商申请失败，请稍后重试';
       showToast('error', '提交失败', errorMsg);
       submitMachine.send(FormEvent.SUBMIT_ERROR);
@@ -322,7 +323,7 @@ const AgentAuth: React.FC = () => {
               <label className="flex items-center gap-1.5">
                 <input
                   type="radio"
-                  className="w-4 h-4 text-orange-500"
+                  className="w-4 h-4 text-red-600"
                   checked={entityType === 'individual'}
                   onChange={() => setEntityType('individual')}
                 />
@@ -331,7 +332,7 @@ const AgentAuth: React.FC = () => {
               <label className="flex items-center gap-1.5">
                 <input
                   type="radio"
-                  className="w-4 h-4 text-orange-500"
+                  className="w-4 h-4 text-red-600"
                   checked={entityType === 'company'}
                   onChange={() => setEntityType('company')}
                 />
@@ -370,7 +371,7 @@ const AgentAuth: React.FC = () => {
 
           {/* 提交按钮 */}
           <button
-            className="w-full bg-orange-500 text-white text-sm font-semibold py-3 rounded-md active:opacity-80 shadow-sm disabled:opacity-50"
+            className="w-full bg-red-600 text-white text-sm font-semibold py-3 rounded-md active:opacity-80 shadow-sm disabled:opacity-50"
             onClick={handleSubmit}
             disabled={submitting || uploadingLicense || loading}
           >

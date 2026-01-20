@@ -20,6 +20,7 @@ import { APP_VERSION } from '../../../constants';
 import { extractData, extractError } from '../../../utils/apiHelpers';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../stores/authStore';
+import { debugLog, errorLog } from '../../../utils/logger';
 
 /**
  * Settings 设置页面组件
@@ -63,13 +64,13 @@ const Settings: React.FC = () => {
           setVersionInfo(data.data);
           setUpdateModalVisible(true);
         } else {
-          console.log('已是最新版本');
+          debugLog('Settings', '已是最新版本');
         }
       } else {
-        console.error('检查更新失败:', extractError(response));
+        errorLog('Settings', '检查更新失败', extractError(response));
       }
     } catch (error) {
-      console.error('检查更新出错:', error);
+      errorLog('Settings', '检查更新出错', error);
     } finally {
       setIsCheckingUpdate(false);
     }
@@ -98,7 +99,7 @@ const Settings: React.FC = () => {
       {/* 用户信息卡片 */}
       <div className="bg-white mt-2 px-4 py-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-full bg-orange-100 flex items-center justify-center text-lg font-bold text-orange-600 overflow-hidden">
+          <div className="w-12 h-12 rounded-full bg-red-50 flex items-center justify-center text-lg font-bold text-red-600 overflow-hidden">
             {displayAvatarUrl ? (
               <img src={displayAvatarUrl} alt="用户头像" className="w-full h-full object-cover" />
             ) : (
@@ -113,7 +114,7 @@ const Settings: React.FC = () => {
           </div>
         </div>
         <button
-          className="flex items-center text-xs text-orange-500 font-medium active:opacity-70"
+          className="flex items-center text-xs text-red-600 font-medium active:opacity-70"
           onClick={() => navigate('/edit-profile')}
         >
           编辑
@@ -136,7 +137,7 @@ const Settings: React.FC = () => {
           extra={
             <div className="flex items-center gap-2">
               <span className="text-gray-400 text-xs">{APP_VERSION}</span>
-              {isCheckingUpdate && <RefreshCw size={14} className="text-orange-500 animate-spin" />}
+              {isCheckingUpdate && <RefreshCw size={14} className="text-red-600 animate-spin" />}
             </div>
           }
           onClick={handleCheckUpdate}
@@ -149,7 +150,7 @@ const Settings: React.FC = () => {
       {/* 退出登录按钮 */}
       <div className="mt-8 px-4">
         <button
-          className="w-full bg-gradient-to-r from-orange-500 to-orange-600 text-white text-sm font-bold py-3 rounded-xl active:scale-[0.98] transition-all shadow-lg shadow-orange-200"
+          className="w-full bg-gradient-to-r from-red-600 to-red-500 text-white text-sm font-bold py-3 rounded-xl active:scale-[0.98] transition-all shadow-lg shadow-red-200"
           onClick={handleLogout}
         >
           退出登录

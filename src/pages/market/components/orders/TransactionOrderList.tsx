@@ -37,15 +37,15 @@ const TransactionOrderList: React.FC<TransactionOrderListProps> = ({
   // 获取状态样式
   const getStatusStyle = (statusText: string): string => {
     if (statusText.includes('寄售') || statusText.includes('出售')) {
-      return 'bg-blue-50/80 text-blue-700 border-blue-300';
+      return 'bg-blue-50 text-blue-700 border-blue-200';
     } else if (statusText.includes('确权') || statusText.includes('成功') || statusText.includes('已售出')) {
-      return 'bg-green-50/80 text-green-700 border-green-300';
+      return 'bg-green-50 text-green-700 border-green-200';
     } else if (statusText.includes('失败') || statusText.includes('取消') || statusText.includes('流拍')) {
-      return 'bg-red-50/80 text-red-700 border-red-300';
+      return 'bg-red-50 text-red-700 border-red-200';
     } else if (statusText.includes('提货') || statusText.includes('待')) {
-      return 'bg-orange-50/80 text-orange-700 border-orange-300';
+      return 'bg-orange-50 text-orange-700 border-orange-200';
     }
-    return 'bg-gray-50/80 text-gray-700 border-gray-300';
+    return 'bg-gray-50 text-gray-700 border-gray-200';
   };
 
   // 获取订单 ID
@@ -86,18 +86,20 @@ const TransactionOrderList: React.FC<TransactionOrderListProps> = ({
                   <ArrowRight size={18} className="text-gray-400 flex-shrink-0 mt-0.5" strokeWidth={2} />
                 </div>
 
-                {/* 确权编号 */}
+                {/* 确权编号 - 与我的藏品样式一致 */}
                 {item.asset_code && (
-                  <div className="space-y-1.5 mb-3">
-                    <div className="text-xs text-gray-500 font-mono truncate bg-gray-50 px-2 py-1 rounded-md inline-block" title={item.asset_code}>
-                      确权编号: {item.asset_code}
-                    </div>
+                  <div className="flex flex-wrap gap-2 items-center mb-2">
+                    <span className="text-[11px] px-2 py-0.5 bg-gray-50 text-gray-500 rounded-lg font-mono">
+                      {item.asset_code.length > 15
+                        ? `${item.asset_code.substring(0, 8)}...${item.asset_code.substring(item.asset_code.length - 4)}`
+                        : item.asset_code}
+                    </span>
                   </div>
                 )}
 
                 {/* 价格和时间 */}
                 <div className="flex items-baseline justify-between mb-3">
-                  <div className="text-lg font-bold text-gray-900">¥ {formatAmount(item.buy_price || item.price || 0)}</div>
+                  <div className="text-lg font-bold text-red-600 font-[DINAlternate-Bold]">¥ {formatAmount(item.buy_price || item.price || 0)}</div>
                   <div className="text-xs text-gray-500">{item.create_time_text || formatTime(item.create_time)}</div>
                 </div>
 
@@ -123,7 +125,7 @@ const TransactionOrderList: React.FC<TransactionOrderListProps> = ({
                         e.stopPropagation();
                         onCancelConsignment(getOrderId(item));
                       }}
-                      className="px-3 py-1.5 rounded-full border border-red-300 text-red-600 text-xs font-medium active:bg-red-50"
+                      className="px-3 py-1.5 rounded-full border border-red-400 text-red-600 text-xs font-medium active:bg-red-50 hover:bg-red-50 transition-colors"
                     >
                       取消寄售
                     </button>

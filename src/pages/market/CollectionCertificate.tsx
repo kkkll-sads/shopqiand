@@ -16,7 +16,7 @@ import {
   AnnouncementItem,
 } from '../../../services/api';
 import { useNotification } from '../../../context/NotificationContext';
-import { debugLog } from '../../../utils/logger';
+import { debugLog, errorLog } from '../../../utils/logger';
 import { isSuccess, extractData } from '../../../utils/apiHelpers';
 import { useErrorHandler } from '../../../hooks/useErrorHandler';
 import { useStateMachine } from '../../../hooks/useStateMachine';
@@ -174,7 +174,7 @@ const CollectionCertificate: React.FC<CollectionCertificateProps> = ({
           }
         }
       } catch (error) {
-        console.error('加载交易须知失败:', error);
+        errorLog('CollectionCertificate', '加载交易须知失败', error);
       }
     };
     loadTradingNotice();

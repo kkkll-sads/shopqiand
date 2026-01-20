@@ -12,9 +12,9 @@ interface PointOrderCardProps {
   index?: number;
 }
 
-const PointOrderCard: React.FC<PointOrderCardProps> = ({ 
-  order, 
-  onViewProduct, 
+const PointOrderCard: React.FC<PointOrderCardProps> = ({
+  order,
+  onViewProduct,
   onViewDetail,
   onUrgeShip,
   activeTab,
@@ -22,7 +22,7 @@ const PointOrderCard: React.FC<PointOrderCardProps> = ({
 }) => {
   const formatDate = (timestamp: number | string | undefined) => {
     if (!timestamp) return '';
-    
+
     let ts: number;
     if (typeof timestamp === 'string') {
       const cleaned = timestamp.trim().replace(/[^\d]/g, '');
@@ -31,12 +31,12 @@ const PointOrderCard: React.FC<PointOrderCardProps> = ({
     } else {
       ts = timestamp;
     }
-    
+
     if (!ts || ts === 0) return '';
     const timestampMs = ts < 10000000000 ? ts * 1000 : ts;
     const date = new Date(timestampMs);
     if (isNaN(date.getTime())) return '';
-    
+
     return date.toLocaleDateString('zh-CN', {
       year: 'numeric',
       month: '2-digit',
@@ -51,7 +51,7 @@ const PointOrderCard: React.FC<PointOrderCardProps> = ({
   const getStatusConfig = () => {
     const status = order.status;
     if (status === ShopOrderPayStatus.UNPAID || status === 0) {
-      return { icon: Clock, color: 'text-amber-600', bg: 'from-amber-50 to-orange-50', border: 'border-amber-200' };
+      return { icon: Clock, color: 'text-red-600', bg: 'from-red-50 to-pink-50', border: 'border-red-200' };
     }
     if (status === ShopOrderPayStatus.PAID || status === 1) {
       return { icon: Package, color: 'text-blue-600', bg: 'from-blue-50 to-cyan-50', border: 'border-blue-200' };
@@ -60,7 +60,7 @@ const PointOrderCard: React.FC<PointOrderCardProps> = ({
       return { icon: Truck, color: 'text-purple-600', bg: 'from-purple-50 to-pink-50', border: 'border-purple-200' };
     }
     if (status === 3) {
-      return { icon: CheckCircle, color: 'text-emerald-600', bg: 'from-emerald-50 to-green-50', border: 'border-emerald-200' };
+      return { icon: CheckCircle, color: 'text-green-600', bg: 'from-green-50 to-emerald-50', border: 'border-green-200' };
     }
     return { icon: Package, color: 'text-gray-600', bg: 'from-gray-50 to-slate-50', border: 'border-gray-200' };
   };
@@ -69,10 +69,10 @@ const PointOrderCard: React.FC<PointOrderCardProps> = ({
   const StatusIcon = statusConfig.icon;
 
   return (
-    <div 
+    <div
       className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden border border-white/50"
       style={{
-        animation: `slideUp 0.4s ease-out ${index * 0.08}s both`
+        animation: index < 10 ? `slideUp 0.3s ease-out ${index * 0.03}s both` : undefined
       }}
     >
       {/* 订单头部 */}
@@ -92,7 +92,7 @@ const PointOrderCard: React.FC<PointOrderCardProps> = ({
             </div>
           </div>
           <div className="flex items-center gap-1.5 bg-white/60 backdrop-blur-sm px-3 py-1.5 rounded-full border border-white/50 shadow-sm">
-            <Sparkles size={12} className="text-amber-500" />
+            <Sparkles size={12} className="text-red-500" />
             <span className="text-xs font-medium text-gray-700">消费金兑换</span>
           </div>
         </div>
@@ -102,8 +102,8 @@ const PointOrderCard: React.FC<PointOrderCardProps> = ({
       {items.length > 0 ? (
         <div className="space-y-0">
           {items.map((item, idx) => (
-            <div 
-              key={item.id} 
+            <div
+              key={item.id}
               className={`px-4 py-4 ${idx > 0 ? 'border-t border-gray-100' : ''}`}
               onClick={() => onViewDetail?.(order.id)}
             >
@@ -113,10 +113,10 @@ const PointOrderCard: React.FC<PointOrderCardProps> = ({
                   <div className="relative w-24 h-24 flex-shrink-0 group">
                     <div className="w-full h-full rounded-xl overflow-hidden shadow-lg border border-gray-100 bg-gradient-to-br from-gray-50 to-slate-50">
                       <img
-                        src={item.product_thumbnail 
-                          ? (item.product_thumbnail.startsWith('//') 
-                              ? `https:${item.product_thumbnail}` 
-                              : normalizeAssetUrl(item.product_thumbnail))
+                        src={item.product_thumbnail
+                          ? (item.product_thumbnail.startsWith('//')
+                            ? `https:${item.product_thumbnail}`
+                            : normalizeAssetUrl(item.product_thumbnail))
                           : normalizeAssetUrl(item.product_image || '')}
                         alt={item.product_name}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
@@ -126,7 +126,7 @@ const PointOrderCard: React.FC<PointOrderCardProps> = ({
                       />
                     </div>
                     {item.quantity > 1 && (
-                      <div className="absolute -top-1.5 -right-1.5 w-6 h-6 bg-gradient-to-br from-rose-500 to-pink-500 rounded-full flex items-center justify-center shadow-lg">
+                      <div className="absolute -top-1.5 -right-1.5 w-6 h-6 bg-gradient-to-br from-red-500 to-pink-500 rounded-full flex items-center justify-center shadow-lg">
                         <span className="text-[10px] font-bold text-white">×{item.quantity}</span>
                       </div>
                     )}
@@ -140,22 +140,22 @@ const PointOrderCard: React.FC<PointOrderCardProps> = ({
                       {item.product_name}
                     </p>
                   </div>
-                  
+
                   {/* 价格和操作 */}
                   <div className="flex items-end justify-between mt-3">
                     <div>
                       {item.price > 0 ? (
                         <div className="flex items-baseline gap-1">
-                          <span className="text-lg font-black text-rose-500">¥{item.price}</span>
+                          <span className="text-lg font-black text-red-600 font-[DINAlternate-Bold]">¥{item.price}</span>
                           {item.score_price && item.score_price > 0 && (
-                            <span className="text-sm font-bold text-amber-500">+{item.score_price}消费金</span>
+                            <span className="text-sm font-bold text-red-500">+{item.score_price}消费金</span>
                           )}
                         </div>
                       ) : (
                         item.score_price && item.score_price > 0 && (
                           <div className="flex items-center gap-1">
-                            <Sparkles size={14} className="text-amber-500" />
-                            <span className="text-lg font-black text-amber-500">{item.score_price}</span>
+                            <Sparkles size={14} className="text-red-500" />
+                            <span className="text-lg font-black text-red-600 font-[DINAlternate-Bold]">{item.score_price}</span>
                             <span className="text-sm text-gray-500">消费金</span>
                           </div>
                         )
@@ -202,9 +202,9 @@ const PointOrderCard: React.FC<PointOrderCardProps> = ({
               <div>
                 {order.total_amount > 0 ? (
                   <div className="flex items-baseline gap-1">
-                    <span className="text-lg font-black text-rose-500">¥{order.total_amount}</span>
+                    <span className="text-lg font-black text-red-600 font-[DINAlternate-Bold]">¥{order.total_amount}</span>
                     {order.total_score && Number(order.total_score) > 0 && (
-                      <span className="text-sm font-bold text-amber-500">
+                      <span className="text-sm font-bold text-red-500">
                         +{typeof order.total_score === 'string' ? parseFloat(order.total_score) : order.total_score}消费金
                       </span>
                     )}
@@ -212,8 +212,8 @@ const PointOrderCard: React.FC<PointOrderCardProps> = ({
                 ) : (
                   order.total_score && Number(order.total_score) > 0 && (
                     <div className="flex items-center gap-1">
-                      <Sparkles size={14} className="text-amber-500" />
-                      <span className="text-lg font-black text-amber-500">
+                      <Sparkles size={14} className="text-red-500" />
+                      <span className="text-lg font-black text-red-600 font-[DINAlternate-Bold]">
                         {typeof order.total_score === 'string' ? parseFloat(order.total_score) : order.total_score}
                       </span>
                       <span className="text-sm text-gray-500">消费金</span>
@@ -229,12 +229,12 @@ const PointOrderCard: React.FC<PointOrderCardProps> = ({
       {/* 底部操作按钮 */}
       {(order.status === ShopOrderPayStatus.PAID || order.status === 1) && order.pay_type === 'score' && activeTab === 1 && onUrgeShip && (
         <div className="px-4 pb-4 pt-2 border-t border-gray-100">
-          <button 
+          <button
             onClick={(e) => {
               e.stopPropagation();
               onUrgeShip(order.id);
             }}
-            className="w-full py-3 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-white text-sm font-bold shadow-lg shadow-amber-500/30 hover:shadow-xl transition-all active:scale-[0.98]"
+            className="w-full py-3 rounded-xl bg-gradient-to-r from-red-500 to-red-600 text-white text-sm font-bold shadow-lg shadow-red-500/30 hover:shadow-xl transition-all active:scale-[0.98]"
           >
             催发货
           </button>

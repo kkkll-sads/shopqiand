@@ -6,6 +6,7 @@
  */
 import React, { useState } from 'react';
 import { ChevronRight, Gift, Tag, Crown, Info } from 'lucide-react';
+import { subtract, multiply, toString } from '../../../utils/currency';
 
 interface PromotionSheetProps {
   /** 当前价格 */
@@ -27,7 +28,8 @@ const PromotionSheet: React.FC<PromotionSheetProps> = ({
   promotionEndDate = '2026.01.30 23:59',
 }) => {
   const [activeTab, setActiveTab] = useState<TabKey>('enjoyed');
-  const savedAmount = originalPrice - price;
+  // 使用精确的金额计算工具（避免浮点数精度问题）
+  const savedAmount = subtract(originalPrice, price).toNumber();
 
   const tabs: { key: TabKey; label: string }[] = [
     { key: 'enjoyed', label: '已享受优惠' },
@@ -111,7 +113,7 @@ const PromotionSheet: React.FC<PromotionSheetProps> = ({
                 限购
               </span>
               <div className="flex-1 text-sm text-gray-700 leading-relaxed">
-                购买至少1件时可享受单件价 ¥ {(price * 0.95).toFixed(2)}，超出数量以结算价为准
+                购买至少1件时可享受单件价 ¥ {toString(multiply(price, 0.95), 2)}，超出数量以结算价为准
               </div>
             </div>
           </div>
@@ -157,7 +159,7 @@ const PromotionSheet: React.FC<PromotionSheetProps> = ({
             </div>
             <div className="flex-1 border-l border-gray-100 pl-4">
               <div className="text-sm text-gray-800">
-                PLUS额外省 <span className="text-red-500 font-bold">{(price * 0.1).toFixed(2)}</span> 元
+                PLUS额外省 <span className="text-red-500 font-bold">{toString(multiply(price, 0.1), 2)}</span> 元
               </div>
             </div>
             <button className="bg-red-500 text-white text-xs px-3 py-2 rounded-lg">

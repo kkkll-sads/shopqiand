@@ -12,6 +12,7 @@ import { isSuccess, extractError } from '../../../utils/apiHelpers';
 import { useStateMachine } from '../../../hooks/useStateMachine';
 import { LoadingEvent, LoadingState } from '../../../types/states';
 import { useErrorHandler } from '../../../hooks/useErrorHandler';
+import { useInfiniteScroll } from '../../hooks/useInfiniteScroll';
 
 const ClaimHistory: React.FC = () => {
     const navigate = useNavigate();
@@ -41,11 +42,28 @@ const ClaimHistory: React.FC = () => {
     });
     const loading = loadMachine.state === LoadingState.LOADING;
 
+    const [page, setPage] = useState(1);
+    const [hasMore, setHasMore] = useState(true);
+
+    const handleLoadMore = () => {
+        if (!loading && hasMore) {
+            setPage(prev => prev + 1);
+        }
+    };
+
+    const bottomRef = useInfiniteScroll(handleLoadMore, hasMore, loading);
+
     useEffect(() => {
-        loadHistory();
+        loadHistory(1, false);
     }, []);
 
-    const loadHistory = async () => {
+    useEffect(() => {
+        if (page > 1) {
+            loadHistory(page, true);
+        }
+    }, [page]);
+
+    const loadHistory = async (pageNum: number, append: boolean = false) => {
         loadMachine.send(LoadingEvent.LOAD);
         try {
             const token = getStoredToken();
@@ -55,9 +73,19 @@ const ClaimHistory: React.FC = () => {
                 return;
             }
 
-            const response = await getRightsDeclarationList({}, token);
+            const response = await getRightsDeclarationList({ page: pageNum, limit: 10 }, token);
+
             if (isSuccess(response) && response.data) {
-                setHistory(response.data.list);
+                const list = response.data.list || [];
+                const total = response.data.total || 0;
+
+                if (append) {
+                    setHistory(prev => [...prev, ...list]);
+                } else {
+                    setHistory(list);
+                }
+
+                setHasMore(pageNum * 10 < total);
                 loadMachine.send(LoadingEvent.SUCCESS);
             } else {
                 // ✅ 使用统一错误处理
@@ -170,6 +198,12 @@ const ClaimHistory: React.FC = () => {
                     </div>
                 )}
             </div>
+
+            {/* Infinite Scroll Sentinel */}
+            <div ref={bottomRef} className="h-4" />
+            {loading && hasMore && (
+                <div className="py-4 text-center text-xs text-gray-400">加载中...</div>
+            )}
         </div>
     );
 };

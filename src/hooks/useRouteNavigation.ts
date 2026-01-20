@@ -45,7 +45,6 @@ export const ROUTES = {
 
   // 市场
   TRADING_ZONE: '/trading-zone',
-  ARTIST_SHOWCASE: '/artist-showcase',
   MASTERPIECE_SHOWCASE: '/masterpiece-showcase',
   RESERVATION: '/reservation',
   RESERVATION_RECORD: '/reservation-record',
@@ -68,8 +67,6 @@ export const ROUTES = {
 export const generatePath = {
   newsDetail: (id: string) => `/news/${id}`,
   productDetail: (id: string) => `/product/${id}`,
-  artistDetail: (id: string) => `/artist/${id}`,
-  artistWorks: (artistId: string) => `/artist-works/${artistId}`,
   friendDetail: (id: string) => `/friend-detail/${id}`,
   orderDetail: (orderId: string) => `/order/${orderId}`,
   orderList: (category: string, status: number | string) => `/orders/${category}/${status}`,

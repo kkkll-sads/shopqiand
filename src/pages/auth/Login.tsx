@@ -13,7 +13,7 @@ import React, { useState, useEffect } from 'react';
 import { Eye, EyeOff, User, Lock, Check, HeadphonesIcon } from 'lucide-react';
 import { login as loginApi, LoginParams, fetchProfile, fetchRealNameStatus } from '../../../services/api';
 import { useNotification } from '../../../context/NotificationContext';
-import { bizLog, debugLog } from '../../../utils/logger';
+import { bizLog, debugLog, errorLog, warnLog } from '../../../utils/logger';
 import { isSuccess } from '../../../utils/apiHelpers';
 import { useErrorHandler } from '../../../hooks/useErrorHandler';
 import { sendSmsCode } from '../../../services/common';
@@ -157,7 +157,7 @@ const Login: React.FC = () => {
         setRememberMe(true);
       }
     } catch (error) {
-      console.error('读取记住密码信息失败:', error);
+      errorLog('Login', '读取记住密码信息失败', error);
     }
   }, []);
 
@@ -170,7 +170,7 @@ const Login: React.FC = () => {
       localStorage.setItem(STORAGE_KEY_PASSWORD, password);
       localStorage.setItem(STORAGE_KEY_REMEMBER, 'true');
     } catch (error) {
-      console.error('保存记住密码信息失败:', error);
+      errorLog('Login', '保存记住密码信息失败', error);
     }
   };
 
@@ -183,7 +183,7 @@ const Login: React.FC = () => {
       localStorage.removeItem(STORAGE_KEY_PASSWORD);
       localStorage.removeItem(STORAGE_KEY_REMEMBER);
     } catch (error) {
-      console.error('清除记住密码信息失败:', error);
+      errorLog('Login', '清除记住密码信息失败', error);
     }
   };
 
@@ -275,12 +275,12 @@ const Login: React.FC = () => {
         }
 
         showToast('success', '登录成功', response.msg);
-        
+
         // ✅ 获取完整的用户信息
         let fullUserInfo = response.data?.userInfo || null;
         let realNameStatus = 0;
         let realName = '';
-        
+
         try {
           const profileRes = await fetchProfile(token);
           if (isSuccess(profileRes) && profileRes.data?.userInfo) {
@@ -292,9 +292,9 @@ const Login: React.FC = () => {
             };
           }
         } catch (e) {
-          console.warn('获取用户信息失败，使用登录返回的基础信息:', e);
+          warnLog('Login', '获取用户信息失败，使用登录返回的基础信息', e);
         }
-        
+
         // ✅ 单独获取实名认证状态
         try {
           const realNameRes = await fetchRealNameStatus(token);
@@ -307,19 +307,19 @@ const Login: React.FC = () => {
             });
           }
         } catch (e) {
-          console.warn('获取实名状态失败:', e);
+          warnLog('Login', '获取实名状态失败', e);
         }
-        
+
         // ✅ 使用 Zustand store 管理登录状态
         loginToStore({
           token,
           userInfo: fullUserInfo,
         });
-        
+
         // ✅ 更新实名认证状态
         const { updateRealNameStatus } = useAuthStore.getState();
         updateRealNameStatus(realNameStatus, realName);
-        
+
         // ✅ 登录成功后跳转到首页
         navigate('/');
         submitMachine.send(FormEvent.SUBMIT_SUCCESS);
@@ -348,7 +348,7 @@ const Login: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col px-6 pt-16 pb-safe bg-gradient-to-b from-orange-50 via-white to-gray-50 relative">
+    <div className="min-h-screen flex flex-col px-6 pt-16 pb-safe bg-gradient-to-b from-red-50 via-white to-gray-50 relative">
       {/* 顶部客服入口 */}
       <button
         onClick={() => navigate('/online-service')}
@@ -370,21 +370,19 @@ const Login: React.FC = () => {
       <div className="flex items-center space-x-6 mb-6">
         <button
           onClick={() => setLoginType('password')}
-          className={`text-base font-medium transition-colors relative pb-2 ${
-            loginType === 'password'
-              ? 'text-gray-900 font-bold after:content-[""] after:absolute after:bottom-0 after:left-1/2 after:-translate-x-1/2 after:w-6 after:h-1 after:bg-orange-500 after:rounded-full'
+          className={`text-base font-medium transition-colors relative pb-2 ${loginType === 'password'
+              ? 'text-gray-900 font-bold after:content-[""] after:absolute after:bottom-0 after:left-1/2 after:-translate-x-1/2 after:w-6 after:h-1 after:bg-red-600 after:rounded-full'
               : 'text-gray-400'
-          }`}
+            }`}
         >
           密码登录
         </button>
         <button
           onClick={() => setLoginType('code')}
-          className={`text-base font-medium transition-colors relative pb-2 ${
-            loginType === 'code'
-              ? 'text-gray-900 font-bold after:content-[""] after:absolute after:bottom-0 after:left-1/2 after:-translate-x-1/2 after:w-6 after:h-1 after:bg-orange-500 after:rounded-full'
+          className={`text-base font-medium transition-colors relative pb-2 ${loginType === 'code'
+              ? 'text-gray-900 font-bold after:content-[""] after:absolute after:bottom-0 after:left-1/2 after:-translate-x-1/2 after:w-6 after:h-1 after:bg-red-600 after:rounded-full'
               : 'text-gray-400'
-          }`}
+            }`}
         >
           验证码登录
         </button>
@@ -393,7 +391,7 @@ const Login: React.FC = () => {
       {/* 表单 */}
       <div className="space-y-4 mb-4">
         {/* 手机号输入 */}
-        <div className="bg-white rounded-xl flex items-center px-4 py-3.5 border border-gray-100 shadow-sm focus-within:border-orange-200 focus-within:ring-2 focus-within:ring-orange-100 transition-all">
+        <div className="bg-white rounded-xl flex items-center px-4 py-3.5 border border-gray-100 shadow-sm focus-within:border-red-200 focus-within:ring-2 focus-within:ring-red-50 transition-all">
           <User className="text-gray-400 mr-3" size={20} />
           <input
             type="tel"
@@ -416,7 +414,7 @@ const Login: React.FC = () => {
 
         {/* 密码/验证码输入 */}
         {loginType === 'password' ? (
-          <div className="bg-white rounded-xl flex items-center px-4 py-3.5 border border-gray-100 shadow-sm focus-within:border-orange-200 focus-within:ring-2 focus-within:ring-orange-100 transition-all">
+          <div className="bg-white rounded-xl flex items-center px-4 py-3.5 border border-gray-100 shadow-sm focus-within:border-red-200 focus-within:ring-2 focus-within:ring-red-50 transition-all">
             <Lock className="text-gray-400 mr-3" size={20} />
             <input
               type={showPassword ? 'text' : 'password'}
@@ -430,7 +428,7 @@ const Login: React.FC = () => {
             </button>
           </div>
         ) : (
-          <div className="bg-white rounded-xl flex items-center px-4 py-3.5 border border-gray-100 shadow-sm focus-within:border-orange-200 focus-within:ring-2 focus-within:ring-orange-100 transition-all">
+          <div className="bg-white rounded-xl flex items-center px-4 py-3.5 border border-gray-100 shadow-sm focus-within:border-red-200 focus-within:ring-2 focus-within:ring-red-50 transition-all">
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-400 mr-3">
               <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
             </svg>
@@ -444,7 +442,7 @@ const Login: React.FC = () => {
             <button
               onClick={handleSendCode}
               disabled={countdown > 0}
-              className={`ml-2 text-sm font-medium ${countdown > 0 ? 'text-gray-400' : 'text-orange-500'}`}
+              className={`ml-2 text-sm font-medium ${countdown > 0 ? 'text-gray-400' : 'text-red-600'}`}
             >
               {countdown > 0 ? `${countdown}s后重发` : '获取验证码'}
             </button>
@@ -456,9 +454,8 @@ const Login: React.FC = () => {
       <div className="flex justify-between items-center mb-8 text-sm">
         <label className="flex items-center text-gray-600 gap-2 cursor-pointer select-none">
           <div
-            className={`w-4 h-4 border rounded flex items-center justify-center transition-colors cursor-pointer ${
-              rememberMe ? 'bg-orange-500 border-orange-500' : 'border-gray-300 bg-white'
-            }`}
+            className={`w-4 h-4 border rounded flex items-center justify-center transition-colors cursor-pointer ${rememberMe ? 'bg-red-600 border-red-600' : 'border-gray-300 bg-white'
+              }`}
             onClick={() => setRememberMe(!rememberMe)}
           >
             {rememberMe && <Check size={12} className="text-white" />}
@@ -474,7 +471,7 @@ const Login: React.FC = () => {
       <button
         onClick={handleLogin}
         disabled={loading}
-        className="w-full bg-gradient-to-r from-orange-500 to-orange-600 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-orange-200 active:scale-[0.98] transition-all mb-6 text-base disabled:opacity-70 disabled:cursor-not-allowed"
+        className="w-full bg-gradient-to-r from-red-600 to-red-500 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-red-200 active:scale-[0.98] transition-all mb-6 text-base disabled:opacity-70 disabled:cursor-not-allowed"
       >
         {loading ? '登录中...' : '登 录'}
       </button>
@@ -482,16 +479,16 @@ const Login: React.FC = () => {
       {/* 协议 */}
       <div className="flex items-center justify-center gap-2 text-xs text-gray-500 mb-8">
         <div
-          className={`w-4 h-4 rounded border flex-shrink-0 flex items-center justify-center cursor-pointer transition-colors ${agreed ? 'bg-orange-500 border-orange-500' : 'border-gray-300 bg-white'}`}
+          className={`w-4 h-4 rounded border flex-shrink-0 flex items-center justify-center cursor-pointer transition-colors ${agreed ? 'bg-red-600 border-red-600' : 'border-gray-300 bg-white'}`}
           onClick={() => setAgreed(!agreed)}
         >
           {agreed && <Check size={10} className="text-white" />}
         </div>
         <div className="leading-none flex items-center flex-wrap">
           <span>登录即代表你已同意</span>
-          <button type="button" className="text-orange-500 mx-0.5" onClick={() => navigate('/user-agreement')}>用户协议</button>
+          <button type="button" className="text-red-600 mx-0.5" onClick={() => navigate('/user-agreement')}>用户协议</button>
           <span>和</span>
-          <button type="button" className="text-orange-500 mx-0.5" onClick={() => navigate('/privacy-policy')}>隐私政策</button>
+          <button type="button" className="text-red-600 mx-0.5" onClick={() => navigate('/privacy-policy')}>隐私政策</button>
         </div>
       </div>
 
@@ -501,7 +498,7 @@ const Login: React.FC = () => {
         style={{ paddingBottom: `${bottomPadding}px` }}
       >
         <span className="text-gray-500">没有账户？</span>
-        <button onClick={() => navigate('/register')} className="text-orange-500 font-medium">
+        <button onClick={() => navigate('/register')} className="text-red-600 font-medium">
           点击注册
         </button>
       </div>

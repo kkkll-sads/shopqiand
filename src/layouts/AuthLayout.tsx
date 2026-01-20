@@ -4,10 +4,12 @@
  */
 import React from 'react';
 import { Outlet } from 'react-router-dom';
+import ScrollToTop from '../components/ScrollToTop';
 
 const AuthLayout: React.FC = () => {
   return (
     <div className="bg-gray-100 min-h-screen-dynamic font-sans antialiased text-gray-900 max-w-md mx-auto relative shadow-2xl">
+      <ScrollToTop />
       <div className="min-h-screen-dynamic bg-gray-50">
         <Outlet />
       </div>

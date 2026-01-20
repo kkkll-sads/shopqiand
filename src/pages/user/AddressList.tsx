@@ -402,7 +402,7 @@ const AddressList: React.FC = () => {
                     handleFormInputChange('is_default', e.target.checked)
                   }
                 />
-                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-orange-500"></div>
+                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-red-600"></div>
               </div>
             </label>
 
@@ -415,7 +415,7 @@ const AddressList: React.FC = () => {
             <button
               type="submit"
               disabled={formLoading}
-              className="w-full bg-gradient-to-r from-[#FF6B35] to-[#FF9F2E] text-white text-base font-bold py-3.5 rounded-full shadow-lg shadow-orange-200 active:scale-[0.98] transition-transform disabled:opacity-60 disabled:cursor-not-allowed mt-4 mb-8"
+              className="w-full bg-gradient-to-r from-red-600 to-red-500 text-white text-base font-bold py-3.5 rounded-full shadow-lg shadow-red-200 active:scale-[0.98] transition-transform disabled:opacity-60 disabled:cursor-not-allowed mt-4 mb-8"
             >
               {formLoading ? '提交中...' : '保存地址'}
             </button>
@@ -511,7 +511,7 @@ const AddressList: React.FC = () => {
       {mode === 'list' && (
         <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-gray-100 pb-safe max-w-md mx-auto">
           <button
-            className="w-full bg-gradient-to-r from-[#FF6B35] to-[#FF9F2E] text-white font-bold py-3.5 rounded-xl flex items-center justify-center gap-2 active:scale-[0.98] transition-transform shadow-lg shadow-orange-200"
+            className="w-full bg-gradient-to-r from-red-600 to-red-500 text-white font-bold py-3.5 rounded-xl flex items-center justify-center gap-2 active:scale-[0.98] transition-transform shadow-lg shadow-red-200"
             onClick={() => {
               resetForm();
               setNotice(null);

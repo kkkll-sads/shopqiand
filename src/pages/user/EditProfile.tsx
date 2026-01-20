@@ -17,6 +17,7 @@ import { useAuthStore } from '../../stores/authStore';
 import { UserInfo } from '../../../types';
 import { useNotification } from '../../../context/NotificationContext';
 import { useNavigate } from 'react-router-dom';
+import { errorLog } from '../../../utils/logger';
 
 /**
  * EditProfile 编辑资料页面组件
@@ -66,7 +67,7 @@ const EditProfile: React.FC = () => {
       showToast('success', res?.msg || '保存成功');
       navigate(-1);
     } catch (error: any) {
-      console.error('昵称更新失败:', error);
+      errorLog('EditProfile', '昵称更新失败', error);
       showToast('error', '保存失败', error?.message || '昵称保存失败，请稍后重试');
     } finally {
       setSaving(false);
@@ -132,7 +133,7 @@ const EditProfile: React.FC = () => {
       useAuthStore.getState().updateUser(updatedUser);
       showToast('success', avatarRes?.msg || '头像更新成功');
     } catch (error: any) {
-      console.error('修改头像失败:', error);
+      errorLog('EditProfile', '修改头像失败', error);
       showToast('error', '修改失败', error?.message || '头像修改失败，请稍后重试');
     } finally {
       setAvatarUploading(false);
@@ -152,7 +153,7 @@ const EditProfile: React.FC = () => {
         >
           <span className="text-base text-gray-800">头像</span>
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-full bg-orange-100 overflow-hidden flex items-center justify-center text-lg font-bold text-orange-600">
+            <div className="w-12 h-12 rounded-full bg-red-100 overflow-hidden flex items-center justify-center text-lg font-bold text-red-600">
               {avatarPreview ? (
                 <img
                   src={avatarPreview}
@@ -190,14 +191,14 @@ const EditProfile: React.FC = () => {
       {/* 按钮区域 */}
       <div className="mt-8 px-4 space-y-3">
         <button
-          className="w-full bg-orange-500 text-white text-sm font-semibold py-3 rounded-md active:opacity-80 shadow-sm disabled:opacity-50"
+          className="w-full bg-red-500 text-white text-sm font-semibold py-3 rounded-md active:opacity-80 shadow-sm disabled:opacity-50"
           onClick={handleSave}
           disabled={saving}
         >
           {saving ? '保存中...' : '保存'}
         </button>
         <button
-          className="w-full bg-white text-orange-500 border border-orange-400 text-sm font-semibold py-3 rounded-md active:bg-orange-50"
+          className="w-full bg-white text-red-500 border border-red-400 text-sm font-semibold py-3 rounded-md active:bg-red-50"
           onClick={() => {
             logout();
             navigate('/login', { replace: true });

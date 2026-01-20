@@ -7,7 +7,8 @@ import { useNavigate } from 'react-router-dom';
 import { FileText, ShoppingBag, ArrowRight, ChevronRight, X, AlertCircle, CheckCircle } from 'lucide-react';
 import SubPageLayout from '../../../components/SubPageLayout';
 import { formatAmount, formatTime } from '../../../utils/format';
-import { LoadingSpinner, EmptyState, LazyImage } from '../../../components/common';
+import { multiply, toString, toNumber } from '../../../utils/currency';
+import { LoadingSpinner, EmptyState, LazyImage, SkeletonCollectionList } from '../../../components/common';
 import {
   getMyCollection,
   deliverCollectionItem,
@@ -30,6 +31,8 @@ import { ConsignmentStatus, DeliveryStatus } from '../../../constants/statusEnum
 import { isSuccess, extractError } from '../../../utils/apiHelpers';
 import { useStateMachine } from '../../../hooks/useStateMachine';
 import { FormEvent, FormState, LoadingEvent, LoadingState } from '../../../types/states';
+import { useInfiniteScroll } from '../../hooks/useInfiniteScroll';
+import { debugLog, warnLog, errorLog } from '../../../utils/logger';
 
 interface MyCollectionProps {
   onItemSelect?: (item: MyCollectionItem) => void;
@@ -139,6 +142,15 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onItemSelect, initialConsig
   type CategoryTab = 'hold' | 'consign' | 'sold' | 'dividend';
   const [activeTab, setActiveTab] = useState<CategoryTab>('hold');
 
+  // Load More Handler
+  const handleLoadMore = () => {
+    if (!loading && hasMore) {
+      setPage(prev => prev + 1);
+    }
+  };
+
+  const bottomRef = useInfiniteScroll(handleLoadMore, hasMore, loading);
+
   const tabs: { id: CategoryTab; label: string }[] = [
     { id: 'hold', label: '持仓中' },
     { id: 'consign', label: '寄售中' },
@@ -180,7 +192,7 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onItemSelect, initialConsig
         //   setConsignmentTicketCount(count);
         // }
       } catch (err) {
-        console.error('加载用户信息失败:', err);
+        errorLog('MyCollection', '加载用户信息失败', err);
       }
     };
 
@@ -231,18 +243,16 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onItemSelect, initialConsig
             return dStatus === DeliveryStatus.NOT_DELIVERED && cStatus === 0;
           });
 
-          console.log('API返回数据:', list.length, '个藏品');
-          console.log('过滤后数据:', filteredList.length, '个藏品');
-          console.log('当前标签页:', activeTab);
+          debugLog('MyCollection', 'API返回数据', { count: list.length, filtered: filteredList.length, activeTab });
 
           if (page === 1) {
             const deduplicated = deduplicateCollections(filteredList);
-            console.log('去重后数据:', deduplicated.length, '个藏品');
+            debugLog('MyCollection', '去重后数据', { count: deduplicated.length });
             setMyCollections(deduplicated);
           } else {
             setMyCollections(prev => {
               const combined = deduplicateCollections([...prev, ...filteredList]);
-              console.log('合并去重后数据:', combined.length, '个藏品');
+              debugLog('MyCollection', '合并去重后数据', { count: combined.length });
               return combined;
             });
           }
@@ -350,7 +360,7 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onItemSelect, initialConsig
           checkBatchMachine.send(LoadingEvent.SUCCESS);
         }
       } catch (error) {
-        console.error('获取批量寄售列表失败:', error);
+        errorLog('MyCollection', '获取批量寄售列表失败', error);
         checkBatchMachine.send(LoadingEvent.ERROR);
       } finally {
         // 状态机已处理成功/失败
@@ -380,8 +390,7 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onItemSelect, initialConsig
 
   // 应用筛选器
   const filteredCollections = useMemo(() => {
-    console.log('myCollections长度:', myCollections.length);
-    console.log('筛选条件 - 场次:', selectedSession, '价格分区:', selectedPriceZone);
+    debugLog('MyCollection', '筛选条件', { count: myCollections.length, session: selectedSession, zone: selectedPriceZone });
 
     const filtered = myCollections.filter(item => {
       // 场次筛选
@@ -400,7 +409,7 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onItemSelect, initialConsig
       return true;
     });
 
-    console.log('filteredCollections长度:', filtered.length);
+    debugLog('MyCollection', 'filteredCollections长度', filtered.length);
     return filtered;
   }, [myCollections, selectedSession, selectedPriceZone]);
 
@@ -570,7 +579,7 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onItemSelect, initialConsig
       const itemSessionId = selectedItem.session_id || selectedItem.original_record?.session_id;
       const itemZoneId = selectedItem.zone_id || selectedItem.original_record?.zone_id;
 
-      console.log('[MyCollection Debug] Coupon matching:', {
+      debugLog('MyCollection', 'Coupon matching', {
         totalCoupons: coupons.length,
         itemSessionId,
         itemZoneId,
@@ -583,12 +592,12 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onItemSelect, initialConsig
           String(c.session_id) === String(itemSessionId) &&
           String(c.zone_id) === String(itemZoneId)
         );
-        console.log('[MyCollection Debug] Matched coupons:', matched.length, matched);
+        debugLog('MyCollection', 'Matched coupons', { count: matched.length, matched });
         setAvailableCouponCount(matched.length);
       } else {
         // 如果无法从藏品获取场次信息，使用 API 返回的 available_count
         const fallbackCount = couponRes.data?.available_count ?? coupons.length;
-        console.warn('[MyCollection] Item missing session/zone info, using fallback:', {
+        warnLog('MyCollection', 'Item missing session/zone info, using fallback', {
           itemSessionId,
           itemZoneId,
           fallbackCount,
@@ -597,7 +606,7 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onItemSelect, initialConsig
         setAvailableCouponCount(fallbackCount);
       }
     }).catch(err => {
-      console.error('Fetch data failed', err);
+      errorLog('MyCollection', 'Fetch data failed', err);
       if (mounted) {
         setConsignmentCheckData(null);
         setAvailableCouponCount(0);
@@ -893,7 +902,7 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onItemSelect, initialConsig
         const couponRes = await fetchConsignmentCoupons({ page: 1, limit: 100, status: 1, token });
         const coupons = couponRes.data?.list || [];
 
-        console.log('[MyCollection Debug] Consignment validation - Total coupons:', coupons.length);
+        debugLog('MyCollection', 'Consignment validation - Total coupons', coupons.length);
 
         if (coupons.length === 0) {
           showToast('warning', '缺少道具', '您没有可用的寄售券，无法进行寄售');
@@ -905,11 +914,11 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onItemSelect, initialConsig
         const itemSessionId = selectedItem.session_id || selectedItem.original_record?.session_id;
         const itemZoneId = selectedItem.zone_id || selectedItem.original_record?.zone_id;
 
-        console.log('[MyCollection Debug] Item info:', { itemSessionId, itemZoneId });
+        debugLog('MyCollection', 'Item info', { itemSessionId, itemZoneId });
 
         if (!itemSessionId || !itemZoneId) {
           // 如果无法获取场次信息，只要有券就允许提交，让后端验证
-          console.warn('[MyCollection] Missing session/zone info, allowing submission with backend validation');
+          warnLog('MyCollection', 'Missing session/zone info, allowing submission with backend validation');
           // 继续执行，让后端检查
         } else {
           const matchedCoupon = coupons.find(c =>
@@ -917,7 +926,7 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onItemSelect, initialConsig
             String(c.zone_id) === String(itemZoneId)
           );
 
-          console.log('[MyCollection Debug] Matched coupon:', matchedCoupon);
+          debugLog('MyCollection', 'Matched coupon', matchedCoupon);
 
           if (!matchedCoupon) {
             showToast('warning', '寄售券不匹配', '您没有该场次和分区的可用寄售券');
@@ -926,7 +935,7 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onItemSelect, initialConsig
         }
 
       } catch (error) {
-        console.error('获取寄售券失败', error);
+        errorLog('MyCollection', '获取寄售券失败', error);
         showToast('warning', '校验失败', '无法验证寄售券信息，请稍后重试');
         return;
       }
@@ -1062,7 +1071,7 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onItemSelect, initialConsig
         batchConsignMachine.send(FormEvent.SUBMIT_ERROR);
       }
     } catch (error) {
-      console.error('批量寄售错误:', error);
+      errorLog('MyCollection', '批量寄售错误', error);
       showToast('error', '批量寄售失败', '网络错误，请稍后重试');
       batchConsignMachine.send(FormEvent.SUBMIT_ERROR);
     } finally {
@@ -1111,7 +1120,7 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onItemSelect, initialConsig
         green: { bg: 'bg-green-50', text: 'text-green-700', dot: 'bg-green-500' },
         blue: { bg: 'bg-blue-50', text: 'text-blue-700', dot: 'bg-blue-500' },
         red: { bg: 'bg-red-50', text: 'text-red-700', dot: 'bg-red-500' },
-        orange: { bg: 'bg-orange-50', text: 'text-orange-700', dot: 'bg-orange-500' },
+        orange: { bg: 'bg-red-50', text: 'text-red-700', dot: 'bg-red-500' },
         gray: { bg: 'bg-gray-50', text: 'text-gray-500', dot: 'bg-gray-400' },
       }[colorType] || { bg: 'bg-gray-50', text: 'text-gray-500', dot: 'bg-gray-400' };
 
@@ -1209,50 +1218,59 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onItemSelect, initialConsig
   return (
     <SubPageLayout title="我的藏品" onBack={() => navigate(-1)}>
       <div className="flex-1 overflow-hidden flex flex-col">
-        {/* Filter Dropdowns - 始终显示，确保UI一致性和渲染稳定性 */}
-        <div className="bg-white/80 backdrop-blur-sm px-4 py-3 border-b border-gray-100/50 flex gap-2 shrink-0">
-          {/* Session Filter - 始终显示 */}
-          <select
-            value={selectedSession}
-            onChange={(e) => setSelectedSession(e.target.value)}
-            className="flex-1 px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-orange-200 focus:border-orange-400 transition-all appearance-none"
-            disabled={sessionOptions.length <= 1}
-          >
-            <option value="all">全部场次</option>
-            {sessionOptions.filter(s => s !== 'all').map(session => (
-              <option key={session} value={session}>{session}</option>
-            ))}
-          </select>
+        {/* 固定区域：Tab + 筛选器 */}
+        <div className="sticky top-0 z-20 bg-white shadow-sm">
+          {/* Category Tabs - 固定在顶部 */}
+          <div className="px-3 py-2 border-b border-gray-100/50">
+            <div className="flex bg-gray-100/80 rounded-xl p-1">
+              {tabs.map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => handleTabChange(tab.id)}
+                  className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all duration-200 ${activeTab === tab.id
+                    ? 'bg-white text-red-600 shadow-sm'
+                    : 'text-gray-500 hover:text-gray-700'
+                    }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+          </div>
 
-          {/* Price Zone Filter - 始终显示 */}
-          <select
-            value={selectedPriceZone}
-            onChange={(e) => setSelectedPriceZone(e.target.value)}
-            className="flex-1 px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-orange-200 focus:border-orange-400 transition-all disabled:opacity-50 disabled:cursor-not-allowed appearance-none"
-            disabled={priceZoneOptions.length <= 1}
-          >
-            <option value="all">全部价格分区</option>
-            {priceZoneOptions.filter(z => z !== 'all').map(zone => (
-              <option key={zone} value={zone}>{zone}</option>
-            ))}
-          </select>
-        </div>
-
-        {/* Category Tabs */}
-        <div className="bg-white/80 backdrop-blur-sm px-3 py-2 border-b border-gray-100/50 z-10 shrink-0">
-          <div className="flex bg-gray-100/80 rounded-xl p-1">
-            {tabs.map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => handleTabChange(tab.id)}
-                className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all duration-200 ${activeTab === tab.id
-                  ? 'bg-white text-orange-600 shadow-sm'
-                  : 'text-gray-500 hover:text-gray-700'
-                  }`}
+          {/* Filter Dropdowns - 固定在Tab下方 */}
+          <div className="px-4 py-2.5 border-b border-gray-100/50 flex gap-2 bg-gray-50/80">
+            {/* Session Filter */}
+            <div className="flex-1 relative">
+              <select
+                value={selectedSession}
+                onChange={(e) => setSelectedSession(e.target.value)}
+                className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-xs font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-red-100 focus:border-red-400 transition-all appearance-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={sessionOptions.length <= 1}
               >
-                {tab.label}
-              </button>
-            ))}
+                <option value="all">全部场次</option>
+                {sessionOptions.filter(s => s !== 'all').map(session => (
+                  <option key={session} value={session}>{session}</option>
+                ))}
+              </select>
+              <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400 text-[10px]">▾</div>
+            </div>
+
+            {/* Price Zone Filter */}
+            <div className="flex-1 relative">
+              <select
+                value={selectedPriceZone}
+                onChange={(e) => setSelectedPriceZone(e.target.value)}
+                className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-xs font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-red-100 focus:border-red-400 transition-all appearance-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={priceZoneOptions.length <= 1}
+              >
+                <option value="all">全部价格分区</option>
+                {priceZoneOptions.filter(z => z !== 'all').map(zone => (
+                  <option key={zone} value={zone}>{zone}</option>
+                ))}
+              </select>
+              <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400 text-[10px]">▾</div>
+            </div>
           </div>
         </div>
 
@@ -1262,7 +1280,7 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onItemSelect, initialConsig
             <button
               onClick={handleBatchConsign}
               disabled={batchConsignLoading || checkingBatchConsignable}
-              className="w-full py-3 px-4 bg-gradient-to-r from-orange-500 to-orange-600 text-white font-semibold rounded-xl shadow-lg shadow-orange-200 hover:shadow-xl disabled:opacity-50 disabled:shadow-none disabled:cursor-not-allowed transition-all duration-200 active:scale-[0.98] flex items-center justify-center gap-2"
+              className="w-full py-3 px-4 bg-gradient-to-r from-red-500 to-red-600 text-white font-semibold rounded-xl shadow-lg shadow-red-200 hover:shadow-xl disabled:opacity-50 disabled:shadow-none disabled:cursor-not-allowed transition-all duration-200 active:scale-[0.98] flex items-center justify-center gap-2"
             >
               {batchConsignLoading ? (
                 <>
@@ -1286,10 +1304,7 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onItemSelect, initialConsig
 
         <div className="flex-1 overflow-y-auto p-4 pb-6 bg-gradient-to-b from-gray-50/30 to-white">
           {loading && page === 1 ? (
-            <div className="py-16 text-center">
-              <div className="w-12 h-12 border-4 border-orange-100 border-t-orange-500 rounded-full animate-spin mx-auto mb-4" />
-              <p className="text-sm text-gray-500 animate-pulse">加载中...</p>
-            </div>
+            <SkeletonCollectionList count={5} />
           ) : error ? (
             <div className="py-16 text-center">
               <div className="w-20 h-20 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -1321,19 +1336,19 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onItemSelect, initialConsig
               `}</style>
               <div className="space-y-3">
                 {filteredCollections.filter(i => !!i).map((item, index) => (
-                  <div key={item.id} style={{ animation: `fadeInUp 0.3s ease-out ${index * 0.05}s both` }}>
+                  <div 
+                    key={item.id} 
+                    style={{ animation: index < 10 ? `fadeInUp 0.25s ease-out ${index * 0.03}s both` : undefined }}
+                  >
                     {renderCollectionItem(item)}
                   </div>
                 ))}
               </div>
-              {hasMore && (
-                <button
-                  onClick={() => setPage(prev => prev + 1)}
-                  disabled={loading}
-                  className="w-full mt-4 py-3 text-sm font-bold text-orange-600 bg-orange-50 rounded-xl hover:bg-orange-100 disabled:opacity-50 disabled:cursor-not-allowed transition-all active:scale-[0.98]"
-                >
-                  {loading ? '加载中...' : '加载更多'}
-                </button>
+              <div ref={bottomRef} className="h-4" />
+              {loading && hasMore && (
+                <div className="w-full mt-4">
+                  <SkeletonCollectionList count={2} />
+                </div>
               )}
             </>
           )}
@@ -1393,27 +1408,28 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onItemSelect, initialConsig
                     const price = parseFloat(String(rawPrice));
                     const safePrice = isNaN(price) ? 0 : price;
 
-                    const expectedProfit = safePrice * 0.055;
-                    const expectedTotal = safePrice * 1.055;
+                    // 使用精确的金额计算工具（避免浮点数精度问题）
+                    const expectedProfit = toNumber(multiply(safePrice, 0.055));
+                    const expectedTotal = toNumber(multiply(safePrice, 1.055));
 
                     return (
                       <div className="grid grid-cols-3 gap-2 pt-3 border-t border-dashed border-gray-100">
                         <div className="flex flex-col">
                           <span className="text-[10px] text-gray-400 mb-0.5">当前估值</span>
                           <span className="text-sm font-bold text-gray-900 font-[DINAlternate-Bold]">
-                            ¥{safePrice.toFixed(2)}
+                            ¥{toString(safePrice, 2)}
                           </span>
                         </div>
                         <div className="flex flex-col items-center border-l border-r border-gray-50">
                           <span className="text-[10px] text-gray-400 mb-0.5">预期收益 (5.5%)</span>
                           <span className="text-sm font-bold text-red-500 font-[DINAlternate-Bold]">
-                            +{expectedProfit.toFixed(2)}
+                            +{toString(expectedProfit, 2)}
                           </span>
                         </div>
                         <div className="flex flex-col items-end">
                           <span className="text-[10px] text-gray-400 mb-0.5">预估回款</span>
                           <span className="text-sm font-bold text-gray-900 font-[DINAlternate-Bold]">
-                            ¥{expectedTotal.toFixed(2)}
+                            ¥{toString(expectedTotal, 2)}
                           </span>
                         </div>
                       </div>
@@ -1447,8 +1463,8 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onItemSelect, initialConsig
 
                   if (isLocked) {
                     return (
-                      <div className="flex items-center justify-center gap-2 bg-orange-50 text-orange-600 py-2.5 rounded-lg border border-orange-100 px-3">
-                        <div className="w-2 h-2 rounded-full bg-orange-500 animate-pulse" />
+                      <div className="flex items-center justify-center gap-2 bg-red-50 text-red-600 py-2.5 rounded-lg border border-red-100 px-3">
+                        <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
                         <span className="text-xs font-medium">
                           🔒 锁定期剩余 {formatSeconds(remainingSecs)}
                         </span>
@@ -1478,7 +1494,8 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onItemSelect, initialConsig
                       const rawPrice = selectedItem.market_price || selectedItem.price || selectedItem.current_price || selectedItem.original_price || '0';
                       const safePrice = parseFloat(String(rawPrice)) || 0;
 
-                      const serviceFee = safePrice * 0.03;
+                      // 使用精确的金额计算工具（避免浮点数精度问题）
+                      const serviceFee = toNumber(multiply(safePrice, 0.03));
                       const balance = parseFloat(userInfo?.service_fee_balance || '0');
                       const isBalanceEnough = balance >= serviceFee;
 
@@ -1496,7 +1513,7 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onItemSelect, initialConsig
                             </div>
                             {!isBalanceEnough && (
                               <button
-                                className="text-[10px] text-orange-600 bg-orange-50 px-1.5 py-0.5 rounded mt-1"
+                                className="text-[10px] text-red-600 bg-red-50 px-1.5 py-0.5 rounded mt-1"
                                 onClick={() => {
                                   // 这里可以跳转去充值，暂时先提示
                                   showToast('info', '余额不足', '请前往【我的-服务费】进行充值');
@@ -1566,7 +1583,7 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onItemSelect, initialConsig
                       handleConfirmActionByType('consignment');
                     }}
                     disabled={actionLoading || !canPerformAction() || isConsigning(selectedItem)}
-                    className="flex-[7] flex flex-col items-center justify-center py-3 rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-lg shadow-orange-200 active:scale-[0.98] disabled:opacity-50 disabled:shadow-none disabled:cursor-not-allowed transition-all"
+                    className="flex-[7] flex flex-col items-center justify-center py-3 rounded-xl bg-gradient-to-r from-red-500 to-red-600 text-white shadow-lg shadow-red-200 active:scale-[0.98] disabled:opacity-50 disabled:shadow-none disabled:cursor-not-allowed transition-all"
                   >
                     {actionLoading ? (
                       <span className="text-sm font-bold">提交中...</span>

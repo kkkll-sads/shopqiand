@@ -15,6 +15,7 @@ import { isSuccess, extractError, extractData } from '../../../utils/apiHelpers'
 import { useStateMachine } from '../../../hooks/useStateMachine';
 import { LoadingEvent, LoadingState } from '../../../types/states';
 import { UserInfo } from '../../../types';
+import { errorLog } from '../../../utils/logger';
 
 const ConsignmentVoucher: React.FC = () => {
   const navigate = useNavigate();
@@ -74,11 +75,11 @@ const ConsignmentVoucher: React.FC = () => {
           setCoupons(couponsResponse.data.list || []);
           loadMachine.send(LoadingEvent.SUCCESS);
         } else {
-          console.error('获取寄售券列表失败:', extractError(couponsResponse));
+          errorLog('ConsignmentVoucher', '获取寄售券列表失败', extractError(couponsResponse));
           loadMachine.send(LoadingEvent.ERROR);
         }
       } catch (err: any) {
-        console.error('Failed to load data:', err);
+        errorLog('ConsignmentVoucher', 'Failed to load data', err);
         setError(err?.message || '获取数据失败');
         loadMachine.send(LoadingEvent.ERROR);
       } finally {
@@ -104,7 +105,7 @@ const ConsignmentVoucher: React.FC = () => {
 
       {!loading && !error && (
         <>
-          <div className="bg-gradient-to-br from-orange-400 to-orange-600 rounded-2xl p-6 text-white shadow-lg mb-6 relative overflow-hidden">
+          <div className="bg-gradient-to-br from-red-500 to-red-600 rounded-2xl p-6 text-white shadow-lg mb-6 relative overflow-hidden">
             <div className="absolute top-0 right-0 w-32 h-32 bg-white opacity-5 rounded-full -translate-y-1/2 translate-x-1/2" />
             <div className="relative z-10">
               <div className="flex items-center gap-2 mb-2">
@@ -117,39 +118,39 @@ const ConsignmentVoucher: React.FC = () => {
           </div>
 
           <div className="bg-white rounded-xl p-4 shadow-sm mb-6">
-            <div className="text-sm font-bold text-gray-800 mb-3 border-l-4 border-orange-300 pl-2">
+            <div className="text-sm font-bold text-gray-800 mb-3 border-l-4 border-red-500 pl-2">
               使用说明
             </div>
             <div className="space-y-2 text-xs text-gray-600">
               <div className="flex items-start gap-2">
-                <div className="w-1.5 h-1.5 rounded-full bg-orange-500 mt-1.5 flex-shrink-0" />
-                <div>寄售券绑定到<span className="font-medium text-orange-600">场次+价格区间</span>，需匹配对应场次才能使用</div>
+                <div className="w-1.5 h-1.5 rounded-full bg-red-500 mt-1.5 flex-shrink-0" />
+                <div>寄售券绑定到<span className="font-medium text-red-600">场次+价格区间</span>，需匹配对应场次才能使用</div>
               </div>
               <div className="flex items-start gap-2">
-                <div className="w-1.5 h-1.5 rounded-full bg-orange-500 mt-1.5 flex-shrink-0" />
+                <div className="w-1.5 h-1.5 rounded-full bg-red-500 mt-1.5 flex-shrink-0" />
                 <div>可用于同一区间或相邻区间寄售（允许跨一个区间）</div>
               </div>
               <div className="flex items-start gap-2">
-                <div className="w-1.5 h-1.5 rounded-full bg-orange-500 mt-1.5 flex-shrink-0" />
-                <div>寄售券有效期为<span className="font-medium text-orange-600">30天</span>，过期自动失效</div>
+                <div className="w-1.5 h-1.5 rounded-full bg-red-500 mt-1.5 flex-shrink-0" />
+                <div>寄售券有效期为<span className="font-medium text-red-600">30天</span>，过期自动失效</div>
               </div>
               <div className="flex items-start gap-2">
-                <div className="w-1.5 h-1.5 rounded-full bg-orange-500 mt-1.5 flex-shrink-0" />
+                <div className="w-1.5 h-1.5 rounded-full bg-red-500 mt-1.5 flex-shrink-0" />
                 <div>交易用户每次购买藏品都会获得一张寄售券</div>
               </div>
               <div className="flex items-start gap-2">
-                <div className="w-1.5 h-1.5 rounded-full bg-orange-500 mt-1.5 flex-shrink-0" />
+                <div className="w-1.5 h-1.5 rounded-full bg-red-500 mt-1.5 flex-shrink-0" />
                 <div>普通用户首次升级为交易用户时赠送一张寄售券</div>
               </div>
               <div className="flex items-start gap-2">
-                <div className="w-1.5 h-1.5 rounded-full bg-orange-500 mt-1.5 flex-shrink-0" />
+                <div className="w-1.5 h-1.5 rounded-full bg-red-500 mt-1.5 flex-shrink-0" />
                 <div>寄售时系统自动匹配可用寄售券，优先使用快过期的</div>
               </div>
             </div>
           </div>
 
           <div className="bg-white rounded-xl p-4 shadow-sm">
-            <div className="text-sm font-bold text-gray-800 mb-4 border-l-4 border-orange-300 pl-2">
+            <div className="text-sm font-bold text-gray-800 mb-4 border-l-4 border-red-500 pl-2">
               可用券列表
             </div>
             {coupons.length === 0 ? (
@@ -162,18 +163,18 @@ const ConsignmentVoucher: React.FC = () => {
                 {coupons.map((coupon) => (
                   <div
                     key={coupon.id}
-                    className="flex flex-col p-3 bg-orange-50 border border-orange-100 rounded-lg"
+                    className="flex flex-col p-3 bg-red-50 border border-red-100 rounded-lg"
                   >
                     <div className="flex justify-between items-start mb-2">
                       <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 rounded-full bg-orange-100 flex items-center justify-center text-orange-600">
+                        <div className="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center text-red-600">
                           <Tag size={16} />
                         </div>
                         <div>
                           <div className="text-sm font-bold text-gray-800">
                             {coupon.price_zone || `价格区间 ${coupon.zone_id}`}
                           </div>
-                          <div className="text-xs text-orange-600 bg-orange-100 px-1.5 py-0.5 rounded inline-block mt-0.5">
+                          <div className="text-xs text-red-600 bg-red-100 px-1.5 py-0.5 rounded inline-block mt-0.5">
                             场次ID: {coupon.session_id}
                           </div>
                         </div>
@@ -183,7 +184,7 @@ const ConsignmentVoucher: React.FC = () => {
                       </span>
                     </div>
 
-                    <div className="border-t border-orange-100 my-2 pt-2 flex flex-col gap-1">
+                    <div className="border-t border-red-100 my-2 pt-2 flex flex-col gap-1">
                       <div className="flex items-center gap-1 text-xs text-gray-500">
                         <Clock size={12} />
                         <span>获取时间: {formatTime(coupon.create_time)}</span>

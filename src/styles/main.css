@@ -40,22 +40,23 @@
 /* CSS 变量 - 便于全局调整 */
 :root {
   /* 主题色 */
-  --color-primary: #f97316;
-  --color-primary-light: #fb923c;
-  --color-primary-dark: #ea580c;
-  --color-primary-50: #fff7ed;
-  --color-primary-100: #ffedd5;
-  
+  /* 主题色 - JD Red */
+  --color-primary: #e1251b;
+  --color-primary-light: #ef4444;
+  --color-primary-dark: #b91c1c;
+  --color-primary-50: #fef2f2;
+  --color-primary-100: #fee2e2;
+
   /* Web3 强调色 */
   --color-accent: #8b5cf6;
   --color-accent-light: #a78bfa;
-  
+
   /* 功能色 */
   --color-success: #22c55e;
   --color-warning: #eab308;
   --color-danger: #ef4444;
   --color-info: #3b82f6;
-  
+
   /* 中性色 */
   --color-bg: #f3f4f6;
   --color-card: #ffffff;
@@ -63,13 +64,13 @@
   --color-text-primary: #1f2937;
   --color-text-secondary: #6b7280;
   --color-text-muted: #9ca3af;
-  
+
   /* 渐变 */
-  --gradient-primary: linear-gradient(135deg, #f97316 0%, #fb923c 100%);
-  --gradient-primary-vertical: linear-gradient(180deg, #f97316 0%, #ea580c 100%);
-  --gradient-warm: linear-gradient(135deg, #fbbf24 0%, #f97316 100%);
-  --gradient-page-bg: linear-gradient(180deg, #ffd6a5 0%, #f9fafb 100%);
-  
+  --gradient-primary: linear-gradient(135deg, #ff4d4f 0%, #e1251b 100%);
+  --gradient-primary-vertical: linear-gradient(180deg, #ff4d4f 0%, #e1251b 100%);
+  --gradient-warm: linear-gradient(135deg, #ff7875 0%, #e1251b 100%);
+  --gradient-page-bg: linear-gradient(180deg, #ffeceb 0%, #f3f4f6 100%);
+
   /* 圆角 */
   --radius-sm: 6px;
   --radius-md: 8px;
@@ -77,13 +78,13 @@
   --radius-xl: 16px;
   --radius-2xl: 20px;
   --radius-3xl: 24px;
-  
+
   /* 阴影 */
   --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
   --shadow-card: 0 2px 8px -2px rgba(0, 0, 0, 0.1);
   --shadow-lg: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
-  --shadow-primary: 0 4px 14px -3px rgba(249, 115, 22, 0.4);
-  
+  --shadow-primary: 0 4px 14px -3px rgba(225, 37, 27, 0.4);
+
   /* 动画时长 */
   --duration-fast: 150ms;
   --duration-normal: 250ms;
@@ -162,8 +163,10 @@ body.certificate-page textarea {
 
 /* iPhone X+ 底部安全区域 */
 .pb-safe {
-  padding-bottom: constant(safe-area-inset-bottom); /* iOS 11.0 */
-  padding-bottom: env(safe-area-inset-bottom); /* iOS 11.2+ */
+  padding-bottom: constant(safe-area-inset-bottom);
+  /* iOS 11.0 */
+  padding-bottom: env(safe-area-inset-bottom);
+  /* iOS 11.2+ */
 }
 
 /* 动态视口高度 */
@@ -195,42 +198,61 @@ body.certificate-page textarea {
 }
 
 /* ========================================
-   卡片系统
+   卡片系统 (京东风格)
    ======================================== */
 
 /* 基础卡片 */
 .card {
   background: var(--color-card);
-  border-radius: var(--radius-xl);
-  box-shadow: var(--shadow-card);
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  transition: all 0.2s ease;
+}
+
+.card:active {
+  transform: scale(0.99);
 }
 
 /* 卡片阴影 */
 .card-shadow {
-  box-shadow: var(--shadow-card);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 
 /* 轻量卡片 */
 .card-light {
   background: var(--color-card);
-  border-radius: var(--radius-xl);
-  box-shadow: var(--shadow-sm);
+  border-radius: 12px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.03);
 }
 
 /* 强调卡片 */
 .card-elevated {
   background: var(--color-card);
-  border-radius: var(--radius-2xl);
-  box-shadow: var(--shadow-lg);
+  border-radius: 16px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
 }
 
 /* 玻璃卡片 */
 .card-glass {
-  background: rgba(255, 255, 255, 0.8);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  border-radius: var(--radius-xl);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+/* 悬浮卡片 - 京东商品卡片风格 */
+.card-float {
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  border: 1px solid rgba(0, 0, 0, 0.02);
+  transition: all 0.2s ease;
+}
+
+.card-float:active {
+  transform: scale(0.98);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
 }
 
 /* ========================================
@@ -407,6 +429,7 @@ body.certificate-page textarea {
     opacity: 0;
     transform: translateY(10px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -423,6 +446,7 @@ body.certificate-page textarea {
     opacity: 0;
     transform: translateY(20px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -439,6 +463,7 @@ body.certificate-page textarea {
     opacity: 0;
     transform: scale(0.9);
   }
+
   to {
     opacity: 1;
     transform: scale(1);
@@ -451,9 +476,12 @@ body.certificate-page textarea {
 
 /* 脉冲呼吸 */
 @keyframes pulse-soft {
-  0%, 100% {
+
+  0%,
+  100% {
     opacity: 1;
   }
+
   50% {
     opacity: 0.7;
   }
@@ -474,9 +502,14 @@ body.certificate-page textarea {
 }
 
 .skeleton {
-  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background: linear-gradient(90deg, #f0f0f0 25%, #e8e8e8 50%, #f0f0f0 75%);
   background-size: 200% 100%;
-  animation: shimmer 1.5s infinite;
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+
+/* 骨架屏动画 - Tailwind 兼容 */
+.animate-\[shimmer_1\.5s_infinite\] {
+  animation: shimmer 1.5s ease-in-out infinite;
 }
 
 /* 数字跳动 */
@@ -485,6 +518,7 @@ body.certificate-page textarea {
     opacity: 0;
     transform: translateY(10px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -638,6 +672,7 @@ body.certificate-page textarea {
 .line-clamp-2 {
   display: -webkit-box;
   -webkit-line-clamp: 2;
+  line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
@@ -645,6 +680,7 @@ body.certificate-page textarea {
 .line-clamp-3 {
   display: -webkit-box;
   -webkit-line-clamp: 3;
+  line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
@@ -655,11 +691,35 @@ body.certificate-page textarea {
 
 /* 点击反馈效果 */
 .tap-highlight {
-  -webkit-tap-highlight-color: rgba(249, 115, 22, 0.1);
+  -webkit-tap-highlight-color: rgba(225, 37, 27, 0.1);
 }
 
 .tap-highlight:active {
-  background-color: rgba(249, 115, 22, 0.05);
+  background-color: rgba(225, 37, 27, 0.05);
+}
+
+/* 通用点击反馈 - 所有可点击元素 */
+.clickable {
+  cursor: pointer;
+  transition: all 0.15s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.clickable:active {
+  opacity: 0.85;
+  transform: scale(0.98);
+}
+
+/* 卡片点击反馈 */
+.card-clickable {
+  cursor: pointer;
+  transition: all 0.2s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.card-clickable:active {
+  transform: scale(0.98);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
 }
 
 /* 禁用状态 */
@@ -703,6 +763,23 @@ body.certificate-page textarea {
    表单样式增强
    ======================================== */
 
+/* ========================================
+   输入框样式 - iOS 缩放防止
+   ======================================== */
+
+/* 
+ * 防止 iOS Safari 在聚焦输入框时自动缩放页面
+ * iOS Safari 会在 font-size < 16px 时自动缩放
+ * 设置 font-size: 16px 可以禁用此行为
+ */
+input,
+textarea,
+select {
+  font-size: 16px !important; /* 防止 iOS 聚焦放大 */
+  -webkit-text-size-adjust: 100%; /* 防止文字大小调整 */
+  touch-action: manipulation; /* 禁用双击缩放 */
+}
+
 /* 输入框焦点样式 - 移除默认 focus 边框 */
 input:focus,
 textarea:focus,
@@ -729,4 +806,5 @@ input[type='number']::-webkit-outer-spin-button {
 
 input[type='number'] {
   -moz-appearance: textfield;
+  appearance: textfield;
 }

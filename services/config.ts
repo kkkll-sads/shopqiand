@@ -224,6 +224,14 @@ export const API_ENDPOINTS = {
         latest: '/shopProduct/latest',
         /** 商品分享信息 */
         share: '/shopProduct/share',
+        /** 商品评价列表 */
+        reviews: '/shopProduct/reviews',
+        /** 商品评价摘要 */
+        reviewSummary: '/shopProduct/reviewSummary',
+        /** 提交商品评价 */
+        submitReview: '/shopProduct/submitReview',
+        /** 点赞/取消点赞评价 */
+        likeReview: '/shopProduct/likeReview',
     },
     shopOrder: {
         /** 创建订单 */

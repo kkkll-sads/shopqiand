@@ -13,6 +13,7 @@ import { useAuthStore } from '../../stores/authStore';
 import { UserInfo } from '../../../types';
 import { useNotification } from '../../../context/NotificationContext';
 import { isSuccess, extractData, extractError } from '../../../utils/apiHelpers';
+import { errorLog } from '../../../utils/logger';
 
 const HashrateExchange: React.FC = () => {
     const navigate = useNavigate();
@@ -41,7 +42,7 @@ const HashrateExchange: React.FC = () => {
                 useAuthStore.getState().updateUser(data.userInfo);
             }
         } catch (err) {
-            console.error(err);
+            errorLog('HashrateExchange', '加载用户信息失败', err);
         }
     };
 
@@ -93,7 +94,7 @@ const HashrateExchange: React.FC = () => {
     return (
         <div className="min-h-screen bg-gray-50 flex flex-col font-sans text-gray-900 pb-safe">
             {/* Header */}
-            <div className="bg-gradient-to-b from-orange-100 to-gray-50 p-5 pt-4">
+            <div className="bg-gradient-to-b from-red-50 to-gray-50 p-5 pt-4">
                 <div className="flex items-center gap-3 mb-6">
                     <button onClick={() => navigate(-1)} className="w-8 h-8 flex items-center justify-center bg-white rounded-full shadow-sm text-gray-700">
                         <ChevronLeft size={20} />
@@ -171,15 +172,15 @@ const HashrateExchange: React.FC = () => {
                     <div className="w-full h-px bg-gray-50"></div>
                     <div className="flex justify-between items-center">
                         <span className="text-sm text-gray-900 font-bold">预计消耗</span>
-                        <span className="text-lg font-bold text-orange-500 font-[DINAlternate-Bold]">
+                        <span className="text-lg font-bold text-red-600 font-[DINAlternate-Bold]">
                             {calculateCost()} <span className="text-xs text-gray-400 font-normal">消费金</span>
                         </span>
                     </div>
                 </div>
 
-                <div className="bg-orange-50 p-3 rounded-xl flex items-start gap-2">
-                    <Activity size={16} className="text-orange-500 shrink-0 mt-0.5" />
-                    <p className="text-xs text-orange-600 leading-tight">
+                <div className="bg-red-50 p-3 rounded-xl flex items-start gap-2">
+                    <Activity size={16} className="text-red-500 shrink-0 mt-0.5" />
+                    <p className="text-xs text-red-600 leading-tight">
                         您的当前消费金余额为 <span className="font-bold">{userInfo?.score || 0}</span>。算力补充后即时生效，可提升您的每日产出效率。
                     </p>
                 </div>

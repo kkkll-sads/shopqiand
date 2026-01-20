@@ -209,7 +209,7 @@ const AccountDeletion: React.FC = () => {
         <div className="px-4 pt-6 pb-6">
           <button
             type="submit"
-            className="w-full rounded-lg bg-orange-500 py-3 text-sm font-semibold text-white shadow-sm active:opacity-80 disabled:opacity-50"
+            className="w-full rounded-lg bg-red-600 py-3 text-sm font-semibold text-white shadow-sm active:opacity-80 disabled:opacity-50"
             disabled={loading}
           >
             {loading ? '提交中...' : '确认注销'}

@@ -251,7 +251,7 @@ const BalanceWithdraw: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col font-sans text-gray-900 pb-safe">
       {/* Header */}
-      <div className="bg-gradient-to-b from-orange-100 to-gray-50 p-5 pt-4">
+      <div className="bg-gradient-to-b from-red-100 to-gray-50 p-5 pt-4">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
             <button onClick={() => navigate(-1)} className="w-8 h-8 flex items-center justify-center bg-white rounded-full shadow-sm text-gray-700">
@@ -261,7 +261,7 @@ const BalanceWithdraw: React.FC = () => {
           </div>
           <button
             onClick={() => navigate('/withdraw-orders')}
-            className="text-xs font-bold text-orange-600 bg-white/50 px-3 py-1.5 rounded-full border border-orange-100 flex items-center gap-1 hover:bg-white transition-colors"
+            className="text-xs font-bold text-red-600 bg-white/50 px-3 py-1.5 rounded-full border border-red-100 flex items-center gap-1 hover:bg-white transition-colors"
           >
             <Banknote size={14} />
             提现记录
@@ -269,8 +269,8 @@ const BalanceWithdraw: React.FC = () => {
         </div>
 
         {/* Amount Card */}
-        <div className="bg-white rounded-[24px] p-6 shadow-xl shadow-orange-100/50 mb-6 border border-orange-50 relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-24 h-24 bg-orange-50 rounded-bl-[100px] -z-0 opacity-50"></div>
+        <div className="bg-white rounded-[24px] p-6 shadow-xl shadow-red-100/50 mb-6 border border-red-50 relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-24 h-24 bg-red-50 rounded-bl-[100px] -z-0 opacity-50"></div>
 
           <div className="relative z-10">
             <div className="flex justify-between items-center mb-4">
@@ -283,8 +283,8 @@ const BalanceWithdraw: React.FC = () => {
               </div>
             </div>
 
-            <div className="flex items-baseline gap-2 border-b-2 border-orange-50 pb-2 focus-within:border-orange-500 transition-colors">
-              <span className="text-3xl font-bold text-gray-900">¥</span>
+            <div className="flex items-center gap-1 pb-3 border-b-2 border-gray-100 focus-within:border-red-500 transition-colors">
+              <span className="text-2xl font-bold text-gray-400">¥</span>
               <input
                 type="number"
                 value={amount}
@@ -297,12 +297,13 @@ const BalanceWithdraw: React.FC = () => {
                   }
                   clearSubmitError();
                 }}
-                placeholder="0.00"
-                className="flex-1 text-4xl font-black text-gray-900 bg-transparent outline-none placeholder:text-gray-200 font-[DINAlternate-Bold]"
+                placeholder="0"
+                className="flex-1 text-[36px] font-bold text-gray-900 bg-transparent outline-none placeholder:text-gray-200 font-[DINAlternate-Bold] leading-tight"
+                style={{ fontSize: '36px' }}
               />
               <button
                 onClick={() => setAmount(balance)}
-                className="text-xs font-bold text-orange-600 px-2 py-1 bg-orange-50 rounded-md"
+                className="text-xs font-bold text-red-600 px-3 py-1.5 bg-red-50 rounded-lg whitespace-nowrap"
               >
                 全部
               </button>
@@ -321,7 +322,7 @@ const BalanceWithdraw: React.FC = () => {
       {/* Account Selection */}
       <div className="px-5 flex-1 space-y-4">
         <h2 className="text-sm font-bold text-gray-900 flex items-center gap-2">
-          <span className="w-1 h-4 bg-orange-500 rounded-full"></span>
+          <span className="w-1 h-4 bg-red-600 rounded-full"></span>
           收款账户
         </h2>
 
@@ -330,7 +331,7 @@ const BalanceWithdraw: React.FC = () => {
           className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex items-center justify-between active:scale-[0.99] transition-transform cursor-pointer"
         >
           <div className="flex items-center gap-3">
-            <div className={`w-10 h-10 rounded-full flex items-center justify-center ${selectedAccount ? 'bg-orange-50 text-orange-600' : 'bg-gray-100 text-gray-400'}`}>
+            <div className={`w-10 h-10 rounded-full flex items-center justify-center ${selectedAccount ? 'bg-red-50 text-red-600' : 'bg-gray-100 text-gray-400'}`}>
               <CreditCard size={20} />
             </div>
             <div>
@@ -370,7 +371,7 @@ const BalanceWithdraw: React.FC = () => {
       <div className="p-5 safe-area-bottom bg-white/80 backdrop-blur border-t border-gray-100">
         <button
           onClick={handleWithdrawClick}
-          className="w-full py-4 rounded-xl bg-gradient-to-r from-[#FF6B35] to-[#FF9F2E] text-white font-bold text-lg shadow-lg shadow-orange-200 active:scale-[0.98] transition-transform flex items-center justify-center gap-2 disabled:opacity-50 disabled:shadow-none"
+          className="w-full py-4 rounded-xl bg-gradient-to-r from-red-600 to-red-500 text-white font-bold text-lg shadow-lg shadow-red-200 active:scale-[0.98] transition-transform flex items-center justify-center gap-2 disabled:opacity-50 disabled:shadow-none"
           disabled={submitting}
         >
           {submitting ? '处理中...' : '确认提现资金'}
@@ -397,7 +398,7 @@ const BalanceWithdraw: React.FC = () => {
                   key={acc.id}
                   onClick={() => { setSelectedAccount(acc); setShowAccountModal(false); }}
                   className={`p-4 rounded-xl border flex items-center gap-4 transition-all ${selectedAccount?.id === acc.id
-                    ? 'border-orange-500 bg-orange-50/50 shadow-sm'
+                    ? 'border-red-600 bg-red-50/50 shadow-sm'
                     : 'border-gray-100 bg-white'
                     }`}
                 >
@@ -411,7 +412,7 @@ const BalanceWithdraw: React.FC = () => {
                     </div>
                     <div className="text-xs text-gray-500 mt-0.5">{acc.type_text} • {acc.account}</div>
                   </div>
-                  <div className={`w-5 h-5 rounded-full border flex items-center justify-center ${selectedAccount?.id === acc.id ? 'border-orange-500 bg-orange-500' : 'border-gray-300'}`}>
+                  <div className={`w-5 h-5 rounded-full border flex items-center justify-center ${selectedAccount?.id === acc.id ? 'border-red-600 bg-red-600' : 'border-gray-300'}`}>
                     {selectedAccount?.id === acc.id && <div className="w-2 h-2 bg-white rounded-full" />}
                   </div>
                 </div>
@@ -447,7 +448,7 @@ const BalanceWithdraw: React.FC = () => {
               autoFocus
               value={payPassword}
               onChange={(e) => { setPayPassword(e.target.value); clearSubmitError(); }}
-              className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-center text-lg tracking-[8px] font-bold outline-none focus:border-orange-500 focus:bg-white transition-all mb-4"
+              className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-center text-lg tracking-[8px] font-bold outline-none focus:border-red-600 focus:bg-white transition-all mb-4"
               placeholder="••••••"
               maxLength={6}
             />

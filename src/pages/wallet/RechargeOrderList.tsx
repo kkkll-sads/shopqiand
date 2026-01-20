@@ -103,7 +103,7 @@ const RechargeOrderList: React.FC<RechargeOrderListProps> = ({ onOrderSelect }) 
         switch (status) {
             case 1: return 'text-green-600 bg-green-50 border-green-100';
             case 2: return 'text-red-600 bg-red-50 border-red-100';
-            default: return 'text-orange-600 bg-orange-50 border-orange-100';
+            default: return 'text-red-600 bg-red-50 border-red-100';
         }
     };
 
@@ -149,13 +149,13 @@ const RechargeOrderList: React.FC<RechargeOrderListProps> = ({ onOrderSelect }) 
                             key={String(tab.value)}
                             onClick={() => setActiveTab(tab.value)}
                             className={`flex-1 py-3 text-sm font-medium relative whitespace-nowrap transition-colors ${activeTab === tab.value
-                                ? 'text-orange-600'
+                                ? 'text-red-600'
                                 : 'text-gray-500 hover:text-gray-700'
                                 }`}
                         >
                             {tab.label}
                             {activeTab === tab.value && (
-                                <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-6 h-0.5 bg-orange-500 rounded-full" />
+                                <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-6 h-0.5 bg-red-600 rounded-full" />
                             )}
                         </button>
                     ))}
@@ -194,7 +194,7 @@ const RechargeOrderList: React.FC<RechargeOrderListProps> = ({ onOrderSelect }) 
                         </div>
                         {order.payment_screenshot && (
                             <div className="mt-3 pt-2 border-t border-dashed border-gray-100">
-                                <a href={order.payment_screenshot} target="_blank" rel="noopener noreferrer" className="text-xs text-orange-500 flex items-center gap-1">
+                                <a href={order.payment_screenshot} target="_blank" rel="noopener noreferrer" className="text-xs text-red-600 flex items-center gap-1">
                                     <FileText size={12} /> 查看凭证
                                 </a>
                             </div>

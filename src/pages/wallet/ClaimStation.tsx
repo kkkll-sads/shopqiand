@@ -58,7 +58,7 @@ const ClaimStation: React.FC = () => {
           <button
             onClick={() => setActiveTab('apply')}
             className={`flex-1 py-3 text-center rounded-xl text-base font-bold transition-all duration-300 relative z-10 ${activeTab === 'apply'
-              ? 'bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-md'
+              ? 'bg-gradient-to-r from-red-600 to-red-500 text-white shadow-md'
               : 'text-gray-500 hover:bg-white/50'
               }`}
           >
@@ -67,7 +67,7 @@ const ClaimStation: React.FC = () => {
           <button
             onClick={() => setActiveTab('unlock')}
             className={`flex-1 py-3 text-center rounded-xl text-base font-bold transition-all duration-300 relative z-10 ${activeTab === 'unlock'
-              ? 'bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-md'
+              ? 'bg-gradient-to-r from-red-600 to-red-500 text-white shadow-md'
               : 'text-gray-500 hover:bg-white/50'
               }`}
           >
@@ -79,7 +79,7 @@ const ClaimStation: React.FC = () => {
       <div className="px-4 mt-2 relative z-10">
         {activeTab === 'apply' ? (
           <>
-            <div className="bg-white rounded-2xl p-4 shadow-sm border border-orange-100/50 mb-4 backdrop-blur-sm bg-opacity-80">
+            <div className="bg-white rounded-2xl p-4 shadow-sm border border-red-100/50 mb-4 backdrop-blur-sm bg-opacity-80">
               <ClaimSteps reviewStats={reviewStats} />
             </div>
 

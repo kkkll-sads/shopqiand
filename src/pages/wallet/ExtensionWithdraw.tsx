@@ -22,6 +22,7 @@ import { isSuccess, extractError } from '../../../utils/apiHelpers';
 import { useErrorHandler } from '../../../hooks/useErrorHandler';
 import { useStateMachine } from '../../../hooks/useStateMachine';
 import { FormEvent, FormState, LoadingEvent, LoadingState } from '../../../types/states';
+import { errorLog } from '../../../utils/logger';
 
 const ExtensionWithdraw: React.FC = () => {
   const navigate = useNavigate();
@@ -107,7 +108,7 @@ const ExtensionWithdraw: React.FC = () => {
           useAuthStore.getState().updateUser(response.data.userInfo);
         }
       } catch (err) {
-        console.error('获取用户信息失败:', err);
+        errorLog('ExtensionWithdraw', '获取用户信息失败', err);
       }
     };
 
@@ -281,7 +282,7 @@ const ExtensionWithdraw: React.FC = () => {
                 const val = e.target.value;
                 if (val === '') {
                   setAmount('');
-                  setSubmitError(null);
+                  clearSubmitError();
                   return;
                 }
                 if (!isNaN(parseFloat(val)) && parseFloat(val) >= 0) {
@@ -292,13 +293,13 @@ const ExtensionWithdraw: React.FC = () => {
                   } else {
                     setAmount(val);
                   }
-                  setSubmitError(null);
+                  clearSubmitError();
                 }
               }}
             />
             <button
               onClick={handleSelectAll}
-              className="ml-2 text-sm text-orange-600 font-medium whitespace-nowrap"
+              className="ml-2 text-sm text-red-600 font-medium whitespace-nowrap"
             >
               全部提现
             </button>
@@ -312,7 +313,7 @@ const ExtensionWithdraw: React.FC = () => {
 
         {hasSubmitError && (
           <div className="text-xs text-red-500 bg-red-50 px-3 py-2 rounded">
-            {submitErrorMessage}
+            {submitErrorMessageMessage}
           </div>
         )}
 
@@ -325,7 +326,7 @@ const ExtensionWithdraw: React.FC = () => {
         <button
           onClick={handleWithdrawClick}
           disabled={submitting}
-          className="w-full bg-orange-600 text-white rounded-full py-3.5 text-base font-medium active:bg-orange-700 disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+          className="w-full bg-red-600 text-white rounded-full py-3.5 text-base font-medium active:bg-red-700 disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center justify-center gap-2"
         >
           {submitting ? '提交中...' : '提现'}
         </button>
@@ -358,7 +359,7 @@ const ExtensionWithdraw: React.FC = () => {
               <div className="text-center py-8 space-y-3">
                 <div className="text-gray-400 text-sm">暂无绑定的收款账户</div>
                 <button
-                  className="text-sm text-orange-600 bg-orange-50 px-4 py-2 rounded-lg"
+                  className="text-sm text-red-600 bg-red-50 px-4 py-2 rounded-lg"
                   onClick={() => {
                     setShowAccountModal(false);
                     navigate('/card-management');
@@ -376,7 +377,7 @@ const ExtensionWithdraw: React.FC = () => {
                   return (
                     <div
                       key={item.id}
-                      className={`border rounded-lg p-3 cursor-pointer transition-colors ${isSelected ? 'border-orange-500 bg-orange-50' : 'border-gray-100 bg-gray-50'
+                      className={`border rounded-lg p-3 cursor-pointer transition-colors ${isSelected ? 'border-red-500 bg-red-50' : 'border-gray-100 bg-gray-50'
                         }`}
                       onClick={() => {
                         setSelectedAccount(item);
@@ -387,7 +388,7 @@ const ExtensionWithdraw: React.FC = () => {
                         <span className="text-sm font-medium text-gray-800">
                           {item.account_name || item.type_text}
                         </span>
-                        <span className="text-xs text-orange-600">{item.type_text}</span>
+                        <span className="text-xs text-red-600">{item.type_text}</span>
                       </div>
                       <div className="text-xs text-gray-600">{item.account}</div>
                     </div>
@@ -395,7 +396,7 @@ const ExtensionWithdraw: React.FC = () => {
                 })}
 
                 <button
-                  className="w-full text-center text-sm text-orange-600 py-2"
+                  className="w-full text-center text-sm text-red-600 py-2"
                   onClick={() => {
                     setShowAccountModal(false);
                     navigate('/card-management');
@@ -446,32 +447,32 @@ const ExtensionWithdraw: React.FC = () => {
                 placeholder="请输入备注信息"
                 value={remark}
                 onChange={(e) => setRemark(e.target.value)}
-                className="w-full border rounded-lg px-3 py-2 bg-gray-50 text-base outline-none focus:border-orange-500"
+                className="w-full border rounded-lg px-3 py-2 bg-gray-50 text-base outline-none focus:border-red-500"
               />
             </div>
 
             <input
               type="password"
               placeholder="请输入支付密码"
-              className="w-full border border-gray-200 rounded-lg px-4 py-3 text-base outline-none focus:border-orange-500 mb-4"
+              className="w-full border border-gray-200 rounded-lg px-4 py-3 text-base outline-none focus:border-red-500 mb-4"
               value={payPassword}
               onChange={(e) => {
                 setPayPassword(e.target.value);
-                setSubmitError(null);
+                clearSubmitError();
               }}
               autoFocus
             />
 
             {hasSubmitError && (
               <div className="text-xs text-red-500 bg-red-50 px-3 py-2 rounded mb-4">
-                {submitErrorMessage}
+                {submitErrorMessageMessage}
               </div>
             )}
 
             <button
               className={`w-full rounded-lg py-3 text-base font-medium ${submitting
                 ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
-                : 'bg-orange-500 text-white active:bg-orange-600'
+                : 'bg-red-600 text-white active:bg-red-700'
                 }`}
               onClick={handleConfirmWithdraw}
               disabled={submitting}

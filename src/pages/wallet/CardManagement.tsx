@@ -100,6 +100,7 @@ const CardManagement: React.FC = () => {
         [FormEvent.SUBMIT]: FormState.SUBMITTING,
         [FormEvent.RESET]: FormState.IDLE,
       },
+      [FormState.VALIDATING]: {},
     },
   });
   const formLoading = formMachine.state === FormState.SUBMITTING;
@@ -176,7 +177,7 @@ const CardManagement: React.FC = () => {
         className="bg-white rounded-lg px-4 py-3 shadow-sm border border-gray-100 flex items-center justify-between"
       >
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-full bg-orange-50 flex items-center justify-center text-orange-500">
+          <div className="w-9 h-9 rounded-full bg-red-50 flex items-center justify-center text-red-600">
             <CreditCard size={18} strokeWidth={1.7} />
           </div>
           <div className="flex flex-col">
@@ -185,7 +186,7 @@ const CardManagement: React.FC = () => {
                 {typeText}
               </span>
               {isDefault && (
-                <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-orange-50 text-orange-500 border border-orange-100">
+                <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-red-50 text-red-600 border border-red-100">
                   默认
                 </span>
               )}
@@ -205,7 +206,7 @@ const CardManagement: React.FC = () => {
         <div className="flex items-center gap-1.5">
           <button
             type="button"
-            className="p-1.5 rounded-full text-gray-400 hover:text-orange-500 hover:bg-orange-50 active:opacity-80"
+            className="p-1.5 rounded-full text-gray-400 hover:text-red-600 hover:bg-red-50 active:opacity-80"
             onClick={() => {
               if (!id) {
                 showToast('error', '操作失败', '该账户缺少 ID，无法编辑');
@@ -393,7 +394,7 @@ const CardManagement: React.FC = () => {
                 key={opt.value}
                 type="button"
                 className={`py-2 px-4 rounded-lg text-sm font-medium transition-all ${active
-                  ? 'bg-orange-50 text-orange-600 border-orange-200 border'
+                  ? 'bg-red-50 text-red-600 border-red-200 border'
                   : 'bg-gray-50 text-gray-600 border border-transparent'
                   }`}
                 onClick={() => handleFormInputChange('type', opt.value)}
@@ -480,7 +481,7 @@ const CardManagement: React.FC = () => {
               checked={formValues.is_default}
               onChange={(e) => handleFormInputChange('is_default', e.target.checked)}
             />
-            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-orange-500"></div>
+            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-red-600"></div>
           </div>
         </label>
       )}
@@ -494,7 +495,7 @@ const CardManagement: React.FC = () => {
       <button
         type="submit"
         disabled={formLoading}
-        className="w-full bg-gradient-to-r from-[#FF6B35] to-[#FF9F2E] text-white text-base font-bold py-3.5 rounded-full shadow-lg shadow-orange-200 active:scale-[0.98] transition-transform disabled:opacity-60 disabled:cursor-not-allowed mt-8 mb-8"
+        className="w-full bg-gradient-to-r from-red-600 to-red-500 text-white text-base font-bold py-3.5 rounded-full shadow-lg shadow-red-200 active:scale-[0.98] transition-transform disabled:opacity-60 disabled:cursor-not-allowed mt-8 mb-8"
       >
         {formLoading ? '提交中...' : '提交保存'}
       </button>
@@ -560,7 +561,7 @@ const CardManagement: React.FC = () => {
         <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-gray-100 pb-safe max-w-md mx-auto">
           <button
             type="button"
-            className="w-full bg-gradient-to-r from-[#FF6B35] to-[#FF9F2E] text-white font-bold py-3.5 rounded-xl flex items-center justify-center gap-2 active:scale-[0.98] transition-transform shadow-lg shadow-orange-200"
+            className="w-full bg-gradient-to-r from-red-600 to-red-500 text-white font-bold py-3.5 rounded-xl flex items-center justify-center gap-2 active:scale-[0.98] transition-transform shadow-lg shadow-red-200"
             onClick={() => {
               setMode('add');
               setNotice(null);

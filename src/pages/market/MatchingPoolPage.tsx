@@ -20,6 +20,7 @@ import { useNotification } from '../../../context/NotificationContext';
 import { isSuccess, extractError } from '../../../utils/apiHelpers';
 import { useStateMachine } from '../../../hooks/useStateMachine';
 import { LoadingEvent, LoadingState } from '../../../types/states';
+import { errorLog } from '../../../utils/logger';
 
 // 状态显示配置
 const STATUS_CONFIG: Record<MatchingPoolStatus, {
@@ -114,7 +115,7 @@ const MatchingPoolPage: React.FC = () => {
                 loadMachine.send(LoadingEvent.ERROR);
             }
         } catch (err: any) {
-            console.error('加载撮合池列表失败:', err);
+            errorLog('MatchingPoolPage', '加载撮合池列表失败', err);
             setError(err?.msg || '网络连接异常');
             loadMachine.send(LoadingEvent.ERROR);
         } finally {
@@ -149,7 +150,7 @@ const MatchingPoolPage: React.FC = () => {
                 showToast(extractError(response, '取消失败'), 'error');
             }
         } catch (err: any) {
-            console.error('取消竞价失败:', err);
+            errorLog('MatchingPoolPage', '取消竞价失败', err);
             showToast(err?.msg || '操作失败', 'error');
         } finally {
             setCancellingId(null);
