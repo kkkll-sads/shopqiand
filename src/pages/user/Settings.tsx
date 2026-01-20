@@ -18,6 +18,7 @@ import { UserInfo } from '../../../types';
 import { formatPhone } from '../../../utils/format';
 import { AppVersionInfo } from '../../../services/app';
 import { APP_VERSION } from '../../../constants';
+import { extractData, extractError } from '../../../utils/apiHelpers';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../stores/authStore';
 
@@ -94,11 +95,11 @@ const Settings: React.FC = () => {
   };
 
   return (
-    <PageContainer title="设置" onBack={() => navigate(-1)} bgColor="bg-gray-100" padding={false}>
+    <PageContainer title="设置" onBack={() => navigate(-1)} bgColor="bg-gray-50" padding={false}>
       {/* 用户信息卡片 */}
       <div className="bg-white mt-2 px-4 py-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="w-11 h-11 rounded-full bg-yellow-200 flex items-center justify-center text-lg font-bold text-yellow-700 overflow-hidden">
+          <div className="w-12 h-12 rounded-full bg-orange-100 flex items-center justify-center text-lg font-bold text-orange-600 overflow-hidden">
             {displayAvatarUrl ? (
               <img src={displayAvatarUrl} alt="用户头像" className="w-full h-full object-cover" />
             ) : (
@@ -106,14 +107,14 @@ const Settings: React.FC = () => {
             )}
           </div>
           <div className="flex flex-col">
-            <span className="text-sm font-medium text-gray-900">{displayName}</span>
+            <span className="text-sm font-bold text-gray-900">{displayName}</span>
             {displayMobile && displayMobile !== '-' && (
               <span className="text-xs text-gray-400 mt-0.5">手机号：{displayMobile}</span>
             )}
           </div>
         </div>
         <button
-          className="flex items-center text-xs text-gray-500 active:opacity-70"
+          className="flex items-center text-xs text-orange-500 font-medium active:opacity-70"
           onClick={() => navigate('/edit-profile')}
         >
           编辑
@@ -123,22 +124,10 @@ const Settings: React.FC = () => {
 
       {/* 设置列表 */}
       <div className="mt-3 bg-white">
-        <ListItem
-          title="重置登录密码"
-          onClick={() => navigate('/reset-login-password')}
-        />
-        <ListItem
-          title="重置支付密码"
-          onClick={() => navigate('/reset-pay-password')}
-        />
-        <ListItem
-          title="新消息通知"
-          onClick={() => navigate('/notification-settings')}
-        />
-        <ListItem
-          title="账户注销"
-          onClick={() => navigate('/account-deletion')}
-        />
+        <ListItem title="重置登录密码" onClick={() => navigate('/reset-login-password')} />
+        <ListItem title="重置支付密码" onClick={() => navigate('/reset-pay-password')} />
+        <ListItem title="新消息通知" onClick={() => navigate('/notification-settings')} />
+        <ListItem title="账户注销" onClick={() => navigate('/account-deletion')} />
       </div>
 
       {/* 版本和政策 */}
@@ -148,26 +137,20 @@ const Settings: React.FC = () => {
           extra={
             <div className="flex items-center gap-2">
               <span className="text-gray-400 text-xs">{APP_VERSION}</span>
-              {isCheckingUpdate && <RefreshCw size={14} className="text-gray-400 animate-spin" />}
+              {isCheckingUpdate && <RefreshCw size={14} className="text-orange-500 animate-spin" />}
             </div>
           }
           onClick={handleCheckUpdate}
           arrow={!isCheckingUpdate}
         />
-        <ListItem
-          title="隐私政策"
-          onClick={() => navigate('/privacy-policy')}
-        />
-        <ListItem
-          title="关于我们"
-          onClick={() => navigate('/about-us')}
-        />
+        <ListItem title="隐私政策" onClick={() => navigate('/privacy-policy')} />
+        <ListItem title="关于我们" onClick={() => navigate('/about-us')} />
       </div>
 
       {/* 退出登录按钮 */}
       <div className="mt-8 px-4">
         <button
-          className="w-full bg-orange-500 text-white text-sm font-semibold py-3 rounded-md active:opacity-80 shadow-sm"
+          className="w-full bg-gradient-to-r from-orange-500 to-orange-600 text-white text-sm font-bold py-3 rounded-xl active:scale-[0.98] transition-all shadow-lg shadow-orange-200"
           onClick={handleLogout}
         >
           退出登录

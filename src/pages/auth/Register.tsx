@@ -262,26 +262,26 @@ const Register: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col px-6 pt-8 pb-safe bg-gradient-to-br from-[#FFD6A5] via-[#FFC3A0] to-[#FFDEE9]">
+    <div className="min-h-screen flex flex-col px-5 pt-6 pb-safe bg-gradient-to-b from-orange-50 via-white to-gray-50">
       {/* 顶部导航 */}
-      <div className="flex items-center mb-8 relative">
+      <div className="flex items-center mb-6 relative">
         <button onClick={() => navigate(-1)} className="absolute left-0 -ml-2 p-2">
-          <ChevronLeft size={24} className="text-gray-800" />
+          <ChevronLeft size={24} className="text-gray-700" />
         </button>
         <h1 className="text-lg font-bold text-gray-900 w-full text-center">注册</h1>
       </div>
 
       {/* 标题 */}
-      <div className="mb-8">
-        <h2 className="text-3xl font-bold text-gray-800 mb-2">Hello!</h2>
-        <h3 className="text-xl font-bold text-gray-700">欢迎注册树交所</h3>
+      <div className="mb-6">
+        <h2 className="text-2xl font-black text-gray-900 mb-1">Hello!</h2>
+        <h3 className="text-base font-bold text-gray-600">欢迎注册树交所</h3>
       </div>
 
       {/* 表单 */}
-      <div className="space-y-4 mb-8">
+      <div className="space-y-3 mb-6">
         {/* 邀请码 */}
-        <div className="bg-white rounded-lg flex items-center px-4 py-3 shadow-sm">
-          <User className="text-gray-500 mr-3" size={20} />
+        <div className="bg-white rounded-xl flex items-center px-4 py-3 border border-gray-100 shadow-sm focus-within:border-orange-200 focus-within:ring-2 focus-within:ring-orange-100 transition-all">
+          <User className="text-gray-400 mr-3" size={20} />
           <input
             type="text"
             value={inviteCode}
@@ -297,8 +297,8 @@ const Register: React.FC = () => {
         </div>
 
         {/* 手机号 */}
-        <div className="bg-white rounded-lg flex items-center px-4 py-3 shadow-sm">
-          <Smartphone className="text-gray-500 mr-3" size={20} />
+        <div className="bg-white rounded-xl flex items-center px-4 py-3 border border-gray-100 shadow-sm focus-within:border-orange-200 focus-within:ring-2 focus-within:ring-orange-100 transition-all">
+          <Smartphone className="text-gray-400 mr-3" size={20} />
           <input
             type="tel"
             placeholder="请输入手机号"
@@ -309,8 +309,8 @@ const Register: React.FC = () => {
         </div>
 
         {/* 登录密码 */}
-        <div className="bg-white rounded-lg flex items-center px-4 py-3 shadow-sm">
-          <Lock className="text-gray-500 mr-3" size={20} />
+        <div className="bg-white rounded-xl flex items-center px-4 py-3 border border-gray-100 shadow-sm focus-within:border-orange-200 focus-within:ring-2 focus-within:ring-orange-100 transition-all">
+          <Lock className="text-gray-400 mr-3" size={20} />
           <input
             type={showPassword ? 'text' : 'password'}
             placeholder="设置登录密码"
@@ -318,18 +318,14 @@ const Register: React.FC = () => {
             onChange={(e) => setPassword(e.target.value)}
             className="flex-1 text-base outline-none placeholder-gray-400 bg-transparent text-gray-800"
           />
-          <button
-            type="button"
-            onClick={() => setShowPassword(!showPassword)}
-            className="ml-2 text-gray-400 focus:outline-none"
-          >
+          <button type="button" onClick={() => setShowPassword(!showPassword)} className="ml-2 text-gray-400">
             {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
           </button>
         </div>
 
         {/* 支付密码 */}
-        <div className="bg-white rounded-lg flex items-center px-4 py-3 shadow-sm">
-          <CreditCard className="text-gray-500 mr-3" size={20} />
+        <div className="bg-white rounded-xl flex items-center px-4 py-3 border border-gray-100 shadow-sm focus-within:border-orange-200 focus-within:ring-2 focus-within:ring-orange-100 transition-all">
+          <CreditCard className="text-gray-400 mr-3" size={20} />
           <input
             type={showPayPassword ? 'text' : 'password'}
             placeholder="设置支付密码 (6位数字)"
@@ -337,18 +333,14 @@ const Register: React.FC = () => {
             onChange={(e) => setPayPassword(e.target.value)}
             className="flex-1 text-base outline-none placeholder-gray-400 bg-transparent text-gray-800"
           />
-          <button
-            type="button"
-            onClick={() => setShowPayPassword(!showPayPassword)}
-            className="ml-2 text-gray-400 focus:outline-none"
-          >
+          <button type="button" onClick={() => setShowPayPassword(!showPayPassword)} className="ml-2 text-gray-400">
             {showPayPassword ? <EyeOff size={20} /> : <Eye size={20} />}
           </button>
         </div>
 
         {/* 验证码 */}
-        <div className="bg-white rounded-lg flex items-center px-4 py-3 shadow-sm">
-          <ShieldCheck className="text-gray-500 mr-3" size={20} />
+        <div className="bg-white rounded-xl flex items-center px-4 py-3 border border-gray-100 shadow-sm focus-within:border-orange-200 focus-within:ring-2 focus-within:ring-orange-100 transition-all">
+          <ShieldCheck className="text-gray-400 mr-3" size={20} />
           <input
             type="text"
             placeholder="请输入验证码"
@@ -367,47 +359,36 @@ const Register: React.FC = () => {
       </div>
 
       {/* 提交按钮 */}
-      <div className="mb-6">
-        <button
-          onClick={handleRegister}
-          disabled={loading}
-          className="w-full bg-gradient-to-r from-[#FF9966] to-[#FF5E62] text-white font-bold py-3.5 rounded-full shadow-lg shadow-orange-200 active:scale-[0.98] transition-all text-lg tracking-wide disabled:opacity-70 disabled:cursor-not-allowed"
-        >
-          {loading ? '注册中...' : '完成并登录'}
-        </button>
-      </div>
+      <button
+        onClick={handleRegister}
+        disabled={loading}
+        className="w-full bg-gradient-to-r from-orange-500 to-orange-600 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-orange-200 active:scale-[0.98] transition-all text-base mb-4 disabled:opacity-70 disabled:cursor-not-allowed"
+      >
+        {loading ? '注册中...' : '完成并登录'}
+      </button>
 
       {/* 协议 */}
-      <div className="flex items-center justify-center gap-2 text-xs text-gray-600 mb-8">
+      <div className="flex items-center justify-center gap-2 text-xs text-gray-500 mb-6">
         <div
-          className={`w-4 h-4 rounded border flex-shrink-0 flex items-center justify-center cursor-pointer transition-colors ${agreed ? 'bg-orange-500 border-orange-500' : 'border-gray-400 bg-transparent'}`}
+          className={`w-4 h-4 rounded border flex-shrink-0 flex items-center justify-center cursor-pointer transition-colors ${agreed ? 'bg-orange-500 border-orange-500' : 'border-gray-300 bg-white'}`}
           onClick={() => setAgreed(!agreed)}
         >
-          {agreed && <Check size={12} className="text-white" />}
+          {agreed && <Check size={10} className="text-white" />}
         </div>
-        <div className="leading-none flex items-center flex-wrap">
+        <div className="leading-relaxed flex items-center flex-wrap">
           <span>阅读并同意</span>
-          <button
-            type="button"
-            className="text-orange-500 mx-0.5"
-            onClick={() => navigate('/user-agreement')}
-          >
-            《用户协议》
-          </button>
+          <button type="button" className="text-orange-500 mx-0.5" onClick={() => navigate('/user-agreement')}>《用户协议》</button>
           <span>及</span>
-          <button
-            type="button"
-            className="text-orange-500 mx-0.5"
-            onClick={() => navigate('/privacy-policy')}
-          >
-            《隐私政策》
-          </button>
+          <button type="button" className="text-orange-500 mx-0.5" onClick={() => navigate('/privacy-policy')}>《隐私政策》</button>
         </div>
       </div>
 
-      {/* 下载APP链接 */}
-      <div className="text-center pb-4 mt-auto">
-        <button className="text-orange-600 text-sm font-medium">点击下载APP</button>
+      {/* 登录链接 */}
+      <div className="mt-auto text-center pb-4 flex items-center justify-center gap-1 text-sm">
+        <span className="text-gray-500">已有账户？</span>
+        <button onClick={() => navigate('/login')} className="text-orange-500 font-medium">
+          立即登录
+        </button>
       </div>
 
       {/* 注册须知公告弹窗 */}

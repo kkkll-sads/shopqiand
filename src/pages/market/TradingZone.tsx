@@ -696,21 +696,22 @@ const TradingZone: React.FC<TradingZoneProps> = ({
 
     // 2. 列表页渲染 (主界面)
     return (
-        <div className="min-h-screen bg-[#F8F9FA] text-gray-900 font-sans pb-safe">
+        <div className="min-h-screen bg-gradient-to-br from-amber-50/50 via-white to-orange-50/30 text-gray-900 font-sans pb-safe">
             {/* 顶部背景渐变 */}
-            <div className="absolute top-0 left-0 right-0 h-64 bg-gradient-to-b from-[#FFE4C4] via-[#FFF0E0] to-[#F8F9FA] z-0" />
+            <div className="absolute top-0 left-0 right-0 h-72 bg-gradient-to-br from-orange-500 via-amber-500 to-yellow-500 opacity-90 z-0" />
+            <div className="absolute top-0 left-0 right-0 h-72 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-white/20 via-transparent to-transparent z-0" />
 
             {/* 顶部导航区 */}
             <div className="relative z-10 px-5 pt-4 pb-2 flex justify-between items-center">
                 <div className="flex items-center gap-3">
-                    <button type="button" onClick={handleBack} className="p-2 -ml-2 text-gray-700 active:bg-black/5 rounded-full transition-colors">
-                        <ArrowLeft size={24} />
+                    <button type="button" onClick={handleBack} className="p-2.5 -ml-2 bg-white/20 backdrop-blur-sm hover:bg-white/30 rounded-full transition-all active:scale-95">
+                        <ArrowLeft size={22} className="text-white" />
                     </button>
-                    <h1 className="font-bold text-xl text-gray-900 tracking-tight">资产交易</h1>
+                    <h1 className="font-bold text-xl text-white tracking-tight drop-shadow-sm">资产交易</h1>
                 </div>
-                <div className="flex items-center gap-1.5 bg-white/90 backdrop-blur px-3 py-1.5 rounded-full shadow-sm border border-white/60">
-                    <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse ring-4 ring-green-100"></div>
-                    <span className="text-xs font-bold text-gray-700 font-sans tracking-wide">LIVE</span>
+                <div className="flex items-center gap-2 bg-white/90 backdrop-blur-xl px-4 py-2 rounded-full shadow-lg border border-white/50">
+                    <div className="w-2.5 h-2.5 rounded-full bg-gradient-to-r from-green-400 to-emerald-500 animate-pulse shadow-lg shadow-green-500/50"></div>
+                    <span className="text-xs font-bold text-gray-700 tracking-wide">实时交易</span>
                 </div>
             </div>
 

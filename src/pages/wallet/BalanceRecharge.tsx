@@ -679,7 +679,7 @@ const BalanceRecharge: React.FC<BalanceRechargeProps> = ({ initialAmount }) => {
             onClick={handleTransfer}
             disabled={!transferAmount || transferring}
             className={`w-full py-3 rounded-xl font-bold text-base transition-all flex items-center justify-center gap-2 ${transferAmount && !transferring
-              ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg shadow-blue-200 active:scale-[0.98]'
+              ? 'bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-lg shadow-orange-200 active:scale-[0.98]'
               : 'bg-gray-200 text-gray-400 cursor-not-allowed shadow-none'
               }`}
           >

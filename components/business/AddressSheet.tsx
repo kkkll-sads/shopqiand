@@ -4,8 +4,11 @@
  * 展示配送信息、当前位置、收货地址列表
  * 参考京东商品详情页地址选择弹窗设计
  */
-import React, { useState } from 'react';
-import { MapPin, Clock, Truck, Package, Home, ChevronRight, Plus, Check } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { MapPin, Clock, Truck, Package, Home, ChevronRight, Plus, Check, Loader2 } from 'lucide-react';
+import { fetchAddressList, AddressItem } from '../../services/api';
+import { getStoredToken } from '../../services/client';
+import { isSuccess } from '../../utils/apiHelpers';
 
 interface Address {
   id: string;
@@ -21,7 +24,7 @@ interface Address {
 interface AddressSheetProps {
   /** 当前选中的地址ID */
   selectedAddressId?: string;
-  /** 地址列表 */
+  /** 地址列表（外部传入，优先使用） */
   addresses?: Address[];
   /** 选择地址回调 */
   onSelectAddress?: (address: Address) => void;
@@ -29,47 +32,68 @@ interface AddressSheetProps {
   onAddAddress?: () => void;
 }
 
-// 模拟地址数据
-const mockAddresses: Address[] = [
-  {
-    id: '1',
-    name: '张三',
-    phone: '19526683014',
-    province: '广东',
-    city: '茂名市',
-    district: '化州市',
-    detail: '上佳脆香大锅狗(化州市商业园店) 上街脆香大锅狗',
-    isDefault: true,
-  },
-  {
-    id: '2',
-    name: '宋手',
-    phone: '17876199586',
-    province: '广东',
-    city: '湛江市',
-    district: '遂溪县',
-    detail: '七村仔',
-    isDefault: false,
-  },
-  {
-    id: '3',
-    name: '吴梓鑫',
-    phone: '13692503887',
-    province: '广东',
-    city: '茂名市',
-    district: '化州市',
-    detail: '黑水塘丽珠三路F4',
-    isDefault: false,
-  },
-];
+// 转换API地址数据为组件格式
+const adaptAddress = (item: AddressItem): Address => ({
+  id: String(item.id),
+  name: item.name,
+  phone: item.phone,
+  province: item.province,
+  city: item.city,
+  district: item.area || item.district || '',
+  detail: item.detail || item.address || '',
+  isDefault: item.is_default === 1,
+});
 
 const AddressSheet: React.FC<AddressSheetProps> = ({
   selectedAddressId,
-  addresses = mockAddresses,
+  addresses: externalAddresses,
   onSelectAddress,
   onAddAddress,
 }) => {
-  const [selected, setSelected] = useState(selectedAddressId || addresses[0]?.id);
+  const [addresses, setAddresses] = useState<Address[]>(externalAddresses || []);
+  const [selected, setSelected] = useState(selectedAddressId || '');
+  const [loading, setLoading] = useState(!externalAddresses);
+
+  // 加载地址列表
+  useEffect(() => {
+    if (externalAddresses) {
+      setAddresses(externalAddresses);
+      if (!selected && externalAddresses.length > 0) {
+        const defaultAddr = externalAddresses.find(a => a.isDefault) || externalAddresses[0];
+        setSelected(defaultAddr.id);
+      }
+      return;
+    }
+
+    const loadAddresses = async () => {
+      try {
+        const token = getStoredToken();
+        if (!token) {
+          setLoading(false);
+          return;
+        }
+
+        const response = await fetchAddressList(token);
+        if (isSuccess(response) && response.data) {
+          const list = Array.isArray(response.data) ? response.data : response.data.list || [];
+          const adaptedList = list.map(adaptAddress);
+          setAddresses(adaptedList);
+          
+          // 设置默认选中
+          if (adaptedList.length > 0) {
+            const defaultAddr = adaptedList.find(a => a.isDefault) || adaptedList[0];
+            setSelected(defaultAddr.id);
+          }
+        }
+      } catch (error) {
+        console.error('加载地址列表失败:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadAddresses();
+  }, [externalAddresses, selected]);
 
   const handleSelect = (address: Address) => {
     setSelected(address.id);
@@ -80,6 +104,9 @@ const AddressSheet: React.FC<AddressSheetProps> = ({
   const tomorrow = new Date();
   tomorrow.setDate(tomorrow.getDate() + 1);
   const tomorrowStr = `${tomorrow.getMonth() + 1}月${tomorrow.getDate()}日`;
+
+  // 获取当前选中的地址
+  const currentAddress = addresses.find(a => a.id === selected) || addresses[0];
 
   return (
     <div className="pb-6">
@@ -115,64 +142,71 @@ const AddressSheet: React.FC<AddressSheetProps> = ({
       </div>
 
       {/* 当前使用位置 */}
-      <div className="px-4 py-3 border-b border-gray-100">
-        <div className="flex items-center justify-between">
-          <div>
-            <div className="text-xs text-gray-400 mb-1">当前使用位置</div>
-            <div className="text-sm font-medium text-gray-800">
-              上佳脆香大锅狗(化州市商业园店)
+      {currentAddress && (
+        <div className="px-4 py-3 border-b border-gray-100">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-xs text-gray-400 mb-1">当前使用位置</div>
+              <div className="text-sm font-medium text-gray-800">
+                {currentAddress.city} {currentAddress.district} {currentAddress.detail}
+              </div>
             </div>
+            <button className="text-blue-500 text-xs flex items-center gap-1">
+              <MapPin size={12} />
+              重新定位
+            </button>
           </div>
-          <button className="text-blue-500 text-xs flex items-center gap-1">
-            <MapPin size={12} />
-            重新定位
-          </button>
         </div>
-      </div>
+      )}
+
+      {/* 加载状态 */}
+      {loading && (
+        <div className="py-12 flex items-center justify-center text-gray-400">
+          <Loader2 size={24} className="animate-spin mr-2" />
+          加载中...
+        </div>
+      )}
+
+      {/* 空状态 */}
+      {!loading && addresses.length === 0 && (
+        <div className="py-12 text-center text-gray-400">
+          <MapPin size={48} className="mx-auto mb-3 text-gray-300" />
+          <div>暂无收货地址</div>
+        </div>
+      )}
 
       {/* 地址列表 */}
-      <div className="divide-y divide-gray-100">
-        {addresses.map(address => (
-          <div
-            key={address.id}
-            className="px-4 py-4 active:bg-gray-50"
-            onClick={() => handleSelect(address)}
-          >
-            <div className="flex items-start gap-3">
-              <div className="flex-1">
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="font-medium text-gray-800">{address.name}</span>
-                  <span className="text-gray-600">{address.phone}</span>
-                  {selected === address.id && (
-                    <Check size={16} className="text-red-500" />
-                  )}
-                </div>
-                <div className="text-sm text-gray-500 leading-relaxed">
-                  {address.province} {address.city} {address.district} {address.detail}
-                </div>
-                <div className="flex items-center gap-4 mt-2">
-                  <label className="flex items-center gap-1.5 text-xs text-gray-500">
-                    <input
-                      type="checkbox"
-                      checked={address.isDefault}
-                      readOnly
-                      className="w-3.5 h-3.5 rounded border-gray-300"
-                    />
-                    设为购物默认
-                  </label>
-                  <div className="flex items-center gap-3 text-xs text-gray-400">
-                    <button>删除</button>
-                    <span>|</span>
-                    <button>复制</button>
-                    <span>|</span>
-                    <button>修改</button>
+      {!loading && addresses.length > 0 && (
+        <div className="divide-y divide-gray-100">
+          {addresses.map(address => (
+            <div
+              key={address.id}
+              className="px-4 py-4 active:bg-gray-50 cursor-pointer"
+              onClick={() => handleSelect(address)}
+            >
+              <div className="flex items-start gap-3">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="font-medium text-gray-800">{address.name}</span>
+                    <span className="text-gray-600">{address.phone}</span>
+                    {selected === address.id && (
+                      <Check size={16} className="text-red-500" />
+                    )}
                   </div>
+                  <div className="text-sm text-gray-500 leading-relaxed">
+                    {address.province} {address.city} {address.district} {address.detail}
+                  </div>
+                  {address.isDefault && (
+                    <span className="inline-block mt-1 text-[10px] text-red-500 bg-red-50 px-1.5 py-0.5 rounded">
+                      默认地址
+                    </span>
+                  )}
                 </div>
               </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
 
       {/* 新增地址按钮 */}
       <div className="px-4 pt-4">

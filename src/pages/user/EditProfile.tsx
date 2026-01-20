@@ -24,8 +24,9 @@ import { useNavigate } from 'react-router-dom';
 const EditProfile: React.FC = () => {
   const navigate = useNavigate();
   const { showToast } = useNotification();
-  // 从 authStore 获取用户信息
+  // 从 authStore 获取用户信息和登出方法
   const cachedUser = useAuthStore((state) => state.user);
+  const logout = useAuthStore((state) => state.logout);
 
   const [userInfo, setUserInfo] = useState<UserInfo | null>(cachedUser);
   const [nickname, setNickname] = useState<string>(cachedUser?.nickname || cachedUser?.username || '');
@@ -197,7 +198,10 @@ const EditProfile: React.FC = () => {
         </button>
         <button
           className="w-full bg-white text-orange-500 border border-orange-400 text-sm font-semibold py-3 rounded-md active:bg-orange-50"
-          onClick={onLogout}
+          onClick={() => {
+            logout();
+            navigate('/login', { replace: true });
+          }}
         >
           退出登录
         </button>

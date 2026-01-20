@@ -22,7 +22,7 @@ import {
   ShopOrderItem,
 } from '../services/api';
 import { getStoredToken } from '../services/client';
-import { isSuccess, extractData, extractError } from '../utils/apiHelpers';
+import { isSuccess as checkApiSuccess, extractData, extractError } from '../utils/apiHelpers';
 import { CashierState, CashierEvent } from '../types/states';
 
 /**
@@ -201,7 +201,7 @@ export function useCashier(orderId: string): UseCashierReturn {
       const token = getStoredToken() || '';
       const res = await payOrder({ id: orderId, token });
 
-      if (isSuccess(res)) {
+      if (checkApiSuccess(res)) {
         send(CashierEvent.PAY_SUCCESS);
         showToast('success', extractError(res, '支付成功'));
       } else {

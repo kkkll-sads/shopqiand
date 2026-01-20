@@ -96,13 +96,16 @@ const Market: React.FC<MarketProps> = ({ onProductSelect }) => {
     title: item.name,
     // 暂无艺术家字段，用分类占位，避免界面空白
     artist: item.category || '消费金商品',
-    // 人民币价格
-    price: item.price || 0,
+    // 人民币价格 - 确保转换为数字
+    price: Number(item.price) || 0,
     image: normalizeAssetUrl(item.thumbnail),
     category: item.category || '其他',
     productType: 'shop', // 标记为消费金商城商品
-    // 消费金价格（整数）
-    score_price: item.score_price,
+    // 消费金价格（整数）- 确保转换为数字
+    score_price: Number(item.score_price) || 0,
+    // 绿色能量和余额可用金额
+    green_power_amount: Number(item.green_power_amount) || 0,
+    balance_available_amount: Number(item.balance_available_amount) || 0,
   });
 
   // 加载分类列表（只在首次加载时执行）
@@ -377,14 +380,20 @@ const Market: React.FC<MarketProps> = ({ onProductSelect }) => {
 
                   {/* 价格区域 */}
                   <div className="mt-auto pt-2 border-t border-gray-50">
-                    <div className="flex items-baseline gap-0.5">
-                      <span className="text-orange-500 text-[11px] font-bold">¥</span>
-                      <span className="text-orange-500 text-lg font-bold leading-none font-[DINAlternate-Bold,Roboto,sans-serif]">
-                        {product.price > 0 ? product.price.toLocaleString() : '0'}
-                      </span>
+                    <div className="flex items-baseline gap-0.5 flex-wrap">
+                      {/* 现金价格：仅在price > 0时显示 */}
+                      {product.price > 0 && (
+                        <>
+                          <span className="text-orange-500 text-[11px] font-bold">¥</span>
+                          <span className="text-orange-500 text-lg font-bold leading-none font-[DINAlternate-Bold,Roboto,sans-serif]">
+                            {product.price.toLocaleString()}
+                          </span>
+                        </>
+                      )}
+                      {/* 消费金价格：红色显示 */}
                       {product.score_price && product.score_price > 0 && (
-                        <span className="text-gray-400 text-[10px] ml-1">
-                          +{product.score_price}消费金
+                        <span className="text-red-500 text-sm font-bold ml-0.5">
+                          {product.price > 0 ? '+' : ''}{product.score_price}消费金
                         </span>
                       )}
                     </div>

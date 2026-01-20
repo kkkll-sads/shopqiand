@@ -78,7 +78,7 @@ const NotificationSettings: React.FC = () => {
   const renderSwitch = (enabled: boolean) => (
     <span
       aria-hidden="true"
-      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${enabled ? 'bg-green-500' : 'bg-gray-300'
+      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${enabled ? 'bg-orange-500' : 'bg-gray-300'
         }`}
     >
       <span

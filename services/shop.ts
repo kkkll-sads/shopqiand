@@ -12,6 +12,7 @@ import { API_ENDPOINTS } from './config';
 import { authedFetch, getStoredToken } from './client';
 import { fetchDefaultAddress } from './user';
 import { bizLog, debugLog, warnLog, errorLog } from '../utils/logger';
+import { extractData } from '../utils/apiHelpers';
 
 // ============================================================================
 // 商品相关接口
@@ -56,9 +57,28 @@ export async function fetchShopProducts(
   });
 }
 
+// 商品规格定义
+export interface ProductSpecOption {
+  id: string;
+  name: string;
+  image?: string;  // 规格对应的图片
+  price_diff?: number;  // 价格差异
+  stock?: number;  // 该规格的库存
+}
+
+export interface ProductSpec {
+  id: string;
+  name: string;  // 规格名称，如"颜色"、"尺寸"
+  values: string[];  // 规格值列表，如["红色", "蓝色"]
+  options?: ProductSpecOption[];  // 详细选项（包含图片、价格等）
+}
+
 export interface ShopProductDetailData extends ShopProductItem {
   images?: string[];
   description?: string;
+  specs?: ProductSpec[];  // 商品规格列表
+  detail_images?: string[];  // 商品详情图片
+  max_purchase?: number;  // 最大购买数量
 }
 
 export async function fetchShopProductDetail(

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Package, Phone, MapPin, Copy, Check, Truck, Calendar, Gift, CheckCircle } from 'lucide-react';
+import { ArrowLeft, Package, Phone, MapPin, Copy, Check, Truck, Calendar, Gift, CheckCircle, Star } from 'lucide-react';
 import { LoadingSpinner, LazyImage } from '../../../components/common';
 import { formatTime, formatAmount } from '../../../utils/format';
 import { getOrderDetail, ShopOrderItem, confirmOrder, normalizeAssetUrl, payOrder, cancelOrder } from '../../../services/api';
@@ -239,8 +239,28 @@ const OrderDetail: React.FC = () => {
         });
     };
 
-    if (loading) return <div className="min-h-screen flex items-center justify-center bg-gray-50"><LoadingSpinner /></div>;
-    if (hasError || !order) return <div className="min-h-screen flex items-center justify-center bg-gray-50 text-gray-500">{errorMessage || '订单不存在'}</div>;
+    if (loading) return (
+        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-50 via-white to-amber-50">
+            <div className="text-center">
+                <LoadingSpinner />
+                <p className="mt-3 text-sm text-gray-500 animate-pulse">加载订单详情...</p>
+            </div>
+        </div>
+    );
+    if (hasError || !order) return (
+        <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 px-6">
+            <div className="w-20 h-20 rounded-full bg-gray-200 flex items-center justify-center mb-4">
+                <Package className="w-10 h-10 text-gray-400" />
+            </div>
+            <p className="text-gray-500 text-center">{errorMessage || '订单不存在'}</p>
+            <button 
+                onClick={() => navigate(-1)}
+                className="mt-6 px-6 py-2.5 bg-orange-500 text-white rounded-full text-sm font-medium shadow-lg shadow-orange-500/30 active:scale-95 transition-transform"
+            >
+                返回
+            </button>
+        </div>
+    );
 
     const isScoreOrder = order.pay_type === 'score';
 
@@ -252,25 +272,54 @@ const OrderDetail: React.FC = () => {
         { key: 'completed', label: '交易完成', time: order.complete_time, active: order.complete_time > 0 },
     ];
 
+    // 计算当前步骤
+    const currentStep = orderSteps.filter(s => s.active).length;
+
     return (
-        <div className="min-h-screen bg-gray-50 max-w-[480px] mx-auto pb-safe">
+        <div className="min-h-screen bg-gradient-to-br from-orange-50/50 via-white to-amber-50/30 max-w-[480px] mx-auto pb-safe">
+            {/* 顶部渐变背景装饰 */}
+            <div className="absolute top-0 left-0 right-0 h-48 bg-gradient-to-br from-orange-500 via-orange-400 to-amber-500 opacity-90" />
+            <div className="absolute top-0 left-0 right-0 h-48 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-white/20 via-transparent to-transparent" />
+            
             {/* Header */}
-            <header className="bg-white border-b border-gray-100 sticky top-0 z-10 shadow-sm">
+            <header className="relative z-20 sticky top-0">
                 <div className="flex items-center h-14 px-4">
                     <button
                         onClick={() => navigate(-1)}
-                        className="p-2 -ml-2 hover:bg-gray-50 rounded-full transition-colors"
+                        className="p-2 -ml-2 bg-white/20 backdrop-blur-sm hover:bg-white/30 rounded-full transition-all active:scale-95"
                         aria-label="返回"
                     >
-                        <ArrowLeft className="w-5 h-5 text-gray-700" />
+                        <ArrowLeft className="w-5 h-5 text-white" />
                     </button>
-                    <h1 className="flex-1 text-center pr-9 font-semibold text-gray-900">订单详情</h1>
+                    <h1 className="flex-1 text-center pr-9 font-bold text-white text-lg drop-shadow-sm">订单详情</h1>
+                </div>
+                
+                {/* 订单状态卡片 */}
+                <div className="mx-4 mt-2 p-4 bg-white/95 backdrop-blur-md rounded-2xl shadow-xl shadow-orange-500/10 border border-white/50">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <p className="text-xs text-gray-500 mb-1">订单状态</p>
+                            <p className="text-lg font-bold text-gray-900">{order.status_text || '处理中'}</p>
+                        </div>
+                        <div className="flex items-center gap-1">
+                            {[1, 2, 3, 4].map((step) => (
+                                <div 
+                                    key={step}
+                                    className={`w-2 h-2 rounded-full transition-all ${
+                                        step <= currentStep 
+                                            ? 'bg-gradient-to-r from-orange-500 to-amber-500 scale-110' 
+                                            : 'bg-gray-200'
+                                    }`}
+                                />
+                            ))}
+                        </div>
+                    </div>
                 </div>
             </header>
 
-            <div className="pb-24 pt-4">
+            <div className="relative z-10 pb-24 pt-6">
                 {/* Order Progress */}
-                <div className="bg-white mx-4 mt-0 rounded-xl shadow-sm border border-gray-100 p-6 mb-4">
+                <div className="bg-white/80 backdrop-blur-sm mx-4 mt-0 rounded-2xl shadow-lg shadow-gray-200/50 border border-white p-6 mb-4">
                     <div className="flex items-center gap-2.5 mb-6">
                         <div className="w-1 h-5 bg-gradient-to-b from-orange-500 to-orange-400 rounded-full" />
                         <h2 className="font-semibold text-gray-900 text-base">物流进度</h2>
@@ -321,7 +370,7 @@ const OrderDetail: React.FC = () => {
 
                 {/* Logistics Info */}
                 {order.shipping_company && (
-                    <div className="bg-white mx-4 rounded-xl shadow-sm border border-gray-100 p-5 mb-4">
+                    <div className="bg-white/80 backdrop-blur-sm mx-4 rounded-2xl shadow-lg shadow-gray-200/50 border border-white p-5 mb-4">
                         <div className="flex items-center gap-2.5 mb-5">
                             <div className="w-8 h-8 rounded-lg bg-orange-50 flex items-center justify-center">
                                 <Truck className="w-4 h-4 text-orange-500" />
@@ -346,7 +395,7 @@ const OrderDetail: React.FC = () => {
 
                 {/* Recipient Info */}
                 {order.recipient_name && (
-                    <div className="bg-white mx-4 rounded-xl shadow-sm border border-gray-100 p-5 mb-4">
+                    <div className="bg-white/80 backdrop-blur-sm mx-4 rounded-2xl shadow-lg shadow-gray-200/50 border border-white p-5 mb-4">
                         <div className="flex items-center gap-2.5 mb-5">
                             <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center">
                                 <MapPin className="w-4 h-4 text-blue-500" />
@@ -376,7 +425,7 @@ const OrderDetail: React.FC = () => {
                 )}
 
                 {/* Product Info */}
-                <div className="bg-white mx-4 rounded-xl shadow-sm border border-gray-100 p-5 mb-4">
+                <div className="bg-white/80 backdrop-blur-sm mx-4 rounded-2xl shadow-lg shadow-gray-200/50 border border-white p-5 mb-4">
                     <div className="flex items-center gap-2.5 mb-5">
                         <div className="w-8 h-8 rounded-lg bg-purple-50 flex items-center justify-center">
                             <Package className="w-4 h-4 text-purple-500" />
@@ -454,7 +503,7 @@ const OrderDetail: React.FC = () => {
                 </div>
 
                 {/* Order Info */}
-                <div className="bg-white mx-4 rounded-xl shadow-sm border border-gray-100 p-5 mb-4">
+                <div className="bg-white/80 backdrop-blur-sm mx-4 rounded-2xl shadow-lg shadow-gray-200/50 border border-white p-5 mb-4">
                     <div className="flex items-center gap-2.5 mb-5">
                         <div className="w-8 h-8 rounded-lg bg-green-50 flex items-center justify-center">
                             <Calendar className="w-4 h-4 text-green-500" />
@@ -518,7 +567,7 @@ const OrderDetail: React.FC = () => {
             </div>
 
             {/* Bottom Actions */}
-            <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] max-w-[480px] mx-auto safe-area-bottom">
+            <div className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-xl border-t border-gray-100 shadow-[0_-8px_30px_rgba(0,0,0,0.12)] max-w-[480px] mx-auto safe-area-bottom">
                 <div className="p-4 flex gap-3">
                     {(order.status === ShopOrderPayStatus.UNPAID || order.status === 'pending' || String(order.status) === '0') && (
                         <>
@@ -560,11 +609,32 @@ const OrderDetail: React.FC = () => {
                         </>
                     )}
                     {(order.status === ShopOrderShippingStatus.RECEIVED || order.status === 'completed' || String(order.status) === '3') && (
-                        <button
-                            className="flex-1 h-12 rounded-xl bg-gradient-to-r from-orange-500 to-orange-400 text-white hover:from-orange-600 hover:to-orange-500 font-semibold shadow-lg shadow-orange-500/30 transition-all active:scale-[0.98]"
-                        >
-                            再次购买
-                        </button>
+                        <>
+                            <button
+                                onClick={() => {
+                                    // 获取第一个商品用于评价
+                                    const firstItem = order.items?.[0];
+                                    if (firstItem) {
+                                        const params = new URLSearchParams({
+                                            order_id: String(order.id),
+                                            product_id: String(firstItem.product_id),
+                                            name: firstItem.product_name || '',
+                                            image: normalizeAssetUrl(firstItem.product_thumbnail || firstItem.product_image || ''),
+                                        });
+                                        navigate(`/submit-review?${params.toString()}`);
+                                    }
+                                }}
+                                className="flex-1 h-12 rounded-xl border-2 border-orange-200 bg-orange-50 text-orange-600 hover:border-orange-300 hover:bg-orange-100 font-semibold transition-all active:scale-[0.98] flex items-center justify-center gap-2"
+                            >
+                                <Star size={18} />
+                                去评价
+                            </button>
+                            <button
+                                className="flex-1 h-12 rounded-xl bg-gradient-to-r from-orange-500 to-orange-400 text-white hover:from-orange-600 hover:to-orange-500 font-semibold shadow-lg shadow-orange-500/30 transition-all active:scale-[0.98]"
+                            >
+                                再次购买
+                            </button>
+                        </>
                     )}
                 </div>
             </div>

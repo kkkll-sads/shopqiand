@@ -241,13 +241,22 @@ export function useStateMachine<
     setState(newState);
   }, []);
 
+  // ✅ 包装 setContext，支持部分更新和函数更新
+  const setContextWrapped = useCallback((updater: ((prev: TContext) => TContext) | Partial<TContext>) => {
+    if (typeof updater === 'function') {
+      setContext(updater);
+    } else {
+      setContext((prev) => ({ ...prev, ...updater }));
+    }
+  }, []);
+
   return {
     state,
     context,
     can,
     send,
     setState: setStateWithRef,
-    setContext,
+    setContext: setContextWrapped,
     getHistory,
   };
 }

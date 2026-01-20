@@ -135,22 +135,37 @@ const CollectionOrderDetail: React.FC = () => {
 
   if (loading) {
     return (
-      <PageContainer title="订单详情" onBack={() => navigate(-1)}>
-        <LoadingSpinner text="加载中..." />
-      </PageContainer>
+      <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-amber-50 flex flex-col items-center justify-center">
+        <div className="relative">
+          <div className="absolute inset-0 blur-3xl opacity-30 bg-gradient-to-r from-orange-500 to-amber-500 rounded-full" />
+          <LoadingSpinner text="加载中..." />
+        </div>
+      </div>
     );
   }
 
   if (error || !order) {
     return (
-      <PageContainer title="订单详情" onBack={() => navigate(-1)}>
-        <div className="flex flex-col items-center justify-center py-20 text-red-400">
-          <div className="w-16 h-16 mb-4 border-2 border-red-200 rounded-lg flex items-center justify-center">
-            <Package size={32} className="opacity-50" />
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-gray-100">
+        <header className="bg-white/80 backdrop-blur-sm border-b border-gray-100 px-4 py-3 flex items-center sticky top-0 z-10">
+          <button onClick={() => navigate(-1)} className="p-2 -ml-2 active:bg-gray-100 rounded-full transition-colors">
+            <ArrowLeft size={24} className="text-gray-700" />
+          </button>
+          <h1 className="ml-2 text-lg font-bold text-gray-900">订单详情</h1>
+        </header>
+        <div className="flex flex-col items-center justify-center py-20 px-6">
+          <div className="w-20 h-20 bg-red-50 rounded-full flex items-center justify-center mb-4">
+            <Package size={40} className="text-red-400" />
           </div>
-          <span className="text-xs">{error || '订单不存在'}</span>
+          <p className="text-gray-500 text-center">{error || '订单不存在'}</p>
+          <button
+            onClick={() => navigate(-1)}
+            className="mt-6 px-6 py-2.5 bg-gradient-to-r from-orange-500 to-amber-500 text-white rounded-full text-sm font-medium shadow-lg active:scale-95 transition-transform"
+          >
+            返回
+          </button>
         </div>
-      </PageContainer>
+      </div>
     );
   }
 
@@ -162,26 +177,39 @@ const CollectionOrderDetail: React.FC = () => {
   ];
 
   return (
-    <PageContainer title="订单详情" onBack={() => navigate(-1)}>
-      <div className="space-y-4 pb-safe">
-        {/* 订单状态横幅 */}
-        <div className="bg-gradient-to-br from-orange-500 to-orange-600 rounded-2xl p-6 text-white shadow-lg mx-4">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <div className="text-sm opacity-90 mb-1">订单状态</div>
-              <div className="text-2xl font-bold">{order.status_text}</div>
-            </div>
-            <div className="w-16 h-16 rounded-full bg-white/20 flex items-center justify-center">
-              <Package size={32} className="text-white" />
-            </div>
+    <div className="min-h-screen bg-gradient-to-br from-orange-50/50 via-white to-amber-50/30 max-w-[480px] mx-auto pb-safe">
+      {/* 顶部装饰背景 */}
+      <div className="absolute top-0 left-0 right-0 h-64 bg-gradient-to-br from-orange-500 via-amber-500 to-yellow-500 opacity-95" />
+      <div className="absolute top-0 left-0 right-0 h-64 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-white/20 via-transparent to-transparent" />
+      
+      {/* Header */}
+      <header className="relative z-20 px-4 py-3 flex items-center sticky top-0">
+        <button 
+          onClick={() => navigate(-1)} 
+          className="p-2.5 -ml-2 bg-white/20 backdrop-blur-sm hover:bg-white/30 rounded-full transition-all active:scale-95"
+        >
+          <ArrowLeft size={22} className="text-white" />
+        </button>
+        <h1 className="ml-3 text-lg font-bold text-white drop-shadow-sm">订单详情</h1>
+      </header>
+
+      {/* 订单状态卡片 */}
+      <div className="relative z-10 mx-4 mt-2 p-5 bg-white/95 backdrop-blur-xl rounded-2xl shadow-xl border border-white/50">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-xs text-gray-500 mb-1">订单状态</p>
+            <p className="text-2xl font-black text-gray-900">{order.status_text}</p>
+            <p className="text-xs text-gray-400 mt-2 font-mono">订单号: {order.order_no}</p>
           </div>
-          <div className="text-sm opacity-90">
-            订单号: {order.order_no}
+          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center shadow-lg shadow-orange-500/30">
+            <Package size={32} className="text-white" />
           </div>
         </div>
+      </div>
 
+      <div className="relative z-10 space-y-4 mt-6 pb-safe">
         {/* 订单进度 */}
-        <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100 mx-4">
+        <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-5 shadow-lg border border-white/50 mx-4">
           <div className="flex items-center gap-2.5 mb-5">
             <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center">
               <Calendar className="w-4 h-4 text-blue-600" />
@@ -228,7 +256,7 @@ const CollectionOrderDetail: React.FC = () => {
         </div>
 
         {/* 订单信息 */}
-        <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100 mx-4">
+        <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-5 shadow-lg border border-white/50 mx-4">
           <div className="flex items-center gap-2.5 mb-5">
             <div className="w-8 h-8 rounded-lg bg-green-50 flex items-center justify-center">
               <Receipt className="w-4 h-4 text-green-600" />
@@ -289,7 +317,7 @@ const CollectionOrderDetail: React.FC = () => {
         </div>
 
         {/* 订单明细 */}
-        <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100 mx-4">
+        <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-5 shadow-lg border border-white/50 mx-4">
           <div className="flex items-center gap-2.5 mb-5">
             <div className="w-8 h-8 rounded-lg bg-purple-50 flex items-center justify-center">
               <Package className="w-4 h-4 text-purple-600" />
@@ -472,7 +500,7 @@ const CollectionOrderDetail: React.FC = () => {
         if (!buttonText) return null;
 
         return (
-          <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] max-w-[480px] mx-auto safe-area-bottom">
+          <div className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-xl border-t border-gray-100 shadow-[0_-8px_30px_rgba(0,0,0,0.12)] max-w-[480px] mx-auto safe-area-bottom">
             <div className="p-4">
               <button
                 onClick={buttonAction || undefined}
@@ -485,7 +513,7 @@ const CollectionOrderDetail: React.FC = () => {
           </div>
         );
       })()}
-    </PageContainer>
+    </div>
   );
 };
 

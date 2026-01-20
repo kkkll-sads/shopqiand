@@ -26,7 +26,6 @@ import AssetActionsGrid from './components/asset/AssetActionsGrid';
 import AssetTabSwitcher from './components/asset/AssetTabSwitcher';
 import { isSuccess, extractData, extractError } from '../../../utils/apiHelpers';
 import { ConsignmentStatus, DeliveryStatus } from '../../../constants/statusEnums';
-import { useAuthStore } from '../../stores/authStore';
 import { useAssetActionModal, ActionModalState } from '../../../hooks/useAssetActionModal';
 import { useAssetTabs, TabConfig } from '../../../hooks/useAssetTabs';
 import { BALANCE_TYPE_OPTIONS, getBalanceTypeLabel } from '../../../constants/balanceTypes';
@@ -195,7 +194,7 @@ const AssetView: React.FC<AssetViewProps> = ({ onProductSelect, initialTab = 0 }
     });
   };
 
-  const renderAllLogItem = (item: AllLogItem) => {
+  const renderAllLogItem = (item: AllLogItem, index: number = 0) => {
     const amountVal = Number(item.amount);
     const isPositive = amountVal > 0;
     const typeText = getBalanceTypeLabel(item.type);
@@ -203,77 +202,84 @@ const AssetView: React.FC<AssetViewProps> = ({ onProductSelect, initialTab = 0 }
     return (
       <div
         key={item.id}
-        className="bg-white rounded-lg p-4 mb-3 shadow-sm border border-gray-100 cursor-pointer active:bg-gray-50 transition-colors"
+        className="bg-white/80 backdrop-blur-sm rounded-2xl p-4 mb-3 shadow-lg border border-white/50 cursor-pointer hover:shadow-xl active:scale-[0.99] transition-all"
         onClick={() => {
           if (item.id) {
-            navigate(`/money-log-detail/${item.id}`);
+            navigate(`/money-log/${item.id}`);
           }
         }}
+        style={{ animation: `slideUp 0.3s ease-out ${index * 0.05}s both` }}
       >
-        <div className="flex justify-between items-start mb-2">
+        <div className="flex justify-between items-start mb-3">
           <div className="flex-1">
-            <div className="text-sm font-medium text-gray-800 mb-1">{item.memo || item.remark || '资金变动'}</div>
-            <div className="text-xs text-gray-500">{formatTime(item.createtime || item.create_time)}</div>
+            <div className="text-sm font-semibold text-gray-800 mb-1.5">{item.memo || item.remark || '资金变动'}</div>
+            <div className="text-xs text-gray-400">{formatTime(item.createtime || item.create_time)}</div>
           </div>
-          <div className={`text-lg font-bold font-[DINAlternate-Bold,Roboto,sans-serif] ${isPositive ? 'text-[#FF6B00]' : 'text-gray-900'}`}>
+          <div className={`text-xl font-black font-mono ${isPositive ? 'text-emerald-500' : 'text-rose-500'}`}>
             {isPositive ? '+' : ''}{Number(amountVal).toFixed(2)}
           </div>
         </div>
-        <div className="flex justify-between items-center text-xs text-gray-400 mt-2 pt-2 border-t border-gray-50">
-          <span>{typeText}</span>
-          <span className="flex items-center">
-            余额: {Number(item.before_value).toFixed(2)}
-            <span className="mx-1">→</span>
-            {Number(item.after_value || item.after_balance).toFixed(2)}
+        <div className="flex justify-between items-center text-xs text-gray-400 pt-3 border-t border-gray-100">
+          <span className="px-2 py-0.5 bg-gray-100 rounded-full text-gray-500 text-[10px]">{typeText}</span>
+          <span className="flex items-center gap-1 font-mono">
+            <span className="text-gray-400">{Number(item.before_value).toFixed(2)}</span>
+            <span className="text-gray-300">→</span>
+            <span className={isPositive ? 'text-emerald-500' : 'text-rose-500'}>{Number(item.after_value || item.after_balance).toFixed(2)}</span>
           </span>
         </div>
       </div>
     );
   };
 
-  const renderCollectionItem = (item: MyCollectionItem) => {
-    // New API fields: title, image, price, consignment_status
-    // Helper to get image URL safely
+  const renderCollectionItem = (item: MyCollectionItem, index: number = 0) => {
     const imageUrl = normalizeAssetUrl(item.image) || '';
 
-    // Status Text Logic
-    let statusBadge = null;
-    if (item.consignment_status === 2) {
-      statusBadge = <div className="text-xs px-2 py-1 rounded-full bg-green-50 text-green-600 border border-green-200">已售出</div>;
-    } else if (item.consignment_status === 1) {
-      statusBadge = <div className="text-xs px-2 py-1 rounded-full bg-orange-50 text-orange-600 border border-orange-200">寄售中</div>;
-    } else {
-      // consignment_status === 0
-      statusBadge = <div className="text-xs px-2 py-1 rounded-full bg-gray-50 text-gray-600 border border-gray-200">未寄售</div>;
-    }
+    // Status config
+    const getStatusConfig = () => {
+      if (item.consignment_status === 2) {
+        return { text: '已售出', gradient: 'from-emerald-500 to-green-500', bg: 'bg-emerald-50', border: 'border-emerald-200', textColor: 'text-emerald-600' };
+      } else if (item.consignment_status === 1) {
+        return { text: '寄售中', gradient: 'from-amber-500 to-orange-500', bg: 'bg-amber-50', border: 'border-amber-200', textColor: 'text-amber-600' };
+      }
+      return { text: '持有中', gradient: 'from-gray-400 to-gray-500', bg: 'bg-gray-50', border: 'border-gray-200', textColor: 'text-gray-600' };
+    };
+    const statusConfig = getStatusConfig();
 
     return (
-      <div key={item.id} className="bg-white rounded-lg p-4 mb-3 shadow-sm cursor-pointer active:bg-gray-50 transition-colors border border-gray-100" onClick={() => handleItemClick(item)}>
-        <div className="flex gap-3">
-          <div className="w-20 h-20 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
+      <div 
+        key={item.id} 
+        className="bg-white/80 backdrop-blur-sm rounded-2xl p-4 mb-3 shadow-lg cursor-pointer hover:shadow-xl active:scale-[0.99] transition-all border border-white/50" 
+        onClick={() => handleItemClick(item)}
+        style={{ animation: `slideUp 0.3s ease-out ${index * 0.05}s both` }}
+      >
+        <div className="flex gap-4">
+          <div className="w-24 h-24 rounded-xl overflow-hidden flex-shrink-0 shadow-md border border-gray-100 bg-gradient-to-br from-gray-50 to-slate-50">
             {imageUrl ? (
-              <img src={imageUrl} alt={item.title} className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.visibility = 'hidden'; }} />
+              <img src={imageUrl} alt={item.title} className="w-full h-full object-cover hover:scale-105 transition-transform" onError={(e) => { (e.target as HTMLImageElement).style.visibility = 'hidden'; }} />
             ) : (
-              <div className="w-full h-full flex items-center justify-center text-gray-300"><ShoppingBag size={24} /></div>
+              <div className="w-full h-full flex items-center justify-center text-gray-300"><ShoppingBag size={28} /></div>
             )}
           </div>
-          <div className="flex-1">
-            <div className="flex items-start justify-between mb-1">
-              <div className="text-sm font-medium text-gray-800 flex-1 line-clamp-2">{item.title}</div>
-              <ArrowRight size={16} className="text-gray-400 ml-2 flex-shrink-0" />
+          <div className="flex-1 flex flex-col justify-between">
+            <div>
+              <div className="flex items-start justify-between mb-2">
+                <div className="text-sm font-semibold text-gray-800 flex-1 line-clamp-2">{item.title}</div>
+                <ArrowRight size={16} className="text-gray-300 ml-2 flex-shrink-0" />
+              </div>
+              <div className="text-[10px] text-gray-400 mb-2 font-mono">
+                #{item.unique_id || item.id}
+              </div>
             </div>
-            {/* New API doc does not guarantee pay_time_text. We use ID or unique_id if needed, or hide if no date */}
-            <div className="text-xs text-gray-500 mb-2">
-              UID: {item.unique_id || item.id}
-            </div>
-            <div className="flex justify-between items-center mb-2">
-              <div className="text-sm font-bold text-gray-900">¥ {Number(item.price).toFixed(2)}</div>
-              {Number(item.market_price) > 0 && (
-                <div className="text-xs text-gray-400">市场价: ¥{Number(item.market_price).toFixed(2)}</div>
-              )}
-            </div>
-            <div className="flex gap-2 flex-wrap">
-              {statusBadge}
+            <div className="flex justify-between items-center">
+              <div>
+                <div className="text-base font-black text-gray-900">¥{Number(item.price).toFixed(2)}</div>
+                {Number(item.market_price) > 0 && (
+                  <div className="text-[10px] text-gray-400">市场价: ¥{Number(item.market_price).toFixed(2)}</div>
+                )}
+              </div>
+              <div className={`text-[10px] font-bold px-2.5 py-1 rounded-full ${statusConfig.bg} ${statusConfig.textColor} ${statusConfig.border} border shadow-sm`}>
+                {statusConfig.text}
+              </div>
             </div>
           </div>
         </div>
@@ -282,16 +288,53 @@ const AssetView: React.FC<AssetViewProps> = ({ onProductSelect, initialTab = 0 }
   };
 
   const renderContent = () => {
-    if (tabs.isLoading && tabs.data.length === 0) return <LoadingSpinner text="加载中..." />;
-    if (tabs.hasError) return <div className="flex flex-col items-center justify-center py-12 text-red-400"><div className="w-16 h-16 mb-4 border-2 border-red-200 rounded-lg flex items-center justify-center"><FileText size={32} className="opacity-50" /></div><span className="text-xs">{tabs.error}</span></div>;
-    if (tabs.data.length === 0) return <div className="flex flex-col items-center justify-center py-12 text-gray-400"><div className="w-16 h-16 mb-4 border-2 border-gray-200 rounded-lg flex items-center justify-center">{tabs.activeTab === 1 ? <ShoppingBag size={32} className="opacity-50" /> : <FileText size={32} className="opacity-50" />}</div><span className="text-xs">{tabs.activeTab === 1 ? '暂无藏品' : '暂无数据'}</span></div>;
+    if (tabs.isLoading && tabs.data.length === 0) {
+      return (
+        <div className="py-16 text-center">
+          <div className="w-12 h-12 border-4 border-orange-100 border-t-orange-500 rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-sm text-gray-500 animate-pulse">加载中...</p>
+        </div>
+      );
+    }
+    if (tabs.hasError) {
+      return (
+        <div className="flex flex-col items-center justify-center py-16">
+          <div className="w-20 h-20 mb-4 bg-red-50 rounded-full flex items-center justify-center">
+            <FileText size={32} className="text-red-400" />
+          </div>
+          <span className="text-sm text-gray-500">{tabs.error}</span>
+        </div>
+      );
+    }
+    if (tabs.data.length === 0) {
+      return (
+        <div className="flex flex-col items-center justify-center py-16">
+          <div className="w-20 h-20 mb-4 bg-gray-100 rounded-full flex items-center justify-center">
+            {tabs.activeTab === 1 ? <ShoppingBag size={32} className="text-gray-300" /> : <FileText size={32} className="text-gray-300" />}
+          </div>
+          <span className="text-sm text-gray-400">{tabs.activeTab === 1 ? '暂无藏品' : '暂无数据'}</span>
+        </div>
+      );
+    }
 
     return (
       <div>
-        {tabs.activeTab === 0 && tabs.data.map(renderAllLogItem)}
-        {tabs.activeTab === 1 && tabs.data.map(renderCollectionItem)}
+        <style>{`
+          @keyframes slideUp {
+            from { opacity: 0; transform: translateY(15px); }
+            to { opacity: 1; transform: translateY(0); }
+          }
+        `}</style>
+        {tabs.activeTab === 0 && tabs.data.map((item, index) => renderAllLogItem(item, index))}
+        {tabs.activeTab === 1 && tabs.data.map((item, index) => renderCollectionItem(item, index))}
         {tabs.hasMore && (
-          <button onClick={tabs.loadMore} disabled={tabs.isLoading} className="w-full py-2 text-sm text-orange-600 disabled:opacity-50">{tabs.isLoading ? '加载中...' : '加载更多'}</button>
+          <button 
+            onClick={tabs.loadMore} 
+            disabled={tabs.isLoading} 
+            className="w-full py-3 text-sm font-medium text-orange-600 bg-orange-50 rounded-xl hover:bg-orange-100 transition-colors disabled:opacity-50"
+          >
+            {tabs.isLoading ? '加载中...' : '加载更多'}
+          </button>
         )}
       </div>
     );

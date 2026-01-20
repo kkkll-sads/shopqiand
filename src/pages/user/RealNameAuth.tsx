@@ -74,18 +74,14 @@ const RealNameAuth: React.FC = () => {
                 您的身份信息已通过审核，现在可以享受平台的全部服务
               </p>
 
-              <div className="w-full bg-white px-4 border-t border-b border-gray-100">
+              <div className="w-full bg-white px-4 rounded-xl border border-gray-100">
                 <div className="py-4 border-b border-gray-50 flex items-center justify-between">
-                  <span className="text-base text-gray-500">真实姓名</span>
-                  <span className="text-base font-bold text-gray-800">
-                    {status?.real_name || realName}
-                  </span>
+                  <span className="text-sm text-gray-500">真实姓名</span>
+                  <span className="text-sm font-bold text-gray-800">{status?.real_name || realName}</span>
                 </div>
                 <div className="py-4 flex items-center justify-between">
-                  <span className="text-base text-gray-500">身份证号</span>
-                  <span className="text-base font-bold text-gray-800">
-                    {formatIdCard(status?.id_card || idCard)}
-                  </span>
+                  <span className="text-sm text-gray-500">身份证号</span>
+                  <span className="text-sm font-bold text-gray-800">{formatIdCard(status?.id_card || idCard)}</span>
                 </div>
               </div>
             </div>
@@ -100,7 +96,7 @@ const RealNameAuth: React.FC = () => {
                 您的资料已提交，工作人员正在加急审核中，请您耐心等待
               </p>
 
-              <div className="w-full bg-white rounded-xl shadow-sm border border-orange-100 bg-orange-50/30 overflow-hidden">
+              <div className="w-full bg-orange-50 rounded-xl border border-orange-100 overflow-hidden">
                 <div className="p-4 flex items-start gap-3">
                   <AlertCircle size={18} className="text-orange-500 mt-0.5 flex-shrink-0" />
                   <p className="text-xs text-orange-700 leading-5">
@@ -130,31 +126,31 @@ const RealNameAuth: React.FC = () => {
               )}
 
               {/* 基本信息 */}
-              <div className="bg-white px-4 mb-6">
+              <div className="bg-white px-4 rounded-xl border border-gray-100 mb-6">
                 <div className="py-4 border-b border-gray-100 flex items-center">
-                  <span className="w-24 text-base text-gray-800">真实姓名</span>
+                  <span className="w-24 text-sm text-gray-600">真实姓名</span>
                   <input
                     type="text"
                     value={realName}
                     onChange={(e) => updateForm({ realName: e.target.value })}
                     placeholder="请输入身份证上的姓名"
-                    className="flex-1 text-base text-gray-900 outline-none bg-transparent placeholder:text-gray-300 text-right font-medium"
+                    className="flex-1 text-sm text-gray-900 outline-none bg-transparent placeholder:text-gray-300 text-right font-medium"
                   />
                 </div>
-                <div className="py-4 border-b border-gray-100 flex items-center">
-                  <span className="w-24 text-base text-gray-800">身份证号</span>
+                <div className="py-4 flex items-center">
+                  <span className="w-24 text-sm text-gray-600">身份证号</span>
                   <input
                     type="text"
                     value={idCard}
                     onChange={(e) => updateForm({ idCard: e.target.value })}
                     placeholder="请输入身份证号码"
-                    className="flex-1 text-base text-gray-900 outline-none bg-transparent placeholder:text-gray-300 text-right font-medium"
+                    className="flex-1 text-sm text-gray-900 outline-none bg-transparent placeholder:text-gray-300 text-right font-medium"
                   />
                 </div>
               </div>
 
               {/* 人脸核身说明 */}
-              <div className="mb-6 px-4">
+              <div className="mb-6">
                 <div className="bg-blue-50 border border-blue-100 rounded-lg p-3">
                   <div className="flex items-start gap-2">
                     <UserCheck size={16} className="text-blue-500 mt-0.5 flex-shrink-0" />
@@ -170,13 +166,11 @@ const RealNameAuth: React.FC = () => {
 
               {/* 提交按钮 */}
               <button
-                className="w-full bg-orange-600 text-white text-base font-semibold py-3.5 rounded-full shadow-lg shadow-orange-200 active:scale-[0.98] transition-all disabled:opacity-60 disabled:cursor-not-allowed disabled:shadow-none"
+                className="w-full bg-gradient-to-r from-orange-500 to-orange-600 text-white text-base font-bold py-3.5 rounded-xl shadow-lg shadow-orange-200 active:scale-[0.98] transition-all disabled:opacity-60 disabled:cursor-not-allowed disabled:shadow-none"
                 onClick={handleSubmit}
                 disabled={!canSubmit}
               >
-                {state === RealNameState.VERIFYING
-                  ? '正在跳转...'
-                  : '开始人脸核身认证'}
+                {state === RealNameState.VERIFYING ? '正在跳转...' : '开始人脸核身认证'}
               </button>
             </>
           )}
@@ -186,13 +180,13 @@ const RealNameAuth: React.FC = () => {
             <div className="flex flex-col gap-3">
               <button
                 onClick={handleRetry}
-                className="w-full bg-orange-600 text-white text-base font-semibold py-3.5 rounded-full shadow-lg shadow-orange-200 active:scale-[0.98] transition-all"
+                className="w-full bg-gradient-to-r from-orange-500 to-orange-600 text-white text-base font-bold py-3.5 rounded-xl shadow-lg shadow-orange-200 active:scale-[0.98] transition-all"
               >
                 返回表单
               </button>
               <button
                 onClick={handleRetryLoad}
-                className="w-full bg-white text-orange-600 text-base font-semibold py-3.5 rounded-full border-2 border-orange-600 active:scale-[0.98] transition-all"
+                className="w-full bg-white text-orange-600 text-base font-bold py-3.5 rounded-xl border-2 border-orange-500 active:scale-[0.98] transition-all"
               >
                 刷新状态
               </button>

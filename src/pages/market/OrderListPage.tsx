@@ -804,42 +804,46 @@ const OrderListPage: React.FC = () => {
   // 为消费金订单使用特殊的布局
   if (category === 'points') {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-orange-50/30 to-gray-50 max-w-[480px] mx-auto">
-        {/* 顶部导航栏 - 使用浅橙色渐变 */}
-        <header className="bg-gradient-to-r from-[#fedab0] to-[#ffd9a8] text-gray-800 shadow-md sticky top-0 z-10">
+      <div className="min-h-screen bg-gradient-to-br from-amber-50/50 via-white to-orange-50/30 max-w-[480px] mx-auto">
+        {/* 顶部装饰背景 */}
+        <div className="absolute top-0 left-0 right-0 h-48 bg-gradient-to-br from-amber-500 via-orange-500 to-rose-500 opacity-95" />
+        <div className="absolute top-0 left-0 right-0 h-48 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-white/20 via-transparent to-transparent" />
+        
+        {/* 顶部导航栏 */}
+        <header className="relative z-20 sticky top-0">
           <div className="flex items-center h-14 px-4">
             <button
-              className="p-2 -ml-2 hover:bg-white/30 rounded-full transition-colors"
+              className="p-2.5 -ml-2 bg-white/20 backdrop-blur-sm hover:bg-white/30 rounded-full transition-all active:scale-95"
               aria-label="返回"
-            onClick={handleBack}
+              onClick={handleBack}
             >
-              <ArrowLeft className="w-5 h-5" />
+              <ArrowLeft className="w-5 h-5 text-white" />
             </button>
-            <h1 className="flex-1 text-center pr-9 font-medium">消费金订单</h1>
+            <h1 className="flex-1 text-center pr-9 font-bold text-white text-lg drop-shadow-sm">消费金订单</h1>
           </div>
 
-          {/* 标签页 - 优化样式 */}
-          <div className="flex bg-white/20 backdrop-blur-sm">
-            {config.tabs.map((tab, index) => (
-              <button
-                key={index}
-                onClick={() => setActiveTab(index)}
-                className={`flex-1 py-3.5 text-sm relative transition-all ${activeTab === index
-                  ? 'text-gray-800 font-medium'
-                  : 'text-gray-600'
+          {/* 标签页 */}
+          <div className="mx-4 mt-1 bg-white/95 backdrop-blur-xl rounded-2xl p-1 shadow-xl border border-white/50">
+            <div className="flex">
+              {config.tabs.map((tab, index) => (
+                <button
+                  key={index}
+                  onClick={() => setActiveTab(index)}
+                  className={`flex-1 py-2.5 text-xs font-bold rounded-xl transition-all ${
+                    activeTab === index
+                      ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-lg shadow-amber-500/30'
+                      : 'text-gray-500 hover:text-gray-700'
                   }`}
-              >
-                {tab}
-                {activeTab === index && (
-                  <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-12 h-1 bg-white rounded-t-full shadow-md" />
-                )}
-              </button>
-            ))}
+                >
+                  {tab}
+                </button>
+              ))}
+            </div>
           </div>
         </header>
 
         {/* 订单列表 */}
-        <div className="p-3 pb-4 space-y-3">
+        <div className="relative z-10 p-4 pt-6 space-y-4">
           <PointDeliveryOrderList
             category={category}
             orders={orders}

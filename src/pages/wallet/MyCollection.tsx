@@ -1210,12 +1210,12 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onItemSelect, initialConsig
     <SubPageLayout title="我的藏品" onBack={() => navigate(-1)}>
       <div className="flex-1 overflow-hidden flex flex-col">
         {/* Filter Dropdowns - 始终显示，确保UI一致性和渲染稳定性 */}
-        <div className="bg-white px-4 py-3 border-b border-gray-100/80 flex gap-2 shrink-0">
+        <div className="bg-white/80 backdrop-blur-sm px-4 py-3 border-b border-gray-100/50 flex gap-2 shrink-0">
           {/* Session Filter - 始终显示 */}
           <select
             value={selectedSession}
             onChange={(e) => setSelectedSession(e.target.value)}
-            className="flex-1 px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-orange-200 focus:border-orange-400 transition-all"
+            className="flex-1 px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-orange-200 focus:border-orange-400 transition-all appearance-none"
             disabled={sessionOptions.length <= 1}
           >
             <option value="all">全部场次</option>
@@ -1228,7 +1228,7 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onItemSelect, initialConsig
           <select
             value={selectedPriceZone}
             onChange={(e) => setSelectedPriceZone(e.target.value)}
-            className="flex-1 px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-orange-200 focus:border-orange-400 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex-1 px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-orange-200 focus:border-orange-400 transition-all disabled:opacity-50 disabled:cursor-not-allowed appearance-none"
             disabled={priceZoneOptions.length <= 1}
           >
             <option value="all">全部价格分区</option>
@@ -1239,22 +1239,21 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onItemSelect, initialConsig
         </div>
 
         {/* Category Tabs */}
-        <div className="bg-white px-4 pt-3 pb-2 border-b border-gray-100/80 flex justify-between items-center z-10 shrink-0">
-          {tabs.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => handleTabChange(tab.id)}
-              className={`flex-1 py-3 text-sm font-semibold relative transition-all duration-200 ${activeTab === tab.id
-                ? 'text-orange-600'
-                : 'text-gray-500 hover:text-gray-700 active:text-gray-800'
-                }`}
-            >
-              {tab.label}
-              {activeTab === tab.id && (
-                <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-10 h-1 bg-gradient-to-r from-orange-500 to-orange-400 rounded-full shadow-sm shadow-orange-200" />
-              )}
-            </button>
-          ))}
+        <div className="bg-white/80 backdrop-blur-sm px-3 py-2 border-b border-gray-100/50 z-10 shrink-0">
+          <div className="flex bg-gray-100/80 rounded-xl p-1">
+            {tabs.map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => handleTabChange(tab.id)}
+                className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all duration-200 ${activeTab === tab.id
+                  ? 'bg-white text-orange-600 shadow-sm'
+                  : 'text-gray-500 hover:text-gray-700'
+                  }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* 批量寄售按钮 */}
@@ -1285,33 +1284,53 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onItemSelect, initialConsig
           </div>
         )}
 
-        <div className="flex-1 overflow-y-auto p-4 pb-6 bg-gradient-to-b from-gray-50/50 to-white">
+        <div className="flex-1 overflow-y-auto p-4 pb-6 bg-gradient-to-b from-gray-50/30 to-white">
           {loading && page === 1 ? (
-            <div className="flex items-center justify-center py-12">
-              <LoadingSpinner text="加载中..." />
+            <div className="py-16 text-center">
+              <div className="w-12 h-12 border-4 border-orange-100 border-t-orange-500 rounded-full animate-spin mx-auto mb-4" />
+              <p className="text-sm text-gray-500 animate-pulse">加载中...</p>
             </div>
           ) : error ? (
-            <div className="py-12">
-              <EmptyState icon={<FileText size={48} className="text-gray-300" />} title="加载失败" description={error} />
+            <div className="py-16 text-center">
+              <div className="w-20 h-20 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                <FileText size={32} className="text-red-400" />
+              </div>
+              <p className="text-sm text-gray-500">{error}</p>
             </div>
           ) : myCollections.length === 0 ? (
-            <div className="py-12">
-              <EmptyState icon={<ShoppingBag size={48} className="text-gray-300" />} title="暂无藏品" description="您还没有任何藏品" />
+            <div className="py-16 text-center">
+              <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <ShoppingBag size={32} className="text-gray-300" />
+              </div>
+              <p className="text-sm text-gray-400">暂无藏品</p>
             </div>
           ) : filteredCollections.length === 0 ? (
-            <div className="py-12">
-              <EmptyState icon={<ShoppingBag size={48} className="text-gray-300" />} title="无匹配结果" description="未找到符合筛选条件的藏品" />
+            <div className="py-16 text-center">
+              <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <ShoppingBag size={32} className="text-gray-300" />
+              </div>
+              <p className="text-sm text-gray-400">未找到符合筛选条件的藏品</p>
             </div>
           ) : (
             <>
-              <div className="space-y-4">
-                {filteredCollections.filter(i => !!i).map((item) => renderCollectionItem(item))}
+              <style>{`
+                @keyframes fadeInUp {
+                  from { opacity: 0; transform: translateY(10px); }
+                  to { opacity: 1; transform: translateY(0); }
+                }
+              `}</style>
+              <div className="space-y-3">
+                {filteredCollections.filter(i => !!i).map((item, index) => (
+                  <div key={item.id} style={{ animation: `fadeInUp 0.3s ease-out ${index * 0.05}s both` }}>
+                    {renderCollectionItem(item)}
+                  </div>
+                ))}
               </div>
               {hasMore && (
                 <button
                   onClick={() => setPage(prev => prev + 1)}
                   disabled={loading}
-                  className="w-full mt-4 py-3 text-sm font-medium text-gray-700 bg-white border-2 border-gray-200 rounded-xl hover:border-orange-300 hover:text-orange-600 hover:bg-orange-50/50 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-sm hover:shadow-md active:scale-[0.98]"
+                  className="w-full mt-4 py-3 text-sm font-bold text-orange-600 bg-orange-50 rounded-xl hover:bg-orange-100 disabled:opacity-50 disabled:cursor-not-allowed transition-all active:scale-[0.98]"
                 >
                   {loading ? '加载中...' : '加载更多'}
                 </button>

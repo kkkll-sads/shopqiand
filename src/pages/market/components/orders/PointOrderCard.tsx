@@ -1,7 +1,7 @@
 import React from 'react';
 import { ShopOrderItem, ShopOrderItemDetail, normalizeAssetUrl } from '../../../../../services/api';
 import { ShopOrderPayStatus } from '../../../../../constants/statusEnums';
-import { Package, Gift } from 'lucide-react';
+import { Package, Gift, ChevronRight, Sparkles, Clock, Truck, CheckCircle } from 'lucide-react';
 
 interface PointOrderCardProps {
   order: ShopOrderItem;
@@ -33,11 +33,8 @@ const PointOrderCard: React.FC<PointOrderCardProps> = ({
     }
     
     if (!ts || ts === 0) return '';
-    
-    // 判断时间戳是秒级还是毫秒级
     const timestampMs = ts < 10000000000 ? ts * 1000 : ts;
     const date = new Date(timestampMs);
-    
     if (isNaN(date.getTime())) return '';
     
     return date.toLocaleDateString('zh-CN', {
@@ -47,34 +44,56 @@ const PointOrderCard: React.FC<PointOrderCardProps> = ({
     });
   };
 
-  // 获取订单创建时间（适配 createtime 和 create_time）
   const orderTime = order.create_time || order.createtime || 0;
-
-  // 获取订单项列表
   const items = order.items && order.items.length > 0 ? order.items : [];
+
+  // 状态配置
+  const getStatusConfig = () => {
+    const status = order.status;
+    if (status === ShopOrderPayStatus.UNPAID || status === 0) {
+      return { icon: Clock, color: 'text-amber-600', bg: 'from-amber-50 to-orange-50', border: 'border-amber-200' };
+    }
+    if (status === ShopOrderPayStatus.PAID || status === 1) {
+      return { icon: Package, color: 'text-blue-600', bg: 'from-blue-50 to-cyan-50', border: 'border-blue-200' };
+    }
+    if (status === 2) {
+      return { icon: Truck, color: 'text-purple-600', bg: 'from-purple-50 to-pink-50', border: 'border-purple-200' };
+    }
+    if (status === 3) {
+      return { icon: CheckCircle, color: 'text-emerald-600', bg: 'from-emerald-50 to-green-50', border: 'border-emerald-200' };
+    }
+    return { icon: Package, color: 'text-gray-600', bg: 'from-gray-50 to-slate-50', border: 'border-gray-200' };
+  };
+
+  const statusConfig = getStatusConfig();
+  const StatusIcon = statusConfig.icon;
 
   return (
     <div 
-      className="bg-white rounded-2xl shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden"
+      className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden border border-white/50"
       style={{
-        animation: `slideUp 0.4s ease-out ${index * 0.1}s both`
+        animation: `slideUp 0.4s ease-out ${index * 0.08}s both`
       }}
     >
-      {/* 订单头部 - 带装饰条 */}
-      <div className="relative">
-        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-[#fedab0] to-[#ffd9a8]" />
-        <div className="flex items-center justify-between p-4 pb-3 bg-gradient-to-b from-[#fedab0]/20 to-transparent">
-          <div className="flex items-center gap-2">
-            <div className="w-1.5 h-1.5 rounded-full bg-[#fedab0]" />
-            <span className="text-sm text-gray-600">
-              {formatDate(orderTime)}
-            </span>
+      {/* 订单头部 */}
+      <div className={`relative bg-gradient-to-r ${statusConfig.bg} p-4`}>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <div className={`w-8 h-8 rounded-xl bg-white/80 backdrop-blur-sm flex items-center justify-center shadow-sm ${statusConfig.border} border`}>
+              <StatusIcon size={16} className={statusConfig.color} />
+            </div>
+            <div>
+              <span className={`text-sm font-bold ${statusConfig.color}`}>
+                {order.status_text || '未知状态'}
+              </span>
+              <p className="text-[10px] text-gray-400 mt-0.5">
+                {formatDate(orderTime)}
+              </p>
+            </div>
           </div>
-          <div className="flex items-center gap-1.5 bg-[#fedab0]/40 px-3 py-1 rounded-full">
-            <Package className="w-3.5 h-3.5 text-gray-700" />
-            <span className="text-xs font-medium text-gray-700">
-              {order.status_text || '未知状态'}
-            </span>
+          <div className="flex items-center gap-1.5 bg-white/60 backdrop-blur-sm px-3 py-1.5 rounded-full border border-white/50 shadow-sm">
+            <Sparkles size={12} className="text-amber-500" />
+            <span className="text-xs font-medium text-gray-700">消费金兑换</span>
           </div>
         </div>
       </div>
@@ -82,13 +101,17 @@ const PointOrderCard: React.FC<PointOrderCardProps> = ({
       {/* 商品信息 */}
       {items.length > 0 ? (
         <div className="space-y-0">
-          {items.map((item) => (
-            <div key={item.id} className="px-4 pb-4">
-              <div className="flex gap-3">
-                {/* 商品图片 - 只使用后端返回的图片 */}
+          {items.map((item, idx) => (
+            <div 
+              key={item.id} 
+              className={`px-4 py-4 ${idx > 0 ? 'border-t border-gray-100' : ''}`}
+              onClick={() => onViewDetail?.(order.id)}
+            >
+              <div className="flex gap-4">
+                {/* 商品图片 */}
                 {(item.product_thumbnail || item.product_image) && (
-                  <div className="relative w-24 h-24 flex-shrink-0">
-                    <div className="w-full h-full bg-gradient-to-br from-[#fedab0]/30 to-[#ffd9a8]/20 rounded-xl overflow-hidden shadow-sm border border-[#fedab0]/40">
+                  <div className="relative w-24 h-24 flex-shrink-0 group">
+                    <div className="w-full h-full rounded-xl overflow-hidden shadow-lg border border-gray-100 bg-gradient-to-br from-gray-50 to-slate-50">
                       <img
                         src={item.product_thumbnail 
                           ? (item.product_thumbnail.startsWith('//') 
@@ -96,53 +119,45 @@ const PointOrderCard: React.FC<PointOrderCardProps> = ({
                               : normalizeAssetUrl(item.product_thumbnail))
                           : normalizeAssetUrl(item.product_image || '')}
                         alt={item.product_name}
-                        className="w-full h-full object-cover"
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                         onError={(e) => {
                           (e.target as HTMLImageElement).style.display = 'none';
                         }}
                       />
                     </div>
+                    {item.quantity > 1 && (
+                      <div className="absolute -top-1.5 -right-1.5 w-6 h-6 bg-gradient-to-br from-rose-500 to-pink-500 rounded-full flex items-center justify-center shadow-lg">
+                        <span className="text-[10px] font-bold text-white">×{item.quantity}</span>
+                      </div>
+                    )}
                   </div>
                 )}
 
                 {/* 商品详情 */}
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm leading-relaxed line-clamp-2 mb-2 text-gray-800">
-                    {item.product_name}
-                  </p>
-                  
-                  {/* 积分标签和数量 */}
-                  <div className="flex items-center gap-2 mb-3">
-                    <div className="inline-flex items-center gap-1 bg-gradient-to-r from-[#fedab0]/60 to-[#ffd9a8]/50 px-2.5 py-1 rounded-lg">
-                      <Gift className="w-3.5 h-3.5 text-gray-700" />
-                      <span className="text-xs text-gray-700 font-medium">
-                        消费金兑换
-                      </span>
-                    </div>
-                    {item.quantity > 1 && (
-                      <span className="text-xs text-gray-500">
-                        x{item.quantity}
-                      </span>
-                    )}
+                <div className="flex-1 min-w-0 flex flex-col justify-between">
+                  <div>
+                    <p className="text-sm font-medium leading-relaxed line-clamp-2 text-gray-800 group-hover:text-gray-900">
+                      {item.product_name}
+                    </p>
                   </div>
                   
-                  {/* 底部价格和按钮 */}
-                  <div className="flex items-center justify-between">
-                    <div className="text-red-500 font-bold text-base leading-none">
+                  {/* 价格和操作 */}
+                  <div className="flex items-end justify-between mt-3">
+                    <div>
                       {item.price > 0 ? (
-                        <>
-                          <span className="text-xs">¥</span>{String(item.price)}
+                        <div className="flex items-baseline gap-1">
+                          <span className="text-lg font-black text-rose-500">¥{item.price}</span>
                           {item.score_price && item.score_price > 0 && (
-                            <span className="text-sm">
-                              +{item.score_price}消费金
-                            </span>
+                            <span className="text-sm font-bold text-amber-500">+{item.score_price}消费金</span>
                           )}
-                        </>
+                        </div>
                       ) : (
                         item.score_price && item.score_price > 0 && (
-                          <span className="text-sm">
-                            {item.score_price}消费金
-                          </span>
+                          <div className="flex items-center gap-1">
+                            <Sparkles size={14} className="text-amber-500" />
+                            <span className="text-lg font-black text-amber-500">{item.score_price}</span>
+                            <span className="text-sm text-gray-500">消费金</span>
+                          </div>
                         )
                       )}
                     </div>
@@ -151,9 +166,10 @@ const PointOrderCard: React.FC<PointOrderCardProps> = ({
                         e.stopPropagation();
                         onViewDetail?.(order.id);
                       }}
-                      className="h-8 text-xs px-4 rounded-full border-2 border-[#fedab0] text-gray-700 hover:bg-[#fedab0]/20 hover:border-[#fedab0] transition-all shadow-sm font-medium"
+                      className="flex items-center gap-1 px-4 py-2 rounded-full bg-gradient-to-r from-gray-100 to-gray-50 hover:from-gray-200 hover:to-gray-100 text-gray-700 text-xs font-medium transition-all active:scale-95 border border-gray-200"
                     >
-                      查看详情
+                      详情
+                      <ChevronRight size={14} />
                     </button>
                   </div>
                 </div>
@@ -162,12 +178,12 @@ const PointOrderCard: React.FC<PointOrderCardProps> = ({
           ))}
         </div>
       ) : (
-        // 如果没有 items，显示备用信息
-        <div className="px-4 pb-4">
-          <div className="flex gap-3">
+        // 备用显示
+        <div className="px-4 py-4">
+          <div className="flex gap-4">
             {(order.product_image || order.thumbnail) && (
               <div className="relative w-24 h-24 flex-shrink-0">
-                <div className="w-full h-full bg-gradient-to-br from-[#fedab0]/30 to-[#ffd9a8]/20 rounded-xl overflow-hidden shadow-sm border border-[#fedab0]/40">
+                <div className="w-full h-full rounded-xl overflow-hidden shadow-lg border border-gray-100">
                   <img
                     src={normalizeAssetUrl(order.product_image || order.thumbnail || '')}
                     alt={order.product_name || '商品'}
@@ -179,29 +195,29 @@ const PointOrderCard: React.FC<PointOrderCardProps> = ({
                 </div>
               </div>
             )}
-            <div className="flex-1 min-w-0">
-              <p className="text-sm leading-relaxed line-clamp-2 mb-2 text-gray-800">
+            <div className="flex-1 min-w-0 flex flex-col justify-between">
+              <p className="text-sm font-medium line-clamp-2 text-gray-800">
                 {order.product_name || '商品'}
               </p>
-              <div className="text-red-500 font-bold text-base leading-none">
+              <div>
                 {order.total_amount > 0 ? (
-                  <>
-                    <span className="text-xs">¥</span>{String(order.total_amount)}
-                    {order.total_score && order.total_score > 0 && (
-                      <span className="text-sm">
-                        +{typeof order.total_score === 'string'
-                          ? parseFloat(order.total_score)
-                          : order.total_score}消费金
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-lg font-black text-rose-500">¥{order.total_amount}</span>
+                    {order.total_score && Number(order.total_score) > 0 && (
+                      <span className="text-sm font-bold text-amber-500">
+                        +{typeof order.total_score === 'string' ? parseFloat(order.total_score) : order.total_score}消费金
                       </span>
                     )}
-                  </>
+                  </div>
                 ) : (
-                  order.total_score && order.total_score > 0 && (
-                    <span className="text-sm">
-                      {typeof order.total_score === 'string'
-                        ? parseFloat(order.total_score)
-                        : order.total_score}消费金
-                    </span>
+                  order.total_score && Number(order.total_score) > 0 && (
+                    <div className="flex items-center gap-1">
+                      <Sparkles size={14} className="text-amber-500" />
+                      <span className="text-lg font-black text-amber-500">
+                        {typeof order.total_score === 'string' ? parseFloat(order.total_score) : order.total_score}
+                      </span>
+                      <span className="text-sm text-gray-500">消费金</span>
+                    </div>
                   )
                 )}
               </div>
@@ -210,7 +226,7 @@ const PointOrderCard: React.FC<PointOrderCardProps> = ({
         </div>
       )}
 
-      {/* 底部操作按钮（如果有需要） */}
+      {/* 底部操作按钮 */}
       {(order.status === ShopOrderPayStatus.PAID || order.status === 1) && order.pay_type === 'score' && activeTab === 1 && onUrgeShip && (
         <div className="px-4 pb-4 pt-2 border-t border-gray-100">
           <button 
@@ -218,14 +234,13 @@ const PointOrderCard: React.FC<PointOrderCardProps> = ({
               e.stopPropagation();
               onUrgeShip(order.id);
             }}
-            className="w-full py-2 rounded-full bg-gradient-to-r from-[#fedab0] to-[#ffd9a8] text-gray-700 text-sm font-medium shadow-sm hover:shadow-md transition-all active:scale-95"
+            className="w-full py-3 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-white text-sm font-bold shadow-lg shadow-amber-500/30 hover:shadow-xl transition-all active:scale-[0.98]"
           >
             催发货
           </button>
         </div>
       )}
 
-      {/* 添加关键帧动画 */}
       <style>{`
         @keyframes slideUp {
           from {

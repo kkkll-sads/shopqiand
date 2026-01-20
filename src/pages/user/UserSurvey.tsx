@@ -41,6 +41,10 @@ const UserSurvey: React.FC = () => {
     initial: FormState.IDLE,
     transitions: {
       [FormState.IDLE]: { [FormEvent.SUBMIT]: FormState.SUBMITTING },
+      [FormState.VALIDATING]: {
+        [FormEvent.VALIDATION_SUCCESS]: FormState.SUBMITTING,
+        [FormEvent.VALIDATION_ERROR]: FormState.ERROR,
+      },
       [FormState.SUBMITTING]: {
         [FormEvent.SUBMIT_SUCCESS]: FormState.SUCCESS,
         [FormEvent.SUBMIT_ERROR]: FormState.ERROR,
@@ -141,12 +145,12 @@ const UserSurvey: React.FC = () => {
       return;
     }
 
-    const filesToAdd = Array.from(files).slice(0, remainingSlots);
+    const filesToAdd = Array.from(files as FileList).slice(0, remainingSlots) as File[];
     if (files.length > remainingSlots) {
       showToast('warning', '数量限制', `最多只能上传${maxCount}张图片`);
     }
 
-    const newStates: ImageUploadState[] = filesToAdd.map((file) => ({
+    const newStates: ImageUploadState[] = filesToAdd.map((file: File) => ({
       file,
       preview: URL.createObjectURL(file),
       uploading: true,
@@ -454,13 +458,13 @@ const UserSurvey: React.FC = () => {
       </div>
 
       <ResultModal
-        visible={resultModal.visible}
-        type={resultModal.state?.status as any || 'success'}
-        title={resultModal.state?.title}
-        description={resultModal.state?.desc}
-        confirmText={resultModal.state?.confirmText}
+        visible={resultModal.open}
+        type={resultModal.data?.status as any || 'success'}
+        title={resultModal.data?.title}
+        description={resultModal.data?.desc}
+        confirmText={resultModal.data?.confirmText}
         onConfirm={() => {
-          resultModal.state?.onConfirm && resultModal.state.onConfirm();
+          resultModal.data?.onConfirm && resultModal.data.onConfirm();
           resultModal.hide();
         }}
         onClose={resultModal.hide}

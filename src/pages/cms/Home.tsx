@@ -104,7 +104,7 @@ const Home: React.FC<HomeProps> = ({ announcements = [] }) => {
         // 并行请求，提高首屏速度
         const [bannerRes, artistRes] = await Promise.all([
           fetchBanners({ page: 1, limit: 10 }),
-          fetchArtists({ page: 1, limit: 4 }),
+          fetchArtists(),
         ]);
 
         // 轮播图
@@ -127,9 +127,9 @@ const Home: React.FC<HomeProps> = ({ announcements = [] }) => {
         const mappedArtists: Artist[] = artistList.slice(0, 4).map((a) => ({
           id: String(a.id),
           name: a.name,
-          image: normalizeAssetUrl(a.image),
+          image: normalizeAssetUrl(a.avatar), // avatar -> image
           title: a.title,
-          bio: a.bio,
+          bio: a.description, // description -> bio
         }));
         setArtists(mappedArtists);
       } catch (error) {

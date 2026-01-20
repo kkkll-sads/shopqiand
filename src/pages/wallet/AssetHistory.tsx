@@ -157,7 +157,7 @@ const AssetHistory: React.FC = () => {
   };
 
   const handleItemClick = (item: AllLogItem) => {
-    navigate(`/money-log-detail/${item.id}`, {
+    navigate(`/money-log/${item.id}`, {
       state: { flowNo: item.flow_no }
     });
   };

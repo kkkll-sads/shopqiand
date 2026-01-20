@@ -96,7 +96,7 @@ const SignIn: React.FC = () => {
                     const [infoRes, progressRes, promotionRes, teamRes] = results.slice(1);
 
                     // 处理签到信息
-                    const infoData = extractData(infoRes);
+                    const infoData = extractData(infoRes) as { total_reward?: number; today_signed?: boolean; calendar?: { signed_dates?: string[] } } | null;
                     if ((isSuccess(infoRes) || infoRes.code === 0) && infoData) {
                         const data = infoData;
                         setBalance(data.total_reward || 0);
@@ -124,7 +124,7 @@ const SignIn: React.FC = () => {
                     }
 
                     // 处理进度信息（优先级更高，会覆盖balance）
-                    const progressData = extractData(progressRes);
+                    const progressData = extractData(progressRes) as SignInProgressData | null;
                     if (progressData) {
                         setProgressInfo(progressData);
                         // 使用 withdrawable_money 作为当前累计奖励（可提现金额）
@@ -137,10 +137,10 @@ const SignIn: React.FC = () => {
 
                     // 处理邀请人数
                     if ((isSuccess(teamRes) || teamRes.code === 0) && teamRes.data) {
-                        setInviteCount(teamRes.data.total || 0);
+                        setInviteCount((teamRes.data as any).total || 0);
                     } else {
                         // Fallback to promotion card count if team fetch fails
-                        const promotionData = extractData(promotionRes);
+                        const promotionData = extractData(promotionRes) as { team_count?: number } | null;
                         if (promotionData) {
                             setInviteCount(promotionData.team_count || 0);
                         }

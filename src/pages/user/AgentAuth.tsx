@@ -62,6 +62,10 @@ const AgentAuth: React.FC = () => {
     initial: FormState.IDLE,
     transitions: {
       [FormState.IDLE]: { [FormEvent.SUBMIT]: FormState.SUBMITTING },
+      [FormState.VALIDATING]: {
+        [FormEvent.VALIDATION_SUCCESS]: FormState.SUBMITTING,
+        [FormEvent.VALIDATION_ERROR]: FormState.ERROR,
+      },
       [FormState.SUBMITTING]: {
         [FormEvent.SUBMIT_SUCCESS]: FormState.SUCCESS,
         [FormEvent.SUBMIT_ERROR]: FormState.ERROR,

@@ -7,7 +7,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
-  ChevronLeft, ChevronRight, Store, MessageCircle, Heart, ShoppingCart, 
+  ChevronLeft, ChevronRight, Store, MessageCircle, 
   Truck, Shield, RotateCcw, Headphones, Star, ThumbsUp, Gift, Tag, Clock
 } from 'lucide-react';
 import { LazyImage } from '../../../components/common';
@@ -16,6 +16,7 @@ import BottomSheet from '../../../components/common/BottomSheet';
 import PromotionSheet from '../../../components/business/PromotionSheet';
 import AddressSheet from '../../../components/business/AddressSheet';
 import ServiceSheet from '../../../components/business/ServiceSheet';
+import BuySpecSheet from '../../components/shop/BuySpecSheet';
 import { Product } from '../../../types';
 import {
   fetchShopProductDetail,
@@ -62,7 +63,7 @@ const ShopProductDetail: React.FC<ShopProductDetailProps> = ({
 
   const [detailData, setDetailData] = useState<ShopProductDetailData | null>(initialData);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
-  const [isFavorite, setIsFavorite] = useState(false);
+  // 收藏功能已移除
   const [activeTab, setActiveTab] = useState<'product' | 'reviews' | 'detail' | 'recommend'>('product');
   const [scrollY, setScrollY] = useState(0);
   const [headerStyle, setHeaderStyle] = useState<'transparent' | 'white'>('transparent');
@@ -82,6 +83,11 @@ const ShopProductDetail: React.FC<ShopProductDetailProps> = ({
   const [showPromotionSheet, setShowPromotionSheet] = useState(false);
   const [showAddressSheet, setShowAddressSheet] = useState(false);
   const [showServiceSheet, setShowServiceSheet] = useState(false);
+  
+  // 规格选择弹窗状态
+  const [showBuySpecSheet, setShowBuySpecSheet] = useState(false);
+  const [selectedSpecs, setSelectedSpecs] = useState<Record<string, string>>({});
+  const [buyQuantity, setBuyQuantity] = useState(1);
 
   // 状态机
   const detailMachine = useStateMachine<LoadingState, LoadingEvent>({
@@ -239,20 +245,38 @@ const ShopProductDetail: React.FC<ShopProductDetailProps> = ({
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // 购买
-  const handleBuy = async () => {
+  // 打开规格选择弹窗
+  const handleOpenBuySheet = () => {
     if (buying) return;
+    setShowBuySpecSheet(true);
+  };
 
+  // 确认购买（从规格选择弹窗确认后调用）
+  const handleConfirmBuy = async (quantity: number, specs?: Record<string, string>) => {
+    if (buying) return;
+    
+    // 保存选择的数量和规格
+    setBuyQuantity(quantity);
+    if (specs) {
+      setSelectedSpecs(specs);
+    }
+    setShowBuySpecSheet(false);
+    
+    // 显示确认对话框
+    const specText = specs && Object.keys(specs).length > 0 
+      ? ` (${Object.values(specs).join('、')})` 
+      : '';
+    
     showDialog({
       title: '确认购买',
-      description: `确定要购买 ${product.title} 吗？`,
+      description: `确定要购买 ${quantity} 件 ${product.title}${specText} 吗？`,
       confirmText: '立即支付',
       cancelText: '取消',
       onConfirm: async () => {
         try {
           buyMachine.send(FormEvent.SUBMIT);
           const response = await createOrder({
-            items: [{ product_id: Number(product.id), quantity: 1 }],
+            items: [{ product_id: Number(product.id), quantity }],
             pay_type: 'money',
           });
 
@@ -291,6 +315,21 @@ const ShopProductDetail: React.FC<ShopProductDetailProps> = ({
         }
       }
     });
+  };
+
+  // 直接购买（无规格商品）
+  const handleBuy = async () => {
+    if (buying) return;
+
+    // 如果有规格，打开规格选择弹窗
+    const specs = detailData?.specs || [];
+    if (specs.length > 0) {
+      setShowBuySpecSheet(true);
+      return;
+    }
+
+    // 无规格商品，打开数量选择弹窗
+    setShowBuySpecSheet(true);
   };
 
   if (loading) {
@@ -383,16 +422,7 @@ const ShopProductDetail: React.FC<ShopProductDetailProps> = ({
           )}
           
           <div className="flex items-center gap-1">
-            <button 
-              onClick={() => setIsFavorite(!isFavorite)}
-              className={`p-2 rounded-full transition-colors ${
-                headerStyle === 'white' 
-                  ? 'active:bg-gray-100' 
-                  : 'bg-black/20 active:bg-black/30'
-              }`}
-            >
-              <Heart size={20} className={isFavorite ? 'fill-red-500 text-red-500' : headerStyle === 'white' ? 'text-gray-500' : 'text-white'} />
-            </button>
+            {/* 分享按钮已移除 */}
           </div>
         </div>
       </header>
@@ -455,49 +485,46 @@ const ShopProductDetail: React.FC<ShopProductDetailProps> = ({
         </div>
       )}
 
-      {/* 价格促销区 - 京东风格紧凑卡片 - 点击弹出优惠详情 */}
+      {/* 价格促销区 */}
       <div 
         className="bg-white px-3 py-2.5 active:bg-gray-50 cursor-pointer"
         onClick={() => setShowPromotionSheet(true)}
       >
         {/* 价格行 */}
         <div className="flex items-center justify-between">
-          <div className="flex items-baseline">
-            <span className="text-red-500 text-sm">¥</span>
-            <span className="text-red-500 text-2xl font-bold">{displayPrice}</span>
+          <div className="flex items-baseline flex-wrap">
+            {/* 现金价格：仅在price > 0时显示 */}
+            {displayPrice > 0 && (
+              <>
+                <span className="text-red-500 text-sm">¥</span>
+                <span className="text-red-500 text-2xl font-bold">{displayPrice}</span>
+              </>
+            )}
+            {/* 消费金价格 */}
             {scorePrice > 0 && (
-              <span className="ml-1.5 text-orange-500 text-xs">+{scorePrice}消费金</span>
+              <span className="text-red-500 text-xl font-bold ml-1">
+                {displayPrice > 0 ? '+' : ''}{scorePrice}消费金
+              </span>
             )}
           </div>
           <div className="flex items-center gap-1">
             <span className="bg-gradient-to-r from-red-500 to-orange-500 text-white text-[10px] px-2 py-0.5 rounded">
-              新春购物季
+              热销
             </span>
           </div>
         </div>
         
-        {/* 促销标签行 */}
-        <div className="flex items-center gap-2 mt-1.5">
-          <span className="text-[10px] text-orange-600 bg-orange-50 px-1.5 py-0.5 rounded">
-            入会到手价
+        {/* 保障标签行 */}
+        <div className="flex items-center gap-2 mt-2">
+          <span className="flex items-center gap-0.5 text-[10px] text-green-600 bg-green-50 px-1.5 py-0.5 rounded">
+            <Shield size={10} />
+            正品保障
           </span>
-          <span className="text-gray-400 text-xs line-through">¥{originalPrice}</span>
-          <span className="text-gray-500 text-xs">官方直降{Math.round((savedAmount / originalPrice) * 100)}%</span>
-          <span className="text-gray-500 text-xs">已售{salesCount}+</span>
-        </div>
-        
-        {/* 优惠券行 */}
-        <div className="flex items-center gap-1.5 mt-2 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
-          <span className="flex items-center gap-0.5 text-[10px] text-red-500 bg-red-50 px-1.5 py-0.5 rounded border border-red-100 flex-shrink-0">
-            <Gift size={10} />
-            入会赠品1件
+          <span className="flex items-center gap-0.5 text-[10px] text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">
+            <Truck size={10} />
+            极速发货
           </span>
-          <span className="text-[10px] text-orange-600 bg-orange-50 px-1.5 py-0.5 rounded border border-orange-100 flex-shrink-0">
-            专项金支付减20元
-          </span>
-          <span className="text-[10px] text-yellow-600 bg-yellow-50 px-1.5 py-0.5 rounded border border-yellow-100 flex-shrink-0">
-            最高返1,000积分
-          </span>
+          <span className="text-gray-500 text-xs ml-auto">已售{salesCount}+</span>
         </div>
       </div>
 
@@ -565,6 +592,24 @@ const ShopProductDetail: React.FC<ShopProductDetailProps> = ({
           <ChevronRight size={14} className="text-gray-400" />
         </div>
         <div className="text-[11px] text-gray-400 mt-1 ml-5">官方物流 · 全国包邮</div>
+      </div>
+
+      {/* 规格选择入口 - 点击弹出规格选择 */}
+      <div 
+        className="bg-white mt-1.5 px-3 py-3 active:bg-gray-50 cursor-pointer"
+        onClick={() => setShowBuySpecSheet(true)}
+      >
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="text-gray-500 text-sm">已选</span>
+            <span className="text-gray-800 text-sm font-medium">
+              {Object.keys(selectedSpecs).length > 0 
+                ? `${Object.values(selectedSpecs).join('，')}，${buyQuantity}件` 
+                : '请选择规格'}
+            </span>
+          </div>
+          <ChevronRight size={14} className="text-gray-400" />
+        </div>
       </div>
 
       {/* 买家评价区 - 点击跳转评价页面 */}
@@ -647,38 +692,28 @@ const ShopProductDetail: React.FC<ShopProductDetailProps> = ({
 
       {/* 底部操作栏 - 紧凑设计 */}
       {!hideActions && (
-        <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 px-2 py-2 flex items-center z-50">
-          {/* 左侧图标按钮 - 紧凑排列 */}
-          <div className="flex items-center gap-0">
-            <button className="flex flex-col items-center justify-center w-10 py-0.5">
+        <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 px-3 py-2 flex items-center z-50">
+          {/* 左侧图标按钮 */}
+          <div className="flex items-center gap-1">
+            <button className="flex flex-col items-center justify-center w-12 py-0.5">
               <Store size={18} className="text-gray-500" />
               <span className="text-[9px] text-gray-500">店铺</span>
             </button>
             <button 
               onClick={() => navigate('/online-service')}
-              className="flex flex-col items-center justify-center w-10 py-0.5"
+              className="flex flex-col items-center justify-center w-12 py-0.5"
             >
               <MessageCircle size={18} className="text-gray-500" />
               <span className="text-[9px] text-gray-500">客服</span>
             </button>
-            <button className="flex flex-col items-center justify-center w-10 py-0.5 relative">
-              <ShoppingCart size={18} className="text-gray-500" />
-              <span className="text-[9px] text-gray-500">购物车</span>
-              <span className="absolute -top-0.5 right-0.5 w-3.5 h-3.5 bg-red-500 text-white text-[8px] rounded-full flex items-center justify-center">
-                2
-              </span>
-            </button>
           </div>
           
-          {/* 右侧按钮 */}
-          <div className="flex-1 flex gap-0 ml-1.5">
-            <button className="flex-1 bg-gradient-to-r from-[#ffa940] to-[#ff7a00] text-white py-2.5 rounded-l-lg text-sm font-bold active:opacity-90 transition-opacity">
-              加入购物车
-            </button>
+          {/* 右侧按钮 - 立即购买 */}
+          <div className="flex-1 ml-3">
             <button
               onClick={handleBuy}
               disabled={buying}
-              className="flex-1 bg-gradient-to-r from-[#ff4d4f] to-[#e23c41] text-white py-2.5 rounded-r-lg text-sm font-bold active:opacity-90 transition-opacity disabled:opacity-70"
+              className="w-full bg-gradient-to-r from-[#ff4d4f] to-[#e23c41] text-white py-3 rounded-xl text-base font-bold active:opacity-90 transition-opacity disabled:opacity-70"
             >
               {buying ? '处理中...' : '立即购买'}
             </button>
@@ -738,6 +773,24 @@ const ShopProductDetail: React.FC<ShopProductDetailProps> = ({
       >
         <ServiceSheet productName={displayTitle} />
       </BottomSheet>
+
+      {/* 规格选择弹窗 */}
+      <BuySpecSheet
+        visible={showBuySpecSheet}
+        onClose={() => setShowBuySpecSheet(false)}
+        productName={displayTitle}
+        productImage={mainImage}
+        price={displayPrice}
+        scorePrice={scorePrice}
+        stock={detailData?.stock ?? 999}
+        maxPurchase={detailData?.max_purchase ?? 99}
+        specs={detailData?.specs?.map(spec => ({
+          id: spec.id,
+          name: spec.name,
+          values: spec.values
+        })) || []}
+        onConfirm={handleConfirmBuy}
+      />
     </div>
   );
 };

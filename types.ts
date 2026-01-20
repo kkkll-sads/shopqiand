@@ -21,6 +21,10 @@ export interface Product {
   zoneId?: number | string;
   /** 消费金价格（整数） */
   score_price?: number;
+  /** 绿色能量金额 */
+  green_power_amount?: number;
+  /** 余额可用金额 */
+  balance_available_amount?: number;
 }
 
 export interface Artist {
