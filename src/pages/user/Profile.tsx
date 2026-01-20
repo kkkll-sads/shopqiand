@@ -343,18 +343,24 @@ const Profile: React.FC<{ unreadCount?: number }> = ({ unreadCount = 0 }) => {
 
       {/* Digital Rights Card - 独立区块 */}
       <div className="px-4 relative z-10">
-        <div className="bg-white rounded-2xl px-5 py-5 shadow-sm relative overflow-hidden">
-          <div className="relative z-10">
-            <div className="flex justify-between items-start mb-5">
+        <div className="relative rounded-2xl shadow-xl overflow-hidden text-white font-sans">
+          {/* 渐变背景 - 和总资产页面一致 */}
+          <div className="absolute inset-0 bg-gradient-to-br from-[#FF884D] to-[#FF5500] z-0">
+            <div className="absolute top-0 right-0 w-40 h-40 bg-white opacity-10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
+            <div className="absolute bottom-0 left-0 w-32 h-32 bg-orange-300 opacity-20 rounded-full blur-2xl translate-y-1/2 -translate-x-1/4"></div>
+          </div>
+
+          <div className="relative z-10 p-4">
+            <div className="flex justify-between items-start mb-3">
               <div className="flex items-center gap-2">
-                <span className="text-sm text-gray-500 font-medium">供应链专项金</span>
-                <span className="bg-red-50 text-red-600 text-[10px] px-2 py-0.5 rounded-full font-bold">
+                <span className="text-sm font-medium text-white/90">供应链专项金</span>
+                <span className="bg-white/20 text-white text-[10px] px-2 py-0.5 rounded-full font-bold">
                   采购本金
                 </span>
               </div>
               <button
                 onClick={() => navigate('/balance-recharge')}
-                className="text-red-600 text-sm font-medium flex items-center gap-1 active:opacity-70"
+                className="text-white/90 text-sm font-medium flex items-center gap-0.5 active:opacity-70"
               >
                 去充值 <ChevronRight size={14} />
               </button>
@@ -362,57 +368,59 @@ const Profile: React.FC<{ unreadCount?: number }> = ({ unreadCount = 0 }) => {
 
             {/* Main Big Number: Supply Chain Special Fund (balance_available) */}
             <div
-              className="text-3xl font-[DINAlternate-Bold,Roboto,sans-serif] font-bold text-gray-900 tracking-tight mb-5 cursor-pointer active:opacity-70 transition-opacity"
+              className="mb-4 cursor-pointer active:opacity-70 transition-opacity"
               onClick={() => navigate('/asset-view?tab=0')}
             >
-              <span className="text-xl mr-1">¥</span>
-              {formatPriceSmart(userInfo?.balance_available)}
+              <div className="flex items-baseline">
+                <span className="text-2xl font-medium mr-0.5">¥</span>
+                <span className="text-[32px] font-bold font-[DINAlternate-Bold,Roboto,sans-serif] tracking-tight leading-none">
+                  {formatPriceSmart(userInfo?.balance_available)}
+                </span>
+              </div>
             </div>
 
-            {/* Bottom Grid: 4 columns */}
-            <div className="grid grid-cols-4 gap-x-2">
-              {/* Withdrawable */}
+            {/* Bottom Grid: 2x2 Layout - 和总资产页面一致 */}
+            <div className="grid grid-cols-2 gap-y-3 gap-x-2 pt-3 border-t border-white/20">
+              {/* Row 1 */}
               <div
-                className="flex flex-col cursor-pointer active:opacity-70 transition-opacity"
+                className="text-center border-r border-white/10 cursor-pointer active:opacity-70"
                 onClick={() => navigate('/asset-view?tab=1')}
               >
-                <div className="text-xs text-gray-400 mb-1">可调度收益</div>
-                <div className="text-sm font-bold text-gray-800 font-[DINAlternate-Bold,Roboto,sans-serif] leading-tight">
+                <div className="text-xs text-white/80 mb-1">可调度收益</div>
+                <div className="text-lg font-bold font-[DINAlternate-Bold,Roboto,sans-serif]">
                   {formatPriceSmart(userInfo?.withdrawable_money)}
                 </div>
               </div>
 
-              {/* Consumer Points */}
               <div
-                className="flex flex-col cursor-pointer active:opacity-70 transition-opacity"
+                className="text-center cursor-pointer active:opacity-70"
                 onClick={() => navigate('/market')}
               >
-                <div className="text-xs text-gray-400 mb-1">消费金</div>
-                <div className="text-sm font-bold text-gray-800 font-[DINAlternate-Bold,Roboto,sans-serif] leading-tight">
+                <div className="text-xs text-white/80 mb-1">消费金</div>
+                <div className="text-lg font-bold font-[DINAlternate-Bold,Roboto,sans-serif]">
                   {formatPriceSmart(userInfo?.score)}
                 </div>
               </div>
 
-              {/* Green Power */}
+              {/* Row 2 */}
               <div
-                className="flex flex-col cursor-pointer active:opacity-70 transition-opacity"
+                className="text-center border-r border-white/10 border-t border-white/10 pt-3 cursor-pointer active:opacity-70"
                 onClick={() => navigate('/hashrate-exchange')}
               >
-                <div className="text-xs text-gray-400 mb-1 flex items-center gap-1">
-                  绿色算力 <Leaf size={10} className="text-green-500" />
+                <div className="text-xs text-white/80 mb-1 flex items-center justify-center gap-1">
+                  绿色算力 <Leaf size={10} className="text-white/70" />
                 </div>
-                <div className="text-sm font-bold text-gray-800 font-[DINAlternate-Bold,Roboto,sans-serif] leading-tight">
+                <div className="text-lg font-bold font-[DINAlternate-Bold,Roboto,sans-serif]">
                   {formatPriceSmart(userInfo?.green_power)}
                 </div>
               </div>
 
-              {/* Rights Fund */}
               <div
-                className="flex flex-col cursor-pointer active:opacity-70 transition-opacity"
+                className="text-center border-t border-white/10 pt-3 cursor-pointer active:opacity-70"
                 onClick={() => navigate('/asset-view?tab=3')}
               >
-                <div className="text-xs text-gray-400 mb-1">确权金</div>
-                <div className="text-sm font-bold text-gray-800 font-[DINAlternate-Bold,Roboto,sans-serif] leading-tight">
+                <div className="text-xs text-white/80 mb-1">确权金</div>
+                <div className="text-lg font-bold font-[DINAlternate-Bold,Roboto,sans-serif]">
                   {formatPriceSmart(userInfo?.service_fee_balance)}
                 </div>
               </div>
