@@ -225,100 +225,120 @@ const Market: React.FC<MarketProps> = ({ onProductSelect }) => {
   };
 
   return (
-    <div ref={containerRef} onScroll={handleScroll} className="h-[calc(100vh-60px)] overflow-y-auto bg-gray-50">
-      {/* Header & Search */}
-      <div className="bg-white p-3 sticky top-0 z-20 shadow-sm">
-        <div className="flex items-center gap-3 mb-3">
-          <h1 className="font-bold text-lg text-gray-800 whitespace-nowrap">消费金兑换</h1>
-          <div className="flex-1 bg-gray-100 rounded-full flex items-center px-3 py-1.5 border border-gray-100 focus-within:border-orange-200 transition-colors">
-            <Search size={16} className="text-gray-400 mr-2" />
+    <div ref={containerRef} onScroll={handleScroll} className="h-[calc(100vh-60px)] overflow-y-auto bg-gray-100">
+      {/* Header & Search - 渐变背景 */}
+      <div className="bg-gradient-to-b from-orange-50 to-white sticky top-0 z-20 shadow-sm">
+        {/* 搜索栏 */}
+        <div className="flex items-center gap-2.5 p-3 pb-2">
+          <h1 className="font-bold text-base text-gray-800 whitespace-nowrap">消费金商城</h1>
+          <div className="flex-1 bg-white rounded-full flex items-center px-3 py-2 shadow-sm border border-gray-100 focus-within:border-orange-300 focus-within:shadow-md transition-all">
+            <Search size={16} className="text-orange-400 mr-2 flex-shrink-0" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="请输入您要搜索的商品名称"
-              className="bg-transparent border-none outline-none text-xs flex-1 text-gray-700 placeholder-gray-400"
+              placeholder="搜索商品"
+              className="bg-transparent border-none outline-none text-sm flex-1 text-gray-700 placeholder-gray-400"
             />
           </div>
-          <button className="bg-orange-600 text-white text-xs px-4 py-1.5 rounded-full shadow-sm shadow-orange-200 active:bg-orange-700">
+          <button className="bg-gradient-to-r from-orange-500 to-orange-400 text-white text-xs font-semibold px-4 py-2 rounded-full shadow-md shadow-orange-500/25 active:scale-95 transition-transform">
             搜索
           </button>
         </div>
 
-        {/* Categories Icons */}
-        <div className="grid grid-cols-4 gap-2 mb-2">
-          {categories.map((cat) => (
-            <div
-              key={cat.id}
-              className="flex flex-col items-center py-2 cursor-pointer active:opacity-60"
-              onClick={() => setSelectedCategory(cat.id)}
-            >
-              <div className={`w-10 h-10 rounded-lg flex items-center justify-center mb-1 border transition-colors ${selectedCategory === cat.id ? 'border-orange-500 text-orange-500 bg-orange-50' : 'border-gray-200 text-gray-400'}`}>
-                <cat.icon size={20} />
+        {/* Categories Icons - 分类入口 */}
+        <div className="px-3 pb-2">
+          <div className="flex gap-2 overflow-x-auto scrollbar-hide py-1">
+            {categories.map((cat) => (
+              <div
+                key={cat.id}
+                className={`flex flex-col items-center px-3 py-2 cursor-pointer active:scale-95 transition-all rounded-xl min-w-[60px] ${
+                  selectedCategory === cat.id 
+                    ? 'bg-orange-500 shadow-md shadow-orange-500/30' 
+                    : 'bg-white shadow-sm'
+                }`}
+                onClick={() => setSelectedCategory(cat.id)}
+              >
+                <cat.icon 
+                  size={18} 
+                  className={selectedCategory === cat.id ? 'text-white' : 'text-orange-400'} 
+                  strokeWidth={selectedCategory === cat.id ? 2.5 : 1.5}
+                />
+                <span className={`text-[10px] mt-1 whitespace-nowrap ${
+                  selectedCategory === cat.id ? 'text-white font-semibold' : 'text-gray-600'
+                }`}>
+                  {cat.label}
+                </span>
               </div>
-              <span className={`text-[10px] ${selectedCategory === cat.id ? 'text-orange-600 font-bold' : 'text-gray-500'}`}>
-                {cat.label}
-              </span>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
 
-        {/* Filter Tabs */}
-        <div className="flex justify-between text-sm border-t border-gray-100 pt-3">
+        {/* Filter Tabs - 筛选标签 */}
+        <div className="flex bg-white border-t border-gray-100">
           {[
             { id: 'comprehensive', label: '综合' },
             { id: 'price', label: '价格' },
             { id: 'sales', label: '销量' },
             { id: 'new', label: '最新' }
-          ].map((filter) => (
-            <button
-              key={filter.id}
-              onClick={() => handleFilterClick(filter.id)}
-              className={`flex items-center justify-center flex-1 py-1 ${(activeFilter === filter.id || (filter.id === 'price' && activeFilter.startsWith('price')))
-                ? 'text-orange-600 font-bold'
-                : 'text-gray-500'
+          ].map((filter) => {
+            const isActive = activeFilter === filter.id || (filter.id === 'price' && activeFilter.startsWith('price'));
+            return (
+              <button
+                key={filter.id}
+                onClick={() => handleFilterClick(filter.id)}
+                className={`flex items-center justify-center flex-1 py-2.5 text-sm relative transition-colors ${
+                  isActive ? 'text-orange-500 font-semibold' : 'text-gray-500'
                 }`}
-            >
-              {filter.label}
-              {filter.id === 'price' && (
-                <div className="flex flex-col ml-1 -space-y-1">
-                  <span className={`w-0 h-0 border-l-[3px] border-l-transparent border-r-[3px] border-r-transparent border-b-[4px] ${activeFilter === 'price_asc' ? 'border-b-orange-600' : 'border-b-gray-300'}`}></span>
-                  <span className={`w-0 h-0 border-l-[3px] border-l-transparent border-r-[3px] border-r-transparent border-t-[4px] ${activeFilter === 'price_desc' ? 'border-t-orange-600' : 'border-t-gray-300'}`}></span>
-                </div>
-              )}
-            </button>
-          ))}
+              >
+                {filter.label}
+                {filter.id === 'price' && (
+                  <div className="flex flex-col ml-1 gap-0.5">
+                    <span className={`w-0 h-0 border-l-[3px] border-l-transparent border-r-[3px] border-r-transparent border-b-[4px] ${activeFilter === 'price_asc' ? 'border-b-orange-500' : 'border-b-gray-300'}`}></span>
+                    <span className={`w-0 h-0 border-l-[3px] border-l-transparent border-r-[3px] border-r-transparent border-t-[4px] ${activeFilter === 'price_desc' ? 'border-t-orange-500' : 'border-t-gray-300'}`}></span>
+                  </div>
+                )}
+                {/* 底部指示条 */}
+                {isActive && (
+                  <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-5 h-0.5 bg-orange-500 rounded-full" />
+                )}
+              </button>
+            );
+          })}
         </div>
       </div>
 
-      {/* Product Grid */}
-      <div className="p-3">
+      {/* Product Grid - 商品列表 */}
+      <div className="p-2.5">
         {loading ? (
-          <LoadingSpinner text="商品加载中..." />
+          <div className="py-20">
+            <LoadingSpinner text="商品加载中..." />
+          </div>
         ) : error ? (
-          <EmptyState
-            icon={<LayoutGrid size={48} className="text-gray-300" />}
-            title="加载失败"
-            description={error}
-          />
+          <div className="py-20">
+            <EmptyState
+              icon={<LayoutGrid size={48} className="text-gray-300" />}
+              title="加载失败"
+              description={error}
+            />
+          </div>
         ) : filteredProducts.length > 0 ? (
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-2 gap-2.5">
             {filteredProducts.map((product, index) => (
               <div
                 key={product.id}
-                className="bg-white rounded-xl overflow-hidden shadow-sm active:scale-[0.98] transition-all duration-200 flex flex-col"
+                className="bg-white rounded-2xl overflow-hidden shadow-sm active:scale-[0.97] transition-transform duration-200 flex flex-col"
                 onClick={() => {
                   if (onProductSelect) {
                     onProductSelect(product);
                   } else {
-                    // 保存商品到 store，然后跳转到新重构的商品详情页
                     setSelectedProduct(product, 'market');
                     navigate(`/product/${product.id}`);
                   }
                 }}
               >
                 {/* 商品图片 */}
-                <div className="aspect-square bg-gray-50 relative overflow-hidden">
+                <div className="aspect-square bg-gray-100 relative overflow-hidden">
                   <LazyImage 
                     src={product.image} 
                     alt={product.title} 
@@ -326,58 +346,47 @@ const Market: React.FC<MarketProps> = ({ onProductSelect }) => {
                   />
                   {/* 热销标签 */}
                   {index < 3 && (
-                    <div className="absolute top-0 left-0 bg-gradient-to-r from-red-500 to-orange-500 text-white text-[10px] px-2 py-0.5 rounded-br-lg font-medium">
-                      热销
+                    <div className="absolute top-2 left-2 bg-gradient-to-r from-red-500 to-orange-500 text-white text-[10px] px-2 py-0.5 rounded-full font-semibold shadow-sm">
+                      🔥 热销
+                    </div>
+                  )}
+                  {/* 新品标签 */}
+                  {index >= 3 && index < 6 && activeFilter === 'new' && (
+                    <div className="absolute top-2 left-2 bg-gradient-to-r from-green-500 to-emerald-500 text-white text-[10px] px-2 py-0.5 rounded-full font-semibold shadow-sm">
+                      ✨ 新品
                     </div>
                   )}
                 </div>
 
                 {/* 商品信息 */}
-                <div className="p-2.5 flex flex-col flex-1">
-                  {/* 标题带标签 */}
-                  <div className="flex items-start gap-1 mb-1.5">
-                    <span className="flex-shrink-0 bg-gradient-to-r from-orange-500 to-red-500 text-white text-[9px] px-1 py-0.5 rounded font-bold">
-                      树交所
-                    </span>
-                    <span className="text-[13px] text-gray-800 font-medium line-clamp-2 leading-[1.3]">
-                      {product.title}
-                    </span>
-                  </div>
+                <div className="p-3 flex flex-col flex-1">
+                  {/* 标题 */}
+                  <h3 className="text-[13px] text-gray-800 font-medium line-clamp-2 leading-snug mb-2">
+                    {product.title}
+                  </h3>
 
                   {/* 分类标签 */}
-                  <div className="flex items-center gap-1 mb-2">
-                    <span className="text-[10px] text-orange-600 bg-orange-50 px-1.5 py-0.5 rounded border border-orange-100">
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <span className="text-[10px] text-orange-600 bg-orange-50 px-1.5 py-0.5 rounded-md font-medium">
                       {product.category || '精选'}
                     </span>
-                    {product.artist && product.artist !== '消费金商品' && (
-                      <span className="text-[10px] text-gray-400 truncate">
-                        {product.artist}
-                      </span>
-                    )}
+                    <span className="text-[10px] text-gray-400">
+                      {((parseInt(product.id, 10) || index + 1) * 17 % 500) + 100}人已兑
+                    </span>
                   </div>
 
                   {/* 价格区域 */}
-                  <div className="mt-auto">
-                    <div className="flex items-baseline gap-1">
-                      <span className="text-red-500 text-[10px] font-bold">¥</span>
-                      <span className="text-red-500 text-lg font-bold leading-none">
+                  <div className="mt-auto pt-2 border-t border-gray-50">
+                    <div className="flex items-baseline gap-0.5">
+                      <span className="text-orange-500 text-[11px] font-bold">¥</span>
+                      <span className="text-orange-500 text-lg font-bold leading-none font-[DINAlternate-Bold,Roboto,sans-serif]">
                         {product.price > 0 ? product.price.toLocaleString() : '0'}
                       </span>
                       {product.score_price && product.score_price > 0 && (
-                        <span className="text-orange-500 text-[11px] font-medium">
+                        <span className="text-gray-400 text-[10px] ml-1">
                           +{product.score_price}消费金
                         </span>
                       )}
-                    </div>
-                    
-                    {/* 促销信息 */}
-                    <div className="flex items-center justify-between mt-1.5">
-                      <span className="text-[10px] text-gray-400 bg-gray-50 px-1.5 py-0.5 rounded">
-                        兑换价
-                      </span>
-                      <span className="text-[10px] text-gray-400">
-                        {((parseInt(product.id, 10) || index + 1) * 17 % 500) + 100}人付款
-                      </span>
                     </div>
                   </div>
                 </div>
@@ -385,25 +394,31 @@ const Market: React.FC<MarketProps> = ({ onProductSelect }) => {
             ))}
           </div>
         ) : (
-          <EmptyState
-            icon={<LayoutGrid size={48} className="text-gray-300" />}
-            title="暂无相关商品"
-            description="换个关键词试试吧"
-          />
+          <div className="py-20">
+            <EmptyState
+              icon={<LayoutGrid size={48} className="text-gray-300" />}
+              title="暂无相关商品"
+              description="换个关键词试试吧"
+            />
+          </div>
         )}
 
         {/* 加载更多指示器 */}
         {loadingMore && (
-          <div className="py-4 flex items-center justify-center text-gray-400 text-xs">
-            <Loader2 size={16} className="animate-spin mr-2" />
-            加载中...
+          <div className="py-6 flex items-center justify-center text-gray-400 text-xs">
+            <Loader2 size={18} className="animate-spin mr-2 text-orange-400" />
+            正在加载...
           </div>
         )}
 
         {/* 没有更多数据 */}
         {!loading && !hasMore && filteredProducts.length > 0 && (
-          <div className="py-4 text-center text-gray-400 text-xs pb-20">
-            已加载全部
+          <div className="py-6 text-center text-gray-400 text-xs pb-20">
+            <div className="inline-flex items-center gap-2">
+              <div className="w-8 h-px bg-gray-200" />
+              <span>已加载全部</span>
+              <div className="w-8 h-px bg-gray-200" />
+            </div>
           </div>
         )}
       </div>
