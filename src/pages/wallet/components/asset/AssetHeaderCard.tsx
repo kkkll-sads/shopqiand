@@ -4,9 +4,9 @@
  */
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowRight, HelpCircle, ChevronRight } from 'lucide-react';
+import { ArrowRight, HelpCircle } from 'lucide-react';
 import { UserInfo } from '../../../../../types';
-import { formatPriceSmart } from '../../../../../utils/format';
+import { formatAmount } from '../../../../../utils/format';
 import { fetchAnnouncements } from '../../../../../services/cms';
 import BalanceHelpModal from './BalanceHelpModal';
 import { extractData } from '../../../../../utils/apiHelpers';
@@ -91,84 +91,84 @@ const AssetHeaderCard: React.FC<AssetHeaderCardProps> = ({ userInfo }) => {
 
   return (
     <>
-      <div className="relative rounded-2xl shadow-lg mb-3 overflow-hidden text-white font-sans">
-        {/* 渐变背景 */}
-        <div className="absolute inset-0 bg-gradient-to-br from-[#FF7A45] via-[#FF5722] to-[#E64A19] z-0" />
+      <div className="relative rounded-3xl shadow-xl mb-3 overflow-hidden text-white font-sans">
+        <div className="absolute inset-0 bg-gradient-to-br from-[#FF884D] to-[#FF5500] z-0">
+          <div className="absolute top-0 right-0 w-40 h-40 bg-white opacity-10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
+          <div className="absolute bottom-0 left-0 w-32 h-32 bg-orange-300 opacity-20 rounded-full blur-2xl translate-y-1/2 -translate-x-1/4"></div>
+        </div>
 
-        <div className="relative z-10 p-4">
-          {/* 顶部：标题 + 标签 + 充值入口 */}
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-medium text-white/90">供应链专项金</span>
-              <span className="text-[10px] px-1.5 py-0.5 bg-white/20 rounded text-white/80">采购本金</span>
+        <div className="relative z-10 p-3">
+          <div className="mb-4 text-center">
+            <div className="flex items-center justify-center gap-1 opacity-90 text-sm font-medium mb-1">
+              总资产 (CNY)
+              <HelpIcon type="total_assets" />
             </div>
-            <button
-              onClick={() => navigate('/balance-recharge')}
-              className="text-xs text-white/90 flex items-center gap-0.5 active:opacity-70"
-            >
-              去充值 <ChevronRight size={14} />
-            </button>
-          </div>
-
-          {/* 主金额 */}
-          <div className="mb-4">
-            <div className="flex items-baseline">
-              <span className="text-2xl font-medium mr-0.5">¥</span>
-              <span className="text-[32px] font-bold font-[DINAlternate-Bold,Roboto,sans-serif] tracking-tight leading-none">
-                {formatPriceSmart(userInfo?.balance_available)}
-              </span>
+            <div className="text-3xl font-[DINAlternate-Bold,Roboto,sans-serif] font-bold tracking-tight drop-shadow-sm">
+              {formatAmount(userInfo?.money)}
             </div>
           </div>
 
-          {/* 四个字段 - 使用 Grid 均匀分布 */}
-          <div className="grid grid-cols-4 gap-1 pt-3 border-t border-white/15">
-            {/* 可调度收益 */}
+          <div className="w-full h-px bg-white/20 mb-3"></div>
+
+          <div className="grid grid-cols-2 gap-y-4 gap-x-2 relative mb-2">
+            {/* Row 1 */}
+            <div className="text-center border-r border-white/10">
+              <div className="text-xs text-white/80 mb-1 flex items-center justify-center">
+                供应链专项金
+                <HelpIcon type="supply_chain_fund" />
+              </div>
+              <div className="text-lg font-bold font-[DINAlternate-Bold,Roboto,sans-serif]">
+                {formatAmount(userInfo?.balance_available)}
+              </div>
+            </div>
+
             <div className="text-center">
-              <div className="text-[10px] text-white/70 mb-1 flex items-center justify-center whitespace-nowrap">
+              <div className="text-xs text-white/80 mb-1 flex items-center justify-center">
                 可调度收益
                 <HelpIcon type="withdrawable_income" />
               </div>
-              <div className="text-sm font-bold font-[DINAlternate-Bold,Roboto,sans-serif] truncate">
-                {formatPriceSmart(userInfo?.withdrawable_money)}
+              <div className="text-lg font-bold font-[DINAlternate-Bold,Roboto,sans-serif]">
+                {formatAmount(userInfo?.withdrawable_money)}
               </div>
             </div>
 
-            {/* 消费金 */}
-            <div className="text-center">
-              <div className="text-[10px] text-white/70 mb-1 flex items-center justify-center whitespace-nowrap">
+            {/* Row 2 */}
+            <div className="text-center border-r border-white/10 border-t border-white/10 pt-3">
+              <div className="text-xs text-white/80 mb-1 flex items-center justify-center">
                 消费金
                 <HelpIcon type="consumer_points" />
               </div>
-              <div className="text-sm font-bold font-[DINAlternate-Bold,Roboto,sans-serif] truncate">
-                {formatPriceSmart(userInfo?.score)}
+              <div className="text-lg font-bold font-[DINAlternate-Bold,Roboto,sans-serif]">
+                {userInfo?.score ?? 0}
               </div>
             </div>
 
-            {/* 绿色算力 */}
             <button
               type="button"
-              className="text-center"
+              className="text-center border-t border-white/10 pt-3"
               onClick={() => navigate('/hashrate-exchange')}
             >
-              <div className="text-[10px] text-white/70 mb-1 flex items-center justify-center whitespace-nowrap">
-                绿色算力
-                <ArrowRight size={10} className="ml-0.5 opacity-60" />
+              <div className="text-xs text-white/80 mb-1 flex items-center justify-center gap-1">
+                绿色算力 <ArrowRight size={10} className="opacity-70" />
+                <span onClick={(e) => e.stopPropagation()}>
+                  <HelpIcon type="green_power" />
+                </span>
               </div>
-              <div className="text-sm font-bold font-[DINAlternate-Bold,Roboto,sans-serif] text-emerald-200 truncate">
-                {formatPriceSmart(userInfo?.green_power)}
+              <div className="text-lg font-bold font-[DINAlternate-Bold,Roboto,sans-serif]">
+                {userInfo?.green_power || 0} <span className="text-xs font-normal opacity-70">GHs</span>
               </div>
             </button>
+          </div>
 
-            {/* 确权金 */}
-            <div className="text-center">
-              <div className="text-[10px] text-white/70 mb-1 flex items-center justify-center whitespace-nowrap">
-                确权金
-                <HelpIcon type="rights_fund" />
-              </div>
-              <div className="text-sm font-bold font-[DINAlternate-Bold,Roboto,sans-serif] truncate">
-                {formatPriceSmart(userInfo?.service_fee_balance)}
-              </div>
-            </div>
+          <div className="mt-2 pt-2 flex justify-between text-xs text-white/95 border-t border-white/20 px-1 font-medium tracking-wide">
+            <span className="flex items-center">
+              确权金: ¥{formatAmount(userInfo?.service_fee_balance)}
+              <HelpIcon type="rights_fund" />
+            </span>
+            <span className="flex items-center">
+              待激活: ¥{formatAmount(userInfo?.pending_activation_gold || 0)}
+              <HelpIcon type="pending_activation" />
+            </span>
           </div>
         </div>
       </div>
