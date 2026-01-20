@@ -239,27 +239,28 @@ const Home: React.FC<HomeProps> = ({ announcements = [] }) => {
 
   return (
     <div className="pb-24 bg-gray-50 min-h-screen">
-      {/* Top Background Gradient */}
-      <div className="absolute top-0 left-0 right-0 h-64 bg-gradient-to-b from-[#FFD6A5] to-gray-50 z-0" />
+      {/* Top Background Gradient - 更柔和的渐变 */}
+      <div className="absolute top-0 left-0 right-0 h-72 bg-gradient-to-b from-orange-100 via-orange-50 to-gray-50 z-0" />
 
       {/* Header - Fixed Positioning */}
-      <header className="px-4 py-3 fixed top-0 left-0 right-0 z-20 bg-gradient-to-r from-[#FFD6A5] to-[#FFC3A0] shadow-sm max-w-md mx-auto">
+      <header className="px-4 py-3 fixed top-0 left-0 right-0 z-20 max-w-md mx-auto">
+        {/* 搜索栏 - 毛玻璃效果 */}
         <div
-          className="flex items-center bg-white rounded-full p-1 pl-4 shadow-sm cursor-pointer active:scale-[0.99] transition-transform"
+          className="flex items-center bg-white/90 backdrop-blur-md rounded-full p-1.5 pl-4 shadow-lg shadow-orange-500/10 cursor-pointer active:scale-[0.98] transition-all border border-white/50"
           onClick={() => handleNavigate('search')}
         >
-          <Search size={16} className="text-gray-400 mr-2 flex-shrink-0" />
-          <span className="text-sm text-gray-400 flex-1 truncate">数据资产溯源查询...</span>
-          <div className="bg-gradient-to-r from-orange-500 to-red-500 text-white text-xs font-medium px-4 py-1.5 rounded-full flex-shrink-0 ml-2">
+          <Search size={18} className="text-orange-400 mr-2 flex-shrink-0" />
+          <span className="text-sm text-gray-400 flex-1 truncate">搜索数据资产、藏品...</span>
+          <div className="bg-gradient-to-r from-orange-500 to-orange-400 text-white text-xs font-semibold px-5 py-2 rounded-full flex-shrink-0 ml-2 shadow-md shadow-orange-500/30">
             搜索
           </div>
         </div>
       </header>
 
       {/* Banner Carousel - Added padding top for fixed header */}
-      <div className="p-4 pb-0 pt-[72px] relative z-0">
+      <div className="px-4 pb-0 pt-[68px] relative z-0">
         <div
-          className="w-full h-40 rounded-xl overflow-hidden relative shadow-lg touch-pan-y"
+          className="w-full h-44 rounded-2xl overflow-hidden relative shadow-xl shadow-orange-500/15 touch-pan-y"
           onTouchStart={handleTouchStart}
           onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
@@ -276,25 +277,26 @@ const Home: React.FC<HomeProps> = ({ announcements = [] }) => {
                   className="w-full h-full object-cover"
                   draggable={false}
                 />
+                {/* 底部渐变遮罩 */}
+                <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/40 to-transparent" />
               </div>
             ))}
           </div>
 
-          {/* Indicators */}
-          <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5 z-10">
+          {/* Indicators - 胶囊形指示器 */}
+          <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5 z-10 bg-black/20 backdrop-blur-sm rounded-full px-2 py-1">
             {banners.map((_, idx) => (
               <div
                 key={idx}
-                className={`h-1.5 rounded-full transition-all duration-300 ${currentBanner === idx ? 'w-4 bg-white' : 'w-1.5 bg-white/60'
-                  }`}
+                className={`h-1 rounded-full transition-all duration-300 ${currentBanner === idx ? 'w-4 bg-white' : 'w-1 bg-white/50'}`}
               />
             ))}
           </div>
         </div>
 
-        {/* Scrolling Notice */}
+        {/* Scrolling Notice - 公告栏 */}
         <div
-          className={`flex items-center mt-3 text-xs text-gray-600 bg-white/80 backdrop-blur-sm p-2 rounded-lg transition-colors shadow-sm ${announcements.length ? 'cursor-pointer active:bg-white' : 'opacity-60'}`}
+          className={`flex items-center mt-3 text-xs bg-white rounded-xl p-2.5 shadow-sm border border-orange-100/50 ${announcements.length ? 'cursor-pointer active:bg-orange-50/50' : 'opacity-60'}`}
           onClick={() => {
             if (announcements.length) {
               const targetId = announcements[noticeIndex]?.id;
@@ -304,137 +306,162 @@ const Home: React.FC<HomeProps> = ({ announcements = [] }) => {
             }
           }}
         >
-          <span className="bg-orange-500 text-white px-1 rounded text-[10px] mr-2 flex-shrink-0 font-medium">平台资讯</span>
+          <span className="bg-gradient-to-r from-orange-500 to-orange-400 text-white px-2 py-0.5 rounded-md text-[10px] mr-2.5 flex-shrink-0 font-semibold shadow-sm">公告</span>
           <div className="flex-1 h-5 overflow-hidden relative">
             <div
               className="absolute w-full transition-transform duration-500 ease-in-out"
               style={{ transform: `translateY(-${noticeIndex * 1.25}rem)` }}
             >
-              {(announcements.length ? announcements : [{ id: 'placeholder', title: '暂无公告' } as NewsItem]).map((item) => (
+              {(announcements.length ? announcements : [{ id: 'placeholder', title: '暂无最新公告' } as NewsItem]).map((item) => (
                 <div key={item.id} className="h-5 flex items-center w-full">
-                  <span className="truncate text-gray-700">{item.title}</span>
+                  <span className="truncate text-gray-600 font-medium">{item.title}</span>
                 </div>
               ))}
             </div>
           </div>
-          <ChevronRight size={14} className="text-gray-400 flex-shrink-0 ml-1" />
+          <ChevronRight size={16} className="text-orange-400 flex-shrink-0 ml-1" />
         </div>
       </div>
 
-      {/* Quick Actions */}
-      <div className="pb-4 pt-4 relative z-0">
-        <div className="grid grid-cols-4 gap-2 px-2">
-          {quickActions.map((item, index) => (
-            <div
-              key={index}
-              className="flex flex-col items-center cursor-pointer active:opacity-70 transition-opacity"
-              onClick={item.action}
-            >
-              <div className={`w-10 h-10 rounded-full ${item.bgColor} flex items-center justify-center mb-1 ${item.color} shadow-sm`}>
-                <item.icon size={20} />
+      {/* Quick Actions - 快捷操作 */}
+      <div className="py-4 px-4 relative z-0">
+        <div className="bg-white rounded-2xl p-4 shadow-sm">
+          <div className="grid grid-cols-4 gap-3">
+            {quickActions.map((item, index) => (
+              <div
+                key={index}
+                className="flex flex-col items-center cursor-pointer active:scale-95 transition-transform"
+                onClick={item.action}
+              >
+                <div className={`w-12 h-12 rounded-2xl ${item.bgColor} flex items-center justify-center mb-2 ${item.color} shadow-sm`}>
+                  <item.icon size={22} strokeWidth={1.8} />
+                </div>
+                <span className="text-[11px] text-gray-700 font-medium whitespace-nowrap">{item.label}</span>
               </div>
-              <span className="text-[10px] text-gray-700 font-medium whitespace-nowrap">{item.label}</span>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Trading Zone Entrance */}
-      <div className="px-4 py-2 mb-2 relative z-0">
-        <div
-          className="w-full h-24 rounded-xl overflow-hidden relative shadow-md cursor-pointer transform transition active:scale-95 duration-200 group bg-gradient-to-r from-[#FFD6A5] to-[#FFC3A0]"
-          onClick={() => handleNavigate('trading-zone')}
-        >
-          <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <h2 className="text-2xl font-bold text-white tracking-widest drop-shadow-md">交易专区</h2>
-            <div className="w-8 h-1 bg-white/80 mt-2 rounded-full shadow-sm"></div>
+            ))}
           </div>
         </div>
       </div>
 
-      {/* Subscription Records Preview */}
-      <div className="mt-2 bg-white p-4 rounded-t-2xl shadow-sm relative z-0 pb-10">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="font-bold text-gray-800 text-lg border-l-4 border-orange-500 pl-2 flex items-center gap-2">
-            申购记录
-          </h2>
+      {/* Trading Zone Entrance - 交易专区入口 */}
+      <div className="px-4 mb-3 relative z-0">
+        <div
+          className="w-full h-20 rounded-2xl overflow-hidden relative cursor-pointer active:scale-[0.98] transition-transform bg-gradient-to-r from-orange-500 via-orange-400 to-amber-400 shadow-lg shadow-orange-500/25"
+          onClick={() => handleNavigate('trading-zone')}
+        >
+          {/* 装饰性背景元素 */}
+          <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/4" />
+          <div className="absolute bottom-0 left-0 w-20 h-20 bg-white/10 rounded-full translate-y-1/2 -translate-x-1/4" />
+          
+          <div className="absolute inset-0 flex items-center justify-between px-6">
+            <div>
+              <h2 className="text-xl font-bold text-white tracking-wide">交易专区</h2>
+              <p className="text-white/80 text-xs mt-0.5">数据资产确权交易</p>
+            </div>
+            <div className="w-10 h-10 rounded-full bg-white/20 backdrop-blur flex items-center justify-center">
+              <ChevronRight size={24} className="text-white" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Subscription Records Preview - 申购记录 */}
+      <div className="mx-4 bg-white rounded-2xl shadow-sm relative z-0 overflow-hidden">
+        {/* 标题栏 */}
+        <div className="flex justify-between items-center p-4 pb-3">
+          <div className="flex items-center gap-2">
+            <div className="w-1 h-5 bg-gradient-to-b from-orange-500 to-orange-400 rounded-full" />
+            <h2 className="font-bold text-gray-800 text-base">申购记录</h2>
+          </div>
           <button
             onClick={() => handleNavigate('reservation-record')}
-            className="text-gray-400 flex items-center text-xs bg-gray-50 px-2 py-1 rounded-full"
+            className="text-orange-500 flex items-center text-xs font-medium active:opacity-70"
           >
-            全部记录 <ChevronRight size={14} />
+            全部 <ChevronRight size={16} />
           </button>
         </div>
 
-        <div className="space-y-3">
+        <div className="px-4 pb-4">
           {loadingRecords ? (
-            <div className="text-center py-8 text-gray-400">
-              <Clock size={24} className="mx-auto mb-2 animate-pulse" />
+            <div className="text-center py-10 text-gray-400">
+              <div className="w-10 h-10 mx-auto mb-3 rounded-full bg-orange-50 flex items-center justify-center">
+                <Clock size={20} className="text-orange-400 animate-pulse" />
+              </div>
               <p className="text-sm">加载中...</p>
             </div>
           ) : reservationRecords.length === 0 ? (
-            <div className="text-center py-8 text-gray-400">
-              <ClipboardList size={24} className="mx-auto mb-2" />
+            <div className="text-center py-10 text-gray-400">
+              <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-gray-100 flex items-center justify-center">
+                <ClipboardList size={24} className="text-gray-400" />
+              </div>
               <p className="text-sm">暂无申购记录</p>
+              <p className="text-xs text-gray-300 mt-1">参与申购后这里会显示记录</p>
             </div>
           ) : (
-            reservationRecords.map((record) => {
-              const getStatusBadge = (item: ReservationItem) => {
-                switch (item.status) {
-                  case 0: // 待撮合
-                    return (
-                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded border flex items-center gap-1 whitespace-nowrap text-orange-600 bg-orange-100 border-orange-200">
-                        <Clock size={10} className="text-orange-500" /> 待撮合
-                      </span>
-                    );
-                  case 1: // 已中签
-                    return (
-                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded border flex items-center gap-1 whitespace-nowrap text-green-600 bg-green-100 border-green-200">
-                        <CheckCircle2 size={10} className="text-green-500" /> 已中签
-                      </span>
-                    );
-                  case 2: // 未中签/已退款
-                    return (
-                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded border flex items-center gap-1 whitespace-nowrap text-gray-400 bg-gray-100 border-gray-200">
-                        <AlertCircle size={10} className="text-gray-400" /> 未中签
-                      </span>
-                    );
-                  default:
-                    return (
-                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded border flex items-center gap-1 whitespace-nowrap text-gray-400 bg-gray-100 border-gray-200">
-                        <Clock size={10} /> {item.status_text || '未知'}
-                      </span>
-                    );
-                }
-              };
+            <div className="space-y-2.5">
+              {reservationRecords.map((record) => {
+                const getStatusBadge = (item: ReservationItem) => {
+                  switch (item.status) {
+                    case 0: // 待撮合
+                      return (
+                        <span className="text-[10px] font-semibold px-2 py-1 rounded-lg flex items-center gap-1 whitespace-nowrap text-orange-600 bg-orange-50">
+                          <Clock size={10} /> 待撮合
+                        </span>
+                      );
+                    case 1: // 已中签
+                      return (
+                        <span className="text-[10px] font-semibold px-2 py-1 rounded-lg flex items-center gap-1 whitespace-nowrap text-green-600 bg-green-50">
+                          <CheckCircle2 size={10} /> 已中签
+                        </span>
+                      );
+                    case 2: // 未中签/已退款
+                      return (
+                        <span className="text-[10px] font-semibold px-2 py-1 rounded-lg flex items-center gap-1 whitespace-nowrap text-gray-500 bg-gray-100">
+                          <AlertCircle size={10} /> 未中签
+                        </span>
+                      );
+                    default:
+                      return (
+                        <span className="text-[10px] font-semibold px-2 py-1 rounded-lg flex items-center gap-1 whitespace-nowrap text-gray-500 bg-gray-100">
+                          <Clock size={10} /> {item.status_text || '未知'}
+                        </span>
+                      );
+                  }
+                };
 
-              return (
-                <div
-                  key={record.id}
-                  className="bg-gray-50 rounded-xl p-3 flex flex-col gap-2 active:scale-[0.99] transition-transform cursor-pointer"
-                  onClick={() => handleNavigate('reservation-record')}
-                >
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <h3 className="font-bold text-gray-900 text-sm">{record.status_text || '待撮合'}</h3>
-                      <span className="text-xs text-orange-600 bg-orange-50 px-1.5 py-0.5 rounded border border-orange-100">
-                        {record.session_id ? `场次${record.session_id}` : '盲盒预约'}
+                return (
+                  <div
+                    key={record.id}
+                    className="bg-gray-50 rounded-xl p-3.5 flex flex-col gap-2.5 active:bg-gray-100 transition-colors cursor-pointer"
+                    onClick={() => handleNavigate('reservation-record')}
+                  >
+                    <div className="flex justify-between items-start">
+                      <div className="flex flex-col gap-1">
+                        <h3 className="font-bold text-gray-800 text-sm">{record.status_text || '待撮合'}</h3>
+                        <span className="text-[10px] text-orange-500 bg-orange-50 px-2 py-0.5 rounded-md font-medium w-fit">
+                          {record.session_id ? `场次 ${record.session_id}` : '盲盒预约'}
+                        </span>
+                      </div>
+                      {getStatusBadge(record)}
+                    </div>
+                    <div className="flex justify-between items-center text-xs pt-1 border-t border-gray-100">
+                      <span className="text-gray-500">
+                        冻结 <span className="text-orange-600 font-bold">¥{Number(record.freeze_amount || 0).toLocaleString()}</span>
+                      </span>
+                      <span className="text-gray-400 flex items-center gap-1">
+                        <Zap size={10} className="text-yellow-500" /> 算力 {record.power_used || 5}
                       </span>
                     </div>
-                    {getStatusBadge(record)}
                   </div>
-                  <div className="flex justify-between items-center text-xs">
-                    <span className="text-gray-500">
-                      冻结金额 <span className="text-red-600 font-bold">¥{Number(record.freeze_amount || 0).toLocaleString()}</span>
-                    </span>
-                    <span className="text-gray-400">消耗算力: {record.power_used || 5}</span>
-                  </div>
-                </div>
-              );
-            })
+                );
+              })}
+            </div>
           )}
         </div>
       </div>
+
+      {/* 底部留白 */}
+      <div className="h-6" />
     </div>
   );
 };
