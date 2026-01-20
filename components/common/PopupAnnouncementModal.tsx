@@ -19,35 +19,36 @@ const PopupAnnouncementModal: React.FC<PopupAnnouncementModalProps> = ({
 
     return (
         <div
-            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4"
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 px-5 py-6 pb-24"
+            style={{ paddingBottom: 'max(6rem, calc(env(safe-area-inset-bottom) + 5rem))' }}
             onClick={onClose}
         >
             <div
-                className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden animate-in fade-in zoom-in duration-300"
+                className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden animate-in fade-in zoom-in duration-300 max-h-[calc(100vh-10rem)] flex flex-col"
                 onClick={(e) => e.stopPropagation()}
             >
                 {/* Header */}
-                <div className="relative bg-gradient-to-r from-orange-500 to-orange-400 px-4 py-4 text-white">
+                <div className="relative bg-gradient-to-r from-orange-500 to-orange-400 px-4 py-3 text-white flex-shrink-0">
                     <div className="flex items-center gap-2">
-                        <Bell size={20} className="animate-bounce" />
-                        <span className="font-semibold">平台公告</span>
+                        <Bell size={18} className="animate-bounce" />
+                        <span className="font-semibold text-sm">平台公告</span>
                     </div>
                     <button
                         type="button"
-                        className="absolute top-3 right-3 p-1 rounded-full bg-white/20 hover:bg-white/30 active:bg-white/40 transition-colors"
+                        className="absolute top-2.5 right-3 p-1 rounded-full bg-white/20 hover:bg-white/30 active:bg-white/40 transition-colors"
                         onClick={onClose}
                     >
-                        <X size={18} />
+                        <X size={16} />
                     </button>
                 </div>
 
                 {/* Title */}
-                <div className="px-4 pt-4 pb-2">
-                    <h3 className="text-lg font-bold text-gray-800 leading-tight">
+                <div className="px-4 pt-3 pb-2 flex-shrink-0">
+                    <h3 className="text-base font-bold text-gray-800 leading-tight">
                         {announcement.title}
                     </h3>
                     {announcement.createtime && (
-                        <p className="text-xs text-gray-400 mt-1">
+                        <p className="text-[11px] text-gray-400 mt-1">
                             {(() => {
                                 // 格式化时间戳为可读日期
                                 const timestamp = typeof announcement.createtime === 'number'
@@ -67,16 +68,16 @@ const PopupAnnouncementModal: React.FC<PopupAnnouncementModalProps> = ({
                     )}
                 </div>
 
-                {/* Content */}
-                <div className="px-4 py-3 max-h-[50vh] overflow-y-auto">
+                {/* Content - 弹性滚动区域 */}
+                <div className="px-4 py-2 overflow-y-auto flex-1 min-h-0">
                     <div
                         className="text-sm text-gray-600 leading-relaxed prose prose-sm max-w-none whitespace-pre-wrap"
                         dangerouslySetInnerHTML={{ __html: announcement.content }}
                     />
                 </div>
 
-                {/* Footer */}
-                <div className="px-4 py-4 border-t border-gray-100 bg-gray-50 flex flex-col gap-2">
+                {/* Footer - 固定底部 */}
+                <div className="px-4 py-3 border-t border-gray-100 bg-gray-50 flex flex-col gap-2 flex-shrink-0">
                     <button
                         type="button"
                         className="w-full py-2.5 bg-gradient-to-r from-orange-500 to-orange-400 text-white text-sm font-medium rounded-lg active:opacity-80 transition-opacity shadow-sm"
@@ -87,7 +88,7 @@ const PopupAnnouncementModal: React.FC<PopupAnnouncementModalProps> = ({
                     {onDontShowToday && (
                         <button
                             type="button"
-                            className="w-full py-2 text-xs text-gray-400 hover:text-gray-600 transition-colors"
+                            className="w-full py-1.5 text-xs text-gray-400 hover:text-gray-600 transition-colors"
                             onClick={() => {
                                 onDontShowToday();
                                 onClose();
