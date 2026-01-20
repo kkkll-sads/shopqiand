@@ -348,8 +348,8 @@ const Profile: React.FC<{ unreadCount?: number }> = ({ unreadCount = 0 }) => {
         </div>
       </div>
 
-      {/* Digital Rights Card - 独立区块，减少外边距增加显示区域 */}
-      <div className="px-3 relative z-10">
+      {/* Digital Rights Card - 独立区块 */}
+      <div className="px-4 relative z-10">
         <div className="bg-white rounded-2xl px-5 py-5 shadow-sm relative overflow-hidden">
           <div className="relative z-10">
             <div className="flex justify-between items-start mb-5">
