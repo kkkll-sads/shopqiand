@@ -784,11 +784,15 @@ const ShopProductDetail: React.FC<ShopProductDetailProps> = ({
         scorePrice={scorePrice}
         stock={detailData?.stock ?? 999}
         maxPurchase={detailData?.max_purchase ?? 99}
-        specs={detailData?.specs?.map(spec => ({
-          id: spec.id,
-          name: spec.name,
-          values: spec.values
-        })) || []}
+        specs={Array.isArray(detailData?.specs) 
+          ? detailData.specs
+              .filter(spec => spec && spec.id && spec.name && Array.isArray(spec.values))
+              .map(spec => ({
+                id: spec.id,
+                name: spec.name,
+                values: spec.values || []
+              }))
+          : []}
         onConfirm={handleConfirmBuy}
       />
     </div>
