@@ -6,13 +6,10 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FileText, ShoppingBag, X, AlertCircle, CheckCircle, ArrowRight } from 'lucide-react';
 import PageContainer from '../../../components/layout/PageContainer';
-import { LoadingSpinner, EmptyState, LazyImage } from '../../../components/common';
 import { FilterBar } from '../../../components/FilterBar';
-import { formatAmount } from '../../../utils/format';
 import {
   getAllLog,
   AllLogItem,
-  getMyCollection,
   MyCollectionItem,
   fetchProfile,
   normalizeAssetUrl,
@@ -23,10 +20,9 @@ import { useNotification } from '../../../context/NotificationContext';
 import { useAuthStore } from '../../stores/authStore';
 import AssetHeaderCard from './components/asset/AssetHeaderCard';
 import AssetActionsGrid from './components/asset/AssetActionsGrid';
-import AssetTabSwitcher from './components/asset/AssetTabSwitcher';
-import { isSuccess, extractData, extractError } from '../../../utils/apiHelpers';
+import { extractData } from '../../../utils/apiHelpers';
 import { ConsignmentStatus, DeliveryStatus } from '../../../constants/statusEnums';
-import { useAssetActionModal, ActionModalState } from '../../../hooks/useAssetActionModal';
+import { useAssetActionModal } from '../../../hooks/useAssetActionModal';
 import { useAssetTabs, TabConfig } from '../../../hooks/useAssetTabs';
 import { BALANCE_TYPE_OPTIONS, getBalanceTypeLabel } from '../../../constants/balanceTypes';
 
@@ -158,8 +154,6 @@ const AssetView: React.FC<AssetViewProps> = ({ onProductSelect, initialTab = 0 }
       actionModal.openDelivery(item);
     }
   };
-
-  const tabNames = ['资金明细'];
 
   useEffect(() => {
     const loadUserInfo = async () => {

@@ -8,7 +8,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   ChevronLeft, ChevronRight, Store, MessageCircle, 
-  Truck, Shield, RotateCcw, Headphones, Star, ThumbsUp, Gift, Tag, Clock
+  Truck, Shield, RotateCcw, Headphones, ThumbsUp, Gift
 } from 'lucide-react';
 import { LazyImage } from '../../../components/common';
 import PopupAnnouncementModal from '../../../components/common/PopupAnnouncementModal';

@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Package, Phone, MapPin, Copy, Check, Truck, Calendar, Gift, CheckCircle, Star } from 'lucide-react';
+import { ArrowLeft, Package, Phone, MapPin, Copy, Check, Truck, Calendar, Gift, Star } from 'lucide-react';
 import { LoadingSpinner, LazyImage } from '../../../components/common';
-import { formatTime, formatAmount } from '../../../utils/format';
+import { formatAmount } from '../../../utils/format';
 import { getOrderDetail, ShopOrderItem, confirmOrder, normalizeAssetUrl, payOrder, cancelOrder } from '../../../services/api';
 import { getStoredToken } from '../../../services/client';
 import { useNotification } from '../../../context/NotificationContext';

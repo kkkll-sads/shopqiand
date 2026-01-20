@@ -9,12 +9,11 @@
  * @version 3.0.0 - 迁移到新路由系统
  */
 
-import React, { useMemo, useState } from 'react';
+import React, { useState } from 'react';
 import { ChevronRight, RefreshCw } from 'lucide-react';
 import PageContainer from '../../../components/layout/PageContainer';
 import { ListItem, UpdatePromptModal } from '../../../components/common';
 import { normalizeAssetUrl, checkAppUpdate } from '../../../services/api';
-import { UserInfo } from '../../../types';
 import { formatPhone } from '../../../utils/format';
 import { AppVersionInfo } from '../../../services/app';
 import { APP_VERSION } from '../../../constants';

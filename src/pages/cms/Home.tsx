@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Building2, Newspaper, Palette, Trophy, ChevronRight, UserCheck, TreeDeciduous, Search, Wallet, Vault, Zap, FileBadge, ClipboardList, Clock, CheckCircle2, AlertCircle } from 'lucide-react';
+import { ChevronRight, Search, Wallet, Vault, Zap, FileBadge, ClipboardList, Clock, CheckCircle2, AlertCircle } from 'lucide-react';
 import { Banner, Artist, NewsItem } from '../../../types';
-import { fetchBanners, fetchArtists, normalizeAssetUrl, ArtistApiItem, fetchReservations, ReservationItem, ReservationStatus } from '../../../services/api';
+import { fetchBanners, fetchArtists, normalizeAssetUrl, ArtistApiItem, fetchReservations, ReservationItem } from '../../../services/api';
 import { isSuccess } from '../../../utils/apiHelpers';
 
 interface HomeProps {

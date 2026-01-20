@@ -4,7 +4,7 @@
  */
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Clock, Globe, Database, Zap, Cpu, Activity, Lock, ArrowRight, ArrowLeft, Layers, Gem, Crown, Coins, TrendingUp, ClipboardList } from 'lucide-react';
+import { Clock, Globe, Database, Zap, Cpu, Activity, Lock, ArrowRight, ArrowLeft, Layers, Gem, Coins, TrendingUp, ClipboardList } from 'lucide-react';
 import PageContainer from '../../../components/layout/PageContainer';
 import { LoadingSpinner, LazyImage } from '../../../components/common';
 import PopupAnnouncementModal from '../../../components/common/PopupAnnouncementModal';

@@ -2,9 +2,6 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import SubPageLayout from '../../../components/SubPageLayout';
-import { LoadingSpinner, EmptyState, LazyImage } from '../../../components/common';
-import { formatTime, formatAmount } from '../../../utils/format';
-import { Order } from '../../../types';
 import {
   fetchPendingPayOrders,
   fetchPendingShipOrders,
@@ -75,10 +72,6 @@ const OrderListPage: React.FC = () => {
   const loading = loadMachine.state === LoadingState.LOADING;
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
-  // const [showDetailModal, setShowDetailModal] = useState(false); // Deprecated
-  // const [selectedOrder, setSelectedOrder] = useState<ShopOrderItem | null>(null); // Deprecated
-  const [selectedConsignmentOrder, setSelectedConsignmentOrder] = useState<MyConsignmentItem | null>(null);
-  // const [loadingDetail, setLoadingDetail] = useState(false); // Deprecated
   const [showConsignmentDetailModal, setShowConsignmentDetailModal] = useState(false);
   const [selectedConsignmentDetail, setSelectedConsignmentDetail] = useState<ConsignmentDetailData | null>(null);
   const [loadingConsignmentDetail, setLoadingConsignmentDetail] = useState(false);
