@@ -25,6 +25,8 @@ export interface Product {
   green_power_amount?: number;
   /** 余额可用金额 */
   balance_available_amount?: number;
+  /** 销量 */
+  sales?: number;
 }
 
 export interface Artist {

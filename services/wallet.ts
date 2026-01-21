@@ -10,6 +10,8 @@ export interface PaymentAccountItem {
     type: string; // bank_card, alipay, wechat, usdt
     type_text?: string;
     account: string;
+    account_number?: string; // 兼容后端可能返回的 account_number 字段
+    account_number_display?: string; // 用于显示的账号（可能是脱敏后的）
     account_name: string;
     bank_name?: string;
     bank_branch?: string;

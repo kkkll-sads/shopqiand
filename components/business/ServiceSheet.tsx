@@ -22,21 +22,10 @@ interface ServiceSheetProps {
 const ServiceSheet: React.FC<ServiceSheetProps> = ({ productName }) => {
   const services: ServiceItem[] = [
     {
-      icon: <RotateCcw size={20} className="text-green-500" />,
-      title: '7天无理由退货',
-      description: '自签收之日起7天内，商品完好且不影响二次销售可申请无理由退货',
-      highlight: true,
-    },
-    {
-      icon: <Shield size={20} className="text-blue-500" />,
-      title: '免费上门退换',
-      description: '树交所配送的商品，如有质量问题或商品错发，可享免费上门取件服务',
-      highlight: true,
-    },
-    {
       icon: <Headphones size={20} className="text-purple-500" />,
       title: '专属客服',
       description: '7x24小时在线客服，随时为您解答疑问，处理售后问题',
+      highlight: true,
     },
     {
       icon: <Truck size={20} className="text-orange-500" />,
@@ -59,19 +48,19 @@ const ServiceSheet: React.FC<ServiceSheetProps> = ({ productName }) => {
   return (
     <div className="pb-6">
       {/* 服务概览 */}
-      <div className="px-4 py-4 bg-gradient-to-r from-green-50 to-blue-50 border-b border-gray-100">
+      <div className="px-4 py-4 bg-gradient-to-r from-purple-50 to-blue-50 border-b border-gray-100">
         <div className="flex items-center justify-center gap-6">
-          <div className="flex items-center gap-1.5 text-sm text-green-600">
-            <Check size={16} className="text-green-500" />
-            7天无理由
-          </div>
-          <div className="flex items-center gap-1.5 text-sm text-blue-600">
-            <Check size={16} className="text-blue-500" />
-            免费退换
-          </div>
           <div className="flex items-center gap-1.5 text-sm text-purple-600">
             <Check size={16} className="text-purple-500" />
+            专属客服
+          </div>
+          <div className="flex items-center gap-1.5 text-sm text-red-600">
+            <Check size={16} className="text-red-500" />
             正品保障
+          </div>
+          <div className="flex items-center gap-1.5 text-sm text-orange-600">
+            <Check size={16} className="text-orange-500" />
+            极速发货
           </div>
         </div>
       </div>
@@ -109,11 +98,11 @@ const ServiceSheet: React.FC<ServiceSheetProps> = ({ productName }) => {
           <ul className="text-xs text-gray-500 space-y-1.5">
             <li className="flex items-start gap-1.5">
               <span className="text-gray-400">•</span>
-              <span>部分商品（如定制商品、鲜活易腐商品等）不支持7天无理由退货</span>
+              <span>所有商品均为100%官方正品，支持验货</span>
             </li>
             <li className="flex items-start gap-1.5">
               <span className="text-gray-400">•</span>
-              <span>退换货需保持商品完好，不影响二次销售</span>
+              <span>7x24小时专属客服随时为您服务</span>
             </li>
             <li className="flex items-start gap-1.5">
               <span className="text-gray-400">•</span>

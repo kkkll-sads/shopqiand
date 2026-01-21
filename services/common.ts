@@ -111,6 +111,10 @@ export async function uploadImage(file: File, token?: string): Promise<ApiRespon
     }
 }
 
+export async function uploadVideo(file: File, token?: string): Promise<ApiResponse<UploadResponse>> {
+    return uploadImage(file, token);
+}
+
 export interface SendSmsParams {
     mobile: string;
     event: string;

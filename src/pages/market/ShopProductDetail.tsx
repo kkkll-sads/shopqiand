@@ -4,7 +4,7 @@
  * 专门用于消费金商城商品的详情展示
  * 参考京东APP商品详情页设计
  */
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   ChevronLeft, ChevronRight, Store, MessageCircle,
@@ -344,13 +344,39 @@ const ShopProductDetail: React.FC<ShopProductDetailProps> = ({
     });
   };
 
+  // 检查是否有可选择的规格
+  const hasSelectableSpecs = useMemo(() => {
+    const hasSku = detailData?.has_sku === '1';
+    if (hasSku && detailData?.sku_specs && detailData.sku_specs.length > 0) {
+      return true; // 新版SKU规格
+    }
+
+    // 检查旧版规格格式
+    const rawSpecs = detailData?.specs || [];
+    if (!Array.isArray(rawSpecs) || rawSpecs.length === 0) {
+      return false;
+    }
+
+    // 检查是否是标准格式：{id, name, values[]}
+    const firstSpec = rawSpecs[0];
+    if (firstSpec && firstSpec.id && firstSpec.name && Array.isArray(firstSpec.values)) {
+      return rawSpecs.some(spec => spec.values && spec.values.length > 0);
+    }
+
+    // 兼容格式：{name, value} - 需要检查是否有多个不同的name或value
+    const uniqueNames = new Set(rawSpecs.map((s: any) => s?.name).filter(Boolean));
+    const uniqueValues = new Set(rawSpecs.map((s: any) => s?.value).filter(Boolean));
+    // 如果有多个不同的name，说明有多个规格分组
+    // 或者有多个不同的value，说明有多个规格值可选
+    return uniqueNames.size > 1 || uniqueValues.size > 1;
+  }, [detailData]);
+
   // 直接购买（无规格商品）
   const handleBuy = async () => {
     if (buying) return;
 
     // 如果有规格，打开规格选择弹窗
-    const specs = detailData?.specs || [];
-    if (specs.length > 0) {
+    if (hasSelectableSpecs) {
       setShowBuySpecSheet(true);
       return;
     }
@@ -380,17 +406,17 @@ const ShopProductDetail: React.FC<ShopProductDetailProps> = ({
   const hasSku = detailData?.has_sku === '1';
   const priceRange = detailData?.price_range;
   // 多规格商品显示价格区间，单规格商品显示固定价格
-  const displayPrice = hasSku && priceRange 
-    ? priceRange.min 
+  const displayPrice = hasSku && priceRange
+    ? priceRange.min
     : Number(detailData?.price ?? product.price);
   const maxPrice = hasSku && priceRange ? priceRange.max : displayPrice;
   const showPriceRange = hasSku && priceRange && priceRange.min !== priceRange.max;
   const scorePrice = detailData?.score_price || product.score_price || 0;
-  
+
   // 使用精确的金额计算工具（避免浮点数精度问题）
   const originalPrice = roundCurrency(multiply(displayPrice, 1.15), 0).toNumber();
   const savedAmount = subtract(originalPrice, displayPrice).toNumber();
-  
+
   // 从 API 数据获取真实的销量和评价数，如果没有则显示 0
   // 注意：如果后端没有返回 sales_count，可以使用 reviewSummary.total 作为评价数
   const salesCount = (detailData as any)?.sales_count ?? (detailData as any)?.sales ?? 0;
@@ -398,10 +424,13 @@ const ShopProductDetail: React.FC<ShopProductDetailProps> = ({
 
   // 商品图片列表 - 防御性处理确保 detail_images 是数组
   const detailImages = Array.isArray(detailData?.detail_images) ? detailData.detail_images : [];
-  const shopImages: string[] = [
-    detailData?.thumbnail || product.image,
-    ...detailImages,
-  ].filter(Boolean) as string[];
+
+  // 轮播图优先使用 images 字段，如果不为空则使用 images，否则使用缩略图
+  // 注意：不再混合 detailImages 到轮播图中，因为 detailImages 单独用于详情展示
+  const serverImages = Array.isArray(detailData?.images) ? detailData.images : [];
+  const shopImages: string[] = serverImages.length > 0
+    ? serverImages
+    : [detailData?.thumbnail || product.image].filter(Boolean) as string[];
 
   // 确保 shopImages 有内容，避免空数组导致的问题
   const safeShopImages = shopImages.length > 0 ? shopImages : [product.image].filter(Boolean);
@@ -412,16 +441,16 @@ const ShopProductDetail: React.FC<ShopProductDetailProps> = ({
       {/* 顶部Tab导航栏 - 滚动跟随变化 */}
       <header
         className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${headerStyle === 'white'
-            ? 'bg-white shadow-sm'
-            : 'bg-transparent'
+          ? 'bg-white shadow-sm'
+          : 'bg-transparent'
           }`}
       >
         <div className={`flex items-center px-2 py-2 ${headerStyle === 'white' ? 'border-b border-gray-100' : ''}`}>
           <button
             onClick={() => navigate(-1)}
             className={`p-2 -ml-1 rounded-full transition-colors ${headerStyle === 'white'
-                ? 'active:bg-gray-100'
-                : 'bg-black/20 active:bg-black/30'
+              ? 'active:bg-gray-100'
+              : 'bg-black/20 active:bg-black/30'
               }`}
           >
             <ChevronLeft size={22} className={headerStyle === 'white' ? 'text-gray-700' : 'text-white'} />
@@ -531,13 +560,13 @@ const ShopProductDetail: React.FC<ShopProductDetailProps> = ({
             {/* 现金价格：支持价格区间显示 */}
             {displayPrice > 0 && (
               <>
-                <span className="text-red-600 text-sm font-bold font-[DINAlternate-Bold]">¥</span>
-                <span className="text-red-600 text-3xl font-bold font-[DINAlternate-Bold] -ml-0.5">{displayPrice}</span>
+                <span className="text-red-600 text-lg font-bold font-[DINAlternate-Bold] mr-1">¥</span>
+                <span className="text-red-600 text-3xl font-bold font-[DINAlternate-Bold]">{displayPrice}</span>
                 {showPriceRange && (
                   <>
                     <span className="text-red-600 text-lg mx-1">-</span>
-                    <span className="text-red-600 text-sm font-bold font-[DINAlternate-Bold]">¥</span>
-                    <span className="text-red-600 text-3xl font-bold font-[DINAlternate-Bold] -ml-0.5">{maxPrice}</span>
+                    <span className="text-red-600 text-lg font-bold font-[DINAlternate-Bold] mr-1">¥</span>
+                    <span className="text-red-600 text-3xl font-bold font-[DINAlternate-Bold]">{maxPrice}</span>
                   </>
                 )}
               </>
@@ -576,7 +605,7 @@ const ShopProductDetail: React.FC<ShopProductDetailProps> = ({
           <span className="flex-shrink-0 bg-red-600 text-white text-[10px] px-1.5 py-0.5 rounded-[4px] font-bold leading-none mt-1">
             自营
           </span>
-          <span className="flex-shrink-0 bg-gray-900 text-white text-[10px] px-1.5 py-0.5 rounded-[4px] font-bold leading-none mt-1">
+          <span className="flex-shrink-0 bg-gradient-to-r from-red-500 to-red-600 text-white text-[10px] px-1.5 py-0.5 rounded-[4px] font-bold leading-none mt-1">
             树交所
           </span>
           <h1 className="text-[15px] font-bold text-gray-900 leading-snug line-clamp-2">
@@ -604,14 +633,6 @@ const ShopProductDetail: React.FC<ShopProductDetailProps> = ({
         onClick={() => setShowServiceSheet(true)}
       >
         <div className="flex items-center text-xs text-gray-500 gap-3">
-          <span className="flex items-center gap-1">
-            <Shield size={12} className="text-green-500" />
-            免费上门退换
-          </span>
-          <span className="flex items-center gap-1">
-            <RotateCcw size={12} className="text-green-500" />
-            7天无理由退货
-          </span>
           <span className="flex items-center gap-1">
             <Headphones size={12} className="text-green-500" />
             专属客服
@@ -647,7 +668,7 @@ const ShopProductDetail: React.FC<ShopProductDetailProps> = ({
             <span className="text-gray-800 text-sm font-medium">
               {Object.keys(selectedSpecs).length > 0
                 ? `${Object.values(selectedSpecs).join('，')}，${buyQuantity}件`
-                : hasSku 
+                : hasSelectableSpecs
                   ? '请选择规格'
                   : `${buyQuantity}件`}
             </span>
@@ -830,15 +851,45 @@ const ShopProductDetail: React.FC<ShopProductDetailProps> = ({
         stock={detailData?.stock ?? 999}
         maxPurchase={detailData?.max_purchase ?? 99}
         // 旧版规格（向后兼容）
-        specs={Array.isArray(detailData?.specs)
-          ? detailData.specs
-            .filter(spec => spec && spec.id && spec.name && Array.isArray(spec.values))
-            .map(spec => ({
-              id: spec.id,
-              name: spec.name,
-              values: spec.values || []
-            }))
-          : []}
+        specs={(() => {
+          const rawSpecs = detailData?.specs || [];
+          if (!Array.isArray(rawSpecs) || rawSpecs.length === 0) {
+            return [];
+          }
+
+          // 检查是否是标准格式：{id, name, values[]}
+          const firstSpec = rawSpecs[0];
+          if (firstSpec && firstSpec.id && firstSpec.name && Array.isArray(firstSpec.values)) {
+            // 标准格式，直接使用
+            return rawSpecs
+              .filter(spec => spec && spec.id && spec.name && Array.isArray(spec.values))
+              .map(spec => ({
+                id: spec.id,
+                name: spec.name,
+                values: spec.values || []
+              }));
+          }
+
+          // 兼容格式：{name, value} - 需要转换为分组格式
+          // 从 [{name: "5kg", value: "黑色"}, {name: "6kg", value: "红色"}] 
+          // 转换为按 name 分组的格式
+          const specGroups = new Map<string, Set<string>>();
+          rawSpecs.forEach((spec: any) => {
+            if (spec && spec.name && spec.value) {
+              if (!specGroups.has(spec.name)) {
+                specGroups.set(spec.name, new Set());
+              }
+              specGroups.get(spec.name)!.add(spec.value);
+            }
+          });
+
+          // 转换为组件期望的格式
+          return Array.from(specGroups.entries()).map(([name, values], index) => ({
+            id: `spec-${index}`,
+            name: name,
+            values: Array.from(values)
+          }));
+        })()}
         // 新版 SKU 规格
         hasSku={detailData?.has_sku === '1'}
         skuSpecs={detailData?.sku_specs || []}

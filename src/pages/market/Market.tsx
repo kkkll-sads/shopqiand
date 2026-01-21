@@ -35,11 +35,8 @@ const Market: React.FC<MarketProps> = ({ onProductSelect }) => {
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const containerRef = useRef<HTMLDivElement>(null);
-  
-  // 滑动切换相关状态
-  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
-  const touchMoveRef = useRef<{ x: number; y: number } | null>(null);
-  const isSwipingRef = useRef(false);
+
+
   const listMachine = useStateMachine<LoadingState, LoadingEvent>({
     initial: LoadingState.IDLE,
     transitions: {
@@ -107,11 +104,12 @@ const Market: React.FC<MarketProps> = ({ onProductSelect }) => {
     image: normalizeAssetUrl(item.thumbnail),
     category: item.category || '其他',
     productType: 'shop', // 标记为消费金商城商品
-    // 消费金价格（整数）- 确保转换为数字
-    score_price: Number(item.score_price) || 0,
+    // 消费金价格（整数）- null转为0便于判断
+    score_price: item.score_price ? Number(item.score_price) : 0,
     // 绿色能量和余额可用金额
-    green_power_amount: Number(item.green_power_amount) || 0,
-    balance_available_amount: Number(item.balance_available_amount) || 0,
+    green_power_amount: item.green_power_amount ? Number(item.green_power_amount) : 0,
+    balance_available_amount: item.balance_available_amount ? Number(item.balance_available_amount) : 0,
+    sales: Number(item.sales) || 0,
   });
 
   // 加载分类列表（只在首次加载时执行）
@@ -150,7 +148,7 @@ const Market: React.FC<MarketProps> = ({ onProductSelect }) => {
       if (category && category !== 'all') {
         params.category = category;
       }
-      
+
       if (activeFilter === 'sales') {
         listRes = await fetchShopProductsBySales(params);
       } else if (activeFilter === 'new') {
@@ -204,57 +202,9 @@ const Market: React.FC<MarketProps> = ({ onProductSelect }) => {
     }
   }, [loadingMore, hasMore, page, loadProducts, selectedCategory]);
 
-  // 获取所有分类的 ID 列表（用于滑动切换）
-  const categoryIds = useMemo(() => categories.map(c => c.id), [categories]);
-  
-  // 滑动切换分类处理
-  const handleTouchStart = useCallback((e: TouchEvent<HTMLDivElement>) => {
-    const touch = e.touches[0];
-    touchStartRef.current = { x: touch.clientX, y: touch.clientY };
-    touchMoveRef.current = null;
-    isSwipingRef.current = false;
-  }, []);
 
-  const handleTouchMove = useCallback((e: TouchEvent<HTMLDivElement>) => {
-    if (!touchStartRef.current) return;
-    const touch = e.touches[0];
-    touchMoveRef.current = { x: touch.clientX, y: touch.clientY };
-    
-    const deltaX = touch.clientX - touchStartRef.current.x;
-    const deltaY = touch.clientY - touchStartRef.current.y;
-    
-    // 如果水平滑动距离大于垂直滑动距离，标记为滑动切换
-    if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 30) {
-      isSwipingRef.current = true;
-    }
-  }, []);
 
-  const handleTouchEnd = useCallback(() => {
-    if (!touchStartRef.current || !touchMoveRef.current || !isSwipingRef.current) {
-      touchStartRef.current = null;
-      touchMoveRef.current = null;
-      isSwipingRef.current = false;
-      return;
-    }
-    
-    const deltaX = touchMoveRef.current.x - touchStartRef.current.x;
-    const currentIndex = categoryIds.indexOf(selectedCategory);
-    
-    // 滑动距离大于 50px 时切换分类
-    if (Math.abs(deltaX) > 50) {
-      if (deltaX < 0 && currentIndex < categoryIds.length - 1) {
-        // 向左滑动，切换到下一个分类
-        setSelectedCategory(categoryIds[currentIndex + 1]);
-      } else if (deltaX > 0 && currentIndex > 0) {
-        // 向右滑动，切换到上一个分类
-        setSelectedCategory(categoryIds[currentIndex - 1]);
-      }
-    }
-    
-    touchStartRef.current = null;
-    touchMoveRef.current = null;
-    isSwipingRef.current = false;
-  }, [categoryIds, selectedCategory]);
+
 
   // Filtering Logic（分类筛选已在后端处理，前端只处理搜索和排序）
   const filteredProducts = useMemo(() => {
@@ -289,29 +239,26 @@ const Market: React.FC<MarketProps> = ({ onProductSelect }) => {
   };
 
   return (
-    <div 
-      ref={containerRef} 
-      onScroll={handleScroll} 
-      onTouchStart={handleTouchStart}
-      onTouchMove={handleTouchMove}
-      onTouchEnd={handleTouchEnd}
+    <div
+      ref={containerRef}
+      onScroll={handleScroll}
       className="h-[calc(100vh-60px)] overflow-y-auto bg-gray-100">
       {/* Header & Search - 简约白底 + 红色点缀 */}
       <div className="bg-white sticky top-0 z-20 shadow-sm/50">
         {/* 搜索栏 */}
         <div className="flex items-center gap-2.5 p-3 pb-2">
           <h1 className="font-bold text-lg text-gray-900 whitespace-nowrap tracking-wide">消费金商城</h1>
-          <div className="flex-1 bg-gray-100/80 rounded-full flex items-center px-4 py-2 transition-all border border-transparent focus-within:bg-white focus-within:border-red-500 focus-within:shadow-sm focus-within:shadow-red-500/10">
+          <div className="flex-1 bg-gray-100/80 rounded-full flex items-center px-4 py-2 transition-all border border-transparent focus-within:bg-white focus-within:border-red-500 focus-within:shadow-sm focus-within:shadow-red-500/10 min-w-0">
             <Search size={16} className="text-gray-400 mr-2 flex-shrink-0" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="搜索商品"
-              className="bg-transparent border-none outline-none text-sm flex-1 text-gray-700 placeholder-gray-400"
+              className="bg-transparent border-none outline-none text-sm flex-1 text-gray-700 placeholder-gray-400 min-w-0"
             />
           </div>
-          <button className="bg-gradient-to-r from-red-600 to-red-500 text-white text-sm font-semibold px-4 py-2 rounded-full shadow-lg shadow-red-600/20 active:scale-95 transition-all whitespace-nowrap">
+          <button className="bg-gradient-to-r from-red-600 to-red-500 text-white text-sm font-semibold px-4 py-2 rounded-full shadow-lg shadow-red-600/20 active:scale-95 transition-all whitespace-nowrap flex-shrink-0">
             搜索
           </button>
         </div>
@@ -323,8 +270,8 @@ const Market: React.FC<MarketProps> = ({ onProductSelect }) => {
               <div
                 key={cat.id}
                 className={`flex flex-col items-center px-3 py-2 cursor-pointer active:scale-95 transition-all rounded-2xl min-w-[64px] ${selectedCategory === cat.id
-                    ? 'bg-red-50'
-                    : 'bg-transparent'
+                  ? 'bg-red-50'
+                  : 'bg-transparent'
                   }`}
                 onClick={() => setSelectedCategory(cat.id)}
               >
@@ -342,19 +289,7 @@ const Market: React.FC<MarketProps> = ({ onProductSelect }) => {
               </div>
             ))}
           </div>
-          {/* 滑动提示指示器 */}
-          {categoryIds.length > 1 && (
-            <div className="flex justify-center items-center gap-1 mt-1">
-              {categoryIds.map((id, index) => (
-                <div 
-                  key={id} 
-                  className={`w-1.5 h-1.5 rounded-full transition-all ${
-                    selectedCategory === id ? 'bg-red-500 w-3' : 'bg-gray-300'
-                  }`} 
-                />
-              ))}
-            </div>
-          )}
+
         </div>
 
         {/* Filter Tabs - 筛选标签 */}
@@ -457,26 +392,26 @@ const Market: React.FC<MarketProps> = ({ onProductSelect }) => {
                       </span>
                     )}
                     <span className="text-[10px] text-gray-400">
-                      {((parseInt(product.id, 10) || index + 1) * 17 % 500) + 100}人已兑
+                      已售 {product.sales || 0}
                     </span>
                   </div>
 
                   {/* 价格区域 */}
                   <div className="mt-auto pt-2 border-t border-gray-50">
                     {/* 组合支付模式判断 */}
-                    {(product.green_power_amount > 0 || product.balance_available_amount > 0) ? (
+                    {((product.green_power_amount && product.green_power_amount > 0) || (product.balance_available_amount && product.balance_available_amount > 0)) ? (
                       // 组合支付：消费金 + 可用余额
                       <div className="flex flex-col gap-1">
                         <div className="flex items-center gap-1.5">
-                          {product.green_power_amount > 0 && (
+                          {product.green_power_amount && product.green_power_amount > 0 && (
                             <span className="text-[11px] text-emerald-600 bg-emerald-50 border border-emerald-100 px-1.5 py-0.5 rounded font-medium">
                               {product.green_power_amount}消费金
                             </span>
                           )}
-                          {product.green_power_amount > 0 && product.balance_available_amount > 0 && (
+                          {product.green_power_amount && product.green_power_amount > 0 && product.balance_available_amount && product.balance_available_amount > 0 && (
                             <span className="text-[10px] text-gray-400">+</span>
                           )}
-                          {product.balance_available_amount > 0 && (
+                          {product.balance_available_amount && product.balance_available_amount > 0 && (
                             <span className="text-[11px] text-blue-600 bg-blue-50 border border-blue-100 px-1.5 py-0.5 rounded font-medium">
                               ¥{product.balance_available_amount}
                             </span>
@@ -497,14 +432,14 @@ const Market: React.FC<MarketProps> = ({ onProductSelect }) => {
                         {/* 现金价格：仅在price > 0时显示 */}
                         {product.price > 0 && (
                           <>
-                            <span className="text-red-600 text-xs font-bold font-[DINAlternate-Bold]">¥</span>
-                            <span className="text-red-600 text-xl font-bold leading-none font-[DINAlternate-Bold] -ml-[1px]">
+                            <span className="text-red-600 text-sm font-bold font-[DINAlternate-Bold] mr-0.5">¥</span>
+                            <span className="text-red-600 text-xl font-bold leading-none font-[DINAlternate-Bold]">
                               {product.price.toLocaleString()}
                             </span>
                           </>
                         )}
-                        {/* 消费金价格：红色显示 */}
-                        {product.score_price && product.score_price > 0 && (
+                        {/* 消费金价格：红色显示，仅在大于0时显示 */}
+                        {product.score_price > 0 && (
                           <span className="text-[10px] text-red-600 border border-red-200 bg-red-50 px-1 py-[1px] rounded-[4px] ml-1 font-medium">
                             {product.score_price}消费金
                           </span>

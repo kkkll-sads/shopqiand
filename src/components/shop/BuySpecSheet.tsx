@@ -46,6 +46,22 @@ export interface BuySpecSheetProps {
   ) => void;
 }
 
+/**
+ * 标准化 spec_value_ids 格式
+ * 兼容后端返回数组或字符串两种格式
+ */
+const normalizeSpecValueIds = (sku: Sku): Sku => {
+  // 如果是数组，转换为逗号分隔的字符串
+  if (Array.isArray(sku.spec_value_ids)) {
+    return {
+      ...sku,
+      spec_value_ids: sku.spec_value_ids.join(','),
+    };
+  }
+  // 如果已经是字符串，直接返回
+  return sku;
+};
+
 const BuySpecSheet: React.FC<BuySpecSheetProps> = ({
   visible,
   onClose,
@@ -79,8 +95,13 @@ const BuySpecSheet: React.FC<BuySpecSheetProps> = ({
     }
   }, [visible]);
 
+  // 标准化 SKU 数据格式（兼容数组和字符串）
+  const normalizedSkus = useMemo(() => {
+    return skus.map(normalizeSpecValueIds);
+  }, [skus]);
+  
   // 判断是否使用新版 SKU 模式
-  const useSkuMode = hasSku && skuSpecs.length > 0 && skus.length > 0;
+  const useSkuMode = hasSku && skuSpecs.length > 0 && normalizedSkus.length > 0;
 
   /**
    * 根据已选规格值ID查找匹配的 SKU
@@ -99,8 +120,11 @@ const BuySpecSheet: React.FC<BuySpecSheetProps> = ({
     // 排序后生成 spec_value_ids 字符串
     const targetIds = selectedIds.join(',');
     
-    return skus.find(sku => sku.spec_value_ids === targetIds && sku.stock > 0) || null;
-  }, [useSkuMode, skuSpecs, skus]);
+    // 查找匹配的 SKU
+    return normalizedSkus.find(sku => {
+      return String(sku.spec_value_ids) === targetIds && sku.stock > 0;
+    }) || null;
+  }, [useSkuMode, skuSpecs, normalizedSkus]);
 
   /**
    * 检查某个规格值是否可选（有库存）
@@ -116,10 +140,11 @@ const BuySpecSheet: React.FC<BuySpecSheetProps> = ({
     if (specIndex === -1) return false;
     
     // 检查是否有任意 SKU 匹配这个组合且有库存
-    return skus.some(sku => {
+    return normalizedSkus.some(sku => {
       if (sku.stock <= 0) return false;
       
-      const skuValueIds = sku.spec_value_ids.split(',').map(Number);
+      // 解析 spec_value_ids
+      const skuValueIds = String(sku.spec_value_ids).split(',').map(Number);
       
       // 检查每个已选的规格值是否匹配
       for (let i = 0; i < skuSpecs.length; i++) {
@@ -134,7 +159,7 @@ const BuySpecSheet: React.FC<BuySpecSheetProps> = ({
       
       return true;
     });
-  }, [useSkuMode, selectedValueIds, skuSpecs, skus]);
+  }, [useSkuMode, selectedValueIds, skuSpecs, normalizedSkus]);
 
   // 当前匹配的 SKU
   const matchedSku = useMemo(() => {

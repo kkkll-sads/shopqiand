@@ -60,6 +60,7 @@ const ReservationRecordPage = lazy(() => import('../pages/market/ReservationReco
 const ReservationRecordDetailPage = lazy(() => import('../pages/market/ReservationRecordDetailPageWrapper'));
 const SearchPage = lazy(() => import('../pages/market/SearchPageWrapper'));
 const ReviewsPage = lazy(() => import('../pages/market/ReviewsPageWrapper'));
+const SubmitReview = lazy(() => import('../pages/market/SubmitReviewWrapper'));
 const OrderListPage = lazy(() => import('../pages/market/OrderListPageWrapper'));
 const OrderDetail = lazy(() => import('../pages/market/OrderDetailWrapper'));
 const CollectionOrderDetail = lazy(() => import('../pages/market/CollectionOrderDetailWrapper'));
@@ -280,6 +281,10 @@ const routes: RouteObject[] = [
       {
         path: '/reviews/:productId',
         element: <LazyComponent component={ReviewsPage} />,
+      },
+      {
+        path: '/submit-review',
+        element: <LazyComponent component={SubmitReview} />,
       },
       {
         path: '/search',

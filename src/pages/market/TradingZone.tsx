@@ -23,6 +23,7 @@ import { useErrorHandler } from '../../../hooks/useErrorHandler';
 import { useStateMachine } from '../../../hooks/useStateMachine';
 import { LoadingEvent, LoadingState } from '../../../types/states';
 import { debugLog, errorLog } from '../../../utils/logger';
+import { useAppStore } from '../../stores/appStore';
 
 
 interface TradingZoneProps {
@@ -150,6 +151,7 @@ const TradingZone: React.FC<TradingZoneProps> = ({
     initialSessionEndTime
 }) => {
     const navigate = useNavigate();
+    const { setSelectedProduct } = useAppStore();
     // ✅ 使用统一错误处理Hook（会话加载错误）
     const {
         errorMessage: sessionErrorMessage,
@@ -682,7 +684,32 @@ const TradingZone: React.FC<TradingZoneProps> = ({
                                                 <div className="text-red-500 font-extrabold text-base flex items-baseline gap-0.5">
                                                     <span>{item.price_zone}</span>
                                                 </div>
-                                                <button type="button" className="bg-gradient-to-r from-red-500 to-red-600 text-white text-xs font-bold px-4 py-1.5 rounded-full shadow-md shadow-red-200 active:scale-95 transition-transform">
+                                                <button 
+                                                    type="button" 
+                                                    onClick={(e) => {
+                                                        e.stopPropagation(); // 阻止事件冒泡到父卡片
+                                                        
+                                                        // 构建产品数据并保存到 store
+                                                        const productData = {
+                                                            id: String(item.id),
+                                                            title: item.title,
+                                                            price: item.price,
+                                                            image: item.image,
+                                                            artist: config.name,
+                                                            category: 'Data Asset',
+                                                            productType: 'collection' as const,
+                                                            sessionId: selectedSession?.id || item.session_id,
+                                                            zoneId: item.zone_id || item.price_zone_id,
+                                                            ...(item.source === 'consignment' && item.consignment_id
+                                                                ? { consignmentId: item.consignment_id }
+                                                                : {})
+                                                        };
+                                                        
+                                                        setSelectedProduct(productData as Product, 'trading-zone');
+                                                        navigate('/reservation');
+                                                    }}
+                                                    className="bg-gradient-to-r from-red-500 to-red-600 text-white text-xs font-bold px-4 py-1.5 rounded-full shadow-md shadow-red-200 active:scale-95 transition-transform"
+                                                >
                                                     申购
                                                 </button>
                                             </div>

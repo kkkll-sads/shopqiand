@@ -165,7 +165,8 @@ const CardManagement: React.FC = () => {
     const rawId = item.id ?? '';
     const id = rawId === null || rawId === undefined ? '' : String(rawId);
     const typeText = item.type_text || item.type || '卡号';
-    const account = item.account || '';
+    // 优先使用 account_number_display（后端返回的显示字段），回退到其他字段
+    const account = item.account_number_display || item.account || item.account_number || '';
     const bankName = item.bank_name || '';
     const branch = item.bank_branch || '';
     const holder = item.account_name || '';

@@ -216,7 +216,7 @@ const OrderDetail: React.FC = () => {
                 document.body.removeChild(textarea);
             }
         };
-        
+
         try {
             await copyText(text);
             setCopiedOrderNo(true);
@@ -257,7 +257,7 @@ const OrderDetail: React.FC = () => {
                 <Package className="w-10 h-10 text-gray-400" />
             </div>
             <p className="text-gray-500 text-center">{errorMessage || '订单不存在'}</p>
-            <button 
+            <button
                 onClick={() => navigate(-1)}
                 className="mt-6 px-6 py-2.5 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-full text-sm font-medium shadow-lg shadow-red-500/30 active:scale-95 transition-transform"
             >
@@ -284,8 +284,8 @@ const OrderDetail: React.FC = () => {
             {/* 顶部渐变背景装饰 - 京东红 */}
             <div className="absolute top-0 left-0 right-0 h-48 bg-gradient-to-br from-red-500 via-red-500 to-red-600 opacity-95" />
             <div className="absolute top-0 left-0 right-0 h-48 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-white/20 via-transparent to-transparent" />
-            
-            {/* Header */}
+
+            {/* Header - 导航栏固定，状态卡片随页面滚动 */}
             <header className="relative z-20 sticky top-0">
                 <div className="flex items-center h-14 px-4">
                     <button
@@ -297,9 +297,11 @@ const OrderDetail: React.FC = () => {
                     </button>
                     <h1 className="flex-1 text-center pr-9 font-bold text-white text-lg drop-shadow-sm">订单详情</h1>
                 </div>
-                
-                {/* 订单状态卡片 */}
-                <div className="mx-4 mt-2 p-4 bg-white/95 backdrop-blur-md rounded-2xl shadow-xl shadow-red-500/10 border border-white/50">
+            </header>
+
+            <div className="relative z-10 pb-24 pt-2">
+                {/* 订单状态卡片 - 跟随页面滚动 */}
+                <div className="mx-4 mb-4 p-4 bg-white/95 backdrop-blur-md rounded-2xl shadow-xl shadow-red-500/10 border border-white/50">
                     <div className="flex items-center justify-between">
                         <div>
                             <p className="text-xs text-gray-500 mb-1">订单状态</p>
@@ -307,21 +309,17 @@ const OrderDetail: React.FC = () => {
                         </div>
                         <div className="flex items-center gap-1">
                             {[1, 2, 3, 4].map((step) => (
-                                <div 
+                                <div
                                     key={step}
-                                    className={`w-2 h-2 rounded-full transition-all ${
-                                        step <= currentStep 
-                                            ? 'bg-gradient-to-r from-red-500 to-red-600 scale-110' 
-                                            : 'bg-gray-200'
-                                    }`}
+                                    className={`w-2 h-2 rounded-full transition-all ${step <= currentStep
+                                        ? 'bg-gradient-to-r from-red-500 to-red-600 scale-110'
+                                        : 'bg-gray-200'
+                                        }`}
                                 />
                             ))}
                         </div>
                     </div>
                 </div>
-            </header>
-
-            <div className="relative z-10 pb-24 pt-6">
                 {/* Order Progress */}
                 <div className="bg-white/80 backdrop-blur-sm mx-4 mt-0 rounded-2xl shadow-lg shadow-gray-200/50 border border-white p-6 mb-4">
                     <div className="flex items-center gap-2.5 mb-6">
@@ -334,19 +332,17 @@ const OrderDetail: React.FC = () => {
                             <div key={step.key} className="relative pb-8 last:pb-0 flex items-start">
                                 {/* Connection line - 在节点中心位置 */}
                                 {index < orderSteps.length - 1 && (
-                                    <div className={`absolute left-3 top-8 w-0.5 h-full transition-colors z-0 ${
-                                        step.active 
-                                            ? 'bg-gradient-to-b from-red-500 to-red-400' 
-                                            : 'bg-gray-200'
-                                    }`} />
+                                    <div className={`absolute left-3 top-8 w-0.5 h-full transition-colors z-0 ${step.active
+                                        ? 'bg-gradient-to-b from-red-500 to-red-400'
+                                        : 'bg-gray-200'
+                                        }`} />
                                 )}
 
                                 {/* Node - 固定在左边 */}
-                                <div className={`relative z-10 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all flex-shrink-0 ${
-                                    step.active
-                                        ? 'bg-gradient-to-br from-red-500 to-red-600 border-red-500 shadow-lg shadow-red-500/30 scale-110'
-                                        : 'bg-white border-gray-300'
-                                }`}>
+                                <div className={`relative z-10 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all flex-shrink-0 ${step.active
+                                    ? 'bg-gradient-to-br from-red-500 to-red-600 border-red-500 shadow-lg shadow-red-500/30 scale-110'
+                                    : 'bg-white border-gray-300'
+                                    }`}>
                                     {step.active && (
                                         <Check className="w-3.5 h-3.5 text-white font-bold" strokeWidth={3} />
                                     )}
@@ -354,16 +350,14 @@ const OrderDetail: React.FC = () => {
 
                                 {/* Text content - 在节点右边，有足够间距 */}
                                 <div className="flex-1 ml-4 pt-0.5 min-w-0">
-                                    <p className={`text-sm mb-1.5 transition-colors ${
-                                        step.active 
-                                            ? 'text-gray-900 font-semibold' 
-                                            : 'text-gray-400'
-                                    }`}>
+                                    <p className={`text-sm mb-1.5 transition-colors ${step.active
+                                        ? 'text-gray-900 font-semibold'
+                                        : 'text-gray-400'
+                                        }`}>
                                         {step.label}
                                     </p>
-                                    <p className={`text-xs transition-colors ${
-                                        step.active ? 'text-gray-600' : 'text-gray-400'
-                                    }`}>
+                                    <p className={`text-xs transition-colors ${step.active ? 'text-gray-600' : 'text-gray-400'
+                                        }`}>
                                         {step.time > 0 ? formatDateTime(step.time) : '等待中...'}
                                     </p>
                                 </div>
@@ -571,7 +565,7 @@ const OrderDetail: React.FC = () => {
             </div>
 
             {/* Bottom Actions */}
-            <div className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-xl border-t border-gray-100 shadow-[0_-8px_30px_rgba(0,0,0,0.12)] max-w-[480px] mx-auto safe-area-bottom">
+            <div className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-xl border-t border-gray-100 shadow-[0_-8px_30px_rgba(0,0,0,0.12)] max-w-[480px] mx-auto safe-area-bottom z-[1000]">
                 <div className="p-4 flex gap-3">
                     {(order.status === ShopOrderPayStatus.UNPAID || order.status === 'pending' || String(order.status) === '0') && (
                         <>
@@ -614,25 +608,35 @@ const OrderDetail: React.FC = () => {
                     )}
                     {(order.status === ShopOrderShippingStatus.RECEIVED || order.status === 'completed' || String(order.status) === '3') && (
                         <>
-                            <button
-                                onClick={() => {
-                                    // 获取第一个商品用于评价
-                                    const firstItem = order.items?.[0];
-                                    if (firstItem) {
-                                        const params = new URLSearchParams({
-                                            order_id: String(order.id),
-                                            product_id: String(firstItem.product_id),
-                                            name: firstItem.product_name || '',
-                                            image: normalizeAssetUrl(firstItem.product_thumbnail || firstItem.product_image || ''),
-                                        });
-                                        navigate(`/submit-review?${params.toString()}`);
-                                    }
-                                }}
-                                className="flex-1 h-12 rounded-xl border-2 border-red-200 bg-red-50 text-red-600 hover:border-red-300 hover:bg-red-100 font-semibold transition-all active:scale-[0.98] flex items-center justify-center gap-2"
-                            >
-                                <Star size={18} />
-                                去评价
-                            </button>
+                            {order.is_commented === 0 || order.is_commented === undefined ? (
+                                <button
+                                    onClick={() => {
+                                        // 获取第一个商品用于评价
+                                        const firstItem = order.items?.[0];
+                                        if (firstItem) {
+                                            const params = new URLSearchParams({
+                                                order_id: String(order.id),
+                                                product_id: String(firstItem.product_id),
+                                                name: firstItem.product_name || '',
+                                                image: normalizeAssetUrl(firstItem.product_thumbnail || firstItem.product_image || ''),
+                                            });
+                                            navigate(`/submit-review?${params.toString()}`);
+                                        }
+                                    }}
+                                    className="flex-1 h-12 rounded-xl border-2 border-red-200 bg-red-50 text-red-600 hover:border-red-300 hover:bg-red-100 font-semibold transition-all active:scale-[0.98] flex items-center justify-center gap-2"
+                                >
+                                    <Star size={18} />
+                                    去评价
+                                </button>
+                            ) : (
+                                <button
+                                    disabled
+                                    className="flex-1 h-12 rounded-xl border-2 border-gray-200 bg-gray-50 text-gray-400 font-semibold cursor-not-allowed flex items-center justify-center gap-2"
+                                >
+                                    <Star size={18} />
+                                    已评价
+                                </button>
+                            )}
                             <button
                                 className="flex-1 h-12 rounded-xl bg-gradient-to-r from-red-500 to-red-600 text-white hover:from-red-600 hover:to-red-600 font-semibold shadow-lg shadow-red-500/30 transition-all active:scale-[0.98]"
                             >

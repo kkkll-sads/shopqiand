@@ -42,6 +42,10 @@ export interface ShopProductListData {
 export interface FetchShopProductsParams {
   page?: number;
   limit?: number;
+  category?: string;
+  keyword?: string;
+  price_order?: string; // 'asc' | 'desc'
+  purchase_type?: string; // 'money' | 'score' | 'both'
 }
 
 export async function fetchShopProducts(
@@ -50,6 +54,10 @@ export async function fetchShopProducts(
   const search = new URLSearchParams();
   if (params.page !== undefined) search.set('page', String(params.page));
   if (params.limit !== undefined) search.set('limit', String(params.limit));
+  if (params.category) search.set('category', params.category);
+  if (params.keyword) search.set('keyword', params.keyword);
+  if (params.price_order) search.set('price_order', params.price_order);
+  if (params.purchase_type) search.set('purchase_type', params.purchase_type);
 
   const path = `${API_ENDPOINTS.shopProduct.list}?${search.toString()}`;
   return authedFetch<ShopProductListData>(path, {
@@ -160,6 +168,10 @@ export async function fetchShopProductsBySales(
   const search = new URLSearchParams();
   if (params.page !== undefined) search.set('page', String(params.page));
   if (params.limit !== undefined) search.set('limit', String(params.limit));
+  if (params.category) search.set('category', params.category);
+  if (params.keyword) search.set('keyword', params.keyword);
+  if (params.price_order) search.set('price_order', params.price_order);
+  if (params.purchase_type) search.set('purchase_type', params.purchase_type);
 
   const path = `${API_ENDPOINTS.shopProduct.sales}?${search.toString()}`;
   return authedFetch<ShopProductListData>(path, {
@@ -173,6 +185,10 @@ export async function fetchShopProductsByLatest(
   const search = new URLSearchParams();
   if (params.page !== undefined) search.set('page', String(params.page));
   if (params.limit !== undefined) search.set('limit', String(params.limit));
+  if (params.category) search.set('category', params.category);
+  if (params.keyword) search.set('keyword', params.keyword);
+  if (params.price_order) search.set('price_order', params.price_order);
+  if (params.purchase_type) search.set('purchase_type', params.purchase_type);
 
   const path = `${API_ENDPOINTS.shopProduct.latest}?${search.toString()}`;
   return authedFetch<ShopProductListData>(path, {
@@ -239,6 +255,7 @@ export interface ShopOrderItem {
   product_name?: string;
   thumbnail?: string;
   quantity?: number;
+  is_commented?: number; // 0=未评价，1=已评价
   [key: string]: any;
 }
 
@@ -710,12 +727,46 @@ export async function likeReview(
   params: LikeReviewParams
 ): Promise<ApiResponse<{ likes: number; is_liked: boolean }>> {
   const token = params.token ?? getStoredToken();
-  
+
   return authedFetch(API_ENDPOINTS.shopProduct.likeReview, {
     method: 'POST',
     body: JSON.stringify({
       review_id: params.review_id,
       action: params.action,
+    }),
+    token,
+  });
+}
+
+export interface SubmitReviewParams {
+  order_id: number;
+  product_id: number;
+  rating: number;
+  content: string;
+  images?: string[];
+  video?: string;
+  is_anonymous?: boolean;
+  token?: string;
+}
+
+/**
+ * 提交商品评价
+ */
+export async function submitReview(
+  params: SubmitReviewParams
+): Promise<ApiResponse<{ review_id: number }>> {
+  const token = params.token ?? getStoredToken();
+
+  return authedFetch(API_ENDPOINTS.shopProduct.submitReview, {
+    method: 'POST',
+    body: JSON.stringify({
+      order_id: params.order_id,
+      product_id: params.product_id,
+      rating: params.rating,
+      content: params.content,
+      images: params.images && params.images.length > 0 ? JSON.stringify(params.images) : undefined,
+      video: params.video,
+      is_anonymous: params.is_anonymous ? '1' : '0',
     }),
     token,
   });
