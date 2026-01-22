@@ -129,6 +129,8 @@ export const API_ENDPOINTS = {
         checkOldAssetsUnlockStatus: '/Account/checkOldAssetsUnlockStatus',
         /** 解锁旧资产 */
         unlockOldAssets: '/Account/unlockOldAssets',
+        /** 账户一览（余额、历史收益、藏品统计） */
+        accountOverview: '/Account/accountOverview',
     },
     /** 内容资讯（替代废弃的 /api/home/newsList、newsDetail） */
     contentNews: {

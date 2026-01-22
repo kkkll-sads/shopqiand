@@ -621,3 +621,101 @@ export async function transferIncomeToPurchase(params: TransferIncomeToPurchaseP
         token: params.token,
     });
 }
+
+// ========== 账户一览（Account Overview）相关 ==========
+
+/**
+ * 账户余额信息
+ */
+export interface AccountBalanceInfo {
+    /** 可用余额 */
+    balance_available: string;
+    /** 可提现金额 */
+    withdrawable_money: string;
+    /** 消费金 */
+    score: number;
+    /** 服务费余额 */
+    service_fee_balance: string;
+    /** 绿色算力 */
+    green_power: string;
+    /** 总资产 */
+    total_assets: string;
+}
+
+/**
+ * 收益项信息（可提现收益 + 消费金收益）
+ */
+export interface IncomeItemInfo {
+    /** 可提现收益 */
+    withdrawable_income: string;
+    /** 消费金收益 */
+    score_income: number;
+}
+
+/**
+ * 历史收益统计
+ */
+export interface AccountIncomeInfo {
+    /** 寄售收益 */
+    consignment_income: IncomeItemInfo;
+    /** 矿机分红 */
+    mining_dividend: IncomeItemInfo;
+    /** 好友分润（直推佣金、间推佣金、代理团队奖） */
+    friend_commission: IncomeItemInfo;
+    /** 签到奖励 */
+    sign_in: IncomeItemInfo;
+    /** 注册奖励 */
+    register_reward: IncomeItemInfo;
+    /** 其他收益 */
+    other: IncomeItemInfo;
+    /** 累计可提现收益总额 */
+    total_income_withdrawable: string;
+    /** 累计消费金收益总额 */
+    total_income_score: number;
+}
+
+/**
+ * 藏品价值统计
+ */
+export interface CollectionInfo {
+    /** 藏品总数 */
+    total_count: number;
+    /** 藏品总价值 */
+    total_value: string;
+    /** 平均价格 */
+    avg_price: string;
+    /** 持有中数量 */
+    holding_count: number;
+    /** 寄售中数量 */
+    consigning_count: number;
+    /** 已售出数量 */
+    sold_count: number;
+    /** 矿机数量 */
+    mining_count: number;
+    /** 矿机总价值 */
+    mining_value: string;
+}
+
+/**
+ * 账户一览完整数据
+ */
+export interface AccountOverviewData {
+    /** 账户余额信息 */
+    balance: AccountBalanceInfo;
+    /** 历史收益统计 */
+    income: AccountIncomeInfo;
+    /** 藏品价值统计 */
+    collection: CollectionInfo;
+}
+
+/**
+ * 获取账户一览数据（余额、历史收益、藏品统计）
+ * @param token 可选的用户 token，若不传会自动从 localStorage 获取
+ * @returns 账户一览数据
+ */
+export async function fetchAccountOverview(token?: string): Promise<ApiResponse<AccountOverviewData>> {
+    return authedFetch<AccountOverviewData>(API_ENDPOINTS.account.accountOverview, {
+        method: 'GET',
+        token,
+    });
+}
