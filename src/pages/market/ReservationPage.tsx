@@ -117,7 +117,16 @@ const ReservationPage: React.FC<ReservationPageProps> = ({ product, preloadedUse
             return globalThis.__preloadedReservationData.zoneMaxPrice;
         }
 
-        // 2. 如果没有预加载数据，使用产品价格
+        // 2. 优先从 priceZone 字段解析价格（如 "500元区" -> 500）
+        const priceZone = (product as any).priceZone || (product as any).price_zone;
+        if (priceZone) {
+            const parsedPrice = extractPriceFromZone(priceZone);
+            if (parsedPrice > 0) {
+                return parsedPrice;
+            }
+        }
+
+        // 3. 如果没有预加载数据和priceZone，使用产品价格
         return Number(product.price);
     };
 
@@ -403,6 +412,7 @@ const ReservationPage: React.FC<ReservationPageProps> = ({ product, preloadedUse
             if (isSuccess(response)) {
                 setShowConfirmModal(false);
                 showToast('success', '预约成功', response.msg || '预约成功');
+                // 提交成功后跳转到申购记录页面
                 navigate('/reservation-record', { replace: true });
                 submitMachine.send(FormEvent.SUBMIT_SUCCESS);
             } else {
@@ -424,38 +434,42 @@ const ReservationPage: React.FC<ReservationPageProps> = ({ product, preloadedUse
     return (
         <div className="min-h-screen bg-gray-50 pb-20">
             {/* Header */}
-            <header className="bg-white px-4 py-3 flex items-center justify-between sticky top-0 z-10 shadow-sm">
-                <button onClick={() => navigate(-1)} className="p-1 hover:bg-gray-100 rounded-full">
-                    <ChevronLeft size={24} className="text-gray-700" />
+            {/* Header - 渐变红色主题 */}
+            <header className="sticky top-0 z-20 bg-gradient-to-r from-red-500 to-red-600 px-4 py-3 flex items-center justify-between text-white shadow-lg">
+                <button onClick={() => navigate(-1)} className="p-2 -ml-2 rounded-full active:bg-white/20 transition-all">
+                    <ChevronLeft size={22} />
                 </button>
-                <h1 className="text-lg font-bold text-gray-900">预约确权</h1>
-                <div className="w-8"></div>
+                <h1 className="text-lg font-bold">预约确权</h1>
+                <div className="w-10"></div>
             </header>
 
             <div className="p-4 space-y-4">
                 {/* Product Card */}
-                <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex gap-4">
-                    <div className="w-20 h-20 bg-gray-100 rounded-lg overflow-hidden shrink-0">
+                <div className="bg-white p-5 rounded-2xl shadow-lg border border-gray-100 flex gap-4 relative overflow-hidden">
+                    {/* 装饰背景 */}
+                    <div className="absolute -right-8 -top-8 w-32 h-32 rounded-full bg-red-50 opacity-30"></div>
+                    <div className="w-24 h-24 bg-gradient-to-br from-red-100 to-red-50 rounded-xl overflow-hidden shrink-0 relative z-10 shadow-sm">
                         <img src={product.image} alt={product.title} className="w-full h-full object-cover" />
                     </div>
-                    <div className="flex-1">
-                        <h2 className="text-lg font-bold text-gray-900 line-clamp-2">{product.title}</h2>
-                        <div className="text-xs text-gray-500 mt-1">艺术家: {product.artist}</div>
-                        <div className="text-xs text-gray-400 font-mono mt-2">
+                    <div className="flex-1 relative z-10">
+                        <h2 className="text-lg font-bold text-gray-900 line-clamp-2 mb-2">{product.title}</h2>
+                        <div className="text-xs text-gray-400 font-mono mb-3">
                             确权编号: 37-DATA-2025-{String(product.id).padStart(4, '0')}
                         </div>
-                        <div className="flex items-baseline gap-1 mt-2">
-                            <span className="text-xs text-gray-400">起购价</span>
-                            <span className="text-xl font-bold text-red-600 font-mono">¥{zoneMaxPrice.toLocaleString()}</span>
+                        <div className="flex items-baseline gap-2">
+                            <span className="text-xs text-gray-500">起购价</span>
+                            <span className="text-2xl font-bold text-red-600 font-mono">¥{(product as any).priceZone || product.price}</span>
                         </div>
                     </div>
                 </div>
 
                 {/* Configuration */}
-                <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-100">
+                <div className="bg-white p-5 rounded-2xl shadow-lg border border-gray-100">
                     <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
-                        <Zap size={18} className="text-orange-500 fill-orange-500" />
-                        算力配置
+                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-100 to-orange-50 flex items-center justify-center">
+                            <Zap size={18} className="text-orange-600 fill-orange-600" />
+                        </div>
+                        <span>算力配置</span>
                     </h3>
 
                     <div className="mb-6">
@@ -510,10 +524,12 @@ const ReservationPage: React.FC<ReservationPageProps> = ({ product, preloadedUse
                 </div>
 
                 {/* Fund Check */}
-                <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-100">
+                <div className="bg-white p-5 rounded-2xl shadow-lg border border-gray-100">
                     <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
-                        <Wallet size={18} className="text-blue-500 fill-blue-500" />
-                        资金冻结
+                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-100 to-blue-50 flex items-center justify-center">
+                            <Wallet size={18} className="text-blue-600 fill-blue-600" />
+                        </div>
+                        <span>资金冻结</span>
                     </h3>
 
                     <div className="flex justify-between text-sm text-gray-600 mb-2">
@@ -558,11 +574,11 @@ const ReservationPage: React.FC<ReservationPageProps> = ({ product, preloadedUse
                 <button
                     onClick={userInfoLoading ? undefined : ((!isHashrateSufficient || !isFundSufficient) ? handleRecharge : handleReservation)}
                     disabled={userInfoLoading}
-                    className={`w-full py-3.5 rounded-xl font-bold text-lg flex items-center justify-center gap-2 shadow-lg transition-all active:scale-[0.98] ${userInfoLoading
-                            ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
-                            : isHashrateSufficient && isFundSufficient
-                                ? 'bg-[#8B0000] text-amber-50 shadow-red-900/20 hover:bg-[#A00000]'
-                                : 'bg-[#8B0000] text-white opacity-90'
+                    className={`w-full py-3.5 rounded-xl font-bold text-lg flex items-center justify-center gap-2 shadow-lg shadow-red-200 transition-all active:scale-[0.98] ${userInfoLoading
+                        ? 'bg-gray-400 text-gray-200 cursor-not-allowed shadow-none'
+                        : isHashrateSufficient && isFundSufficient
+                            ? 'bg-gradient-to-r from-red-500 to-red-600 text-white'
+                            : 'bg-gradient-to-r from-red-500 to-red-600 text-white opacity-90'
                         }`}
                 >
                     {userInfoLoading ? (
@@ -580,34 +596,39 @@ const ReservationPage: React.FC<ReservationPageProps> = ({ product, preloadedUse
             {showConfirmModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
                     <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowConfirmModal(false)}></div>
-                    <div className="bg-white w-full max-w-sm rounded-2xl p-6 relative z-10 animate-in fade-in zoom-in-95 duration-200">
-                        <h3 className="text-xl font-bold text-center mb-6">确认提交预约</h3>
+                    <div className="bg-white w-full max-w-sm rounded-2xl p-6 relative z-10 shadow-2xl">
+                        <div className="flex items-center justify-center mb-4">
+                            <div className="w-16 h-16 rounded-full bg-gradient-to-br from-red-100 to-red-50 flex items-center justify-center">
+                                <Shield size={32} className="text-red-600" />
+                            </div>
+                        </div>
+                        <h3 className="text-xl font-bold text-center mb-6 text-gray-900">确认提交预约</h3>
 
-                        <div className="space-y-4 mb-8">
-                            <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                                <span className="text-gray-500 text-sm">消耗算力</span>
+                        <div className="space-y-3 mb-8">
+                            <div className="flex justify-between items-center p-4 bg-gradient-to-r from-orange-50 to-orange-100/50 rounded-xl border border-orange-100">
+                                <span className="text-gray-700 text-sm font-medium">消耗算力</span>
                                 <div className="text-right">
-                                    <div className="font-bold text-gray-900 font-mono">{totalRequiredHashrate.toFixed(0)}</div>
-                                    <div className="text-[10px] text-gray-400">基础 {baseHashrate} + 加注 {extraHashrate}</div>
+                                    <div className="font-bold text-gray-900 font-mono text-lg">{totalRequiredHashrate.toFixed(0)}</div>
+                                    <div className="text-[10px] text-gray-500 mt-0.5">基础 {baseHashrate} + 加注 {extraHashrate}</div>
                                 </div>
                             </div>
-                            <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                                <span className="text-gray-500 text-sm">冻结金额</span>
-                                <div className="font-bold text-gray-900 font-mono">¥{frozenAmount.toLocaleString()}</div>
+                            <div className="flex justify-between items-center p-4 bg-gradient-to-r from-blue-50 to-blue-100/50 rounded-xl border border-blue-100">
+                                <span className="text-gray-700 text-sm font-medium">冻结金额</span>
+                                <div className="font-bold text-red-600 font-mono text-lg">¥{frozenAmount.toLocaleString()}</div>
                             </div>
                         </div>
 
                         <div className="flex gap-3">
                             <button
                                 onClick={() => setShowConfirmModal(false)}
-                                className="flex-1 py-3 rounded-lg border border-gray-200 text-gray-600 font-bold hover:bg-gray-50"
+                                className="flex-1 py-3 rounded-xl border-2 border-gray-200 text-gray-600 font-bold hover:bg-gray-50 active:scale-95 transition-all"
                             >
                                 取消
                             </button>
                             <button
                                 onClick={confirmSubmit}
                                 disabled={loading}
-                                className="flex-1 py-3 rounded-lg bg-[#8B0000] text-white font-bold hover:bg-[#A00000] flex justify-center items-center"
+                                className="flex-1 py-3 rounded-xl bg-gradient-to-r from-red-500 to-red-600 text-white font-bold shadow-lg shadow-red-200 active:scale-95 transition-all flex justify-center items-center"
                             >
                                 {loading ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : '确认提交'}
                             </button>

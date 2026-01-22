@@ -51,6 +51,7 @@ type TradingDisplayItem = CollectionItem & {
     hasStockInfo?: boolean;
     // 新 API 字段
     package_name?: string;
+    package_id?: number;          // 资产包ID
     official_stock?: number;      // 官方库存
     consignment_count?: number;   // 寄售数量
     total_available?: number;     // 总可用
@@ -282,6 +283,10 @@ const TradingZone: React.FC<TradingZoneProps> = ({
                         consignment_count: item.consignment_count || 0,
                         total_available: totalAvailable,
                         package_name: item.package_name || item.title,
+                        // 使用 package_name 作为标题显示
+                        title: item.package_name || item.title || `${item.price_zone}元区`,
+                        // 保存 package_id 用于申购
+                        package_id: item.package_id,
                         // 唯一标识
                         displayKey: `pkg-${item.zone_id || item.id}-${item.package_name || item.id}`,
                         source,
@@ -599,9 +604,9 @@ const TradingZone: React.FC<TradingZoneProps> = ({
                                     type="button"
                                     key={zone}
                                     onClick={() => setActivePriceZone(zone)}
-                                    className={`px-4 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all ${activePriceZone === zone
-                                        ? 'bg-red-500 text-white shadow-md shadow-red-200'
-                                        : 'bg-white text-gray-500 border border-gray-100 hover:bg-gray-50'
+                                    className={`px-4 py-2 rounded-full text-xs font-bold whitespace-nowrap transition-all active:scale-95 ${activePriceZone === zone
+                                        ? 'bg-gradient-to-r from-red-500 to-red-600 text-white shadow-lg shadow-red-200'
+                                        : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50 hover:border-gray-300'
                                         }`}
                                 >
                                     {zone === 'all' ? '全部' : zone}
@@ -628,7 +633,7 @@ const TradingZone: React.FC<TradingZoneProps> = ({
                                 .map((item) => (
                                     <div
                                         key={item.displayKey}
-                                        className="bg-white rounded-2xl overflow-hidden shadow-[0_4px_20px_rgb(0,0,0,0.03)] border border-gray-100 hover:border-gray-200 hover:shadow-lg transition-all active:scale-[0.98] group"
+                                        className="bg-white rounded-2xl overflow-hidden shadow-lg border border-gray-100 hover:border-red-200 hover:shadow-xl transition-all active:scale-[0.98] group"
                                         onClick={() => {
                                             debugLog('TradingZone', 'Clicking item', {
                                                 id: item.id,
@@ -638,15 +643,18 @@ const TradingZone: React.FC<TradingZoneProps> = ({
                                             });
 
                                             const productData = {
-                                                id: String(item.id),
+                                                id: String(item.id || item.package_id),
                                                 title: item.title,
                                                 price: item.price,
                                                 image: item.image,
-                                                artist: config.name,
+                                                artist: '',
                                                 category: 'Data Asset',
                                                 productType: 'collection',
                                                 sessionId: selectedSession?.id || item.session_id,
                                                 zoneId: item.zone_id || item.price_zone_id,
+                                                // 新接口需要 packageId 和 priceZone
+                                                packageId: item.package_id,
+                                                priceZone: item.price_zone,
                                                 // 为寄售商品设置consignmentId
                                                 ...(item.source === 'consignment' && item.consignment_id
                                                     ? { consignmentId: item.consignment_id }
@@ -669,46 +677,41 @@ const TradingZone: React.FC<TradingZoneProps> = ({
                                     >
                                         <div className="aspect-square bg-gray-50 relative overflow-hidden">
                                             <LazyImage src={item.image} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
-                                            <div className="absolute top-2 right-2 bg-black/40 backdrop-blur-md text-white text-[10px] px-2 py-1 rounded-full font-bold shadow-sm border border-white/20">
-                                                ID.{item.id}
-                                            </div>
                                         </div>
                                         <div className="p-4">
-                                            <h3 className="text-gray-900 text-sm font-bold line-clamp-1 mb-1">{item.title}</h3>
-                                            <div className="text-[10px] text-gray-400 font-mono mb-2">
-                                                {item.price_zone && (
-                                                    <span className="inline-block px-1.5 py-0.5 bg-red-50 text-red-600 rounded">{item.price_zone}</span>
-                                                )}
-                                            </div>
+                                            <h3 className="text-gray-900 text-sm font-bold line-clamp-1 mb-3">{item.title}</h3>
                                             <div className="flex justify-between items-center">
                                                 <div className="text-red-500 font-extrabold text-base flex items-baseline gap-0.5">
                                                     <span>{item.price_zone}</span>
                                                 </div>
-                                                <button 
-                                                    type="button" 
+                                                <button
+                                                    type="button"
                                                     onClick={(e) => {
                                                         e.stopPropagation(); // 阻止事件冒泡到父卡片
-                                                        
+
                                                         // 构建产品数据并保存到 store
                                                         const productData = {
-                                                            id: String(item.id),
+                                                            id: String(item.id || item.package_id),
                                                             title: item.title,
                                                             price: item.price,
                                                             image: item.image,
-                                                            artist: config.name,
+                                                            artist: '',
                                                             category: 'Data Asset',
                                                             productType: 'collection' as const,
                                                             sessionId: selectedSession?.id || item.session_id,
                                                             zoneId: item.zone_id || item.price_zone_id,
+                                                            // 新接口需要 packageId 和 priceZone
+                                                            packageId: item.package_id,
+                                                            priceZone: item.price_zone,
                                                             ...(item.source === 'consignment' && item.consignment_id
                                                                 ? { consignmentId: item.consignment_id }
                                                                 : {})
                                                         };
-                                                        
+
                                                         setSelectedProduct(productData as Product, 'trading-zone');
                                                         navigate('/reservation');
                                                     }}
-                                                    className="bg-gradient-to-r from-red-500 to-red-600 text-white text-xs font-bold px-4 py-1.5 rounded-full shadow-md shadow-red-200 active:scale-95 transition-transform"
+                                                    className="bg-gradient-to-r from-red-500 to-red-600 text-white text-xs font-bold px-4 py-2 rounded-full shadow-lg shadow-red-200 active:scale-95 transition-all hover:shadow-xl"
                                                 >
                                                     申购
                                                 </button>
@@ -757,7 +760,7 @@ const TradingZone: React.FC<TradingZoneProps> = ({
                     return (
                         <div
                             key={session.id}
-                            className="bg-white rounded-[28px] p-6 shadow-[0_12px_24px_rgb(0,0,0,0.06)] border border-white relative overflow-hidden transition-all duration-300 active:scale-[0.99]"
+                            className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100 relative overflow-hidden transition-all duration-300 active:scale-[0.99] hover:shadow-xl"
                         >
                             {/* 水印图标 - 仅装饰，放在最底层 */}
                             <div className={`absolute -right-6 -bottom-6 opacity-[0.03] pointer-events-none`}>

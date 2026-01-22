@@ -122,7 +122,7 @@ const ServiceRecharge: React.FC = () => {
   };
 
   const currentBalance = payType === 'money'
-    ? Number(userInfo?.money || 0)
+    ? Number(userInfo?.balance_available || 0)
     : Number(userInfo?.withdrawable_money || 0);
 
   return (
@@ -191,7 +191,7 @@ const ServiceRecharge: React.FC = () => {
               </div>
               <div>
                 <div className="font-bold text-gray-900">专项金支付</div>
-                <div className="text-xs text-gray-500 mt-0.5">可用: ¥ {formatAmount(userInfo?.money)}</div>
+                <div className="text-xs text-gray-500 mt-0.5">可用: ¥ {formatAmount(userInfo?.balance_available)}</div>
               </div>
             </div>
             <div className={`w-5 h-5 rounded-full border flex items-center justify-center ${payType === 'money' ? 'border-red-500 bg-red-500' : 'border-gray-300'}`}>

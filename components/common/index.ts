@@ -61,6 +61,17 @@ export { default as BankPicker } from './BankPicker';
 // 版本更新提示弹窗组件
 export { default as UpdatePromptModal } from './UpdatePromptModal';
 
+// 搜索输入框组件
+export { default as SearchInput } from './SearchInput';
+
+// 下拉选择筛选组件
+export { SelectFilter } from './SelectFilter';
+export type { SelectOption } from './SelectFilter';
+
+// 排序选择器组件
+export { SortSelector } from './SortSelector';
+export type { SortOption, SortOrder } from './SortSelector';
+
 // 骨架屏组件系统
 export {
   SkeletonBase,

@@ -8,6 +8,7 @@ import BottomNav from '../../components/BottomNav';
 import ScrollToTop from '../components/ScrollToTop';
 import { ChatWidget } from '../../components/common';
 import { useAuthStore } from '../stores/authStore';
+import { useAppStore } from '../stores/appStore';
 import type { Tab } from '../../types';
 
 // 路径到 Tab 的映射
@@ -50,6 +51,7 @@ const MainLayout: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { isLoggedIn, isRealNameVerified } = useAuthStore();
+  const { clearMarketCache } = useAppStore();
   const currentPath = location.pathname;
 
   // 根据当前路径确定激活的 Tab
@@ -78,6 +80,10 @@ const MainLayout: React.FC = () => {
   }
 
   const handleTabChange = (tab: Tab) => {
+    // 如果点击"商城" Tab 且当前已在商城页面，清除缓存强制刷新
+    if (tab === 'market' && currentPath === '/market') {
+      clearMarketCache();
+    }
     navigate(tabToPath[tab]);
   };
 

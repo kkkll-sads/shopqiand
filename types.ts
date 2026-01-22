@@ -19,6 +19,8 @@ export interface Product {
   sessionId?: number | string;
   /** 价格分区ID (用于盲盒预约) */
   zoneId?: number | string;
+  /** 资产包ID (用于盲盒预约) */
+  packageId?: number | string;
   /** 消费金价格（整数） */
   score_price?: number;
   /** 绿色能量金额 */

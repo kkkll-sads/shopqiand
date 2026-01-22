@@ -226,7 +226,7 @@ export async function fetchCollectionItemOriginalDetail(id: number | string): Pr
 
 /**
  * 将藏品升级为共识验证节点
- * API: POST /api/collectionItem/toMining
+ * API: POST /api/collectionTrade/toMining
  * 
  * @param params - 参数
  * @param params.user_collection_id - 用户藏品ID
@@ -237,7 +237,7 @@ export async function toMining(params: { user_collection_id: number; token?: str
     const formData = new FormData();
     formData.append('user_collection_id', String(params.user_collection_id));
 
-    return authedFetch<any>(API_ENDPOINTS.collectionItem.toMining, {
+    return authedFetch<any>(API_ENDPOINTS.collectionTrade.toMining, {
         method: 'POST',
         token,
         body: formData,
@@ -289,7 +289,7 @@ export interface MatchingPoolItem {
 
 /**
  * 查询撮合池列表的参数接口
- * API: GET /api/collectionItem/matchingPool
+ * API: GET /api/collectionTrade/matchingPool
  */
 export interface FetchMatchingPoolParams {
     item_id?: number;        // 藏品ID
@@ -311,7 +311,7 @@ export interface MatchingPoolListData {
 
 /**
  * 查询撮合池列表
- * API: GET /api/collectionItem/matchingPool
+ * API: GET /api/collectionTrade/matchingPool
  * 
  * @param params - 查询参数
  * @param params.item_id - 藏品ID
@@ -335,7 +335,7 @@ export async function fetchMatchingPool(params: FetchMatchingPoolParams = {}): P
     if (params.limit) search.set('limit', String(params.limit));
     if (params.sort_by_weight) search.set('sort_by_weight', '1');
 
-    const path = `${API_ENDPOINTS.collectionItem.matchingPool}?${search.toString()}`;
+    const path = `${API_ENDPOINTS.collectionTrade.matchingPool}?${search.toString()}`;
     return authedFetch<MatchingPoolListData>(path, {
         method: 'GET',
         token,
@@ -344,7 +344,7 @@ export async function fetchMatchingPool(params: FetchMatchingPoolParams = {}): P
 
 /**
  * 取消竞价（从撮合池移除）的参数接口
- * API: POST /api/collectionItem/cancelBid
+ * API: POST /api/collectionTrade/cancelBid
  */
 export interface CancelBidParams {
     matching_pool_id: number; // 撮合池记录ID
@@ -361,7 +361,7 @@ export interface CancelBidResult {
 
 /**
  * 取消竞价（从撮合池移除）
- * API: POST /api/collectionItem/cancelBid
+ * API: POST /api/collectionTrade/cancelBid
  * 
  * @param params - 取消参数
  * @param params.matching_pool_id - 撮合池记录ID
@@ -376,7 +376,7 @@ export async function cancelBid(params: CancelBidParams): Promise<ApiResponse<Ca
     const search = new URLSearchParams();
     search.set('matching_pool_id', String(params.matching_pool_id));
 
-    const path = `${API_ENDPOINTS.collectionItem.cancelBid}?${search.toString()}`;
+    const path = `${API_ENDPOINTS.collectionTrade.cancelBid}?${search.toString()}`;
     return authedFetch<CancelBidResult>(path, {
         method: 'POST',
         token,
@@ -395,7 +395,7 @@ export type ReservationStatus = -1 | 0 | 1 | 2;
 
 /**
  * 盲盒预约记录项接口
- * API: GET /api/collectionItem/reservations
+ * API: GET /api/collectionReservation/reservations
  */
 export interface ReservationItem {
     id: number;                   // 预约记录ID
@@ -438,12 +438,18 @@ export interface ReservationItem {
 
 /**
  * 查询盲盒预约记录的参数接口
- * API: GET /api/collectionItem/reservations
+ * API: GET /api/collectionReservation/reservations
  */
 export interface FetchReservationsParams {
     status?: ReservationStatus; // 状态筛选: -1=全部(默认), 0=待撮合, 1=已中签, 2=未中签/已退款
     page?: number;              // 页码
     limit?: number;             // 每页数量
+    session_id?: number | string;  // 场次ID筛选
+    zone_id?: number | string;     // 价格分区筛选
+    start_time?: number;           // 创建时间范围起始（Unix时间戳）
+    end_time?: number;             // 创建时间范围结束（Unix时间戳）
+    sort?: 'create_time' | 'weight' | 'freeze_amount';  // 排序字段，默认 create_time
+    order?: 'asc' | 'desc';       // 排序方向，默认 desc
     token?: string;             // 用户登录Token（可选，会自动从localStorage获取）
 }
 
@@ -459,12 +465,18 @@ export interface ReservationsListData {
 
 /**
  * 查询盲盒预约记录列表
- * API: GET /api/collectionItem/reservations
+ * API: GET /api/collectionReservation/reservations
  * 
  * @param params - 查询参数
  * @param params.status - 状态筛选: -1=全部(默认), 0=待撮合, 1=已中签, 2=未中签/已退款
  * @param params.page - 页码
  * @param params.limit - 每页数量
+ * @param params.session_id - 场次ID筛选
+ * @param params.zone_id - 价格分区筛选
+ * @param params.start_time - 创建时间范围起始（Unix时间戳）
+ * @param params.end_time - 创建时间范围结束（Unix时间戳）
+ * @param params.sort - 排序字段: create_time(默认), weight, freeze_amount
+ * @param params.order - 排序方向: desc(默认), asc
  * 
  * @returns 返回数据包括：
  *          - list: 预约记录列表
@@ -481,8 +493,14 @@ export async function fetchReservations(params: FetchReservationsParams = {}): P
     }
     if (params.page) search.set('page', String(params.page));
     if (params.limit) search.set('limit', String(params.limit));
+    if (params.session_id != null) search.set('session_id', String(params.session_id));
+    if (params.zone_id != null) search.set('zone_id', String(params.zone_id));
+    if (params.start_time != null) search.set('start_time', String(params.start_time));
+    if (params.end_time != null) search.set('end_time', String(params.end_time));
+    if (params.sort) search.set('sort', params.sort);
+    if (params.order) search.set('order', params.order);
 
-    const path = `${API_ENDPOINTS.collectionItem.reservations}?${search.toString()}`;
+    const path = `${API_ENDPOINTS.collectionReservation.reservations}?${search.toString()}`;
     return authedFetch<ReservationsListData>(path, {
         method: 'GET',
         token,
@@ -491,7 +509,7 @@ export async function fetchReservations(params: FetchReservationsParams = {}): P
 
 /**
  * 预约记录详情数据接口
- * API: GET /api/collectionItem/reservationDetail
+ * API: GET /api/collectionReservation/reservationDetail
  */
 export interface ReservationDetailData extends ReservationItem {
     // Extends all ReservationItem fields
@@ -500,7 +518,7 @@ export interface ReservationDetailData extends ReservationItem {
 
 /**
  * 获取预约记录详情
- * API: GET /api/collectionItem/reservationDetail
+ * API: GET /api/collectionReservation/reservationDetail
  * 
  * @param id - 预约记录ID
  * @param token - 用户登录Token（可选，会自动从localStorage获取）
@@ -511,7 +529,7 @@ export async function fetchReservationDetail(id: number | string, token?: string
     const search = new URLSearchParams();
     search.set('id', String(id));
 
-    const path = `${API_ENDPOINTS.collectionItem.reservationDetail}?${search.toString()}`;
+    const path = `${API_ENDPOINTS.collectionReservation.reservationDetail}?${search.toString()}`;
     return authedFetch<ReservationDetailData>(path, {
         method: 'GET',
         token: authToken,
@@ -546,7 +564,7 @@ export interface BidBuyResult {
 
 /**
  * 盲盒预约（冻结专项资金与算力）
- * API: POST /api/collectionItem/bidBuy
+ * API: POST /api/collectionReservation/bidBuy
  */
 export async function bidBuy(params: BidBuyParams): Promise<ApiResponse<BidBuyResult>> {
     debugLog('collection.bidBuy', '开始调用', params);
@@ -567,14 +585,14 @@ export async function bidBuy(params: BidBuyParams): Promise<ApiResponse<BidBuyRe
     formData.append('session_id', String(params.session_id));
     formData.append('zone_id', String(params.zone_id));
     formData.append('package_id', String(params.package_id));
-    
+
     const extraHashrate = params.extra_hashrate ?? 0;
     if (extraHashrate < 0) {
         throw new Error('额外算力不能小于0');
     }
     formData.append('extra_hashrate', String(extraHashrate));
 
-    const response = await authedFetch<BidBuyResult>(API_ENDPOINTS.collectionItem.bidBuy, {
+    const response = await authedFetch<BidBuyResult>(API_ENDPOINTS.collectionReservation.bidBuy, {
         method: 'POST',
         token,
         body: formData,
@@ -599,14 +617,27 @@ export interface MyCollectionItem {
     title: string;                // 藏品标题
     image: string;                // 藏品图片
     asset_code: string;           // 确权编号
-    md5: string;                  // MD5指纹
-    fingerprint: string;          // 指纹(同MD5)
-    price: number;                // 价格
+    hash: string;                 // 藏品唯一哈希标识
+    md5?: string;                 // MD5指纹 (兼容旧版)
+    fingerprint?: string;         // 指纹(同MD5) (兼容旧版)
+    price: number;                // 买入价格
     buy_price?: number | string;  // 买入成本价（优先使用）
     market_price: number;         // 当前市场价
     transaction_count: number;    // 交易次数
     fail_count: number;           // 流拍次数
     consignment_status: number;   // 寄售状态: 0=未寄售, 1=寄售中, 2=已售出
+
+    // New API Fields
+    session_id?: number;          // 场次ID
+    session_title?: string;       // 场次标题
+    session_start_time?: string;  // 场次开始时间
+    session_end_time?: string;    // 场次结束时间
+    zone_id?: number;             // 价格区间ID
+    price_zone?: string;          // 价格分区名称 (如 '1K区')
+    price_zone_text?: string;     // 价格分区显示文本 (兼容旧版)
+    price_zone_calc?: number;     // 是否由后端计算兜底 (0=数据库值/1=计算值)
+    mining_status?: number;       // 矿机状态：0=否,1=是
+    mining_start_time?: string;   // 矿机启动时间
 
     // Specially for status=sold
     consignment_id?: number;
@@ -638,7 +669,7 @@ export interface MyCollectionItem {
 
 /**
  * 通过确权编号或MD5指纹查询藏品
- * API: GET /api/collectionItem/queryByCode
+ * API: GET /api/collectionTrade/queryByCode
  * 
  * @param code - 确权编号（如 37-DATA-0001-000123）或 MD5指纹（如 0x1a2b3c...）
  * @returns 藏品详细信息，包括持有人信息（如果已交付且未售出）
@@ -676,7 +707,7 @@ export async function queryCollectionByCode(params: QueryByCodeParams): Promise<
     const search = new URLSearchParams();
     search.set('code', params.code);
 
-    const path = `${API_ENDPOINTS.collectionItem.queryByCode}?${search.toString()}`;
+    const path = `${API_ENDPOINTS.collectionTrade.queryByCode}?${search.toString()}`;
     return authedFetch<CollectionItemDetail>(path, { method: 'GET' });
 }
 
@@ -700,7 +731,7 @@ export interface CollectionOrderItemDetail {
 
 /**
  * 藏品订单详情数据接口
- * API: GET /api/collectionItem/orderDetail
+ * API: GET /api/collectionTrade/orderDetail
  */
 export interface CollectionOrderDetailData {
     id: number;
@@ -733,7 +764,7 @@ export interface GetCollectionOrderDetailParams {
 
 /**
  * 获取藏品订单详情
- * API: GET /api/collectionItem/orderDetail
+ * API: GET /api/collectionTrade/orderDetail
  * 
  * @param params - 查询参数，支持通过 id 或 order_no 查询
  * @returns 订单详情数据
@@ -741,7 +772,7 @@ export interface GetCollectionOrderDetailParams {
 export async function getCollectionOrderDetail(params: GetCollectionOrderDetailParams): Promise<ApiResponse<CollectionOrderDetailData>> {
     const token = params.token ?? getStoredToken();
     const search = new URLSearchParams();
-    
+
     if (params.id !== undefined && params.id !== null) {
         search.set('id', String(params.id));
     }
@@ -749,29 +780,52 @@ export async function getCollectionOrderDetail(params: GetCollectionOrderDetailP
         search.set('order_no', params.order_no);
     }
 
-    const path = `${API_ENDPOINTS.collectionItem.orderDetail}?${search.toString()}`;
+    const path = `${API_ENDPOINTS.collectionTrade.orderDetail}?${search.toString()}`;
     return authedFetch<CollectionOrderDetailData>(path, {
         method: 'GET',
         token,
     });
 }
 
-export async function getMyCollection(params: { page?: number; limit?: number; status?: string; token?: string } = {}): Promise<ApiResponse<{ list: MyCollectionItem[], total: number, has_more?: boolean, consignment_coupon?: number }>> {
+/**
+ * 获取我的藏品
+ * API: GET /api/collectionTrade/myCollection
+ * 
+ * @param params.status - 状态筛选: all=全部, holding=持仓中(默认), consigned=寄售中, mining=矿机中, failed=寄售失败, sold=已售出
+ * @param params.session_id - 场次ID筛选
+ * @param params.zone_id - 价格分区筛选
+ * @param params.keyword - 标题关键词搜索
+ * @param params.sort - 排序字段: create_time(默认), price, market_price
+ * @param params.order - 排序方向: desc(默认), asc
+ */
+export async function getMyCollection(params: {
+    page?: number;
+    limit?: number;
+    status?: string;
+    session_id?: number | string;
+    zone_id?: number | string;
+    keyword?: string;
+    sort?: 'create_time' | 'price' | 'market_price';
+    order?: 'asc' | 'desc';
+    token?: string;
+} = {}): Promise<ApiResponse<{ list: MyCollectionItem[], total: number, has_more?: boolean, consignment_coupon?: number }>> {
     const token = params.token || getStoredToken();
     const search = new URLSearchParams();
     search.set('page', String(params.page || 1));
     search.set('limit', String(params.limit || 10));
+
     if (params.status) {
         search.set('status', params.status);
     } else {
-        // Default behavior: user doc says default is 'holding'.
-        // However, existing usage might expect 'all' (e.g. AssetView).
-        // To be safe and compliant with new API, if not specified, we pass nothing (backend defaults) or valid value.
-        // Let's pass 'all' if not specified to maintain backward compatibility with views expecting everything.
-        search.set('status', 'all');
+        search.set('status', 'holding');
     }
+    if (params.session_id != null) search.set('session_id', String(params.session_id));
+    if (params.zone_id != null) search.set('zone_id', String(params.zone_id));
+    if (params.keyword != null && params.keyword.trim()) search.set('keyword', params.keyword.trim());
+    if (params.sort) search.set('sort', params.sort);
+    if (params.order) search.set('order', params.order);
 
-    const path = `${API_ENDPOINTS.collectionItem.myCollection}?${search.toString()}`;
+    const path = `${API_ENDPOINTS.collectionTrade.myCollection}?${search.toString()}`;
     return authedFetch<{ list: MyCollectionItem[], total: number, has_more?: boolean, consignment_coupon?: number }>(path, {
         method: 'GET',
         token,
@@ -849,7 +903,7 @@ export async function fetchArtistAllWorks(params: { page?: number; limit?: numbe
 
 /**
  * 批量寄售可寄售列表数据接口
- * API: GET /api/collectionItem/batchConsignableList
+ * API: GET /api/collectionConsignment/batchConsignableList
  */
 export interface BatchConsignableListData {
     stats: {
@@ -869,14 +923,14 @@ export interface BatchConsignableListData {
 
 /**
  * 获取可批量寄售的藏品列表
- * API: GET /api/collectionItem/batchConsignableList
+ * API: GET /api/collectionConsignment/batchConsignableList
  *
  * @param token - 用户登录Token（可选，会自动从localStorage获取）
  * @returns 返回可寄售藏品列表及统计信息
  */
 export async function getBatchConsignableList(token?: string): Promise<ApiResponse<BatchConsignableListData>> {
     const authToken = token ?? getStoredToken();
-    return authedFetch<BatchConsignableListData>(API_ENDPOINTS.collectionItem.batchConsignableList, {
+    return authedFetch<BatchConsignableListData>(API_ENDPOINTS.collectionConsignment.batchConsignableList, {
         method: 'GET',
         token: authToken,
     });
@@ -917,7 +971,7 @@ export interface BatchConsignResult {
 
 /**
  * 执行批量寄售
- * API: POST /api/collectionItem/batchConsign
+ * API: POST /api/collectionConsignment/batchConsign
  *
  * @param params - 批量寄售参数
  * @param params.consignments - 要寄售的藏品列表
@@ -927,7 +981,7 @@ export interface BatchConsignResult {
 export async function batchConsign(params: BatchConsignParams): Promise<ApiResponse<BatchConsignResult>> {
     const token = params.token ?? getStoredToken();
 
-    return authedFetch<BatchConsignResult>(API_ENDPOINTS.collectionItem.batchConsign, {
+    return authedFetch<BatchConsignResult>(API_ENDPOINTS.collectionConsignment.batchConsign, {
         method: 'POST',
         token,
         body: JSON.stringify({

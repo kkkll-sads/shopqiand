@@ -11,9 +11,7 @@ import {
   Truck, Shield, RotateCcw, Headphones, ThumbsUp, Gift
 } from 'lucide-react';
 import { LazyImage, openChatWidget } from '../../../components/common';
-import PopupAnnouncementModal from '../../../components/common/PopupAnnouncementModal';
 import BottomSheet from '../../../components/common/BottomSheet';
-import PromotionSheet from '../../../components/business/PromotionSheet';
 import AddressSheet from '../../../components/business/AddressSheet';
 import ServiceSheet from '../../../components/business/ServiceSheet';
 import BuySpecSheet from '../../components/shop/BuySpecSheet';
@@ -22,8 +20,6 @@ import {
   fetchShopProductDetail,
   ShopProductDetailData,
   createOrder,
-  fetchAnnouncements,
-  AnnouncementItem,
   fetchReviewSummary,
   ReviewSummaryData,
 } from '../../../services/api';
@@ -72,15 +68,10 @@ const ShopProductDetail: React.FC<ShopProductDetailProps> = ({
   const reviewsSectionRef = useRef<HTMLDivElement>(null);
   const detailSectionRef = useRef<HTMLDivElement>(null);
 
-  // 交易须知公告
-  const [showTradingNotice, setShowTradingNotice] = useState(false);
-  const [tradingNoticeAnnouncement, setTradingNoticeAnnouncement] = useState<AnnouncementItem | null>(null);
-
   // 评价数据
   const [reviewSummary, setReviewSummary] = useState<ReviewSummaryData | null>(null);
 
   // 底部弹窗状态
-  const [showPromotionSheet, setShowPromotionSheet] = useState(false);
   const [showAddressSheet, setShowAddressSheet] = useState(false);
   const [showServiceSheet, setShowServiceSheet] = useState(false);
 
@@ -191,32 +182,6 @@ const ShopProductDetail: React.FC<ShopProductDetailProps> = ({
     };
     loadReviews();
   }, [product.id]);
-
-  // 加载交易须知
-  useEffect(() => {
-    const loadTradingNotice = async () => {
-      try {
-        const response = await fetchAnnouncements({ page: 1, limit: 10, type: 'normal' });
-        if (isSuccess(response) && response.data?.list) {
-          const notice = response.data.list.find((item: AnnouncementItem) =>
-            item.title && item.title.includes('交易须知')
-          );
-          if (notice) {
-            const dismissedKey = `trading_notice_dismissed_${notice.id}`;
-            const dismissedDate = localStorage.getItem(dismissedKey);
-            const today = new Date().toDateString();
-            if (dismissedDate !== today) {
-              setTradingNoticeAnnouncement(notice);
-              setShowTradingNotice(true);
-            }
-          }
-        }
-      } catch (error) {
-        errorLog('ShopProductDetail', '加载交易须知失败', error);
-      }
-    };
-    loadTradingNotice();
-  }, []);
 
   // 图片滑动处理
   const handleImageScroll = () => {
@@ -550,10 +515,7 @@ const ShopProductDetail: React.FC<ShopProductDetailProps> = ({
       )}
 
       {/* 价格促销区 */}
-      <div
-        className="bg-white px-3 py-2.5 active:bg-gray-50 cursor-pointer"
-        onClick={() => setShowPromotionSheet(true)}
-      >
+      <div className="bg-white px-3 py-2.5">
         {/* 价格行 */}
         <div className="flex items-center justify-between">
           <div className="flex items-baseline flex-wrap">
@@ -786,32 +748,6 @@ const ShopProductDetail: React.FC<ShopProductDetailProps> = ({
           </div>
         </div>
       )}
-
-      {/* 交易须知公告弹窗 */}
-      <PopupAnnouncementModal
-        visible={showTradingNotice}
-        announcement={tradingNoticeAnnouncement}
-        onClose={() => setShowTradingNotice(false)}
-        onDontShowToday={() => {
-          if (tradingNoticeAnnouncement) {
-            const dismissedKey = `trading_notice_dismissed_${tradingNoticeAnnouncement.id}`;
-            localStorage.setItem(dismissedKey, new Date().toDateString());
-          }
-        }}
-      />
-
-      {/* 优惠详情弹窗 */}
-      <BottomSheet
-        visible={showPromotionSheet}
-        title="优惠"
-        onClose={() => setShowPromotionSheet(false)}
-      >
-        <PromotionSheet
-          price={displayPrice}
-          originalPrice={originalPrice}
-          scorePrice={scorePrice}
-        />
-      </BottomSheet>
 
       {/* 地址选择弹窗 */}
       <BottomSheet

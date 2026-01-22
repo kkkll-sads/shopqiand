@@ -141,16 +141,16 @@ export interface GetBalanceLogParams {
     token?: string;
 }
 
+/**
+ * 获取专项金/余额明细（已迁移：统一走 allLog）
+ * 替代废弃接口 /Account/balance
+ */
 export async function getBalanceLog(params: GetBalanceLogParams = {}): Promise<ApiResponse<BalanceLogListData>> {
-    const search = new URLSearchParams();
-    if (params.page) search.set('page', String(params.page));
-    if (params.limit) search.set('limit', String(params.limit));
-
-    const path = `${API_ENDPOINTS.account.balance}?${search.toString()}`;
-    return authedFetch<BalanceLogListData>(path, {
-        method: 'GET',
-        token: params.token,
+    const res = await getAllLog({
+        ...params,
+        type: 'balance_available',
     });
+    return res as unknown as ApiResponse<BalanceLogListData>;
 }
 
 export interface AllLogItem {
@@ -178,6 +178,10 @@ export interface GetAllLogParams extends GetBalanceLogParams {
     start_time?: string | number;
     end_time?: string | number;
     flow_direction?: 'in' | 'out' | 'all';
+    /** 业务类型筛选，如 matching_buy, consignment_income, recharge 等 */
+    biz_type?: string;
+    /** 备注关键词搜索 */
+    keyword?: string;
 }
 
 export async function getAllLog(params: GetAllLogParams = {}): Promise<ApiResponse<AllLogListData>> {
@@ -188,6 +192,8 @@ export async function getAllLog(params: GetAllLogParams = {}): Promise<ApiRespon
     if (params.start_time) search.set('start_time', String(params.start_time));
     if (params.end_time) search.set('end_time', String(params.end_time));
     if (params.flow_direction) search.set('flow_direction', params.flow_direction);
+    if (params.biz_type != null && params.biz_type !== '') search.set('biz_type', params.biz_type);
+    if (params.keyword != null && params.keyword.trim() !== '') search.set('keyword', params.keyword.trim());
 
     const path = `${API_ENDPOINTS.account.allLog}?${search.toString()}`;
     return authedFetch<AllLogListData>(path, {
@@ -195,6 +201,7 @@ export async function getAllLog(params: GetAllLogParams = {}): Promise<ApiRespon
         token: params.token,
     });
 }
+
 
 // 资金明细详情
 export interface MoneyLogDetailData {
@@ -263,16 +270,16 @@ export interface GetServiceFeeLogParams {
     token?: string;
 }
 
+/**
+ * 获取服务费明细（已迁移：统一走 allLog）
+ * 替代废弃接口 /Account/serviceFeeLog
+ */
 export async function getServiceFeeLog(params: GetServiceFeeLogParams = {}): Promise<ApiResponse<ServiceFeeLogListData>> {
-    const search = new URLSearchParams();
-    if (params.page) search.set('page', String(params.page));
-    if (params.limit) search.set('limit', String(params.limit));
-
-    const path = `${API_ENDPOINTS.account.serviceFeeLog}?${search.toString()}`;
-    return authedFetch<ServiceFeeLogListData>(path, {
-        method: 'GET',
-        token: params.token,
+    const res = await getAllLog({
+        ...params,
+        type: 'service_fee_balance',
     });
+    return res as unknown as ApiResponse<ServiceFeeLogListData>;
 }
 
 export interface TransferBalanceToServiceFeeParams {

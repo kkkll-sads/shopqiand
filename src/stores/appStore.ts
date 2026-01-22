@@ -5,6 +5,42 @@ import { create } from 'zustand';
 import type { Tab, Product, NewsItem } from '../../types';
 import type { MyCollectionItem } from '../../services/api';
 
+/**
+ * 市场页缓存状态
+ * 用于保存列表页状态，实现返回时恢复滚动位置和数据
+ */
+export interface MarketCache {
+  products: Product[];
+  page: number;
+  hasMore: boolean;
+  scrollTop: number;
+  activeFilter: string;
+  selectedCategory: string;
+  searchQuery: string;
+  categoryList: string[];
+  timestamp: number; // 缓存时间，用于过期判断
+}
+
+// 缓存过期时间：5 分钟
+export const MARKET_CACHE_TTL = 5 * 60 * 1000;
+
+/**
+ * 通用列表页缓存接口
+ * 用于我的藏品、资产历史、申购记录等列表页
+ */
+export interface ListPageCache<T = any> {
+  data: T[];
+  page: number;
+  hasMore: boolean;
+  scrollTop: number;
+  filters?: Record<string, any>; // 筛选条件
+  activeTab?: string;            // 标签页状态
+  timestamp: number;
+}
+
+// 缓存 key 类型
+export type ListCacheKey = 'myCollection' | 'assetHistory' | 'reservationRecord';
+
 interface AppState {
   // Tab 状态
   activeTab: Tab;
@@ -39,6 +75,17 @@ interface AppState {
   setPopupQueue: (queue: any[]) => void;
   showPopupAnnouncement: boolean;
   setShowPopupAnnouncement: (show: boolean) => void;
+
+  // 市场页缓存状态
+  marketCache: MarketCache | null;
+  setMarketCache: (cache: MarketCache) => void;
+  clearMarketCache: () => void;
+
+  // 通用列表页缓存状态
+  listCaches: Partial<Record<ListCacheKey, ListPageCache | null>>;
+  setListCache: (key: ListCacheKey, cache: ListPageCache) => void;
+  clearListCache: (key: ListCacheKey) => void;
+  clearAllListCaches: () => void;
 }
 
 export const useAppStore = create<AppState>((set, get) => ({
@@ -90,6 +137,21 @@ export const useAppStore = create<AppState>((set, get) => ({
   setPopupQueue: (queue) => set({ popupQueue: queue }),
   showPopupAnnouncement: false,
   setShowPopupAnnouncement: (show) => set({ showPopupAnnouncement: show }),
+
+  // 市场页缓存状态
+  marketCache: null,
+  setMarketCache: (cache) => set({ marketCache: cache }),
+  clearMarketCache: () => set({ marketCache: null }),
+
+  // 通用列表页缓存状态
+  listCaches: {},
+  setListCache: (key, cache) => set((state) => ({
+    listCaches: { ...state.listCaches, [key]: cache }
+  })),
+  clearListCache: (key) => set((state) => ({
+    listCaches: { ...state.listCaches, [key]: null }
+  })),
+  clearAllListCaches: () => set({ listCaches: {} }),
 }));
 
 // 选择器 hooks
@@ -97,3 +159,5 @@ export const useActiveTab = () => useAppStore((state) => state.activeTab);
 export const useSelectedProduct = () => useAppStore((state) => state.selectedProduct);
 export const useNewsList = () => useAppStore((state) => state.newsList);
 export const useUnreadNewsCount = () => useAppStore((state) => state.unreadNewsCount);
+export const useMarketCache = () => useAppStore((state) => state.marketCache);
+export const useListCache = (key: ListCacheKey) => useAppStore((state) => state.listCaches[key]);

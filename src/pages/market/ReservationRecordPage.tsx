@@ -2,21 +2,26 @@
  * ReservationRecordPage - 预约记录页面（现代化UI版）
  * 已迁移: 使用 React Router 导航
  */
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, CheckCircle2, Clock, Wallet, Zap, AlertCircle, ArrowRight, Calendar, Loader2, Sparkles, FileText } from 'lucide-react';
 import {
     fetchReservations,
+    fetchCollectionSessions,
     ReservationItem,
     ReservationStatus as ReservationStatusType,
 } from '../../../services/api';
+import { SelectFilter, SortSelector } from '../../../components/common';
+import type { SortOrder } from '../../../components/common';
+import type { SelectOption } from '../../../components/common';
 import { Product } from '../../../types';
 import { getStoredToken } from '../../../services/client';
 import { ReservationStatus } from '../../../constants/statusEnums';
 import { extractError, isSuccess } from '../../../utils/apiHelpers';
 import { useStateMachine } from '../../../hooks/useStateMachine';
 import { LoadingEvent, LoadingState } from '../../../types/states';
-import { errorLog } from '../../../utils/logger';
+import { errorLog, debugLog } from '../../../utils/logger';
+import { useAppStore, MARKET_CACHE_TTL } from '../../stores/appStore';
 
 interface ReservationRecordPageProps {
     onProductSelect?: (product: Product) => void;
@@ -40,7 +45,18 @@ const ReservationRecordPage: React.FC<ReservationRecordPageProps> = ({
     sessionEndTime
 }) => {
     const navigate = useNavigate();
+    const { listCaches, setListCache } = useAppStore();
+    
+    // 缓存相关 refs
+    const restoredFromCacheRef = useRef(false);
+    const scrollTopRef = useRef(0);
+    
     const [statusFilter, setStatusFilter] = useState<ReservationStatusType | undefined>(-1);
+    const [sessionFilter, setSessionFilter] = useState<string>('all');
+    const [zoneFilter, setZoneFilter] = useState<string>('all');
+    const [sortField, setSortField] = useState<'create_time' | 'weight' | 'freeze_amount'>('create_time');
+    const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
+    const [sessionOptions, setSessionOptions] = useState<SelectOption[]>([]);
     const [records, setRecords] = useState<ReservationItem[]>([]);
     const [error, setError] = useState<string | null>(null);
     const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -86,14 +102,142 @@ const ReservationRecordPage: React.FC<ReservationRecordPageProps> = ({
     const loading = listMachine.state === LoadingState.LOADING;
     const loadingMore = loadMoreMachine.state === LoadingState.LOADING;
 
+    // ========================================
+    // 缓存恢复逻辑：组件挂载时检查并恢复缓存
+    // ========================================
+    useEffect(() => {
+        const cache = listCaches.reservationRecord;
+        if (cache && Date.now() - cache.timestamp < MARKET_CACHE_TTL) {
+            debugLog('ReservationRecordPage', '从缓存恢复状态', {
+                dataCount: cache.data.length,
+                page: cache.page,
+                statusFilter: cache.filters?.statusFilter,
+                scrollTop: cache.scrollTop
+            });
+            
+            // 恢复状态
+            setRecords(cache.data as ReservationItem[]);
+            setPage(cache.page);
+            setHasMore(cache.hasMore);
+            if (cache.filters?.statusFilter !== undefined) {
+                setStatusFilter(cache.filters.statusFilter);
+            }
+            if (cache.filters?.sessionFilter) setSessionFilter(cache.filters.sessionFilter);
+            if (cache.filters?.zoneFilter) setZoneFilter(cache.filters.zoneFilter);
+            if (cache.filters?.sortField) setSortField(cache.filters.sortField);
+            if (cache.filters?.sortOrder) setSortOrder(cache.filters.sortOrder as SortOrder);
+            
+            // 标记已从缓存恢复
+            restoredFromCacheRef.current = true;
+            
+            // 恢复滚动位置（需要等待渲染完成）
+            requestAnimationFrame(() => {
+                if (containerRef.current && cache.scrollTop > 0) {
+                    containerRef.current.scrollTo({ top: cache.scrollTop, behavior: 'instant' });
+                }
+            });
+            
+            // 设置状态机为成功状态
+            listMachine.send(LoadingEvent.LOAD);
+            listMachine.send(LoadingEvent.SUCCESS);
+            
+            // 设置登录状态
+            const token = getStoredToken();
+            setIsLoggedIn(!!token);
+        }
+    }, []); // 仅在组件挂载时执行一次
+
+    // ========================================
+    // 缓存保存逻辑：组件卸载时保存状态
+    // ========================================
+    useEffect(() => {
+        // 更新滚动位置 ref
+        const handleScrollForCache = () => {
+            if (containerRef.current) {
+                scrollTopRef.current = containerRef.current.scrollTop;
+            }
+        };
+        
+        const container = containerRef.current;
+        container?.addEventListener('scroll', handleScrollForCache);
+        
+        return () => {
+            container?.removeEventListener('scroll', handleScrollForCache);
+            
+            // 组件卸载时保存缓存（仅在有数据时保存）
+            if (records.length > 0) {
+                debugLog('ReservationRecordPage', '保存缓存状态', {
+                    dataCount: records.length,
+                    page,
+                    statusFilter,
+                    scrollTop: scrollTopRef.current
+                });
+                
+                setListCache('reservationRecord', {
+                    data: records,
+                    page,
+                    hasMore,
+                    scrollTop: scrollTopRef.current,
+                    filters: {
+                        statusFilter,
+                        sessionFilter,
+                        zoneFilter,
+                        sortField,
+                        sortOrder
+                    },
+                    timestamp: Date.now()
+                });
+            }
+        };
+    }, [records, page, hasMore, statusFilter, sessionFilter, zoneFilter, sortField, sortOrder, setListCache]);
+
     // Check login status
     useEffect(() => {
         const token = getStoredToken();
         setIsLoggedIn(!!token);
     }, []);
 
+    // Fetch session options for filter
+    useEffect(() => {
+        if (!isLoggedIn) return;
+        let cancelled = false;
+        (async () => {
+            try {
+                const res = await fetchCollectionSessions();
+                if (cancelled) return;
+                if (isSuccess(res) && res.data?.list?.length) {
+                    const opts: SelectOption[] = [
+                        { value: 'all', label: '全部场次' },
+                        ...res.data.list.map((s: { id: number; title: string }) => ({ value: String(s.id), label: s.title })),
+                    ];
+                    setSessionOptions(opts);
+                }
+            } catch (e) {
+                if (!cancelled) errorLog('ReservationRecordPage', '获取场次列表失败', e);
+            }
+        })();
+        return () => { cancelled = true; };
+    }, [isLoggedIn]);
+
+    const zoneOptions: SelectOption[] = useMemo(() => [
+        { value: 'all', label: '全部分区' },
+    ], []);
+
+    const sortOptions = useMemo(() => [
+        { value: 'create_time', label: '创建时间' },
+        { value: 'weight', label: '权重' },
+        { value: 'freeze_amount', label: '冻结金额' },
+    ], []);
+
     // Load reservation records
     useEffect(() => {
+        // 如果是从缓存恢复的，跳过首次加载
+        if (restoredFromCacheRef.current) {
+            restoredFromCacheRef.current = false;
+            debugLog('ReservationRecordPage', '跳过首次加载（从缓存恢复）');
+            return;
+        }
+        
         if (isLoggedIn) {
             setPage(1);
             setRecords([]);
@@ -101,7 +245,7 @@ const ReservationRecordPage: React.FC<ReservationRecordPageProps> = ({
         } else {
             listMachine.send(LoadingEvent.SUCCESS);
         }
-    }, [statusFilter, isLoggedIn]);
+    }, [statusFilter, isLoggedIn, sessionFilter, zoneFilter, sortField, sortOrder]);
 
     const loadRecords = async (pageNum: number, append: boolean = false) => {
         try {
@@ -116,6 +260,10 @@ const ReservationRecordPage: React.FC<ReservationRecordPageProps> = ({
                 status: statusFilter,
                 page: pageNum,
                 limit: PAGE_SIZE,
+                session_id: sessionFilter === 'all' ? undefined : sessionFilter,
+                zone_id: zoneFilter === 'all' ? undefined : zoneFilter,
+                sort: sortField,
+                order: sortOrder,
             });
 
             if (isSuccess(response) && response.data) {
@@ -160,7 +308,7 @@ const ReservationRecordPage: React.FC<ReservationRecordPageProps> = ({
         if (scrollTop + clientHeight >= scrollHeight - 100) {
             loadRecords(page + 1, true);
         }
-    }, [loadingMore, hasMore, page, statusFilter]);
+    }, [loadingMore, hasMore, page, statusFilter, sessionFilter, zoneFilter, sortField, sortOrder]);
 
     const getStatusBadge = (item: ReservationItem) => {
         switch (item.status) {
@@ -294,8 +442,37 @@ const ReservationRecordPage: React.FC<ReservationRecordPageProps> = ({
                 </div>
             </div>
 
+            {/* 筛选栏：场次、价格区、排序 */}
+            {isLoggedIn && (
+                <div className="mt-3 mx-4 flex gap-2 overflow-x-auto pb-1">
+                    <SelectFilter
+                        label="场次"
+                        value={sessionFilter}
+                        options={sessionOptions.length ? sessionOptions : [{ value: 'all', label: '全部场次' }]}
+                        onChange={setSessionFilter}
+                        placeholder="全部场次"
+                    />
+                    <SelectFilter
+                        label="价格区"
+                        value={zoneFilter}
+                        options={zoneOptions}
+                        onChange={setZoneFilter}
+                        placeholder="全部分区"
+                    />
+                    <SortSelector
+                        sortField={sortField}
+                        sortOrder={sortOrder}
+                        options={sortOptions}
+                        onSortChange={(field, order) => {
+                            setSortField(field as 'create_time' | 'weight' | 'freeze_amount');
+                            setSortOrder(order);
+                        }}
+                    />
+                </div>
+            )}
+
             {/* List */}
-            <div ref={containerRef} onScroll={handleScroll} className="p-4 space-y-3 h-[calc(100vh-220px)] overflow-y-auto">
+            <div ref={containerRef} onScroll={handleScroll} className="p-4 space-y-3 h-[calc(100vh-260px)] overflow-y-auto">
                 {!isLoggedIn ? (
                     <div className="py-16 text-center">
                         <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">

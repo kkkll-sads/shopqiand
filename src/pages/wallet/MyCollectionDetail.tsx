@@ -14,6 +14,7 @@ import { isSuccess, extractData } from '../../../utils/apiHelpers';
 import { ConsignmentStatus } from '../../../constants/statusEnums';
 import { useStateMachine } from '../../../hooks/useStateMachine';
 import { FormEvent, FormState, LoadingEvent, LoadingState } from '../../../types/states';
+import { useAppStore } from '../../stores/appStore';
 
 interface MyCollectionDetailProps {
     item?: MyCollectionItem | null;
@@ -23,6 +24,7 @@ interface MyCollectionDetailProps {
 const MyCollectionDetail: React.FC<MyCollectionDetailProps> = ({ item: initialItem, onSetSelectedItem }) => {
     const navigate = useNavigate();
     const { id } = useParams<{ id: string }>();
+    const clearListCache = useAppStore((state) => state.clearListCache);
     const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
     const [item, setItem] = useState<any>(initialItem || null);
     const { showToast, showDialog } = useNotification();
@@ -491,7 +493,8 @@ const MyCollectionDetail: React.FC<MyCollectionDetailProps> = ({ item: initialIt
                                                 if (isSuccess(res)) {
                                                     showToast('success', '升级成功', '您的资产已升级为验证节点，参与全网数据确权，每日获得Gas费分红。');
                                                     setHasConvertedToMining(true);
-                                                    setTimeout(() => navigate('/my-collection'), 1000);
+                                                    clearListCache('myCollection'); // 清除我的藏品列表缓存
+                                                    setTimeout(() => navigate(-1), 1000);
                                                     actionMachine.send(FormEvent.SUBMIT_SUCCESS);
                                                 } else {
                                                     showToast('error', '转换失败', res.msg || '操作失败');
@@ -699,7 +702,8 @@ const MyCollectionDetail: React.FC<MyCollectionDetailProps> = ({ item: initialIt
                                         if (isSuccess(res)) {
                                             showToast('success', '提交成功', res.msg || '寄售申请已提交');
                                             setShowConsignmentModal(false);
-                                            setTimeout(() => navigate('/my-collection'), 1000);
+                                            clearListCache('myCollection'); // 清除我的藏品列表缓存
+                                            setTimeout(() => navigate(-1), 1000);
                                             actionMachine.send(FormEvent.SUBMIT_SUCCESS);
                                         } else {
                                             const errorMsg = res.msg || res.message || '寄售申请失败';

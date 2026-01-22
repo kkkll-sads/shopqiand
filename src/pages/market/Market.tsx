@@ -14,8 +14,8 @@ import {
 } from '../../../services/api';
 import { useStateMachine } from '../../../hooks/useStateMachine';
 import { LoadingEvent, LoadingState } from '../../../types/states';
-import { useAppStore } from '../../stores/appStore';
-import { errorLog } from '../../../utils/logger';
+import { useAppStore, MARKET_CACHE_TTL } from '../../stores/appStore';
+import { errorLog, debugLog } from '../../../utils/logger';
 
 interface MarketProps {
   onProductSelect?: (product: Product) => void;
@@ -25,7 +25,7 @@ const PAGE_SIZE = 10;
 
 const Market: React.FC<MarketProps> = ({ onProductSelect }) => {
   const navigate = useNavigate();
-  const { setSelectedProduct } = useAppStore();
+  const { setSelectedProduct, marketCache, setMarketCache } = useAppStore();
   const [activeFilter, setActiveFilter] = useState('comprehensive');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
@@ -35,6 +35,11 @@ const Market: React.FC<MarketProps> = ({ onProductSelect }) => {
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const containerRef = useRef<HTMLDivElement>(null);
+  
+  // 标记是否已从缓存恢复，避免重复加载
+  const restoredFromCacheRef = useRef(false);
+  // 用于保存当前滚动位置的 ref
+  const scrollTopRef = useRef(0);
 
 
   const listMachine = useStateMachine<LoadingState, LoadingEvent>({
@@ -75,6 +80,85 @@ const Market: React.FC<MarketProps> = ({ onProductSelect }) => {
   });
   const loading = listMachine.state === LoadingState.LOADING;
   const loadingMore = loadMoreMachine.state === LoadingState.LOADING;
+
+  // ========================================
+  // 缓存恢复逻辑：组件挂载时检查并恢复缓存
+  // ========================================
+  useEffect(() => {
+    if (marketCache && Date.now() - marketCache.timestamp < MARKET_CACHE_TTL) {
+      debugLog('Market', '从缓存恢复状态', {
+        productsCount: marketCache.products.length,
+        page: marketCache.page,
+        scrollTop: marketCache.scrollTop,
+        cacheAge: Math.round((Date.now() - marketCache.timestamp) / 1000) + 's'
+      });
+      
+      // 恢复状态
+      setProducts(marketCache.products);
+      setPage(marketCache.page);
+      setHasMore(marketCache.hasMore);
+      setActiveFilter(marketCache.activeFilter);
+      setSelectedCategory(marketCache.selectedCategory);
+      setSearchQuery(marketCache.searchQuery);
+      if (marketCache.categoryList.length > 0) {
+        setCategoryList(marketCache.categoryList);
+      }
+      
+      // 标记已从缓存恢复
+      restoredFromCacheRef.current = true;
+      
+      // 恢复滚动位置（需要等待渲染完成）
+      requestAnimationFrame(() => {
+        if (containerRef.current && marketCache.scrollTop > 0) {
+          containerRef.current.scrollTo({ top: marketCache.scrollTop, behavior: 'instant' });
+        }
+      });
+      
+      // 设置状态机为成功状态
+      listMachine.send(LoadingEvent.LOAD);
+      listMachine.send(LoadingEvent.SUCCESS);
+    }
+  }, []); // 仅在组件挂载时执行一次
+
+  // ========================================
+  // 缓存保存逻辑：组件卸载时保存状态
+  // ========================================
+  useEffect(() => {
+    // 更新滚动位置 ref
+    const handleScrollForCache = () => {
+      if (containerRef.current) {
+        scrollTopRef.current = containerRef.current.scrollTop;
+      }
+    };
+    
+    const container = containerRef.current;
+    container?.addEventListener('scroll', handleScrollForCache);
+    
+    return () => {
+      container?.removeEventListener('scroll', handleScrollForCache);
+      
+      // 组件卸载时保存缓存（仅在有数据时保存）
+      if (products.length > 0) {
+        debugLog('Market', '保存缓存状态', {
+          productsCount: products.length,
+          page,
+          scrollTop: scrollTopRef.current
+        });
+        
+        setMarketCache({
+          products,
+          page,
+          hasMore,
+          scrollTop: scrollTopRef.current,
+          activeFilter,
+          selectedCategory,
+          searchQuery,
+          categoryList,
+          timestamp: Date.now()
+        });
+      }
+    };
+  }, [products, page, hasMore, activeFilter, selectedCategory, searchQuery, categoryList, setMarketCache]);
 
   // Categories Configuration（含“全部”+后端分类）
   const categories = useMemo(
@@ -188,6 +272,13 @@ const Market: React.FC<MarketProps> = ({ onProductSelect }) => {
 
   // 当筛选条件或分类变化时重新加载数据
   useEffect(() => {
+    // 如果是从缓存恢复的，跳过首次加载
+    if (restoredFromCacheRef.current) {
+      restoredFromCacheRef.current = false;
+      debugLog('Market', '跳过首次加载（从缓存恢复）');
+      return;
+    }
+    
     setPage(1);
     setProducts([]);
     loadProducts(1, false, selectedCategory);

@@ -2,13 +2,14 @@
  * MyCollection - 我的藏品页面
  * 已迁移: 使用 React Router 导航
  */
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FileText, ShoppingBag, ArrowRight, ChevronRight, X, AlertCircle, CheckCircle } from 'lucide-react';
 import SubPageLayout from '../../../components/SubPageLayout';
 import { formatAmount, formatTime } from '../../../utils/format';
 import { multiply, toString, toNumber } from '../../../utils/currency';
-import { LoadingSpinner, EmptyState, LazyImage, SkeletonCollectionList } from '../../../components/common';
+import { LoadingSpinner, EmptyState, LazyImage, SkeletonCollectionList, SearchInput, SortSelector } from '../../../components/common';
+import type { SortOrder } from '../../../components/common';
 import {
   getMyCollection,
   deliverCollectionItem,
@@ -25,6 +26,7 @@ import {
 } from '../../../services/api';
 import { getStoredToken } from '../../../services/client';
 import { useAuthStore } from '../../stores/authStore';
+import { useAppStore, MARKET_CACHE_TTL } from '../../stores/appStore';
 import { UserInfo } from '../../../types';
 import { useNotification } from '../../../context/NotificationContext';
 import { ConsignmentStatus, DeliveryStatus } from '../../../constants/statusEnums';
@@ -42,6 +44,13 @@ interface MyCollectionProps {
 
 const MyCollection: React.FC<MyCollectionProps> = ({ onItemSelect, initialConsignItemId, preSelectedItem }) => {
   const navigate = useNavigate();
+  const { listCaches, setListCache } = useAppStore();
+  
+  // 缓存相关 refs
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const restoredFromCacheRef = useRef(false);
+  const scrollTopRef = useRef(0);
+  
   const [error, setError] = useState<string | null>(null);
   const [myCollections, setMyCollections] = useState<MyCollectionItem[]>([]);
   const [page, setPage] = useState<number>(1);
@@ -161,11 +170,103 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onItemSelect, initialConsig
   // 筛选器状态
   const [selectedSession, setSelectedSession] = useState<string>('all');
   const [selectedPriceZone, setSelectedPriceZone] = useState<string>('all');
+  const [searchKeyword, setSearchKeyword] = useState<string>('');
+  const [sortField, setSortField] = useState<string>('create_time');
+  const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
 
   // 批量寄售状态
   const [batchConsignableData, setBatchConsignableData] = useState<BatchConsignableListData | null>(null);
   const batchConsignLoading = batchConsignMachine.state === FormState.SUBMITTING;
   const checkingBatchConsignable = checkBatchMachine.state === LoadingState.LOADING;
+
+  // ========================================
+  // 缓存恢复逻辑：组件挂载时检查并恢复缓存
+  // ========================================
+  useEffect(() => {
+    const cache = listCaches.myCollection;
+    if (cache && Date.now() - cache.timestamp < MARKET_CACHE_TTL) {
+      debugLog('MyCollection', '从缓存恢复状态', {
+        dataCount: cache.data.length,
+        page: cache.page,
+        activeTab: cache.activeTab,
+        scrollTop: cache.scrollTop
+      });
+      
+      // 恢复状态
+      setMyCollections(cache.data as MyCollectionItem[]);
+      setPage(cache.page);
+      setHasMore(cache.hasMore);
+      if (cache.activeTab) {
+        setActiveTab(cache.activeTab as CategoryTab);
+      }
+      if (cache.filters) {
+        if (cache.filters.selectedSession) setSelectedSession(cache.filters.selectedSession);
+        if (cache.filters.selectedPriceZone) setSelectedPriceZone(cache.filters.selectedPriceZone);
+        if (cache.filters.searchKeyword) setSearchKeyword(cache.filters.searchKeyword);
+        if (cache.filters.sortField) setSortField(cache.filters.sortField);
+        if (cache.filters.sortOrder) setSortOrder(cache.filters.sortOrder as SortOrder);
+      }
+      
+      // 标记已从缓存恢复
+      restoredFromCacheRef.current = true;
+      
+      // 恢复滚动位置（需要等待渲染完成）
+      requestAnimationFrame(() => {
+        if (scrollContainerRef.current && cache.scrollTop > 0) {
+          scrollContainerRef.current.scrollTo({ top: cache.scrollTop, behavior: 'instant' });
+        }
+      });
+      
+      // 设置状态机为成功状态
+      loadMachine.send(LoadingEvent.LOAD);
+      loadMachine.send(LoadingEvent.SUCCESS);
+    }
+  }, []); // 仅在组件挂载时执行一次
+
+  // ========================================
+  // 缓存保存逻辑：组件卸载时保存状态
+  // ========================================
+  useEffect(() => {
+    // 更新滚动位置 ref
+    const handleScrollForCache = () => {
+      if (scrollContainerRef.current) {
+        scrollTopRef.current = scrollContainerRef.current.scrollTop;
+      }
+    };
+    
+    const container = scrollContainerRef.current;
+    container?.addEventListener('scroll', handleScrollForCache);
+    
+    return () => {
+      container?.removeEventListener('scroll', handleScrollForCache);
+      
+      // 组件卸载时保存缓存（仅在有数据时保存）
+      if (myCollections.length > 0) {
+        debugLog('MyCollection', '保存缓存状态', {
+          dataCount: myCollections.length,
+          page,
+          activeTab,
+          scrollTop: scrollTopRef.current
+        });
+        
+        setListCache('myCollection', {
+          data: myCollections,
+          page,
+          hasMore,
+          scrollTop: scrollTopRef.current,
+          activeTab,
+          filters: {
+            selectedSession,
+            selectedPriceZone,
+            searchKeyword,
+            sortField,
+            sortOrder
+          },
+          timestamp: Date.now()
+        });
+      }
+    };
+  }, [myCollections, page, hasMore, activeTab, selectedSession, selectedPriceZone, searchKeyword, sortField, sortOrder, setListCache]);
 
   // 加载用户信息和寄售券数量
   useEffect(() => {
@@ -343,6 +444,12 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onItemSelect, initialConsig
   }, [activeTab, page]);
 
   useEffect(() => {
+    // 如果是从缓存恢复的，跳过首次加载
+    if (restoredFromCacheRef.current) {
+      restoredFromCacheRef.current = false;
+      debugLog('MyCollection', '跳过首次加载（从缓存恢复）');
+      return;
+    }
     loadData();
   }, [loadData]);
 
@@ -388,11 +495,18 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onItemSelect, initialConsig
     return ['all', ...Array.from(zones).sort()];
   }, [myCollections]);
 
+  // 排序选项
+  const sortOptions = useMemo(() => [
+    { value: 'create_time', label: '创建时间' },
+    { value: 'price', label: '买入价格' },
+    { value: 'market_price', label: '市场价' },
+  ], []);
+
   // 应用筛选器
   const filteredCollections = useMemo(() => {
-    debugLog('MyCollection', '筛选条件', { count: myCollections.length, session: selectedSession, zone: selectedPriceZone });
+    debugLog('MyCollection', '筛选条件', { count: myCollections.length, session: selectedSession, zone: selectedPriceZone, keyword: searchKeyword });
 
-    const filtered = myCollections.filter(item => {
+    let filtered = myCollections.filter(item => {
       // 场次筛选
       if (selectedSession !== 'all' && item.session_title !== selectedSession) {
         return false;
@@ -406,12 +520,45 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onItemSelect, initialConsig
         }
       }
 
+      // 关键词搜索
+      if (searchKeyword.trim()) {
+        const keyword = searchKeyword.toLowerCase();
+        const title = (item.title || item.package_name || '').toLowerCase();
+        const assetCode = (item.asset_code || '').toLowerCase();
+        if (!title.includes(keyword) && !assetCode.includes(keyword)) {
+          return false;
+        }
+      }
+
       return true;
+    });
+
+    // 排序
+    filtered.sort((a, b) => {
+      let aVal: number = 0;
+      let bVal: number = 0;
+
+      switch (sortField) {
+        case 'create_time':
+          aVal = a.create_time || a.pay_time || 0;
+          bVal = b.create_time || b.pay_time || 0;
+          break;
+        case 'price':
+          aVal = Number(a.buy_price) || Number(a.price) || 0;
+          bVal = Number(b.buy_price) || Number(b.price) || 0;
+          break;
+        case 'market_price':
+          aVal = Number(a.market_price) || Number(a.consignment_price) || 0;
+          bVal = Number(b.market_price) || Number(b.consignment_price) || 0;
+          break;
+      }
+
+      return sortOrder === 'desc' ? bVal - aVal : aVal - bVal;
     });
 
     debugLog('MyCollection', 'filteredCollections长度', filtered.length);
     return filtered;
-  }, [myCollections, selectedSession, selectedPriceZone]);
+  }, [myCollections, selectedSession, selectedPriceZone, searchKeyword, sortField, sortOrder]);
 
   // 如果父级要求初始打开寄售弹窗（通过 initialConsignItemId），在数据加载后自动打开对应项的寄售页
   useEffect(() => {
@@ -1238,14 +1385,24 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onItemSelect, initialConsig
             </div>
           </div>
 
+          {/* 搜索框 */}
+          <div className="px-4 py-2 border-b border-gray-100/50 bg-gray-50/50">
+            <SearchInput
+              value={searchKeyword}
+              onChange={setSearchKeyword}
+              placeholder="搜索藏品名称、编号..."
+              debounce={300}
+            />
+          </div>
+
           {/* Filter Dropdowns - 固定在Tab下方 */}
-          <div className="px-4 py-2.5 border-b border-gray-100/50 flex gap-2 bg-gray-50/80">
+          <div className="px-4 py-2.5 border-b border-gray-100/50 flex gap-2 bg-gray-50/80 overflow-x-auto">
             {/* Session Filter */}
-            <div className="flex-1 relative">
+            <div className="flex-shrink-0 relative">
               <select
                 value={selectedSession}
                 onChange={(e) => setSelectedSession(e.target.value)}
-                className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-xs font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-red-100 focus:border-red-400 transition-all appearance-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-3 py-2 bg-white border border-gray-200 rounded-lg text-xs font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-red-100 focus:border-red-400 transition-all appearance-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed pr-6"
                 disabled={sessionOptions.length <= 1}
               >
                 <option value="all">全部场次</option>
@@ -1253,24 +1410,35 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onItemSelect, initialConsig
                   <option key={session} value={session}>{session}</option>
                 ))}
               </select>
-              <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400 text-[10px]">▾</div>
+              <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400 text-[10px]">▾</div>
             </div>
 
             {/* Price Zone Filter */}
-            <div className="flex-1 relative">
+            <div className="flex-shrink-0 relative">
               <select
                 value={selectedPriceZone}
                 onChange={(e) => setSelectedPriceZone(e.target.value)}
-                className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-xs font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-red-100 focus:border-red-400 transition-all appearance-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-3 py-2 bg-white border border-gray-200 rounded-lg text-xs font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-red-100 focus:border-red-400 transition-all appearance-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed pr-6"
                 disabled={priceZoneOptions.length <= 1}
               >
-                <option value="all">全部价格分区</option>
+                <option value="all">全部分区</option>
                 {priceZoneOptions.filter(z => z !== 'all').map(zone => (
-                  <option key={zone} value={zone}>{zone}</option>
+                  <option key={zone} value={zone}>{zone}元区</option>
                 ))}
               </select>
-              <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400 text-[10px]">▾</div>
+              <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400 text-[10px]">▾</div>
             </div>
+
+            {/* Sort Selector */}
+            <SortSelector
+              sortField={sortField}
+              sortOrder={sortOrder}
+              options={sortOptions}
+              onSortChange={(field, order) => {
+                setSortField(field);
+                setSortOrder(order);
+              }}
+            />
           </div>
         </div>
 
@@ -1302,7 +1470,7 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onItemSelect, initialConsig
           </div>
         )}
 
-        <div className="flex-1 overflow-y-auto p-4 pb-6 bg-gradient-to-b from-gray-50/30 to-white">
+        <div ref={scrollContainerRef} className="flex-1 overflow-y-auto p-4 pb-6 bg-gradient-to-b from-gray-50/30 to-white">
           {loading && page === 1 ? (
             <SkeletonCollectionList count={5} />
           ) : error ? (

@@ -2,10 +2,11 @@
  * AssetHistory - 资产历史记录页面
  * 已迁移: 使用 React Router 导航
  */
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Filter, FileText, ChevronRight } from 'lucide-react';
 import { FilterBar } from '../../../components/FilterBar';
+import { SearchInput } from '../../../components/common';
 import {
   getAllLog,
   AllLogItem,
@@ -16,16 +17,24 @@ import { BALANCE_TYPE_OPTIONS, getBalanceTypeLabel } from '../../../constants/ba
 import { useStateMachine } from '../../../hooks/useStateMachine';
 import { LoadingEvent, LoadingState } from '../../../types/states';
 import { useInfiniteScroll } from '../../hooks/useInfiniteScroll';
-import { errorLog } from '../../../utils/logger';
+import { errorLog, debugLog } from '../../../utils/logger';
+import { useAppStore, MARKET_CACHE_TTL } from '../../stores/appStore';
 
 const AssetHistory: React.FC = () => {
   const navigate = useNavigate();
+  const { listCaches, setListCache } = useAppStore();
+  
+  // 缓存相关 refs
+  const restoredFromCacheRef = useRef(false);
+  const scrollTopRef = useRef(0);
+  
   // 筛选状态
   const [filters, setFilters] = useState({
     category: 'all',
     flow: 'all',
     time: 'all',
   });
+  const [searchKeyword, setSearchKeyword] = useState<string>('');
 
   const categoryOptions = [...BALANCE_TYPE_OPTIONS];
 
@@ -58,13 +67,94 @@ const AssetHistory: React.FC = () => {
   });
   const loading = loadMachine.state === LoadingState.LOADING;
 
+  // ========================================
+  // 缓存恢复逻辑：组件挂载时检查并恢复缓存
+  // ========================================
+  useEffect(() => {
+    const cache = listCaches.assetHistory;
+    if (cache && Date.now() - cache.timestamp < MARKET_CACHE_TTL) {
+      debugLog('AssetHistory', '从缓存恢复状态', {
+        dataCount: cache.data.length,
+        page: cache.page,
+        scrollTop: cache.scrollTop
+      });
+      
+      // 恢复状态
+      setAllLogs(cache.data as AllLogItem[]);
+      setPage(cache.page);
+      setHasMore(cache.hasMore);
+      if (cache.filters) {
+        setFilters({
+          category: cache.filters.category || 'all',
+          flow: cache.filters.flow || 'all',
+          time: cache.filters.time || 'all'
+        });
+        if (cache.filters.searchKeyword) setSearchKeyword(cache.filters.searchKeyword);
+      }
+      
+      // 标记已从缓存恢复
+      restoredFromCacheRef.current = true;
+      
+      // 恢复滚动位置（需要等待渲染完成）
+      requestAnimationFrame(() => {
+        if (cache.scrollTop > 0) {
+          window.scrollTo({ top: cache.scrollTop, behavior: 'instant' });
+        }
+      });
+      
+      // 设置状态机为成功状态
+      loadMachine.send(LoadingEvent.LOAD);
+      loadMachine.send(LoadingEvent.SUCCESS);
+    }
+  }, []); // 仅在组件挂载时执行一次
+
+  // ========================================
+  // 缓存保存逻辑：组件卸载时保存状态
+  // ========================================
+  useEffect(() => {
+    // 更新滚动位置 ref
+    const handleScrollForCache = () => {
+      scrollTopRef.current = window.scrollY;
+    };
+    
+    window.addEventListener('scroll', handleScrollForCache);
+    
+    return () => {
+      window.removeEventListener('scroll', handleScrollForCache);
+      
+      // 组件卸载时保存缓存（仅在有数据时保存）
+      if (allLogs.length > 0) {
+        debugLog('AssetHistory', '保存缓存状态', {
+          dataCount: allLogs.length,
+          page,
+          scrollTop: scrollTopRef.current
+        });
+        
+        setListCache('assetHistory', {
+          data: allLogs,
+          page,
+          hasMore,
+          scrollTop: scrollTopRef.current,
+          filters: { ...filters, searchKeyword },
+          timestamp: Date.now()
+        });
+      }
+    };
+  }, [allLogs, page, hasMore, filters, searchKeyword, setListCache]);
+
   // 重置并加载数据
   useEffect(() => {
+    // 如果是从缓存恢复的，跳过首次加载
+    if (restoredFromCacheRef.current) {
+      restoredFromCacheRef.current = false;
+      debugLog('AssetHistory', '跳过首次加载（从缓存恢复）');
+      return;
+    }
     setPage(1);
     setAllLogs([]);
     setHasMore(false);
     loadData(1, true);
-  }, [filters]);
+  }, [filters, searchKeyword]);
 
   // 加载更多
   const handleLoadMore = () => {
@@ -113,10 +203,11 @@ const AssetHistory: React.FC = () => {
       const res = await getAllLog({
         page: pageNum,
         limit: 10,
-        type: filters.category,
+        type: filters.category === 'all' ? undefined : filters.category,
         flow_direction: filters.flow as 'in' | 'out' | 'all',
         start_time: startTime,
         end_time: endTime,
+        keyword: searchKeyword.trim() || undefined,
         token
       });
 
@@ -274,6 +365,16 @@ const AssetHistory: React.FC = () => {
           <h1 className="text-lg font-bold text-gray-800 w-full text-center">历史记录</h1>
         </div>
 
+        {/* 搜索框 */}
+        <div className="px-4 py-2 border-b border-gray-100 bg-gray-50/50">
+          <SearchInput
+            value={searchKeyword}
+            onChange={setSearchKeyword}
+            placeholder="搜索备注、活动名称..."
+            debounce={300}
+          />
+        </div>
+
         <FilterBar
           category={filters.category}
           setCategory={setCategory}
@@ -298,7 +399,6 @@ const AssetHistory: React.FC = () => {
           </div>
         ) : allLogs.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-gray-400">
-
             <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-3">
               <FileText size={24} className="text-gray-300" />
             </div>

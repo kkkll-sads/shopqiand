@@ -89,7 +89,7 @@ export async function consignCollectionItem(params: {
     payload.append('user_collection_id', String(params.user_collection_id || params.id));
     payload.append('price', String(params.price));
 
-    return authedFetch(API_ENDPOINTS.collectionItem.consign, {
+    return authedFetch(API_ENDPOINTS.collectionConsignment.consign, {
         method: 'POST',
         body: payload,
         token: params.token,
@@ -99,7 +99,7 @@ export async function consignCollectionItem(params: {
 
 /**
  * 取消寄售的参数接口
- * API: POST /api/collectionItem/cancelConsignment
+ * API: POST /api/collectionConsignment/cancelConsignment
  */
 export interface CancelConsignmentParams {
     consignment_id: number;  // 寄售记录ID（必填）
@@ -108,7 +108,7 @@ export interface CancelConsignmentParams {
 
 /**
  * 取消寄售
- * API: POST /api/collectionItem/cancelConsignment
+ * API: POST /api/collectionConsignment/cancelConsignment
  * 
  * 请求头需要包含：
  * - ba-token
@@ -127,7 +127,7 @@ export async function cancelConsignment(params: CancelConsignmentParams): Promis
         consignment_id: Number(params.consignment_id),
     };
 
-    return authedFetch(API_ENDPOINTS.collectionItem.cancelConsignment, {
+    return authedFetch(API_ENDPOINTS.collectionConsignment.cancelConsignment, {
         method: 'POST',
         body: JSON.stringify(payload),
         token: params.token,
@@ -160,7 +160,7 @@ export interface ConsignmentListData {
 
 /**
  * 获取寄售商品列表
- * API: GET /api/collectionItem/consignmentList
+ * API: GET /api/collectionConsignment/consignmentList
  * 
  * @param params - 查询参数
  * @param params.page - 页码，默认1
@@ -175,7 +175,7 @@ export async function getConsignmentList(params: { page?: number; limit?: number
     if (params.page) search.set('page', String(params.page));
     if (params.limit) search.set('limit', String(params.limit));
 
-    return authedFetch<ConsignmentListData>(`${API_ENDPOINTS.collectionItem.consignmentList}?${search.toString()}`, { method: 'GET' });
+    return authedFetch<ConsignmentListData>(`${API_ENDPOINTS.collectionConsignment.consignmentList}?${search.toString()}`, { method: 'GET' });
 }
 
 /**
@@ -214,7 +214,7 @@ export interface FetchTradeListParams {
 
 /**
  * 获取寄售交易区列表
- * API: GET /api/collectionItem/tradeList
+ * API: GET /api/collectionTrade/tradeList
  * 
  * @param params - 查询参数
  * @param params.page - 页码，默认1
@@ -231,7 +231,7 @@ export async function getTradeList(params: FetchTradeListParams = {}): Promise<A
     if (params.limit) search.set('limit', String(params.limit));
     if (params.session_id) search.set('session_id', String(params.session_id));
 
-    return authedFetch<TradeListData>(`${API_ENDPOINTS.collectionItem.tradeList}?${search.toString()}`, { method: 'GET', token: params.token });
+    return authedFetch<TradeListData>(`${API_ENDPOINTS.collectionTrade.tradeList}?${search.toString()}`, { method: 'GET', token: params.token });
 }
 
 /**
@@ -268,7 +268,7 @@ export interface MyConsignmentListData {
 
 /**
  * 获取我的寄售列表
- * API: GET /api/collectionItem/myConsignmentList
+ * API: GET /api/collectionConsignment/myConsignmentList
  * 
  * 请求头需要包含：
  * - ba-token
@@ -294,7 +294,7 @@ export async function getMyConsignmentList(params: FetchMyConsignmentListParams 
         search.set('status', String(params.status));
     }
 
-    const path = `${API_ENDPOINTS.collectionItem.myConsignmentList}?${search.toString()}`;
+    const path = `${API_ENDPOINTS.collectionConsignment.myConsignmentList}?${search.toString()}`;
     return authedFetch<MyConsignmentListData>(path, { method: 'GET', token: params.token });
 }
 
@@ -315,7 +315,7 @@ export async function getConsignmentDetail(params: {
     consignment_id: number;
     token?: string
 }): Promise<ApiResponse<ConsignmentDetailData>> {
-    const path = `${API_ENDPOINTS.collectionItem.consignmentDetail}?id=${params.consignment_id}`;
+    const path = `${API_ENDPOINTS.collectionConsignment.consignmentDetail}?id=${params.consignment_id}`;
     return authedFetch<ConsignmentDetailData>(path, { method: 'GET', token: params.token });
 }
 /**
@@ -332,7 +332,7 @@ export interface ConsignmentCheckData {
 
 /**
  * 检查寄售解锁状态
- * API: GET /api/collectionItem/consignmentCheck
+ * API: GET /api/collectionConsignment/consignmentCheck
  *
  * @param params.user_collection_id - 用户藏品记录ID（必填）
  * @param params.token - 用户登录Token（可选，会自动从localStorage获取）
@@ -340,7 +340,7 @@ export interface ConsignmentCheckData {
 export async function getConsignmentCheck(params: { user_collection_id: number | string; token?: string }): Promise<ApiResponse<ConsignmentCheckData>> {
     const search = new URLSearchParams();
     search.set('user_collection_id', String(params.user_collection_id));
-    const path = `${API_ENDPOINTS.collectionItem.consignmentCheck}?${search.toString()}`;
+    const path = `${API_ENDPOINTS.collectionConsignment.consignmentCheck}?${search.toString()}`;
     return authedFetch<ConsignmentCheckData>(path, { method: 'GET', token: params.token });
 }
 
@@ -350,7 +350,7 @@ export async function getConsignmentCheck(params: { user_collection_id: number |
 
 /**
  * 申请提货的参数接口
- * API: POST /api/collectionItem/deliver
+ * API: POST /api/collectionConsignment/deliver
  */
 export interface DeliverParams {
     user_collection_id: number | string; // 用户藏品记录ID（必填）
@@ -360,7 +360,7 @@ export interface DeliverParams {
 
 /**
  * 申请提货
- * API: POST /api/collectionItem/deliver
+ * API: POST /api/collectionConsignment/deliver
  * 
  * 请求头需要包含：
  * - ba-token
@@ -381,7 +381,7 @@ export async function deliverCollectionItem(params: DeliverParams): Promise<ApiR
         address_id: Number(params.address_id),
     };
 
-    return authedFetch(API_ENDPOINTS.collectionItem.deliver, {
+    return authedFetch(API_ENDPOINTS.collectionConsignment.deliver, {
         method: 'POST',
         body: JSON.stringify(payload),
         token: params.token,
@@ -398,7 +398,7 @@ export type DeliveryStatus = 'paid' | 'shipped' | 'completed';
 
 /**
  * 藏品提货列表查询参数接口
- * API: GET /api/collectionItem/deliveryList
+ * API: GET /api/collectionTrade/deliveryList
  */
 export interface FetchDeliveryListParams {
     page?: number;           // 页码，默认1
@@ -418,7 +418,7 @@ export interface DeliveryListData {
 
 /**
  * 获取藏品提货列表
- * API: GET /api/collectionItem/deliveryList
+ * API: GET /api/collectionTrade/deliveryList
  * 
  * 请求头需要包含：
  * - ba-token
@@ -442,7 +442,7 @@ export async function getDeliveryList(params: FetchDeliveryListParams = {}): Pro
     if (params.limit) search.set('limit', String(params.limit));
     if (params.status) search.set('status', params.status);
 
-    const path = `${API_ENDPOINTS.collectionItem.deliveryList}?${search.toString()}`;
+    const path = `${API_ENDPOINTS.collectionTrade.deliveryList}?${search.toString()}`;
     return authedFetch<DeliveryListData>(path, { method: 'GET', token: params.token });
 }
 
@@ -474,13 +474,13 @@ export async function getPurchaseRecords(params: {
     if (params.page) search.set('page', String(params.page));
     if (params.limit) search.set('limit', String(params.limit));
 
-    const path = `${API_ENDPOINTS.collectionItem.purchaseRecords}?${search.toString()}`;
+    const path = `${API_ENDPOINTS.collectionTrade.purchaseRecords}?${search.toString()}`;
     return authedFetch<{ list: PurchaseRecordItem[], has_more?: boolean }>(path, { method: 'GET', token: params.token });
 }
 
 /**
  * 权益分割的参数接口
- * API: POST /api/collectionItem/rightsDeliver
+ * API: POST /api/collectionTrade/rightsDeliver
  */
 export interface RightsDeliverParams {
     user_collection_id: number | string; // 用户藏品记录ID
@@ -498,7 +498,7 @@ export interface RightsDeliverResult {
 
 /**
  * 权益分割
- * API: POST /api/collectionItem/rightsDeliver
+ * API: POST /api/collectionTrade/rightsDeliver
  *
  * @param params - 权益分割参数
  * @param params.user_collection_id - 用户藏品记录ID
@@ -513,7 +513,7 @@ export async function rightsDeliver(params: RightsDeliverParams): Promise<ApiRes
         user_collection_id: Number(params.user_collection_id),
     };
 
-    return authedFetch<RightsDeliverResult>(API_ENDPOINTS.collectionItem.rightsDeliver, {
+    return authedFetch<RightsDeliverResult>(API_ENDPOINTS.collectionTrade.rightsDeliver, {
         method: 'POST',
         body: JSON.stringify(payload),
         token: params.token,

@@ -115,26 +115,29 @@ export const API_ENDPOINTS = {
         profile: '/Account/profile',
         retrievePassword: '/Account/retrievePassword',
         cancelAccount: '/Account/cancelAccount',
-        /** 余额日志（资金明细） */
-        balance: '/Account/balance',
         /** 余额划转到服务费 */
         transferBalanceToServiceFee: '/Account/transferBalanceToServiceFee',
-        /** 服务费明细 */
-        serviceFeeLog: '/Account/serviceFeeLog',
         /** 服务费充值 */
         rechargeServiceFee: '/Account/rechargeServiceFee',
-        /** 全部明细 */
+        /** 全部明细（统一入口；替代废弃的 balance / serviceFeeLog / integral / assetLog） */
         allLog: '/Account/allLog',
         /** 资金明细详情 */
         moneyLogDetail: '/Account/moneyLogDetail',
-        /** 消费金日志 */
-        integral: '/Account/integral',
         /** 消费金兑换绿色算力 */
         exchangeScoreToGreenPower: '/Account/exchangeScoreToGreenPower',
         /** 检查旧资产解锁状态 */
         checkOldAssetsUnlockStatus: '/Account/checkOldAssetsUnlockStatus',
         /** 解锁旧资产 */
         unlockOldAssets: '/Account/unlockOldAssets',
+    },
+    /** 内容资讯（替代废弃的 /api/home/newsList、newsDetail） */
+    contentNews: {
+        index: '/ContentNews/index',
+        detail: '/ContentNews/detail',
+    },
+    /** 热门视频（替代废弃的 /api/home/videoList） */
+    contentHotVideo: {
+        index: '/ContentHotVideo/index',
     },
     address: {
         /** 收货地址列表 */
@@ -274,52 +277,58 @@ export const API_ENDPOINTS = {
         detail: '/collectionItem/detail',
         /** 交易商品原始详情（下架也可查看） */
         originalDetail: '/collectionItem/originalDetail',
-        /** 购买藏品 */
-        buy: '/collectionItem/buy',
-        /** 查询撮合池列表 */
-        matchingPool: '/collectionItem/matchingPool',
-        /** 取消竞价（从撮合池移除） */
-        cancelBid: '/collectionItem/cancelBid',
-        /** 竞价购买藏品（进入撮合池） */
-        bidBuy: '/collectionItem/bidBuy',
-        /** 我的藏品 (新接口) */
-        myCollection: '/collectionItem/myCollection',
-        /** 获取购买记录列表 */
-        purchaseRecords: '/collectionItem/purchaseRecords',
-        /** 获取寄售商品列表 */
-        consignmentList: '/collectionItem/consignmentList',
-        /** 获取寄售交易区列表 */
-        tradeList: '/collectionItem/tradeList',
-        /** 获取我的寄售列表 */
-        myConsignmentList: '/collectionItem/myConsignmentList',
-        /** 通过确权编号或MD5指纹查询藏品 */
-        queryByCode: '/collectionItem/queryByCode',
-        /** 获取寄售详情 */
-        consignmentDetail: '/collectionItem/consignmentDetail',
-        /** 取消寄售 */
-        cancelConsignment: '/collectionItem/cancelConsignment',
-        /** 申请提货 */
-        deliver: '/collectionItem/deliver',
-        /** 申请寄售 */
-        consign: '/collectionItem/consign',
-        /** 检查寄售解锁状态 */
-        consignmentCheck: '/collectionItem/consignmentCheck',
-        /** 提货订单列表 */
-        deliveryList: '/collectionItem/deliveryList',
-        /** 权益分割 */
-        rightsDeliver: '/collectionItem/rightsDeliver',
-        /** 盲盒预约记录列表 */
-        reservations: '/collectionItem/reservations',
-        /** 预约记录详情 */
-        reservationDetail: '/collectionItem/reservationDetail',
+    },
+    collectionTrade: {
+        /** 寄售交易区列表 */
+        tradeList: '/collectionTrade/tradeList',
+        /** 我的藏品列表 */
+        myCollection: '/collectionTrade/myCollection',
+        /** 购买记录列表 */
+        purchaseRecords: '/collectionTrade/purchaseRecords',
         /** 订单详情 */
-        orderDetail: '/collectionItem/orderDetail',
-        /** 升级为共识验证节点 */
-        toMining: '/collectionItem/toMining',
-        /** 获取可批量寄售的藏品列表 */
-        batchConsignableList: '/collectionItem/batchConsignableList',
-        /** 执行批量寄售 */
-        batchConsign: '/collectionItem/batchConsign',
+        orderDetail: '/collectionTrade/orderDetail',
+        /** 转入挖矿/矿机 */
+        toMining: '/collectionTrade/toMining',
+        /** 根据编码查询藏品 */
+        queryByCode: '/collectionTrade/queryByCode',
+        /** 购买藏品 */
+        buy: '/collectionTrade/buy',
+        /** 查询撮合池列表 */
+        matchingPool: '/collectionTrade/matchingPool',
+        /** 取消竞价（从撮合池移除） */
+        cancelBid: '/collectionTrade/cancelBid',
+        /** 提货订单列表（保留） */
+        deliveryList: '/collectionTrade/deliveryList',
+        /** 权益分割（保留） */
+        rightsDeliver: '/collectionTrade/rightsDeliver',
+    },
+    collectionConsignment: {
+        /** 申请寄售 */
+        consign: '/collectionConsignment/consign',
+        /** 批量寄售 */
+        batchConsign: '/collectionConsignment/batchConsign',
+        /** 可批量寄售列表 */
+        batchConsignableList: '/collectionConsignment/batchConsignableList',
+        /** 寄售检查 */
+        consignmentCheck: '/collectionConsignment/consignmentCheck',
+        /** 我的寄售列表 */
+        myConsignmentList: '/collectionConsignment/myConsignmentList',
+        /** 寄售详情 */
+        consignmentDetail: '/collectionConsignment/consignmentDetail',
+        /** 取消寄售 */
+        cancelConsignment: '/collectionConsignment/cancelConsignment',
+        /** 寄售商品列表 */
+        consignmentList: '/collectionConsignment/consignmentList',
+        /** 申请提货 */
+        deliver: '/collectionConsignment/deliver',
+    },
+    collectionReservation: {
+        /** 竞价购买藏品 */
+        bidBuy: '/collectionReservation/bidBuy',
+        /** 预约记录列表 */
+        reservations: '/collectionReservation/reservations',
+        /** 预约记录详情 */
+        reservationDetail: '/collectionReservation/reservationDetail',
     },
     artist: {
         /** 艺术家列表 */

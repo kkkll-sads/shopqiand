@@ -38,6 +38,7 @@ import {
 import { getStoredToken } from '../../../services/client';
 import { UserInfo } from '../../../types';
 import { useAuthStore } from '../../stores/authStore';
+import { useUnreadNewsCount } from '../../stores/appStore';
 import { STORAGE_KEYS } from '../../../constants/storageKeys';
 import { isSuccess, extractData, extractError } from '../../../utils/apiHelpers';
 import { useErrorHandler } from '../../../hooks/useErrorHandler';
@@ -67,8 +68,12 @@ const CoinsIcon = ({ size, className }: { size: number; className: string }) => 
   </svg>
 );
 
-const Profile: React.FC<{ unreadCount?: number }> = ({ unreadCount = 0 }) => {
+const Profile: React.FC<{ unreadCount?: number }> = ({ unreadCount: propUnreadCount }) => {
   const navigate = useNavigate();
+  // 使用 appStore 中的未读消息数
+  const storeUnreadCount = useUnreadNewsCount();
+  const unreadCount = propUnreadCount ?? storeUnreadCount;
+  
   // ✅ 使用统一错误处理Hook（持久化显示）
   const { errorMessage, hasError, handleError, clearError } = useErrorHandler();
 

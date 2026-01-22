@@ -1,6 +1,6 @@
 import { ApiResponse } from './networking';
-import { API_ENDPOINTS } from './config';
-import { authedFetch, getStoredToken } from './client';
+import { getStoredToken } from './client';
+import { getAllLog } from './wallet';
 
 /**
  * 消费金日志项
@@ -31,8 +31,8 @@ export interface GetIntegralLogParams {
 }
 
 /**
- * 获取消费金日志
- * 对应后端: /Account/integral
+ * 获取消费金日志（已迁移：统一走 allLog）
+ * 替代废弃接口 /Account/integral
  * @param params 查询参数
  */
 export async function getIntegralLog(
@@ -45,20 +45,11 @@ export async function getIntegralLog(
         throw new Error('未找到用户登录信息，请先登录后再查看消费金日志');
     }
 
-    const search = new URLSearchParams();
-    search.append('limit', String(limit));
-
-    const path = `${API_ENDPOINTS.account.integral}?${search.toString()}`;
-
-    try {
-        const data = await authedFetch<IntegralLogData>(path, {
-            method: 'GET',
-            token,
-        });
-        console.log('获取消费金日志接口原始响应:', data);
-        return data;
-    } catch (error: any) {
-        console.error('获取消费金日志失败:', error);
-        throw error;
-    }
+    const res = await getAllLog({
+        page: 1,
+        limit,
+        type: 'score',
+        token,
+    });
+    return res as unknown as ApiResponse<IntegralLogData>;
 }
