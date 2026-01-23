@@ -29,6 +29,7 @@ import { debugLog, errorLog } from '../../../utils/logger';
 import { useAssetActionModal } from '../../../hooks/useAssetActionModal';
 import { useAssetTabs, TabConfig } from '../../../hooks/useAssetTabs';
 import { BALANCE_TYPE_OPTIONS, getBalanceTypeLabel } from '../../../constants/balanceTypes';
+import { useAppStore, MARKET_CACHE_TTL } from '../../stores/appStore';
 
 interface AssetViewProps {
   onProductSelect?: (product: Product) => void;
@@ -38,6 +39,25 @@ interface AssetViewProps {
 const AssetView: React.FC<AssetViewProps> = ({ onProductSelect, initialTab = 0 }) => {
   const navigate = useNavigate();
   const { showToast, showDialog } = useNotification();
+  const { listCaches, setListCache } = useAppStore();
+
+  // 缓存相关 refs
+  const restoredFromCacheRef = useRef(false);
+  const scrollTopRef = useRef(0);
+  // 用于保存最新状态值，解决 cleanup 闭包问题
+  const stateRef = useRef<{
+    tabsData: any[];
+    activeTab: number;
+    filterCategory: string;
+    filterFlow: string;
+    filterTime: string;
+  }>({
+    tabsData: [],
+    activeTab: 0,
+    filterCategory: 'all',
+    filterFlow: 'all',
+    filterTime: '7days'
+  });
 
   // Filter States
   const [filterCategory, setFilterCategory] = useState('all');
@@ -111,6 +131,123 @@ const AssetView: React.FC<AssetViewProps> = ({ onProductSelect, initialTab = 0 }
   ], [filterCategory, filterFlow, filterTime]);
 
   const tabs = useAssetTabs(tabConfigs, initialTab);
+
+  // ========================================
+  // 缓存恢复逻辑：组件挂载时检查并恢复缓存
+  // ========================================
+  useEffect(() => {
+    const cache = listCaches.assetView;
+    if (cache && Date.now() - cache.timestamp < MARKET_CACHE_TTL) {
+      debugLog('AssetView', '从缓存恢复状态', {
+        dataCount: cache.data.length,
+        activeTab: cache.activeTab,
+        scrollTop: cache.scrollTop
+      });
+
+      // 恢复筛选条件
+      if (cache.filters) {
+        if (cache.filters.filterCategory) setFilterCategory(cache.filters.filterCategory);
+        if (cache.filters.filterFlow) setFilterFlow(cache.filters.filterFlow);
+        if (cache.filters.filterTime) setFilterTime(cache.filters.filterTime);
+      }
+
+      // 标记已从缓存恢复
+      restoredFromCacheRef.current = true;
+      // 保存滚动位置到 ref，等待数据渲染完成后再恢复
+      scrollTopRef.current = cache.scrollTop;
+
+      // 注意：tabs.data 的恢复需要在 tabs 初始化后，通过 tabs 的机制来处理
+      // 这里只恢复筛选条件和滚动位置
+    }
+  }, []); // 仅在组件挂载时执行一次
+
+  // ========================================
+  // 同步状态到 ref，确保 cleanup 能获取最新值
+  // ========================================
+  useEffect(() => {
+    stateRef.current = {
+      tabsData: tabs.data || [],
+      activeTab: tabs.activeTab,
+      filterCategory,
+      filterFlow,
+      filterTime
+    };
+  }, [tabs.data, tabs.activeTab, filterCategory, filterFlow, filterTime]);
+
+  // ========================================
+  // 滚动位置恢复：在数据渲染完成后恢复
+  // ========================================
+  useEffect(() => {
+    // 只有在从缓存恢复且数据已渲染时才恢复滚动位置
+    if (restoredFromCacheRef.current && tabs.data.length > 0 && scrollTopRef.current > 0) {
+      const restoreScroll = () => {
+        if (scrollTopRef.current > 0) {
+          const targetScroll = scrollTopRef.current;
+          window.scrollTo({ top: targetScroll, behavior: 'instant' });
+          // 验证是否恢复成功
+          if (Math.abs(window.scrollY - targetScroll) > 10) {
+            // 如果恢复失败，重试
+            setTimeout(() => {
+              window.scrollTo({ top: targetScroll, behavior: 'instant' });
+            }, 100);
+          }
+        }
+      };
+
+      // 使用多次 rAF + setTimeout 确保 DOM 完全渲染后再恢复
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          restoreScroll();
+          // 延迟恢复，确保列表项完全渲染
+          setTimeout(restoreScroll, 100);
+          setTimeout(restoreScroll, 300);
+        });
+      });
+
+      // 恢复完成后，重置标志
+      restoredFromCacheRef.current = false;
+    }
+  }, [tabs.data.length]); // 监听数据长度变化
+
+  // ========================================
+  // 缓存保存逻辑：组件卸载时保存状态
+  // ========================================
+  useEffect(() => {
+    // 更新滚动位置 ref
+    const handleScrollForCache = () => {
+      scrollTopRef.current = window.scrollY;
+    };
+
+    window.addEventListener('scroll', handleScrollForCache);
+
+    return () => {
+      window.removeEventListener('scroll', handleScrollForCache);
+
+      // 组件卸载时保存缓存（使用 stateRef 获取最新值）
+      const state = stateRef.current;
+      if (state.tabsData.length > 0) {
+        debugLog('AssetView', '保存缓存状态', {
+          dataCount: state.tabsData.length,
+          activeTab: state.activeTab,
+          scrollTop: scrollTopRef.current
+        });
+
+        setListCache('assetView', {
+          data: state.tabsData,
+          page: 1, // AssetView 使用无限滚动，page 始终为 1
+          hasMore: tabs.hasMore,
+          scrollTop: scrollTopRef.current,
+          activeTab: String(state.activeTab),
+          filters: {
+            filterCategory: state.filterCategory,
+            filterFlow: state.filterFlow,
+            filterTime: state.filterTime
+          },
+          timestamp: Date.now()
+        });
+      }
+    };
+  }, [setListCache, tabs.hasMore]); // 只依赖 setListCache 和 tabs.hasMore，其他值通过 stateRef 获取
 
   // Refresh Funds tab when filters change
   useEffect(() => {

@@ -121,6 +121,7 @@ export interface AnnouncementItem {
     start_time?: string;
     end_time?: string;
     view_count?: number;
+    is_read?: boolean;  // 是否已读（登录用户才有）
     createtime: string;
     updatetime?: string;
     [key: string]: any;
@@ -182,5 +183,26 @@ export async function fetchBanners(params: FetchBannersParams = {}): Promise<Api
     const path = `${API_ENDPOINTS.banner.list}?${search.toString()}`;
     return apiFetch<BannerListData>(path, {
         method: 'GET',
+    });
+}
+
+/**
+ * 标记公告已读
+ * API: POST /api/Announcement/markRead
+ * 
+ * @param id - 公告id
+ * @param token - 用户登录Token（可选，使用 authedFetch 自动获取）
+ * @returns 操作结果
+ */
+export async function markAnnouncementRead(id: number | string, token?: string): Promise<ApiResponse> {
+    const formData = new FormData();
+    formData.append('id', String(id));
+
+    // 使用 authedFetch 自动带上 token
+    const { authedFetch } = await import('./client');
+    return authedFetch(API_ENDPOINTS.announcement.markRead, {
+        method: 'POST',
+        body: formData,
+        token,
     });
 }

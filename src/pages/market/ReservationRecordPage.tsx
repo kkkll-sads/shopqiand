@@ -46,11 +46,31 @@ const ReservationRecordPage: React.FC<ReservationRecordPageProps> = ({
 }) => {
     const navigate = useNavigate();
     const { listCaches, setListCache } = useAppStore();
-    
+
     // 缓存相关 refs
     const restoredFromCacheRef = useRef(false);
     const scrollTopRef = useRef(0);
-    
+    // 用于保存最新状态值，解决 cleanup 闭包问题
+    const stateRef = useRef<{
+        records: ReservationItem[];
+        page: number;
+        hasMore: boolean;
+        statusFilter: ReservationStatusType | undefined;
+        sessionFilter: string;
+        zoneFilter: string;
+        sortField: string;
+        sortOrder: string;
+    }>({
+        records: [],
+        page: 1,
+        hasMore: true,
+        statusFilter: -1,
+        sessionFilter: 'all',
+        zoneFilter: 'all',
+        sortField: 'create_time',
+        sortOrder: 'desc'
+    });
+
     const [statusFilter, setStatusFilter] = useState<ReservationStatusType | undefined>(-1);
     const [sessionFilter, setSessionFilter] = useState<string>('all');
     const [zoneFilter, setZoneFilter] = useState<string>('all');
@@ -114,7 +134,7 @@ const ReservationRecordPage: React.FC<ReservationRecordPageProps> = ({
                 statusFilter: cache.filters?.statusFilter,
                 scrollTop: cache.scrollTop
             });
-            
+
             // 恢复状态
             setRecords(cache.data as ReservationItem[]);
             setPage(cache.page);
@@ -126,26 +146,74 @@ const ReservationRecordPage: React.FC<ReservationRecordPageProps> = ({
             if (cache.filters?.zoneFilter) setZoneFilter(cache.filters.zoneFilter);
             if (cache.filters?.sortField) setSortField(cache.filters.sortField);
             if (cache.filters?.sortOrder) setSortOrder(cache.filters.sortOrder as SortOrder);
-            
+
             // 标记已从缓存恢复
             restoredFromCacheRef.current = true;
-            
-            // 恢复滚动位置（需要等待渲染完成）
-            requestAnimationFrame(() => {
-                if (containerRef.current && cache.scrollTop > 0) {
-                    containerRef.current.scrollTo({ top: cache.scrollTop, behavior: 'instant' });
-                }
-            });
-            
+            // 保存滚动位置到 ref，等待数据渲染完成后再恢复
+            scrollTopRef.current = cache.scrollTop;
+
             // 设置状态机为成功状态
             listMachine.send(LoadingEvent.LOAD);
             listMachine.send(LoadingEvent.SUCCESS);
-            
+
             // 设置登录状态
             const token = getStoredToken();
             setIsLoggedIn(!!token);
         }
     }, []); // 仅在组件挂载时执行一次
+
+    // ========================================
+    // 同步状态到 ref，确保 cleanup 能获取最新值
+    // ========================================
+    useEffect(() => {
+        stateRef.current = {
+            records,
+            page,
+            hasMore,
+            statusFilter,
+            sessionFilter,
+            zoneFilter,
+            sortField,
+            sortOrder
+        };
+    }, [records, page, hasMore, statusFilter, sessionFilter, zoneFilter, sortField, sortOrder]);
+
+    // ========================================
+    // 滚动位置恢复：在数据渲染完成后恢复
+    // ========================================
+    useEffect(() => {
+        // 只有在从缓存恢复且数据已渲染时才恢复滚动位置
+        if (restoredFromCacheRef.current && records.length > 0 && scrollTopRef.current > 0) {
+            const restoreScroll = () => {
+                if (containerRef.current && scrollTopRef.current > 0) {
+                    const targetScroll = scrollTopRef.current;
+                    containerRef.current.scrollTo({ top: targetScroll, behavior: 'instant' });
+                    // 验证是否恢复成功
+                    if (Math.abs(containerRef.current.scrollTop - targetScroll) > 10) {
+                        // 如果恢复失败，重试
+                        setTimeout(() => {
+                            if (containerRef.current) {
+                                containerRef.current.scrollTo({ top: targetScroll, behavior: 'instant' });
+                            }
+                        }, 100);
+                    }
+                }
+            };
+
+            // 使用多次 rAF + setTimeout 确保 DOM 完全渲染后再恢复
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    restoreScroll();
+                    // 延迟恢复，确保列表项完全渲染
+                    setTimeout(restoreScroll, 100);
+                    setTimeout(restoreScroll, 300);
+                });
+            });
+
+            // 恢复完成后，重置标志
+            restoredFromCacheRef.current = false;
+        }
+    }, [records.length]); // 监听数据长度变化
 
     // ========================================
     // 缓存保存逻辑：组件卸载时保存状态
@@ -157,39 +225,40 @@ const ReservationRecordPage: React.FC<ReservationRecordPageProps> = ({
                 scrollTopRef.current = containerRef.current.scrollTop;
             }
         };
-        
+
         const container = containerRef.current;
         container?.addEventListener('scroll', handleScrollForCache);
-        
+
         return () => {
             container?.removeEventListener('scroll', handleScrollForCache);
-            
-            // 组件卸载时保存缓存（仅在有数据时保存）
-            if (records.length > 0) {
+
+            // 组件卸载时保存缓存（使用 stateRef 获取最新值）
+            const state = stateRef.current;
+            if (state.records.length > 0) {
                 debugLog('ReservationRecordPage', '保存缓存状态', {
-                    dataCount: records.length,
-                    page,
-                    statusFilter,
+                    dataCount: state.records.length,
+                    page: state.page,
+                    statusFilter: state.statusFilter,
                     scrollTop: scrollTopRef.current
                 });
-                
+
                 setListCache('reservationRecord', {
-                    data: records,
-                    page,
-                    hasMore,
+                    data: state.records,
+                    page: state.page,
+                    hasMore: state.hasMore,
                     scrollTop: scrollTopRef.current,
                     filters: {
-                        statusFilter,
-                        sessionFilter,
-                        zoneFilter,
-                        sortField,
-                        sortOrder
+                        statusFilter: state.statusFilter,
+                        sessionFilter: state.sessionFilter,
+                        zoneFilter: state.zoneFilter,
+                        sortField: state.sortField,
+                        sortOrder: state.sortOrder
                     },
                     timestamp: Date.now()
                 });
             }
         };
-    }, [records, page, hasMore, statusFilter, sessionFilter, zoneFilter, sortField, sortOrder, setListCache]);
+    }, [setListCache]); // 只依赖 setListCache，其他值通过 stateRef 获取
 
     // Check login status
     useEffect(() => {
@@ -237,7 +306,7 @@ const ReservationRecordPage: React.FC<ReservationRecordPageProps> = ({
             debugLog('ReservationRecordPage', '跳过首次加载（从缓存恢复）');
             return;
         }
-        
+
         if (isLoggedIn) {
             setPage(1);
             setRecords([]);
@@ -429,11 +498,10 @@ const ReservationRecordPage: React.FC<ReservationRecordPageProps> = ({
                         <button
                             key={status.key}
                             onClick={() => setStatusFilter(status.key)}
-                            className={`flex-1 py-2 text-xs font-medium rounded-lg transition-all flex items-center justify-center gap-1 ${
-                                statusFilter === status.key
-                                    ? 'bg-red-500 text-white shadow-sm'
-                                    : 'text-gray-500'
-                            }`}
+                            className={`flex-1 py-2 text-xs font-medium rounded-lg transition-all flex items-center justify-center gap-1 ${statusFilter === status.key
+                                ? 'bg-red-500 text-white shadow-sm'
+                                : 'text-gray-500'
+                                }`}
                         >
                             {status.icon && <status.icon size={12} />}
                             {status.label}
@@ -518,7 +586,7 @@ const ReservationRecordPage: React.FC<ReservationRecordPageProps> = ({
                             // 点击卡片进入申购记录详情
                             navigate(`/reservation-record/${record.id}`);
                         };
-                        
+
                         return (
                             <div
                                 key={record.id}

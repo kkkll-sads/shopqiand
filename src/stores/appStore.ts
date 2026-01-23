@@ -39,7 +39,7 @@ export interface ListPageCache<T = any> {
 }
 
 // 缓存 key 类型
-export type ListCacheKey = 'myCollection' | 'assetHistory' | 'reservationRecord';
+export type ListCacheKey = 'myCollection' | 'assetHistory' | 'reservationRecord' | 'assetView';
 
 interface AppState {
   // Tab 状态

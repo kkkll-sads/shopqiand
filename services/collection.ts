@@ -544,6 +544,7 @@ export interface BidBuyParams {
     zone_id: number | string;         // 价格分区ID（必填，如1=500元区）
     package_id: number | string;      // 资产包ID（必填）
     extra_hashrate?: number;          // 额外加注算力（可选，默认0，用于增加权重）
+    quantity?: number;                // 申购数量（可选，默认1，最大100）
     token?: string;                   // 用户登录Token
 }
 
@@ -591,6 +592,10 @@ export async function bidBuy(params: BidBuyParams): Promise<ApiResponse<BidBuyRe
         throw new Error('额外算力不能小于0');
     }
     formData.append('extra_hashrate', String(extraHashrate));
+
+    // 申购数量（默认1，最大100）
+    const quantity = Math.min(Math.max(params.quantity ?? 1, 1), 100);
+    formData.append('quantity', String(quantity));
 
     const response = await authedFetch<BidBuyResult>(API_ENDPOINTS.collectionReservation.bidBuy, {
         method: 'POST',

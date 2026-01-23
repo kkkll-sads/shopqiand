@@ -39,7 +39,6 @@ import { getStoredToken } from '../../../services/client';
 import { UserInfo } from '../../../types';
 import { useAuthStore } from '../../stores/authStore';
 import { useUnreadNewsCount } from '../../stores/appStore';
-import { STORAGE_KEYS } from '../../../constants/storageKeys';
 import { isSuccess, extractData, extractError } from '../../../utils/apiHelpers';
 import { useErrorHandler } from '../../../hooks/useErrorHandler';
 import { useNavigate } from 'react-router-dom';
@@ -73,7 +72,7 @@ const Profile: React.FC<{ unreadCount?: number }> = ({ unreadCount: propUnreadCo
   // 使用 appStore 中的未读消息数
   const storeUnreadCount = useUnreadNewsCount();
   const unreadCount = propUnreadCount ?? storeUnreadCount;
-  
+
   // ✅ 使用统一错误处理Hook（持久化显示）
   const { errorMessage, hasError, handleError, clearError } = useErrorHandler();
 
@@ -167,17 +166,7 @@ const Profile: React.FC<{ unreadCount?: number }> = ({ unreadCount: propUnreadCo
       try {
         debugLog('Profile', '开始加载签到状态');
 
-        // 1. 优先检查本地存储
-        const todayStr = new Date().toISOString().split('T')[0];
-        const lastSignedDate = localStorage.getItem(STORAGE_KEYS.LAST_SIGN_IN_DATE_KEY);
-
-        if (lastSignedDate === todayStr) {
-          debugLog('Profile', '本地缓存显示今日已签到，跳过API请求');
-          setHasSignedToday(true);
-          return;
-        }
-
-        // 2. 本地无记录或日期不匹配，才请求API
+        // 直接调用API获取签到状态，由后端判断是否显示红点
         const res = await fetchSignInInfo(token);
         debugLog('Profile', '签到状态API响应', res);
 
@@ -187,11 +176,6 @@ const Profile: React.FC<{ unreadCount?: number }> = ({ unreadCount: propUnreadCo
           const hasSign = signInData.today_signed || false;
           debugLog('Profile', '今日是否已签到', hasSign);
           setHasSignedToday(hasSign);
-
-          // 如果API确认已签到，更新本地存储
-          if (hasSign) {
-            localStorage.setItem(STORAGE_KEYS.LAST_SIGN_IN_DATE_KEY, todayStr);
-          }
         } else {
           warnLog('Profile', '签到状态API返回异常', res);
           // Default to false to show red dot (safer to show when uncertain)
@@ -535,11 +519,11 @@ const Profile: React.FC<{ unreadCount?: number }> = ({ unreadCount: propUnreadCo
                 action: () => navigate('/my-collection'),
               },
               {
-                label: '交易订单',
+                label: '藏品订单',
                 icon: ClipboardList,
                 color: 'text-blue-600',
                 bg: 'bg-blue-50',
-                action: () => navigate('/orders/transaction/0'),
+                action: () => navigate('/orders/product/0'),
               },
             ].map((item, idx) => (
               <div

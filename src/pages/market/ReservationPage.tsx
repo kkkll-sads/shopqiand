@@ -57,6 +57,7 @@ const ReservationPage: React.FC<ReservationPageProps> = ({ product, preloadedUse
     const navigate = useNavigate();
     const { showToast } = useNotification();
     const [extraHashrate, setExtraHashrate] = useState(0);
+    const [quantity, setQuantity] = useState(1); // 申购数量，默认1，最大100
     const [showConfirmModal, setShowConfirmModal] = useState(false);
     const userInfoMachine = useStateMachine<LoadingState, LoadingEvent>({
         initial: LoadingState.LOADING,
@@ -140,14 +141,14 @@ const ReservationPage: React.FC<ReservationPageProps> = ({ product, preloadedUse
     // 基础算力需求（所有价格分区的基础算力都是5）
     const baseHashrate = 5;
 
-    // 额外算力（用户可调节）
-    const totalRequiredHashrate = baseHashrate + extraHashrate;
-
     // 当前用户持有算力（从API获取或预加载）
     const [availableHashrate, setAvailableHashrate] = useState(preloadedUserInfo?.availableHashrate ?? 0);
 
-    // 冻结金额计算（按场次分区的最高价冻结，撮合后退还差价）
-    const frozenAmount = zoneMaxPrice;
+    // 冻结金额计算（按场次分区的最高价冻结，撮合后退还差价）- 乘以数量
+    const frozenAmount = zoneMaxPrice * quantity;
+
+    // 算力需求也需要乘以数量
+    const totalRequiredHashrate = (baseHashrate + extraHashrate) * quantity;
 
     // 账户余额（应该从API获取或预加载）
     const [accountBalance, setAccountBalance] = useState(preloadedUserInfo?.accountBalance ?? 0);
@@ -158,8 +159,9 @@ const ReservationPage: React.FC<ReservationPageProps> = ({ product, preloadedUse
     // 检查资金是否充足
     const isFundSufficient = accountBalance >= frozenAmount;
 
-    // 计算额外算力可调节范围
-    const maxExtraHashrate = Math.max(0, availableHashrate - baseHashrate);
+    // 计算额外算力可调节范围（基于每份的算力需求）
+    const perUnitHashrate = baseHashrate + extraHashrate;
+    const maxExtraHashrate = Math.max(0, Math.floor(availableHashrate / quantity) - baseHashrate);
     const canIncreaseHashrate = extraHashrate < maxExtraHashrate;
 
     // 标记是否已尝试过详情补全，避免重复请求
@@ -407,6 +409,7 @@ const ReservationPage: React.FC<ReservationPageProps> = ({ product, preloadedUse
                 zone_id: ensuredZoneId,
                 package_id: ensuredPackageId,
                 extra_hashrate: extraHashrate,
+                quantity: quantity,
             });
 
             if (isSuccess(response)) {
@@ -567,6 +570,59 @@ const ReservationPage: React.FC<ReservationPageProps> = ({ product, preloadedUse
                         </div>
                     )}
                 </div>
+
+                {/* 数量选择 */}
+                <div className="bg-white p-5 rounded-2xl shadow-lg border border-gray-100">
+                    <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
+                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-green-100 to-green-50 flex items-center justify-center">
+                            <Shield size={18} className="text-green-600" />
+                        </div>
+                        <span>申购数量</span>
+                    </h3>
+
+                    <div className="flex items-center gap-4 bg-gray-50 p-3 rounded-lg">
+                        <button
+                            onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                            disabled={quantity <= 1}
+                            className={`w-10 h-10 flex items-center justify-center bg-white rounded-full shadow font-bold text-lg transition-all ${quantity <= 1 ? 'text-gray-300 cursor-not-allowed' : 'text-gray-600 active:scale-95'}`}
+                        >-</button>
+                        <div className="flex-1 text-center">
+                            <span className="font-mono font-bold text-2xl text-gray-900">{quantity}</span>
+                            <span className="text-sm text-gray-500 ml-1">份</span>
+                        </div>
+                        <button
+                            onClick={() => setQuantity(Math.min(100, quantity + 1))}
+                            disabled={quantity >= 100}
+                            className={`w-10 h-10 flex items-center justify-center bg-white rounded-full shadow font-bold text-lg transition-all ${quantity >= 100 ? 'text-gray-300 cursor-not-allowed' : 'text-green-600 active:scale-95'}`}
+                        >+</button>
+                    </div>
+
+                    <div className="mt-3 flex justify-between text-sm">
+                        <span className="text-gray-500">单份冻结金额</span>
+                        <span className="font-mono text-gray-700">¥{zoneMaxPrice.toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between text-sm mt-1">
+                        <span className="text-gray-500">单份算力需求</span>
+                        <span className="font-mono text-gray-700">{baseHashrate + extraHashrate}</span>
+                    </div>
+                    <div className="border-t border-gray-100 mt-3 pt-3 flex justify-between">
+                        <span className="text-sm font-medium text-gray-700">合计冻结金额</span>
+                        <span className="font-mono font-bold text-red-600">¥{frozenAmount.toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between mt-1">
+                        <span className="text-sm font-medium text-gray-700">合计算力需求</span>
+                        <span className="font-mono font-bold text-orange-600">{totalRequiredHashrate}</span>
+                    </div>
+
+                    <div className="mt-3 p-2 bg-green-50 rounded-lg border border-green-100">
+                        <div className="flex items-start gap-2">
+                            <Info size={14} className="text-green-500 flex-shrink-0 mt-0.5" />
+                            <p className="text-xs text-green-700 leading-relaxed">
+                                每份预约将独立参与撮合，最多可一次申购100份
+                            </p>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             {/* Footer Action */}
@@ -611,6 +667,10 @@ const ReservationPage: React.FC<ReservationPageProps> = ({ product, preloadedUse
                                     <div className="font-bold text-gray-900 font-mono text-lg">{totalRequiredHashrate.toFixed(0)}</div>
                                     <div className="text-[10px] text-gray-500 mt-0.5">基础 {baseHashrate} + 加注 {extraHashrate}</div>
                                 </div>
+                            </div>
+                            <div className="flex justify-between items-center p-4 bg-gradient-to-r from-green-50 to-green-100/50 rounded-xl border border-green-100">
+                                <span className="text-gray-700 text-sm font-medium">申购数量</span>
+                                <div className="font-bold text-gray-900 font-mono text-lg">{quantity} 份</div>
                             </div>
                             <div className="flex justify-between items-center p-4 bg-gradient-to-r from-blue-50 to-blue-100/50 rounded-xl border border-blue-100">
                                 <span className="text-gray-700 text-sm font-medium">冻结金额</span>

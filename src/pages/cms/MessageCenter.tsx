@@ -68,14 +68,18 @@ const MessageCenter: React.FC = () => {
 
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false); // 防止重复加载
 
   const handleLoadMore = () => {
-    if (!loading && hasMore) {
-      setPage(prev => prev + 1);
+    // 防止重复请求：检查是否正在加载中或没有更多数据
+    if (loading || isLoadingMore || !hasMore) {
+      return;
     }
+    setIsLoadingMore(true);
+    setPage(prev => prev + 1);
   };
 
-  const bottomRef = useInfiniteScroll(handleLoadMore, hasMore, loading);
+  const bottomRef = useInfiniteScroll(handleLoadMore, hasMore, loading || isLoadingMore);
 
   // 缓存键
   const CACHE_KEY = 'message_center_cache';
@@ -416,13 +420,25 @@ const MessageCenter: React.FC = () => {
         }
       }
 
-      // Check if we received any data to determine if there might be more
-      setHasMore(allMessages.length > 0);
+      // 判断是否还有更多数据：
+      // 如果本次加载的消息数量为0，说明没有更多数据了
+      // 对于追加模式，检查新增的数据量是否足够
+      const minExpectedItems = 3; // 至少期望返回3条新消息才认为还有更多
+      if (append) {
+        setHasMore(allMessages.length >= minExpectedItems);
+      } else {
+        // 首次加载，如果有数据则可能有更多
+        setHasMore(allMessages.length >= minExpectedItems);
+      }
 
       loadMachine.send(LoadingEvent.SUCCESS);
     } catch (err: any) {
       setError(err?.msg || err?.message || '获取消息失败');
       loadMachine.send(LoadingEvent.ERROR);
+      setHasMore(false); // 出错时停止继续加载
+    } finally {
+      // 重置加载更多状态
+      setIsLoadingMore(false);
     }
   };
 
@@ -465,7 +481,7 @@ const MessageCenter: React.FC = () => {
     setMessages([]);
     setPage(1);
     setHasMore(true);
-    // 重置状态机状态? 其实 loadMessages 会发送 LOAD 事件
+    setIsLoadingMore(false); // 重置加载更多状态
     loadMessages(1, false);
   };
 

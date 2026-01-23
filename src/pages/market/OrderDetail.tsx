@@ -69,7 +69,7 @@ const OrderDetail: React.FC = () => {
                     showToast('error', '订单不存在', errorMsg);
                     // 延迟一下再跳转，让用户看到提示
                     setTimeout(() => {
-                        navigate('/orders/product/0');
+                        navigate('/orders/points/0');
                     }, 1500);
                     loadMachine.send(LoadingEvent.ERROR);
                     return;

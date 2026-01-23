@@ -45,12 +45,34 @@ interface MyCollectionProps {
 const MyCollection: React.FC<MyCollectionProps> = ({ onItemSelect, initialConsignItemId, preSelectedItem }) => {
   const navigate = useNavigate();
   const { listCaches, setListCache } = useAppStore();
-  
+
   // 缓存相关 refs
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const restoredFromCacheRef = useRef(false);
   const scrollTopRef = useRef(0);
-  
+  // 用于保存最新状态值，解决 cleanup 闭包问题
+  const stateRef = useRef<{
+    myCollections: MyCollectionItem[];
+    page: number;
+    hasMore: boolean;
+    activeTab: string;
+    selectedSession: string;
+    selectedPriceZone: string;
+    searchKeyword: string;
+    sortField: string;
+    sortOrder: string;
+  }>({
+    myCollections: [],
+    page: 1,
+    hasMore: false,
+    activeTab: 'hold',
+    selectedSession: 'all',
+    selectedPriceZone: 'all',
+    searchKeyword: '',
+    sortField: 'create_time',
+    sortOrder: 'desc'
+  });
+
   const [error, setError] = useState<string | null>(null);
   const [myCollections, setMyCollections] = useState<MyCollectionItem[]>([]);
   const [page, setPage] = useState<number>(1);
@@ -191,7 +213,7 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onItemSelect, initialConsig
         activeTab: cache.activeTab,
         scrollTop: cache.scrollTop
       });
-      
+
       // 恢复状态
       setMyCollections(cache.data as MyCollectionItem[]);
       setPage(cache.page);
@@ -206,22 +228,34 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onItemSelect, initialConsig
         if (cache.filters.sortField) setSortField(cache.filters.sortField);
         if (cache.filters.sortOrder) setSortOrder(cache.filters.sortOrder as SortOrder);
       }
-      
+
       // 标记已从缓存恢复
       restoredFromCacheRef.current = true;
-      
-      // 恢复滚动位置（需要等待渲染完成）
-      requestAnimationFrame(() => {
-        if (scrollContainerRef.current && cache.scrollTop > 0) {
-          scrollContainerRef.current.scrollTo({ top: cache.scrollTop, behavior: 'instant' });
-        }
-      });
-      
+      // 保存滚动位置到 ref，等待数据渲染完成后再恢复
+      scrollTopRef.current = cache.scrollTop;
+
       // 设置状态机为成功状态
       loadMachine.send(LoadingEvent.LOAD);
       loadMachine.send(LoadingEvent.SUCCESS);
     }
   }, []); // 仅在组件挂载时执行一次
+
+  // ========================================
+  // 同步状态到 ref，确保 cleanup 能获取最新值
+  // ========================================
+  useEffect(() => {
+    stateRef.current = {
+      myCollections,
+      page,
+      hasMore,
+      activeTab,
+      selectedSession,
+      selectedPriceZone,
+      searchKeyword,
+      sortField,
+      sortOrder
+    };
+  }, [myCollections, page, hasMore, activeTab, selectedSession, selectedPriceZone, searchKeyword, sortField, sortOrder]);
 
   // ========================================
   // 缓存保存逻辑：组件卸载时保存状态
@@ -233,40 +267,41 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onItemSelect, initialConsig
         scrollTopRef.current = scrollContainerRef.current.scrollTop;
       }
     };
-    
+
     const container = scrollContainerRef.current;
     container?.addEventListener('scroll', handleScrollForCache);
-    
+
     return () => {
       container?.removeEventListener('scroll', handleScrollForCache);
-      
-      // 组件卸载时保存缓存（仅在有数据时保存）
-      if (myCollections.length > 0) {
+
+      // 组件卸载时保存缓存（使用 stateRef 获取最新值）
+      const state = stateRef.current;
+      if (state.myCollections.length > 0) {
         debugLog('MyCollection', '保存缓存状态', {
-          dataCount: myCollections.length,
-          page,
-          activeTab,
+          dataCount: state.myCollections.length,
+          page: state.page,
+          activeTab: state.activeTab,
           scrollTop: scrollTopRef.current
         });
-        
+
         setListCache('myCollection', {
-          data: myCollections,
-          page,
-          hasMore,
+          data: state.myCollections,
+          page: state.page,
+          hasMore: state.hasMore,
           scrollTop: scrollTopRef.current,
-          activeTab,
+          activeTab: state.activeTab,
           filters: {
-            selectedSession,
-            selectedPriceZone,
-            searchKeyword,
-            sortField,
-            sortOrder
+            selectedSession: state.selectedSession,
+            selectedPriceZone: state.selectedPriceZone,
+            searchKeyword: state.searchKeyword,
+            sortField: state.sortField,
+            sortOrder: state.sortOrder
           },
           timestamp: Date.now()
         });
       }
     };
-  }, [myCollections, page, hasMore, activeTab, selectedSession, selectedPriceZone, searchKeyword, sortField, sortOrder, setListCache]);
+  }, [setListCache]); // 只依赖 setListCache，其他值通过 stateRef 获取
 
   // 加载用户信息和寄售券数量
   useEffect(() => {
@@ -559,6 +594,43 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onItemSelect, initialConsig
     debugLog('MyCollection', 'filteredCollections长度', filtered.length);
     return filtered;
   }, [myCollections, selectedSession, selectedPriceZone, searchKeyword, sortField, sortOrder]);
+
+  // ========================================
+  // 滚动位置恢复：在数据渲染完成后恢复
+  // ========================================
+  useEffect(() => {
+    // 只有在从缓存恢复且数据已渲染时才恢复滚动位置
+    if (restoredFromCacheRef.current && filteredCollections.length > 0 && scrollTopRef.current > 0) {
+      const restoreScroll = () => {
+        if (scrollContainerRef.current && scrollTopRef.current > 0) {
+          const targetScroll = scrollTopRef.current;
+          scrollContainerRef.current.scrollTo({ top: targetScroll, behavior: 'instant' });
+          // 验证是否恢复成功
+          if (Math.abs(scrollContainerRef.current.scrollTop - targetScroll) > 10) {
+            // 如果恢复失败，重试
+            setTimeout(() => {
+              if (scrollContainerRef.current) {
+                scrollContainerRef.current.scrollTo({ top: targetScroll, behavior: 'instant' });
+              }
+            }, 100);
+          }
+        }
+      };
+
+      // 使用多次 rAF + setTimeout 确保 DOM 完全渲染后再恢复
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          restoreScroll();
+          // 延迟恢复，确保列表项完全渲染
+          setTimeout(restoreScroll, 100);
+          setTimeout(restoreScroll, 300);
+        });
+      });
+
+      // 恢复完成后，重置标志
+      restoredFromCacheRef.current = false;
+    }
+  }, [filteredCollections.length]); // 监听数据长度变化
 
   // 如果父级要求初始打开寄售弹窗（通过 initialConsignItemId），在数据加载后自动打开对应项的寄售页
   useEffect(() => {
@@ -1504,8 +1576,8 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onItemSelect, initialConsig
               `}</style>
               <div className="space-y-3">
                 {filteredCollections.filter(i => !!i).map((item, index) => (
-                  <div 
-                    key={item.id} 
+                  <div
+                    key={item.id}
                     style={{ animation: index < 10 ? `fadeInUp 0.25s ease-out ${index * 0.03}s both` : undefined }}
                   >
                     {renderCollectionItem(item)}

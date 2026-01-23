@@ -87,7 +87,7 @@ const OrderListPage: React.FC = () => {
     switch (category) {
       case 'product':
         return {
-          title: '商品订单',
+          title: '藏品订单',
           tabs: ['买入订单', '卖出订单']
         };
       case 'transaction':

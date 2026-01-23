@@ -184,6 +184,8 @@ export const API_ENDPOINTS = {
     announcement: {
         /** 平台公告列表 */
         list: '/Announcement/index',
+        /** 标记公告已读 */
+        markRead: '/Announcement/markRead',
     },
     banner: {
         /** 轮播图列表 */

@@ -71,24 +71,13 @@ const Orders: React.FC = () => {
       </header>
 
       <div className="p-4 space-y-4">
-        {/* 商品订单 */}
+        {/* 藏品订单 */}
         <OrderSection
-          title="商品订单"
+          title="藏品订单"
           onItemClick={handleNav}
           items={[
             { icon: ShoppingCart, label: '买入订单', actionKey: 'product:0' },
             { icon: ArrowRightLeft, label: '卖出订单', actionKey: 'product:1' }
-          ]}
-        />
-
-        {/* 交易订单 */}
-        <OrderSection
-          title="交易订单"
-          onItemClick={handleNav}
-          items={[
-            { icon: ShoppingCart, label: '待寄售', actionKey: 'transaction:0' },
-            { icon: Clock, label: '寄售中', actionKey: 'transaction:1' },
-            { icon: XCircle, label: '寄售失败', actionKey: 'transaction:2' }
           ]}
         />
 
