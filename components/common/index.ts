@@ -37,6 +37,9 @@ export { default as PaymentRedirect } from './PaymentRedirect';
 // 在线客服组件
 export { default as ChatWidget, openChatWidget, closeChatWidget, toggleChatWidget, isChatWidgetOpen } from './ChatWidget';
 
+// 可拖动客服悬浮按钮组件
+export { default as DraggableChatButton } from './DraggableChatButton';
+
 // 卡片组件
 export { default as Card } from './Card';
 

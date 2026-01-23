@@ -75,13 +75,13 @@ const MyFriends: React.FC = () => {
   const loadingMore = loadMoreMachine.state === LoadingState.LOADING;
 
   // Infinite Scroll Handler
-  const handleLoadMore = () => {
-    if (!loading && hasMore) {
+  const handleLoadMore = useCallback(() => {
+    if (!loading && !loadingMore && hasMore) {
       setPage(prev => prev + 1);
     }
-  };
+  }, [loading, loadingMore, hasMore]);
 
-  const bottomRef = useInfiniteScroll(handleLoadMore, hasMore, loading);
+  const bottomRef = useInfiniteScroll(handleLoadMore, hasMore, loading || loadingMore);
 
   // 加载好友列表
   const loadTeamMembers = useCallback(async (pageNum: number, append: boolean = false) => {
@@ -145,17 +145,14 @@ const MyFriends: React.FC = () => {
     setError(null);
     loadMachine.send(LoadingEvent.LOAD);
     loadTeamMembers(1, false);
-  }, [activeTab]);
+  }, [activeTab, loadTeamMembers]);
 
-  // 初始加载（仅在组件挂载时）
+  // 监听 page 变化，加载更多数据
   useEffect(() => {
-    // 初始加载已在 activeTab 的 useEffect 中处理，这里不需要重复加载
-  }, []);
-
-  // 初始加载（仅在组件挂载时）
-  useEffect(() => {
-    // 初始加载已在 activeTab 的 useEffect 中处理，这里不需要重复加载
-  }, []);
+    if (page > 1) {
+      loadTeamMembers(page, true);
+    }
+  }, [page, loadTeamMembers]);
 
   /**
    * 格式化日期

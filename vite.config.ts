@@ -85,6 +85,12 @@ export default defineConfig(({ mode }) => {
     },
     build: {
       chunkSizeWarningLimit: 800, // 调高警告阈值，结合手动分包
+      // 确保 CSS 文件正确提取
+      cssCodeSplit: true,
+      // 确保资源路径正确
+      assetsDir: 'assets',
+      // 确保资源内联阈值合理（小于 4KB 的资源会被内联，避免小文件加载问题）
+      assetsInlineLimit: 4096,
       rollupOptions: {
         output: {
           // 按需拆分常见依赖，避免引用不存在的包导致构建失败
@@ -105,6 +111,18 @@ export default defineConfig(({ mode }) => {
               // 其他第三方依赖
               return 'vendor';
             }
+          },
+          // 确保资源文件名包含哈希，便于缓存控制
+          assetFileNames: (assetInfo) => {
+            const info = assetInfo.name?.split('.') || [];
+            const ext = info[info.length - 1];
+            if (/png|jpe?g|svg|gif|tiff|bmp|ico/i.test(ext)) {
+              return `assets/images/[name]-[hash][extname]`;
+            }
+            if (/css/i.test(ext)) {
+              return `assets/[name]-[hash][extname]`;
+            }
+            return `assets/[name]-[hash][extname]`;
           },
         },
       },

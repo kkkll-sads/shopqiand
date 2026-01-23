@@ -540,6 +540,9 @@ const BalanceRecharge: React.FC<BalanceRechargeProps> = ({ initialAmount }) => {
         // Update balance
         setWithdrawableBalance(remaining_withdrawable);
 
+        // Refresh user info to sync data
+        await loadUserBalance();
+
         // Reset form
         setTransferAmount('');
         transferMachine.send(FormEvent.SUBMIT_SUCCESS);
@@ -642,7 +645,7 @@ const BalanceRecharge: React.FC<BalanceRechargeProps> = ({ initialAmount }) => {
             </div>
             <div className="text-right">
               <p className="text-xs text-gray-500">可提现余额</p>
-              <p className="text-lg font-bold text-blue-600">¥{withdrawableBalance.toFixed(2)}</p>
+              <p className="text-lg font-bold text-blue-600">¥{(withdrawableBalance ?? 0).toFixed(2)}</p>
             </div>
           </div>
 

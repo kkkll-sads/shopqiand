@@ -154,13 +154,13 @@ export const formatAmount = (
     // 转换为数字
     const numValue = typeof value === 'string' ? parseFloat(value) : value;
 
-    // 检查是否为有效数字
-    if (isNaN(numValue)) {
+    // 检查是否为有效数字（双重验证，确保类型安全）
+    if (numValue === null || numValue === undefined || isNaN(numValue) || typeof numValue !== 'number') {
         return prefix + '0.00';
     }
 
-    // 格式化数字
-    let formatted = numValue.toFixed(decimals);
+    // 格式化数字（确保 numValue 是有效的 number 类型）
+    let formatted = Number(numValue).toFixed(decimals);
 
     // 添加千分位分隔符
     if (thousandSeparator) {

@@ -239,7 +239,7 @@ const TradingZone: React.FC<TradingZoneProps> = ({
             clearItemsError();
 
             // 获取商品列表（新 API：官方+寄售按 package_name + zone_id 统一归类）
-            const response = await fetchCollectionItemsBySession(session.id, { page: 1, limit: 10 });
+            const response = await fetchCollectionItemsBySession(session.id, { page: 1, limit: 100 });
 
             debugLog('TradingZone', 'API Response', response);
             debugLog('TradingZone', 'Items list', response.data?.list);
@@ -630,95 +630,64 @@ const TradingZone: React.FC<TradingZoneProps> = ({
                                     if (activePriceZone === 'all') return true;
                                     return item.price_zone === activePriceZone;
                                 })
-                                .map((item) => (
-                                    <div
-                                        key={item.displayKey}
-                                        className="bg-white rounded-2xl overflow-hidden shadow-lg border border-gray-100 hover:border-red-200 hover:shadow-xl transition-all active:scale-[0.98] group"
-                                        onClick={() => {
-                                            debugLog('TradingZone', 'Clicking item', {
-                                                id: item.id,
-                                                source: item.source,
-                                                consignment_id: item.consignment_id,
-                                                is_consignment: item.is_consignment
-                                            });
+                                .map((item) => {
+                                    // 构建产品数据的公共函数
+                                    const buildProductData = () => ({
+                                        id: String(item.id || item.package_id),
+                                        title: item.title,
+                                        price: item.price,
+                                        image: item.image,
+                                        artist: '',
+                                        category: 'Data Asset',
+                                        productType: 'collection' as const,
+                                        sessionId: selectedSession?.id || item.session_id,
+                                        zoneId: item.zone_id || item.price_zone_id,
+                                        // 新接口需要 packageId 和 priceZone
+                                        packageId: item.package_id,
+                                        priceZone: item.price_zone,
+                                        // 为寄售商品设置consignmentId
+                                        ...(item.source === 'consignment' && item.consignment_id
+                                            ? { consignmentId: item.consignment_id }
+                                            : {})
+                                    });
 
-                                            const productData = {
-                                                id: String(item.id || item.package_id),
-                                                title: item.title,
-                                                price: item.price,
-                                                image: item.image,
-                                                artist: '',
-                                                category: 'Data Asset',
-                                                productType: 'collection',
-                                                sessionId: selectedSession?.id || item.session_id,
-                                                zoneId: item.zone_id || item.price_zone_id,
-                                                // 新接口需要 packageId 和 priceZone
-                                                packageId: item.package_id,
-                                                priceZone: item.price_zone,
-                                                // 为寄售商品设置consignmentId
-                                                ...(item.source === 'consignment' && item.consignment_id
-                                                    ? { consignmentId: item.consignment_id }
-                                                    : {})
-                                            };
+                                    // 进入申购页面的公共函数
+                                    const handleGoToReservation = () => {
+                                        const productData = buildProductData();
+                                        setSelectedProduct(productData as Product, 'trading-zone');
+                                        navigate('/reservation');
+                                    };
 
-                                            debugLog('TradingZone', 'Product data to pass', productData);
-
-                                            // 如果当前在详情页（有 selectedSession），传递自定义返回路由回到该详情页
-                                            const customBackRoute = selectedSession ? {
-                                                name: 'trading-zone-items' as const,
-                                                sessionId: selectedSession.id,
-                                                sessionTitle: selectedSession.title,
-                                                sessionStartTime: selectedSession.startTime,
-                                                sessionEndTime: selectedSession.endTime,
-                                            } : undefined;
-
-                                            onProductSelect && onProductSelect(productData as Product, 'trading-zone', customBackRoute);
-                                        }}
-                                    >
-                                        <div className="aspect-square bg-gray-50 relative overflow-hidden">
-                                            <LazyImage src={item.image} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
-                                        </div>
-                                        <div className="p-4">
-                                            <h3 className="text-gray-900 text-sm font-bold line-clamp-1 mb-3">{item.title}</h3>
-                                            <div className="flex justify-between items-center">
-                                                <div className="text-red-500 font-extrabold text-base flex items-baseline gap-0.5">
-                                                    <span>{item.price_zone}</span>
+                                    return (
+                                        <div
+                                            key={item.displayKey}
+                                            className="bg-white rounded-2xl overflow-hidden shadow-lg border border-gray-100 hover:border-red-200 hover:shadow-xl transition-all active:scale-[0.98] group cursor-pointer"
+                                            onClick={handleGoToReservation}
+                                        >
+                                            <div className="aspect-square bg-gray-50 relative overflow-hidden">
+                                                <LazyImage src={item.image} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
+                                            </div>
+                                            <div className="p-4">
+                                                <h3 className="text-gray-900 text-sm font-bold line-clamp-1 mb-3">{item.title}</h3>
+                                                <div className="flex justify-between items-center">
+                                                    <div className="text-red-500 font-extrabold text-base flex items-baseline gap-0.5">
+                                                        <span>{item.price_zone}</span>
+                                                    </div>
+                                                    <button
+                                                        type="button"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation(); // 阻止事件冒泡，避免重复触发
+                                                            handleGoToReservation();
+                                                        }}
+                                                        className="bg-gradient-to-r from-red-500 to-red-600 text-white text-xs font-bold px-4 py-2 rounded-full shadow-lg shadow-red-200 active:scale-95 transition-all hover:shadow-xl"
+                                                    >
+                                                        申购
+                                                    </button>
                                                 </div>
-                                                <button
-                                                    type="button"
-                                                    onClick={(e) => {
-                                                        e.stopPropagation(); // 阻止事件冒泡到父卡片
-
-                                                        // 构建产品数据并保存到 store
-                                                        const productData = {
-                                                            id: String(item.id || item.package_id),
-                                                            title: item.title,
-                                                            price: item.price,
-                                                            image: item.image,
-                                                            artist: '',
-                                                            category: 'Data Asset',
-                                                            productType: 'collection' as const,
-                                                            sessionId: selectedSession?.id || item.session_id,
-                                                            zoneId: item.zone_id || item.price_zone_id,
-                                                            // 新接口需要 packageId 和 priceZone
-                                                            packageId: item.package_id,
-                                                            priceZone: item.price_zone,
-                                                            ...(item.source === 'consignment' && item.consignment_id
-                                                                ? { consignmentId: item.consignment_id }
-                                                                : {})
-                                                        };
-
-                                                        setSelectedProduct(productData as Product, 'trading-zone');
-                                                        navigate('/reservation');
-                                                    }}
-                                                    className="bg-gradient-to-r from-red-500 to-red-600 text-white text-xs font-bold px-4 py-2 rounded-full shadow-lg shadow-red-200 active:scale-95 transition-all hover:shadow-xl"
-                                                >
-                                                    申购
-                                                </button>
                                             </div>
                                         </div>
-                                    </div>
-                                ))}
+                                    );
+                                })}
                         </div>
                     )}
                 </div>

@@ -6,7 +6,7 @@ import React from 'react';
 import { Outlet, useLocation, useNavigate, Navigate } from 'react-router-dom';
 import BottomNav from '../../components/BottomNav';
 import ScrollToTop from '../components/ScrollToTop';
-import { ChatWidget } from '../../components/common';
+import { ChatWidget, DraggableChatButton } from '../../components/common';
 import { useAuthStore } from '../stores/authStore';
 import { useAppStore } from '../stores/appStore';
 import type { Tab } from '../../types';
@@ -92,6 +92,8 @@ const MainLayout: React.FC = () => {
       <ScrollToTop />
       {/* 在线客服组件 */}
       <ChatWidget autoOpen={0} />
+      {/* 可拖动客服悬浮按钮 */}
+      <DraggableChatButton />
       <div className="min-h-screen-dynamic bg-gray-50 pb-safe">
         <Outlet />
       </div>

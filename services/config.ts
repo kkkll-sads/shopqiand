@@ -365,6 +365,8 @@ export const API_ENDPOINTS = {
         promotionCard: '/Team/promotionCard',
         /** 获取团队成员列表 */
         members: '/Team/members',
+        /** 获取好友/团队成员详情 */
+        memberDetail: '/Team/memberDetail',
     },
     app: {
         /** 检查应用版本更新 */

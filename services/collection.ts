@@ -137,6 +137,10 @@ export interface UserCollectionDetailData {
     hash: string;              // 唯一哈希（优先取确权哈希）
     consignment_status: number; // 寄售状态
     rights_status: string;     // 确权状态
+    /** 增值比例，如 0.05 表示 5% */
+    appreciation_rate?: number;
+    /** 是否旧资产包 */
+    is_old_asset_package?: boolean;
     [key: string]: any;        // 其他额外字段
 }
 
@@ -631,6 +635,10 @@ export interface MyCollectionItem {
     transaction_count: number;    // 交易次数
     fail_count: number;           // 流拍次数
     consignment_status: number;   // 寄售状态: 0=未寄售, 1=寄售中, 2=已售出
+    /** 增值比例，如 0.05 表示 5%（来自 userCollection/detail 接口） */
+    appreciation_rate?: number;
+    /** 是否旧资产包（来自 userCollection/detail 接口） */
+    is_old_asset_package?: boolean;
 
     // New API Fields
     session_id?: number;          // 场次ID

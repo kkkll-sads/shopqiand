@@ -316,7 +316,7 @@ const ReservationRecordPage: React.FC<ReservationRecordPageProps> = ({
         }
     }, [statusFilter, isLoggedIn, sessionFilter, zoneFilter, sortField, sortOrder]);
 
-    const loadRecords = async (pageNum: number, append: boolean = false) => {
+    const loadRecords = useCallback(async (pageNum: number, append: boolean = false) => {
         try {
             if (append) {
                 loadMoreMachine.send(LoadingEvent.LOAD);
@@ -368,7 +368,7 @@ const ReservationRecordPage: React.FC<ReservationRecordPageProps> = ({
                 listMachine.send(LoadingEvent.ERROR);
             }
         }
-    };
+    }, [statusFilter, sessionFilter, zoneFilter, sortField, sortOrder]);
 
     // 滚动加载更多
     const handleScroll = useCallback(() => {
@@ -377,7 +377,7 @@ const ReservationRecordPage: React.FC<ReservationRecordPageProps> = ({
         if (scrollTop + clientHeight >= scrollHeight - 100) {
             loadRecords(page + 1, true);
         }
-    }, [loadingMore, hasMore, page, statusFilter, sessionFilter, zoneFilter, sortField, sortOrder]);
+    }, [loadingMore, hasMore, page, loadRecords]);
 
     const getStatusBadge = (item: ReservationItem) => {
         switch (item.status) {

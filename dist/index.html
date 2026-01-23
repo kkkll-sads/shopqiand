@@ -28,6 +28,24 @@
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji" !important;
       -webkit-font-smoothing: antialiased;
       -moz-osx-font-smoothing: grayscale;
+      /* 禁用文本选择 */
+      -webkit-user-select: none;
+      -moz-user-select: none;
+      -ms-user-select: none;
+      user-select: none;
+      /* 禁用长按选择菜单（iOS Safari） */
+      -webkit-touch-callout: none;
+    }
+
+    /* 输入框和文本域允许选择文本 */
+    input,
+    textarea,
+    [contenteditable="true"] {
+      -webkit-user-select: text;
+      -moz-user-select: text;
+      -ms-user-select: text;
+      user-select: text;
+      -webkit-touch-callout: default;
     }
 
     /* ========================================
@@ -74,11 +92,11 @@
       /* iOS 11.2 */
     }
   </style>
-  <script type="module" crossorigin src="/assets/index-BbQX_ouj.js"></script>
-  <link rel="modulepreload" crossorigin href="/assets/vendor-CpINFe-3.js">
-  <link rel="modulepreload" crossorigin href="/assets/react-vendor-CwIwsjXq.js">
+  <script type="module" crossorigin src="/assets/index-a5FTSQ6-.js"></script>
+  <link rel="modulepreload" crossorigin href="/assets/vendor-D_9m6sOW.js">
+  <link rel="modulepreload" crossorigin href="/assets/react-vendor-CYR7_fGd.js">
   <link rel="modulepreload" crossorigin href="/assets/area-data-BVDNhPol.js">
-  <link rel="stylesheet" crossorigin href="/assets/index-D04MOh_P.css">
+  <link rel="stylesheet" crossorigin href="/assets/index-CqtHGinB.css">
 </head>
 
 <body>

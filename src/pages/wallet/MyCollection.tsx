@@ -16,6 +16,7 @@ import {
   rightsDeliver,
   consignCollectionItem,
   getConsignmentCheck,
+  computeConsignmentPrice,
   fetchProfile,
   MyCollectionItem,
   normalizeAssetUrl,
@@ -30,7 +31,7 @@ import { useAppStore, MARKET_CACHE_TTL } from '../../stores/appStore';
 import { UserInfo } from '../../../types';
 import { useNotification } from '../../../context/NotificationContext';
 import { ConsignmentStatus, DeliveryStatus } from '../../../constants/statusEnums';
-import { isSuccess, extractError } from '../../../utils/apiHelpers';
+import { isSuccess, extractError, extractData } from '../../../utils/apiHelpers';
 import { useStateMachine } from '../../../hooks/useStateMachine';
 import { FormEvent, FormState, LoadingEvent, LoadingState } from '../../../types/states';
 import { useInfiniteScroll } from '../../hooks/useInfiniteScroll';
@@ -790,8 +791,9 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onItemSelect, initialConsig
     ]).then(([checkRes, couponRes]) => {
       if (!mounted) return;
 
-      // 处理解锁状态
-      setConsignmentCheckData(checkRes?.data ?? null);
+      // 处理解锁状态 - 使用 extractData 提取数据，支持 code === 0 或 code === 1
+      const checkData = extractData(checkRes);
+      setConsignmentCheckData(checkData ?? null);
 
       // 处理寄售券
       const coupons = couponRes.data?.list || [];
@@ -1167,8 +1169,13 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onItemSelect, initialConsig
       }
       */
 
-      // 使用藏品原价作为寄售价格
-      const priceValue = parseFloat(selectedItem.price || '0');
+      // 寄售价格 = buy_price * (1 + appreciation_rate)，优先来自 consignmentCheck 返回
+      const priceValue = computeConsignmentPrice(consignmentCheckData) || (() => {
+        const check = consignmentCheckData || {};
+        const buy = Number(check.buy_price ?? selectedItem.buy_price ?? selectedItem.price ?? 0);
+        const rate = Number(check.appreciation_rate ?? 0);
+        return buy > 0 ? buy * (1 + rate) : 0;
+      })();
       if (Number.isNaN(priceValue) || priceValue <= 0) {
         setActionError('藏品价格无效，无法进行寄售');
         return;
@@ -1641,36 +1648,60 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onItemSelect, initialConsig
                     </div>
                   </div>
 
-                  {/* 核心数据网格 */}
+                  {/* 核心数据网格：优先使用 userCollection/detail 返回的 appreciation_rate，其次使用 consignmentCheck 返回的，寄售价格 = buy_price * (1 + appreciation_rate) */}
                   {(() => {
-                    // 价格处理：优先 check selectedItem.market_price -> price -> current_price -> original_price -> 0
-                    const rawPrice = selectedItem.market_price || selectedItem.price || selectedItem.current_price || selectedItem.original_price || '0';
-                    const price = parseFloat(String(rawPrice));
-                    const safePrice = isNaN(price) ? 0 : price;
+                    const check = consignmentCheckData || {};
+                    // buy_price 优先使用 consignmentCheck 返回的，其次使用 selectedItem
+                    const buyPrice = Number(check.buy_price ?? selectedItem.buy_price ?? selectedItem.price ?? selectedItem.current_price ?? selectedItem.original_price ?? 0);
+                    // appreciation_rate 优先使用 selectedItem（来自 userCollection/detail），其次使用 consignmentCheck 返回的
+                    const appreciationRate = Number(selectedItem.appreciation_rate ?? check.appreciation_rate ?? 0);
+                    // 计算寄售价格：buy_price * (1 + appreciation_rate)
+                    const consignmentPriceVal = buyPrice > 0 
+                      ? buyPrice * (1 + appreciationRate) 
+                      : 0;
+                    // is_old_asset_package 优先使用 selectedItem，其次使用 check
+                    const isOldAsset = !!(selectedItem.is_old_asset_package ?? check.is_old_asset_package);
 
-                    // 使用精确的金额计算工具（避免浮点数精度问题）
-                    const expectedProfit = toNumber(multiply(safePrice, 0.055));
-                    const expectedTotal = toNumber(multiply(safePrice, 1.055));
+                    // 调试日志
+                    debugLog('MyCollection', '挂牌弹窗数据', {
+                      checkData: check,
+                      selectedItem: selectedItem,
+                      buyPrice,
+                      appreciationRate,
+                      consignmentPriceVal,
+                      isOldAsset,
+                      selectedItemPrice: selectedItem.price,
+                      selectedItemAppreciationRate: selectedItem.appreciation_rate,
+                      checkBuyPrice: check.buy_price,
+                      checkAppreciationRate: check.appreciation_rate,
+                    });
 
                     return (
-                      <div className="grid grid-cols-3 gap-2 pt-3 border-t border-dashed border-gray-100">
-                        <div className="flex flex-col">
-                          <span className="text-[10px] text-gray-400 mb-0.5">当前估值</span>
-                          <span className="text-sm font-bold text-gray-900 font-[DINAlternate-Bold]">
-                            ¥{toString(safePrice, 2)}
-                          </span>
-                        </div>
-                        <div className="flex flex-col items-center border-l border-r border-gray-50">
-                          <span className="text-[10px] text-gray-400 mb-0.5">预期收益 (5.5%)</span>
-                          <span className="text-sm font-bold text-red-500 font-[DINAlternate-Bold]">
-                            +{toString(expectedProfit, 2)}
-                          </span>
-                        </div>
-                        <div className="flex flex-col items-end">
-                          <span className="text-[10px] text-gray-400 mb-0.5">预估回款</span>
-                          <span className="text-sm font-bold text-gray-900 font-[DINAlternate-Bold]">
-                            ¥{toString(expectedTotal, 2)}
-                          </span>
+                      <div className="pt-3 border-t border-dashed border-gray-100 space-y-2">
+                        {isOldAsset && (
+                          <div className="flex items-center gap-1.5 px-2 py-1 bg-amber-50 rounded-lg border border-amber-200 w-fit">
+                            <span className="text-xs font-medium text-amber-700">旧资产</span>
+                          </div>
+                        )}
+                        <div className="grid grid-cols-3 gap-2">
+                          <div className="flex flex-col">
+                            <span className="text-[10px] text-gray-400 mb-0.5">买入价</span>
+                            <span className="text-sm font-bold text-gray-900 font-[DINAlternate-Bold]">
+                              ¥{toString(buyPrice, 2)}
+                            </span>
+                          </div>
+                          <div className="flex flex-col items-center border-l border-r border-gray-50">
+                            <span className="text-[10px] text-gray-400 mb-0.5">增值比例</span>
+                            <span className={`text-sm font-bold font-[DINAlternate-Bold] ${appreciationRate >= 0 ? 'text-red-500' : 'text-green-600'}`}>
+                              {(appreciationRate >= 0 ? '+' : '') + (appreciationRate * 100).toFixed(1)}%
+                            </span>
+                          </div>
+                          <div className="flex flex-col items-end">
+                            <span className="text-[10px] text-gray-400 mb-0.5">预估回款</span>
+                            <span className="text-sm font-bold text-gray-900 font-[DINAlternate-Bold]">
+                              ¥{toString(consignmentPriceVal, 2)}
+                            </span>
+                          </div>
                         </div>
                       </div>
                     );
@@ -1731,11 +1762,15 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onItemSelect, initialConsig
 
                   <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 space-y-4">
                     {(() => {
-                      const rawPrice = selectedItem.market_price || selectedItem.price || selectedItem.current_price || selectedItem.original_price || '0';
-                      const safePrice = parseFloat(String(rawPrice)) || 0;
+                      const check = consignmentCheckData || {};
+                      const consignmentPriceVal = computeConsignmentPrice(check) || (() => {
+                        const buy = Number(check.buy_price ?? selectedItem.buy_price ?? selectedItem.price ?? 0);
+                        const rate = Number(check.appreciation_rate ?? 0);
+                        return buy > 0 ? buy * (1 + rate) : 0;
+                      })();
 
-                      // 使用精确的金额计算工具（避免浮点数精度问题）
-                      const serviceFee = toNumber(multiply(safePrice, 0.03));
+                      // 确权技术服务费 3% 以寄售价格计算
+                      const serviceFee = toNumber(multiply(consignmentPriceVal, 0.03));
                       const balance = parseFloat(userInfo?.service_fee_balance || '0');
                       const isBalanceEnough = balance >= serviceFee;
 

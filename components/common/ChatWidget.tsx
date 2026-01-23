@@ -181,7 +181,7 @@ const getCurrentUserInfo = async (): Promise<ChatWidgetConfig['userInfo']> => {
  * 不显示浮动按钮，通过 openChatWidget() 打开
  */
 const ChatWidget: React.FC<ChatWidgetProps> = ({
-  useCustomButton = true, // 默认隐藏浮动按钮
+  useCustomButton = true, // 默认隐藏浮动按钮（使用自定义可拖动按钮）
   autoOpen = 0,
   onStatusChange,
 }) => {

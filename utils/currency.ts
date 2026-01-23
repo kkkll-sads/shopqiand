@@ -159,7 +159,12 @@ export function toString(
   value: Decimal | number | string | null | undefined,
   decimals: number = 2
 ): string {
-  return toDecimal(value).toFixed(decimals);
+  const decimal = toDecimal(value);
+  // 确保 decimal 是有效的 Decimal 实例
+  if (!(decimal instanceof Decimal)) {
+    return new Decimal(0).toFixed(decimals);
+  }
+  return decimal.toFixed(decimals);
 }
 
 /**

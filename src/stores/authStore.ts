@@ -5,6 +5,8 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import type { UserInfo, LoginSuccessPayload } from '../../types';
+import { STORAGE_KEYS as GLOBAL_STORAGE_KEYS } from '../../constants/storageKeys';
+import { useAppStore } from './appStore';
 
 // 存储键名常量
 const STORAGE_KEYS = {
@@ -61,6 +63,7 @@ export const useAuthStore = create<AuthState>()(
 
       // 登出
       logout: () => {
+        // 清空认证状态
         set({
           isLoggedIn: false,
           user: null,
@@ -69,6 +72,47 @@ export const useAuthStore = create<AuthState>()(
           realName: null,
           isRealNameVerified: false,
         });
+
+        // 清空应用缓存
+        try {
+          // 清空 appStore 中的缓存
+          const appStore = useAppStore.getState();
+          appStore.clearAllListCaches();
+          appStore.clearMarketCache();
+          appStore.clearSelectedProduct();
+          appStore.setSelectedCollectionItem(null);
+          appStore.setNewsList([]);
+          appStore.setExtraUnreadCount(0);
+          appStore.setPopupQueue([]);
+          appStore.setShowPopupAnnouncement(false);
+
+          // 清空 localStorage 中的业务缓存
+          const cacheKeysToRemove = [
+            GLOBAL_STORAGE_KEYS.READ_MESSAGE_IDS_KEY,
+            GLOBAL_STORAGE_KEYS.READ_NEWS_IDS_KEY,
+            GLOBAL_STORAGE_KEYS.NEWS_ACTIVE_TAB_KEY,
+            'chat_button_position', // 客服悬浮按钮位置
+            'cat_notification_settings', // 通知设置
+            'search_history', // 搜索历史
+          ];
+
+          cacheKeysToRemove.forEach(key => {
+            try {
+              localStorage.removeItem(key);
+            } catch (e) {
+              // 忽略单个键删除失败
+            }
+          });
+
+          // 清空 sessionStorage 中的缓存
+          try {
+            sessionStorage.clear();
+          } catch (e) {
+            // 忽略 sessionStorage 清空失败
+          }
+        } catch (error) {
+          console.error('清空缓存失败:', error);
+        }
       },
 
       // 更新用户信息

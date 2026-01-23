@@ -2,31 +2,33 @@
  * FriendDetail - 好友详情页（新路由系统版）
  *
  * ✅ 已迁移：使用 React Router + useNavigate
+ * ✅ 已对接：好友详情接口，显示层级和寄售收益
  *
  * @author 树交所前端团队
- * @version 3.0.0（新路由版）
- * @refactored 2026-01-14
+ * @version 4.0.0（API对接版）
+ * @refactored 2026-01-21
  */
 
 import React from 'react';
+import { Wallet, Award, Users } from 'lucide-react';
 import PageContainer from '../../../components/layout/PageContainer';
 import { normalizeAssetUrl } from '../../../services/api';
 import { TeamMember } from '../../../types';
 import { formatTime } from '../../../utils/format';
 import { useNavigate } from 'react-router-dom';
+import { MemberDetailData } from '../../../services/user';
+import { formatAmount } from '../../../utils/format';
 
 interface FriendDetailProps {
   friend?: TeamMember;
   id: string;
+  memberDetail?: MemberDetailData;
 }
 
-const FriendDetail: React.FC<FriendDetailProps> = ({ friend, id }) => {
+const FriendDetail: React.FC<FriendDetailProps> = ({ friend, id, memberDetail }) => {
   const navigate = useNavigate();
-  // 如果没有传入 friend 对象，可以显示加载中或者空状态
-  // 由于目前 API 不支持单独获取好友详情，这里先假设通过 props 传入
-  // 如果 future 需要支持 deep link，则需要增加 API 调用
 
-  if (!friend) {
+  if (!friend || !memberDetail) {
     return (
       <PageContainer title="好友详情" onBack={() => navigate(-1)}>
         <div className="flex flex-col items-center justify-center pt-20 text-gray-400">
@@ -42,6 +44,8 @@ const FriendDetail: React.FC<FriendDetailProps> = ({ friend, id }) => {
     (friend.register_time ? friend.register_time.split(' ')[0] : '') ||
     (friend.join_time ? formatTime(friend.join_time, 'YYYY-MM-DD') : '-');
 
+  const { user_info, level, level_text, consignment_income } = memberDetail;
+
   return (
     <PageContainer title="好友详情" onBack={() => navigate(-1)}>
       <div className="p-4 space-y-4">
@@ -51,8 +55,8 @@ const FriendDetail: React.FC<FriendDetailProps> = ({ friend, id }) => {
 
           <div className="w-20 h-20 rounded-full border-4 border-white shadow-md mb-3 overflow-hidden">
             <img
-              src={normalizeAssetUrl(friend.avatar) || '/static/images/avatar.png'}
-              alt={friend.nickname}
+              src={normalizeAssetUrl(user_info.avatar) || '/static/images/avatar.png'}
+              alt={user_info.nickname}
               className="w-full h-full object-cover"
               onError={(e) => {
                 const target = e.target as HTMLImageElement;
@@ -62,26 +66,73 @@ const FriendDetail: React.FC<FriendDetailProps> = ({ friend, id }) => {
           </div>
 
           <h2 className="text-xl font-bold text-gray-900 mb-1">
-            {friend.nickname || '未命名用户'}
+            {user_info.nickname || '未命名用户'}
           </h2>
-          <p className="text-sm text-gray-500">@{friend.username}</p>
+          <p className="text-sm text-gray-500 mb-2">@{user_info.username}</p>
+          
+          {/* 层级标签 */}
+          {level_text && (
+            <div className="flex items-center gap-1.5 px-3 py-1 bg-gradient-to-r from-orange-50 to-amber-50 rounded-full border border-orange-200">
+              <Users size={12} className="text-orange-600" />
+              <span className="text-xs font-medium text-orange-600">{level_text}</span>
+            </div>
+          )}
+        </div>
+
+        {/* 寄售收益卡片 */}
+        <div className="bg-gradient-to-br from-orange-50 to-amber-50 rounded-2xl p-5 shadow-sm border border-orange-100">
+          <div className="flex items-center gap-2 mb-4">
+            <Wallet size={18} className="text-orange-600" />
+            <h3 className="text-base font-bold text-gray-900">寄售收益</h3>
+            <span className="text-xs text-gray-500 ml-auto">（含下级收益）</span>
+          </div>
+          
+          <div className="grid grid-cols-2 gap-3">
+            {/* 可提现收益 */}
+            <div className="bg-white rounded-xl p-4 border border-orange-100">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-orange-100 to-amber-100 flex items-center justify-center">
+                  <Wallet size={14} className="text-orange-600" />
+                </div>
+                <span className="text-xs text-gray-500">可提现收益</span>
+              </div>
+              <p className="text-xl font-black text-orange-600">
+                ¥{formatAmount(consignment_income.withdrawable_income)}
+              </p>
+            </div>
+
+            {/* 消费金收益 */}
+            <div className="bg-white rounded-xl p-4 border border-orange-100">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-100 to-yellow-100 flex items-center justify-center">
+                  <Award size={14} className="text-amber-600" />
+                </div>
+                <span className="text-xs text-gray-500">消费金收益</span>
+              </div>
+              <p className="text-xl font-black text-amber-600">
+                {formatAmount(consignment_income.score_income, { decimals: 0 })}
+              </p>
+            </div>
+          </div>
         </div>
 
         {/* 详细信息列表 */}
         <div className="bg-white rounded-xl shadow-sm overflow-hidden">
           <div className="px-5 py-4 border-b border-gray-50 flex items-center justify-between">
             <span className="text-sm text-gray-500">用户 ID</span>
-            <span className="text-sm font-medium text-gray-900">{friend.id}</span>
+            <span className="text-sm font-medium text-gray-900">{user_info.id}</span>
           </div>
 
           <div className="px-5 py-4 border-b border-gray-50 flex items-center justify-between">
-            <span className="text-sm text-gray-500">手机号</span>
-            <span className="text-sm font-medium text-gray-900">{friend.mobile || '-'}</span>
+            <span className="text-sm text-gray-500">注册时间</span>
+            <span className="text-sm font-medium text-gray-900">
+              {user_info.register_time || joinDate || '-'}
+            </span>
           </div>
 
-          <div className="px-5 py-4 border-b border-gray-50 flex items-center justify-between">
-            <span className="text-sm text-gray-500">加入日期</span>
-            <span className="text-sm font-medium text-gray-900">{joinDate}</span>
+          <div className="px-5 py-4 flex items-center justify-between">
+            <span className="text-sm text-gray-500">层级关系</span>
+            <span className="text-sm font-medium text-gray-900">{level_text || '-'}</span>
           </div>
         </div>
       </div>

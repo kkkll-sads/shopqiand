@@ -278,7 +278,7 @@ export interface MyConsignmentListData {
  * @param params - 查询参数
  * @param params.page - 页码，默认1
  * @param params.limit - 每页数量，默认10，最大50
- * @param params.status - 寄售状态: 0=全部, 1=寄售中, 2=已售出, 3=已取消
+ * @param params.status - 寄售状态: 0=全部, 1=寄售中, 2=已售出, 3=已取消, 4=已取消(映射到数据库状态0)
  * @param params.token - 用户登录Token（可选，会自动从localStorage获取）
  * 
  * @returns 返回数据包括：
@@ -291,7 +291,12 @@ export async function getMyConsignmentList(params: FetchMyConsignmentListParams 
     if (params.page) search.set('page', String(params.page));
     if (params.limit) search.set('limit', String(params.limit));
     if (params.status !== undefined && params.status !== 0) {
-        search.set('status', String(params.status));
+        // 接口参数映射：status=4 映射到数据库状态0（已取消）
+        let dbStatus = params.status;
+        if (params.status === 4) {
+            dbStatus = 0;
+        }
+        search.set('status', String(dbStatus));
     }
 
     const path = `${API_ENDPOINTS.collectionConsignment.myConsignmentList}?${search.toString()}`;
@@ -315,19 +320,44 @@ export async function getConsignmentDetail(params: {
     consignment_id: number;
     token?: string
 }): Promise<ApiResponse<ConsignmentDetailData>> {
-    const path = `${API_ENDPOINTS.collectionConsignment.consignmentDetail}?id=${params.consignment_id}`;
+    const path = `${API_ENDPOINTS.collectionConsignment.consignmentDetail}?consignment_id=${params.consignment_id}`;
     return authedFetch<ConsignmentDetailData>(path, { method: 'GET', token: params.token });
 }
 /**
  * 寄售解锁状态检查接口返回数据
+ *
+ * 返回字段（已移除 market_price、expected_profit、appreciation_debug、重复 zone_id）：
+ * - buy_price: 买入价
+ * - appreciation_rate: 增值比例，如 0.05 表示 5%
+ * - is_old_asset_package: 是否旧资产包，用于展示「旧资产」标识
+ * - 寄售价格由前端计算：寄售价格 = buy_price * (1 + appreciation_rate)
  */
 export interface ConsignmentCheckData {
     unlocked?: boolean;
+    can_consign?: boolean;
     remaining_seconds?: number;
     remaining_text?: string;
     unlock_hours?: number;
     consignment_unlock_hours?: number;
+    /** 买入价 */
+    buy_price?: number;
+    /** 增值比例，如 0.05 表示 5% */
+    appreciation_rate?: number;
+    /** 是否旧资产包 */
+    is_old_asset_package?: boolean;
     [key: string]: any;
+}
+
+/**
+ * 根据 consignmentCheck 返回的 buy_price、appreciation_rate 计算寄售价格
+ * 寄售价格 = buy_price * (1 + appreciation_rate)
+ */
+export function computeConsignmentPrice(check: ConsignmentCheckData | null | undefined): number {
+    if (!check) return 0;
+    const buy = Number(check.buy_price ?? 0);
+    const rate = Number(check.appreciation_rate ?? 0);
+    if (buy <= 0) return 0;
+    return buy * (1 + rate);
 }
 
 /**

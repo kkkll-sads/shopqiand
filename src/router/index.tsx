@@ -380,6 +380,10 @@ const routes: RouteObject[] = [
         element: <LazyComponent component={MoneyLogDetail} />,
       },
       {
+        path: '/order-fund-detail',
+        element: <LazyComponent component={OrderFundDetail} />,
+      },
+      {
         path: '/order-fund/:id',
         element: <LazyComponent component={OrderFundDetail} />,
       },

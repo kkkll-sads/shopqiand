@@ -263,17 +263,11 @@ const ReservationRecordDetailPage: React.FC = () => {
                         </div>
                         算力信息
                     </h3>
-                    <div className="grid grid-cols-3 gap-3">
+                    <div className={`grid gap-3 ${record.extra_hashrate_cost !== undefined && Number(record.extra_hashrate_cost) > 0 ? 'grid-cols-2' : 'grid-cols-1'}`}>
                         <div className="bg-gradient-to-br from-amber-50 to-yellow-50 rounded-xl p-3 text-center border border-amber-100">
                             <p className="text-[10px] text-gray-500 mb-1">消耗算力</p>
                             <p className="text-xl font-black text-amber-600">{record.power_used || 0}</p>
                         </div>
-                        {record.base_hashrate_cost !== undefined && (
-                            <div className="bg-gradient-to-br from-gray-50 to-slate-50 rounded-xl p-3 text-center border border-gray-100">
-                                <p className="text-[10px] text-gray-500 mb-1">基础算力</p>
-                                <p className="text-xl font-black text-gray-700">{record.base_hashrate_cost}</p>
-                            </div>
-                        )}
                         {record.extra_hashrate_cost !== undefined && Number(record.extra_hashrate_cost) > 0 && (
                             <div className="bg-gradient-to-br from-emerald-50 to-green-50 rounded-xl p-3 text-center border border-emerald-100">
                                 <p className="text-[10px] text-gray-500 mb-1">额外算力</p>

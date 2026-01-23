@@ -466,15 +466,16 @@ const ReservationPage: React.FC<ReservationPageProps> = ({ product, preloadedUse
                     </div>
                 </div>
 
-                {/* Configuration */}
+                {/* 申购配置（合并算力配置和申购数量） */}
                 <div className="bg-white p-5 rounded-2xl shadow-lg border border-gray-100">
                     <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
                         <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-100 to-orange-50 flex items-center justify-center">
                             <Zap size={18} className="text-orange-600 fill-orange-600" />
                         </div>
-                        <span>算力配置</span>
+                        <span>申购配置</span>
                     </h3>
 
+                    {/* 算力配置部分 */}
                     <div className="mb-6">
                         <div className="flex justify-between text-sm text-gray-600 mb-2">
                             <span>基础算力需求</span>
@@ -503,7 +504,7 @@ const ReservationPage: React.FC<ReservationPageProps> = ({ product, preloadedUse
                         </div>
                     </div>
 
-                    <div className="border-t border-gray-100 pt-4">
+                    <div className="border-t border-gray-100 pt-4 mb-6">
                         <div className="flex justify-between items-center mb-2">
                             <span className="text-sm text-gray-500">当前持有绿色算力</span>
                             {userInfoLoading ? (
@@ -523,6 +524,55 @@ const ReservationPage: React.FC<ReservationPageProps> = ({ product, preloadedUse
                                 算力不足，请前往【我的-算力兑换】获取
                             </div>
                         )}
+                    </div>
+
+                    {/* 申购数量部分 */}
+                    <div className="border-t border-gray-100 pt-4">
+                        <div className="flex items-center justify-between mb-4">
+                            <span className="text-sm font-medium text-gray-700">申购数量</span>
+                        </div>
+                        <div className="flex items-center gap-4 bg-gray-50 p-3 rounded-lg">
+                            <button
+                                onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                                disabled={quantity <= 1}
+                                className={`w-10 h-10 flex items-center justify-center bg-white rounded-full shadow font-bold text-lg transition-all ${quantity <= 1 ? 'text-gray-300 cursor-not-allowed' : 'text-gray-600 active:scale-95'}`}
+                            >-</button>
+                            <div className="flex-1 text-center">
+                                <span className="font-mono font-bold text-2xl text-gray-900">{quantity}</span>
+                                <span className="text-sm text-gray-500 ml-1">份</span>
+                            </div>
+                            <button
+                                onClick={() => setQuantity(Math.min(100, quantity + 1))}
+                                disabled={quantity >= 100}
+                                className={`w-10 h-10 flex items-center justify-center bg-white rounded-full shadow font-bold text-lg transition-all ${quantity >= 100 ? 'text-gray-300 cursor-not-allowed' : 'text-green-600 active:scale-95'}`}
+                            >+</button>
+                        </div>
+
+                        <div className="mt-3 flex justify-between text-sm">
+                            <span className="text-gray-500">单份冻结金额</span>
+                            <span className="font-mono text-gray-700">¥{zoneMaxPrice.toLocaleString()}</span>
+                        </div>
+                        <div className="flex justify-between text-sm mt-1">
+                            <span className="text-gray-500">单份算力需求</span>
+                            <span className="font-mono text-gray-700">{baseHashrate + extraHashrate}</span>
+                        </div>
+                        <div className="border-t border-gray-100 mt-3 pt-3 flex justify-between">
+                            <span className="text-sm font-medium text-gray-700">合计冻结金额</span>
+                            <span className="font-mono font-bold text-red-600">¥{frozenAmount.toLocaleString()}</span>
+                        </div>
+                        <div className="flex justify-between mt-1">
+                            <span className="text-sm font-medium text-gray-700">合计算力需求</span>
+                            <span className="font-mono font-bold text-orange-600">{totalRequiredHashrate}</span>
+                        </div>
+
+                        <div className="mt-3 p-2 bg-green-50 rounded-lg border border-green-100">
+                            <div className="flex items-start gap-2">
+                                <Info size={14} className="text-green-500 flex-shrink-0 mt-0.5" />
+                                <p className="text-xs text-green-700 leading-relaxed">
+                                    每份预约将独立参与撮合，最多可一次申购100份
+                                </p>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -569,59 +619,6 @@ const ReservationPage: React.FC<ReservationPageProps> = ({ product, preloadedUse
                             余额不足，请充值
                         </div>
                     )}
-                </div>
-
-                {/* 数量选择 */}
-                <div className="bg-white p-5 rounded-2xl shadow-lg border border-gray-100">
-                    <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
-                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-green-100 to-green-50 flex items-center justify-center">
-                            <Shield size={18} className="text-green-600" />
-                        </div>
-                        <span>申购数量</span>
-                    </h3>
-
-                    <div className="flex items-center gap-4 bg-gray-50 p-3 rounded-lg">
-                        <button
-                            onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                            disabled={quantity <= 1}
-                            className={`w-10 h-10 flex items-center justify-center bg-white rounded-full shadow font-bold text-lg transition-all ${quantity <= 1 ? 'text-gray-300 cursor-not-allowed' : 'text-gray-600 active:scale-95'}`}
-                        >-</button>
-                        <div className="flex-1 text-center">
-                            <span className="font-mono font-bold text-2xl text-gray-900">{quantity}</span>
-                            <span className="text-sm text-gray-500 ml-1">份</span>
-                        </div>
-                        <button
-                            onClick={() => setQuantity(Math.min(100, quantity + 1))}
-                            disabled={quantity >= 100}
-                            className={`w-10 h-10 flex items-center justify-center bg-white rounded-full shadow font-bold text-lg transition-all ${quantity >= 100 ? 'text-gray-300 cursor-not-allowed' : 'text-green-600 active:scale-95'}`}
-                        >+</button>
-                    </div>
-
-                    <div className="mt-3 flex justify-between text-sm">
-                        <span className="text-gray-500">单份冻结金额</span>
-                        <span className="font-mono text-gray-700">¥{zoneMaxPrice.toLocaleString()}</span>
-                    </div>
-                    <div className="flex justify-between text-sm mt-1">
-                        <span className="text-gray-500">单份算力需求</span>
-                        <span className="font-mono text-gray-700">{baseHashrate + extraHashrate}</span>
-                    </div>
-                    <div className="border-t border-gray-100 mt-3 pt-3 flex justify-between">
-                        <span className="text-sm font-medium text-gray-700">合计冻结金额</span>
-                        <span className="font-mono font-bold text-red-600">¥{frozenAmount.toLocaleString()}</span>
-                    </div>
-                    <div className="flex justify-between mt-1">
-                        <span className="text-sm font-medium text-gray-700">合计算力需求</span>
-                        <span className="font-mono font-bold text-orange-600">{totalRequiredHashrate}</span>
-                    </div>
-
-                    <div className="mt-3 p-2 bg-green-50 rounded-lg border border-green-100">
-                        <div className="flex items-start gap-2">
-                            <Info size={14} className="text-green-500 flex-shrink-0 mt-0.5" />
-                            <p className="text-xs text-green-700 leading-relaxed">
-                                每份预约将独立参与撮合，最多可一次申购100份
-                            </p>
-                        </div>
-                    </div>
                 </div>
             </div>
 

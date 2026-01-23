@@ -18,6 +18,7 @@ import {
   getConsignmentCheck,
   rightsDeliver,
   consignCollectionItem,
+  computeConsignmentPrice,
   MyCollectionItem,
 } from '../services/api';
 import { getStoredToken } from '../services/client';
@@ -517,7 +518,12 @@ export function useAssetActionModal(
         return;
       }
 
-      const priceValue = parseFloat(String(context.selectedItem.price || '0'));
+      const check = context.consignmentCheckData || {};
+      const priceValue = computeConsignmentPrice(check) || (() => {
+        const buy = Number(check.buy_price ?? context.selectedItem?.buy_price ?? context.selectedItem?.price ?? 0);
+        const rate = Number(check.appreciation_rate ?? 0);
+        return buy > 0 ? buy * (1 + rate) : 0;
+      })();
       if (Number.isNaN(priceValue) || priceValue <= 0) {
         showToast('error', '错误', '藏品价格无效，无法进行寄售');
         return;

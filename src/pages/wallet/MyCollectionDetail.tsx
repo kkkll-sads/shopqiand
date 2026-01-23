@@ -5,7 +5,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ChevronLeft, Share2, Copy, Shield, Fingerprint, Award, ExternalLink, ArrowRightLeft, Store, X, Cpu, FileText } from 'lucide-react';
-import { MyCollectionItem, fetchProfile, fetchRealNameStatus, fetchUserCollectionDetail, getConsignmentCheck, consignCollectionItem, getMyCollection, normalizeAssetUrl, toMining } from '../../../services/api';
+import { MyCollectionItem, fetchProfile, fetchRealNameStatus, fetchUserCollectionDetail, getConsignmentCheck, consignCollectionItem, computeConsignmentPrice, getMyCollection, normalizeAssetUrl, toMining } from '../../../services/api';
 import { getStoredToken } from '../../../services/client';
 import { UserInfo } from '../../../types';
 import { useNotification } from '../../../context/NotificationContext';
@@ -195,7 +195,9 @@ const MyCollectionDetail: React.FC<MyCollectionDetailProps> = ({ item: initialIt
                 }
 
                 const res = await getConsignmentCheck({ user_collection_id: collectionId, token });
-                setConsignmentCheckData(res?.data ?? null);
+                // 使用 extractData 提取数据，支持 code === 0 或 code === 1
+                const checkData = extractData(res);
+                setConsignmentCheckData(checkData ?? null);
             } catch (e) {
                 console.error('Failed to load consignment check:', e);
                 setActionError('加载寄售检查失败');
@@ -391,12 +393,6 @@ const MyCollectionDetail: React.FC<MyCollectionDetailProps> = ({ item: initialIt
                                             </div>
                                         )}
 
-                                        {item.expected_profit !== undefined && (
-                                            <div>
-                                                <div className="text-[10px] text-gray-400">预期收益</div>
-                                                <div className="text-sm font-bold text-amber-600">+{item.expected_profit}</div>
-                                            </div>
-                                        )}
                                     </div>
                                 </div>
                             </div>
@@ -463,7 +459,6 @@ const MyCollectionDetail: React.FC<MyCollectionDetailProps> = ({ item: initialIt
                             <span className="text-sm text-gray-500 font-medium">当前估值</span>
                             <div className="text-right">
                                 <span className="text-lg font-bold text-gray-700 font-mono">¥{currentValuation}</span>
-                                <span className={`text-xs font-bold ml-2 px-1.5 py-0.5 rounded-full ${isPositive ? 'text-red-500 bg-red-50' : 'text-green-500 bg-green-50'}`}>{yieldText}</span>
                             </div>
                         </div>
 
@@ -570,35 +565,40 @@ const MyCollectionDetail: React.FC<MyCollectionDetailProps> = ({ item: initialIt
                                 </div>
 
                                 {(() => {
-                                    const rawBuyPrice = item.buy_price || item.price || '0';
-                                    const safeBuyPrice = parseFloat(String(rawBuyPrice)) || 0;
-
-                                    const rawMarketPrice = item.market_price || '0';
-                                    const safeMarketPrice = parseFloat(String(rawMarketPrice)) || 0;
-
-                                    let dynamicYieldStr = '0.0';
-                                    if (item.expected_profit !== undefined && item.expected_profit !== null) {
-                                        dynamicYieldStr = String(item.expected_profit);
-                                    } else if (safeBuyPrice > 0) {
-                                        dynamicYieldStr = ((safeMarketPrice - safeBuyPrice) / safeBuyPrice * 100).toFixed(1);
-                                    }
-                                    const isPos = parseFloat(dynamicYieldStr) >= 0;
+                                    const check = consignmentCheckData || {};
+                                    // 优先使用 userCollection/detail 接口返回的 appreciation_rate，其次使用 consignmentCheck 返回的
+                                    // buy_price 优先使用 consignmentCheck，其次使用 detail 接口返回的
+                                    const buyPrice = Number(check.buy_price ?? item.buy_price ?? item.price ?? 0);
+                                    const appreciationRate = Number(item.appreciation_rate ?? check.appreciation_rate ?? 0);
+                                    // 计算寄售价格：buy_price * (1 + appreciation_rate)
+                                    const consignmentPriceVal = buyPrice > 0 
+                                      ? buyPrice * (1 + appreciationRate) 
+                                      : 0;
+                                    // is_old_asset_package 优先使用 item（来自 userCollection/detail），其次使用 check
+                                    const isOldAsset = !!(item.is_old_asset_package ?? check.is_old_asset_package);
 
                                     return (
-                                        <div className="grid grid-cols-3 gap-2 pt-3 border-t border-dashed border-gray-100">
-                                            <div className="flex flex-col">
-                                                <span className="text-xs text-gray-400 mb-1">当前估值</span>
-                                                <span className="text-sm font-bold text-gray-900">¥{safeBuyPrice.toFixed(2)}</span>
-                                            </div>
-                                            <div className="flex flex-col">
-                                                <span className="text-xs text-gray-400 mb-1">预期收益</span>
-                                                <span className={`text-sm font-bold ${isPos ? 'text-red-500' : 'text-green-600'}`}>
-                                                    {(isPos ? '+' : '') + dynamicYieldStr + '%'}
-                                                </span>
-                                            </div>
-                                            <div className="flex flex-col">
-                                                <span className="text-xs text-gray-400 mb-1">预期回款</span>
-                                                <span className="text-sm font-bold text-gray-900">¥{safeMarketPrice.toFixed(2)}</span>
+                                        <div className="pt-3 border-t border-dashed border-gray-100 space-y-2">
+                                            {isOldAsset && (
+                                                <div className="flex items-center gap-1.5 px-2 py-1 bg-amber-50 rounded-lg border border-amber-200 w-fit mb-2">
+                                                    <span className="text-xs font-medium text-amber-700">旧资产</span>
+                                                </div>
+                                            )}
+                                            <div className="grid grid-cols-3 gap-2">
+                                                <div className="flex flex-col">
+                                                    <span className="text-xs text-gray-400 mb-1">买入价</span>
+                                                    <span className="text-sm font-bold text-gray-900">¥{buyPrice.toFixed(2)}</span>
+                                                </div>
+                                                <div className="flex flex-col">
+                                                    <span className="text-xs text-gray-400 mb-1">增值比例</span>
+                                                    <span className={`text-sm font-bold ${appreciationRate >= 0 ? 'text-red-500' : 'text-green-600'}`}>
+                                                        {(appreciationRate >= 0 ? '+' : '') + (appreciationRate * 100).toFixed(1)}%
+                                                    </span>
+                                                </div>
+                                                <div className="flex flex-col">
+                                                    <span className="text-xs text-gray-400 mb-1">预期回款</span>
+                                                    <span className="text-sm font-bold text-gray-900">¥{consignmentPriceVal.toFixed(2)}</span>
+                                                </div>
                                             </div>
                                         </div>
                                     );
@@ -628,8 +628,13 @@ const MyCollectionDetail: React.FC<MyCollectionDetailProps> = ({ item: initialIt
                             })()}
 
                             {(() => {
-                                const safePrice = parseFloat(String(item.market_price || item.price || '0')) || 0;
-                                const serviceFee = safePrice * 0.03;
+                                const check = consignmentCheckData || {};
+                                const consignmentPriceVal = computeConsignmentPrice(check) || (() => {
+                                    const buy = Number(check.buy_price ?? item.buy_price ?? item.price ?? 0);
+                                    const rate = Number(check.appreciation_rate ?? 0);
+                                    return buy > 0 ? buy * (1 + rate) : 0;
+                                })();
+                                const serviceFee = consignmentPriceVal * 0.03;
 
                                 return (
                                     <div className="bg-white rounded-lg p-4 border border-gray-100">
@@ -691,7 +696,12 @@ const MyCollectionDetail: React.FC<MyCollectionDetailProps> = ({ item: initialIt
                                             return;
                                         }
 
-                                        const priceValue = parseFloat(item.price || '0');
+                                        const priceValue = computeConsignmentPrice(consignmentCheckData) || (() => {
+                                            const c = consignmentCheckData || {};
+                                            const buy = Number(c.buy_price ?? item.buy_price ?? item.price ?? 0);
+                                            const rate = Number(c.appreciation_rate ?? 0);
+                                            return buy > 0 ? buy * (1 + rate) : 0;
+                                        })();
 
                                         const res = await consignCollectionItem({
                                             user_collection_id: collectionId,
