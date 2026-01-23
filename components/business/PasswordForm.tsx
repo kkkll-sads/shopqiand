@@ -418,7 +418,7 @@ const PasswordForm: React.FC<PasswordFormProps> = ({
                                     setCurrentType('reset_pay_sms');
                                     setError('');
                                     setCode('');
-                                    setPhone('');
+                                    setPhone(presetAccount);
                                     setOldPassword('');
                                     setNewPassword('');
                                     setConfirmPassword('');

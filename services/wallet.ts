@@ -11,6 +11,7 @@ export interface PaymentAccountItem {
     type_text?: string;
     account: string;
     account_name: string;
+    account_number_display?: string; // 用于显示的脱敏账号
     bank_name?: string;
     bank_branch?: string;
     qrcode?: string;

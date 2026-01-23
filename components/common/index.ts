@@ -60,3 +60,6 @@ export { default as RealNameRequiredModal } from './RealNameRequiredModal';
 
 // 版本更新提示弹窗组件
 export { default as UpdatePromptModal } from './UpdatePromptModal';
+
+// 在线客服组件
+export { default as ChatWidget, openChatWidget, closeChatWidget, toggleChatWidget, isChatWidgetOpen } from './ChatWidget';

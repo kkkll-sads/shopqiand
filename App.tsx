@@ -95,7 +95,7 @@ import MyCollectionDetail from './pages/wallet/MyCollectionDetail';
 import ClaimHistory from './pages/wallet/ClaimHistory';
 import ClaimDetail from './pages/wallet/ClaimDetail';
 import HashrateExchange from './pages/wallet/HashrateExchange';
-import { RealNameRequiredModal } from './components/common';
+import { RealNameRequiredModal, ChatWidget } from './components/common';
 import { NotificationProvider } from './context/NotificationContext';
 import { GlobalNotificationSystem } from './components/common/GlobalNotificationSystem';
 import './styles/notifications.css';
@@ -1001,6 +1001,7 @@ const App: React.FC = () => {
   return (
     <NotificationProvider>
       <GlobalNotificationSystem />
+      <ChatWidget />
       <AppContent />
     </NotificationProvider>
   );

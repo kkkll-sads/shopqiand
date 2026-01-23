@@ -129,7 +129,7 @@ const CardManagement: React.FC<CardManagementProps> = ({ onBack }) => {
     const rawId = item.id ?? '';
     const id = rawId === null || rawId === undefined ? '' : String(rawId);
     const typeText = item.type_text || item.type || '卡号';
-    const account = item.account || '';
+    const account = item.account_number_display || item.account || '';
     const bankName = item.bank_name || '';
     const branch = item.bank_branch || '';
     const holder = item.account_name || '';

@@ -197,7 +197,7 @@ const TradingZone: React.FC<TradingZoneProps> = ({
             clearItemsError();
 
             // 获取商品列表（新 API：官方+寄售按 package_name + zone_id 统一归类）
-            const response = await fetchCollectionItemsBySession(session.id, { page: 1, limit: 10 });
+            const response = await fetchCollectionItemsBySession(session.id, { page: 1, limit: 50 });
 
             console.log('API Response:', response);
             console.log('Items list:', response.data?.list);
