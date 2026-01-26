@@ -5,13 +5,13 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ChevronLeft, Search, X, Clock, ExternalLink } from 'lucide-react';
-import { queryCollectionByCode, CollectionItemDetail } from '../../../services/api';
-import { useNotification } from '../../../context/NotificationContext';
-import { LoadingSpinner } from '../../../components/common';
+import { queryCollectionByCode, CollectionItemDetail } from '@/services/api';
+import { useNotification } from '@/context/NotificationContext';
+import { LoadingSpinner } from '@/components/common';
 import ProductDetail from './ProductDetail';
-import { Product } from '../../../types';
-import { isSuccess, extractError } from '../../../utils/apiHelpers';
-import { errorLog } from '../../../utils/logger';
+import { Product } from '@/types';
+import { isSuccess, extractError } from '@/utils/apiHelpers';
+import { errorLog } from '@/utils/logger';
 
 const SEARCH_HISTORY_KEY = 'search_history';
 const MAX_HISTORY_COUNT = 10;

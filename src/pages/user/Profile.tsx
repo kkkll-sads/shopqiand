@@ -27,24 +27,24 @@ import {
   Truck,
   CheckCircle,
 } from 'lucide-react';
-import { formatAmount, formatPriceSmart } from '../../../utils/format';
+import { formatAmount, formatPriceSmart } from '@/utils/format';
 import {
   fetchProfile,
   normalizeAssetUrl,
   fetchShopOrderStatistics,
   ShopOrderStatistics,
   fetchSignInInfo,
-} from '../../../services/api';
-import { getStoredToken } from '../../../services/client';
-import { UserInfo } from '../../../types';
-import { useAuthStore } from '../../stores/authStore';
-import { useUnreadNewsCount } from '../../stores/appStore';
-import { isSuccess, extractData, extractError } from '../../../utils/apiHelpers';
-import { useErrorHandler } from '../../../hooks/useErrorHandler';
+} from '@/services/api';
+import { getStoredToken } from '@/services/client';
+import { UserInfo } from '@/types';
+import { useAuthStore } from '@/stores/authStore';
+import { useUnreadNewsCount } from '@/stores/appStore';
+import { isSuccess, extractData, extractError } from '@/utils/apiHelpers';
+import { useErrorHandler } from '@/hooks/useErrorHandler';
 import { useNavigate } from 'react-router-dom';
-import { useStateMachine } from '../../../hooks/useStateMachine';
-import { LoadingEvent, LoadingState } from '../../../types/states';
-import { debugLog, warnLog, errorLog } from '../../../utils/logger';
+import { useStateMachine } from '@/hooks/useStateMachine';
+import { LoadingEvent, LoadingState } from '@/types/states';
+import { debugLog, warnLog, errorLog } from '@/utils/logger';
 
 // Helper for custom coin icon
 const CoinsIcon = ({ size, className }: { size: number; className: string }) => (
@@ -197,16 +197,9 @@ const Profile: React.FC<{ unreadCount?: number }> = ({ unreadCount: propUnreadCo
     };
     window.addEventListener('focus', handleFocus);
 
-    // Also reload periodically or when this component re-renders/mounts (which it does on tab switch)
-    // The dependency array is empty, so it runs on mount.
-    // If the component is kept alive (not unmounted), focus listener helps.
-    // If we want to force check more often:
-    // const interval = setInterval(loadSignInStatus, 10000);
-
     return () => {
       isMounted = false;
       window.removeEventListener('focus', handleFocus);
-      // clearInterval(interval);
     };
   }, []);
 

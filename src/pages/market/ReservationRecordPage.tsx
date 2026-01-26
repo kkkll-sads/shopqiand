@@ -10,18 +10,16 @@ import {
     fetchCollectionSessions,
     ReservationItem,
     ReservationStatus as ReservationStatusType,
-} from '../../../services/api';
-import { SelectFilter, SortSelector } from '../../../components/common';
-import type { SortOrder } from '../../../components/common';
-import type { SelectOption } from '../../../components/common';
-import { Product } from '../../../types';
-import { getStoredToken } from '../../../services/client';
-import { ReservationStatus } from '../../../constants/statusEnums';
-import { extractError, isSuccess } from '../../../utils/apiHelpers';
-import { useStateMachine } from '../../../hooks/useStateMachine';
-import { LoadingEvent, LoadingState } from '../../../types/states';
-import { errorLog, debugLog } from '../../../utils/logger';
-import { useAppStore, MARKET_CACHE_TTL } from '../../stores/appStore';
+} from '@/services/api';
+import { SelectFilter, SortSelector } from '@/components/common';
+import type { SortOrder } from '@/components/common';
+import type { SelectOption } from '@/components/common';
+import { Product } from '@/types';
+import { getStoredToken } from '@/services/client';
+import { ReservationStatus } from '@/constants/statusEnums';
+import { extractError, isSuccess } from '@/utils/apiHelpers';
+import { errorLog, debugLog } from '@/utils/logger';
+import { useAppStore, MARKET_CACHE_TTL } from '@/stores/appStore';
 
 interface ReservationRecordPageProps {
     onProductSelect?: (product: Product) => void;
@@ -36,7 +34,7 @@ interface ReservationRecordPageProps {
 const PAGE_SIZE = 10;
 
 const ReservationRecordPage: React.FC<ReservationRecordPageProps> = ({
-    onProductSelect,
+    onProductSelect: propOnProductSelect,
     source,
     sessionId,
     zoneId,
@@ -45,7 +43,13 @@ const ReservationRecordPage: React.FC<ReservationRecordPageProps> = ({
     sessionEndTime
 }) => {
     const navigate = useNavigate();
-    const { listCaches, setListCache } = useAppStore();
+    const { listCaches, setListCache, setSelectedProduct } = useAppStore();
+    
+    // 如果没有传入 onProductSelect，使用默认的处理函数
+    const onProductSelect = propOnProductSelect || ((product: Product) => {
+        setSelectedProduct(product, 'reservation-record');
+        navigate(`/product/${product.id}`);
+    });
 
     // 缓存相关 refs
     const restoredFromCacheRef = useRef(false);
@@ -83,44 +87,8 @@ const ReservationRecordPage: React.FC<ReservationRecordPageProps> = ({
     const [page, setPage] = useState(1);
     const [hasMore, setHasMore] = useState(true);
     const containerRef = useRef<HTMLDivElement>(null);
-    const listMachine = useStateMachine<LoadingState, LoadingEvent>({
-        initial: LoadingState.IDLE,
-        transitions: {
-            [LoadingState.IDLE]: { [LoadingEvent.LOAD]: LoadingState.LOADING },
-            [LoadingState.LOADING]: {
-                [LoadingEvent.SUCCESS]: LoadingState.SUCCESS,
-                [LoadingEvent.ERROR]: LoadingState.ERROR,
-            },
-            [LoadingState.SUCCESS]: {
-                [LoadingEvent.LOAD]: LoadingState.LOADING,
-                [LoadingEvent.RETRY]: LoadingState.LOADING,
-            },
-            [LoadingState.ERROR]: {
-                [LoadingEvent.LOAD]: LoadingState.LOADING,
-                [LoadingEvent.RETRY]: LoadingState.LOADING,
-            },
-        },
-    });
-    const loadMoreMachine = useStateMachine<LoadingState, LoadingEvent>({
-        initial: LoadingState.IDLE,
-        transitions: {
-            [LoadingState.IDLE]: { [LoadingEvent.LOAD]: LoadingState.LOADING },
-            [LoadingState.LOADING]: {
-                [LoadingEvent.SUCCESS]: LoadingState.SUCCESS,
-                [LoadingEvent.ERROR]: LoadingState.ERROR,
-            },
-            [LoadingState.SUCCESS]: {
-                [LoadingEvent.LOAD]: LoadingState.LOADING,
-                [LoadingEvent.RETRY]: LoadingState.LOADING,
-            },
-            [LoadingState.ERROR]: {
-                [LoadingEvent.LOAD]: LoadingState.LOADING,
-                [LoadingEvent.RETRY]: LoadingState.LOADING,
-            },
-        },
-    });
-    const loading = listMachine.state === LoadingState.LOADING;
-    const loadingMore = loadMoreMachine.state === LoadingState.LOADING;
+    const [loading, setLoading] = useState(false);
+    const [loadingMore, setLoadingMore] = useState(false);
 
     // ========================================
     // 缓存恢复逻辑：组件挂载时检查并恢复缓存
@@ -151,10 +119,6 @@ const ReservationRecordPage: React.FC<ReservationRecordPageProps> = ({
             restoredFromCacheRef.current = true;
             // 保存滚动位置到 ref，等待数据渲染完成后再恢复
             scrollTopRef.current = cache.scrollTop;
-
-            // 设置状态机为成功状态
-            listMachine.send(LoadingEvent.LOAD);
-            listMachine.send(LoadingEvent.SUCCESS);
 
             // 设置登录状态
             const token = getStoredToken();
@@ -311,17 +275,15 @@ const ReservationRecordPage: React.FC<ReservationRecordPageProps> = ({
             setPage(1);
             setRecords([]);
             loadRecords(1, false);
-        } else {
-            listMachine.send(LoadingEvent.SUCCESS);
         }
     }, [statusFilter, isLoggedIn, sessionFilter, zoneFilter, sortField, sortOrder]);
 
     const loadRecords = useCallback(async (pageNum: number, append: boolean = false) => {
         try {
             if (append) {
-                loadMoreMachine.send(LoadingEvent.LOAD);
+                setLoadingMore(true);
             } else {
-                listMachine.send(LoadingEvent.LOAD);
+                setLoading(true);
             }
             setError(null);
 
@@ -345,27 +307,18 @@ const ReservationRecordPage: React.FC<ReservationRecordPageProps> = ({
                 }
                 setPage(pageNum);
                 setHasMore(pageNum * PAGE_SIZE < total);
-                if (append) {
-                    loadMoreMachine.send(LoadingEvent.SUCCESS);
-                } else {
-                    listMachine.send(LoadingEvent.SUCCESS);
-                }
             } else {
                 setError(extractError(response, '加载失败'));
-                if (append) {
-                    loadMoreMachine.send(LoadingEvent.ERROR);
-                } else {
-                    listMachine.send(LoadingEvent.ERROR);
-                }
             }
         } catch (err: any) {
             errorLog('ReservationRecordPage', '加载申购记录失败', err);
             if (err?.name === 'NeedLoginError') return;
             setError(err?.msg || '网络连接异常');
+        } finally {
             if (append) {
-                loadMoreMachine.send(LoadingEvent.ERROR);
+                setLoadingMore(false);
             } else {
-                listMachine.send(LoadingEvent.ERROR);
+                setLoading(false);
             }
         }
     }, [statusFilter, sessionFilter, zoneFilter, sortField, sortOrder]);
@@ -441,7 +394,6 @@ const ReservationRecordPage: React.FC<ReservationRecordPageProps> = ({
     };
 
     const handleProductClick = (record: ReservationItem) => {
-        if (!onProductSelect) return;
         const product: Product = {
             id: String(record.item_id),
             title: record.item_title || '商品详情',

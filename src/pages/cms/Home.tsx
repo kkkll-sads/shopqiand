@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronRight, Search, Wallet, Vault, Zap, FileBadge, ClipboardList, Clock, CheckCircle2, AlertCircle } from 'lucide-react';
-import { Banner, NewsItem } from '../../../types';
-import { fetchBanners, normalizeAssetUrl, fetchReservations, ReservationItem } from '../../../services/api';
-import { isSuccess } from '../../../utils/apiHelpers';
-import { SkeletonSubscriptionCard } from '../../../components/common';
-import { errorLog } from '../../../utils/logger';
+import { Banner, NewsItem } from '@/types';
+import { fetchBanners, normalizeAssetUrl, fetchReservations, ReservationItem } from '@/services/api';
+import { isSuccess } from '@/utils/apiHelpers';
+import { SkeletonSubscriptionCard } from '@/components/common';
+import { errorLog } from '@/utils/logger';
 
 interface HomeProps {
   announcements?: NewsItem[];
@@ -217,7 +217,7 @@ const Home: React.FC<HomeProps> = ({ announcements = [] }) => {
       icon: FileBadge,
       color: 'text-red-600',
       bgColor: 'bg-red-50',
-      action: () => handleNavigate('cumulative-rights')
+      action: () => navigate('/rights')
     },
   ];
 

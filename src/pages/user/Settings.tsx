@@ -11,16 +11,16 @@
 
 import React, { useState } from 'react';
 import { ChevronRight, RefreshCw } from 'lucide-react';
-import PageContainer from '../../../components/layout/PageContainer';
-import { ListItem, UpdatePromptModal } from '../../../components/common';
-import { normalizeAssetUrl, checkAppUpdate } from '../../../services/api';
-import { formatPhone } from '../../../utils/format';
-import { AppVersionInfo } from '../../../services/app';
-import { APP_VERSION } from '../../../constants';
-import { extractData, extractError } from '../../../utils/apiHelpers';
+import PageContainer from '@/layouts/PageContainer';
+import { ListItem, UpdatePromptModal } from '@/components/common';
+import { normalizeAssetUrl, checkAppUpdate } from '@/services/api';
+import { formatPhone } from '@/utils/format';
+import { AppVersionInfo } from '@/services/app';
+import { APP_VERSION } from '@/constants';
+import { extractData, extractError } from '@/utils/apiHelpers';
 import { useNavigate } from 'react-router-dom';
-import { useAuthStore } from '../../stores/authStore';
-import { debugLog, errorLog } from '../../../utils/logger';
+import { useAuthStore } from '@/stores/authStore';
+import { debugLog, errorLog } from '@/utils/logger';
 
 /**
  * Settings 设置页面组件

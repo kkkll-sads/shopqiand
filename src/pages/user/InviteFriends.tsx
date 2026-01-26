@@ -10,16 +10,16 @@
 
 import React, { useState, useEffect } from 'react';
 import { Copy, Share2 } from 'lucide-react';
-import PageContainer from '../../../components/layout/PageContainer';
-import { LoadingSpinner } from '../../../components/common';
-import { fetchPromotionCard } from '../../../services/api';
-import { getStoredToken } from '../../../services/client';
-import { useNotification } from '../../../context/NotificationContext';
-import { extractData, extractError } from '../../../utils/apiHelpers';
+import PageContainer from '@/layouts/PageContainer';
+import { LoadingSpinner } from '@/components/common';
+import { fetchPromotionCard } from '@/services/api';
+import { getStoredToken } from '@/services/client';
+import { useNotification } from '@/context/NotificationContext';
+import { extractData, extractError } from '@/utils/apiHelpers';
 import { useNavigate } from 'react-router-dom';
-import { useStateMachine } from '../../../hooks/useStateMachine';
-import { LoadingEvent, LoadingState } from '../../../types/states';
-import { debugLog, warnLog, errorLog } from '../../../utils/logger';
+import { useLoadingMachine, LoadingEvent, LoadingState } from '@/hooks';
+import { debugLog, errorLog } from '@/utils/logger';
+import { copyToClipboard } from '@/utils/clipboard';
 
 /**
  * InviteFriends 邀请好友页面组件
@@ -30,24 +30,7 @@ const InviteFriends: React.FC = () => {
   const [inviteCode, setInviteCode] = useState('');
   const [inviteLink, setInviteLink] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const loadMachine = useStateMachine<LoadingState, LoadingEvent>({
-    initial: LoadingState.IDLE,
-    transitions: {
-      [LoadingState.IDLE]: { [LoadingEvent.LOAD]: LoadingState.LOADING },
-      [LoadingState.LOADING]: {
-        [LoadingEvent.SUCCESS]: LoadingState.SUCCESS,
-        [LoadingEvent.ERROR]: LoadingState.ERROR,
-      },
-      [LoadingState.SUCCESS]: {
-        [LoadingEvent.LOAD]: LoadingState.LOADING,
-        [LoadingEvent.RETRY]: LoadingState.LOADING,
-      },
-      [LoadingState.ERROR]: {
-        [LoadingEvent.LOAD]: LoadingState.LOADING,
-        [LoadingEvent.RETRY]: LoadingState.LOADING,
-      },
-    },
-  });
+  const loadMachine = useLoadingMachine();
   const loading = loadMachine.state === LoadingState.LOADING;
 
   /**
@@ -101,18 +84,18 @@ const InviteFriends: React.FC = () => {
   }, []);
 
   /**
-   * 复制到剪贴板
+   * 复制到剪贴板（支持原生分享）
    */
-  const copyToClipboard = async (text: string, type: 'code' | 'link') => {
+  const handleCopy = async (text: string, type: 'code' | 'link') => {
     debugLog('InviteFriends', 'Attempting to copy', { text: text.substring(0, 50) + '...', type });
 
     if (!text || text.trim() === '') {
       errorLog('InviteFriends', 'Copy failed: text is empty');
       showToast('error', '内容为空，无法复制');
-      return false;
+      return;
     }
 
-    // 方法0: 如果是移动设备，优先使用原生分享API
+    // 如果是移动设备，优先使用原生分享API
     if (navigator.share && type === 'link') {
       try {
         debugLog('InviteFriends', 'Using native share API');
@@ -130,104 +113,11 @@ const InviteFriends: React.FC = () => {
       }
     }
 
-    // 方法1: 尝试使用现代 Clipboard API
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-      try {
-        debugLog('InviteFriends', 'Using modern Clipboard API');
-
-        // 在某些浏览器中需要用户权限
-        if (navigator.permissions) {
-          try {
-            const permission = await navigator.permissions.query({
-              name: 'clipboard-write' as PermissionName,
-            });
-            debugLog('InviteFriends', 'Clipboard permission', permission.state);
-            if (permission.state === 'denied') {
-              warnLog('InviteFriends', 'Clipboard permission denied');
-            }
-          } catch (permErr) {
-            debugLog('InviteFriends', 'Could not check clipboard permission');
-          }
-        }
-
-        await navigator.clipboard.writeText(text);
-        debugLog('InviteFriends', 'Modern clipboard API success');
-        showToast('success', `${type === 'code' ? '邀请码' : '链接'}已复制!`);
-        return;
-      } catch (err: any) {
-        warnLog('InviteFriends', 'Modern clipboard API failed', err);
-      }
+    // 使用统一的剪贴板工具函数
+    const success = await copyToClipboard(text);
+    if (success) {
+      showToast('success', `${type === 'code' ? '邀请码' : '链接'}已复制!`);
     } else {
-      warnLog('InviteFriends', 'Modern clipboard API not available');
-    }
-
-    // 方法2: 降级方案 - 使用传统方法
-    try {
-      debugLog('InviteFriends', 'Using fallback method');
-
-      // 创建隐藏的文本区域
-      const textArea = document.createElement('textarea');
-      textArea.value = text;
-      textArea.style.position = 'absolute';
-      textArea.style.left = '-9999px';
-      textArea.style.top = '-9999px';
-      textArea.style.width = '1px';
-      textArea.style.height = '1px';
-      textArea.style.opacity = '0';
-      textArea.style.border = 'none';
-      textArea.style.outline = 'none';
-      textArea.style.resize = 'none';
-      textArea.style.overflow = 'hidden';
-      textArea.setAttribute('readonly', '');
-
-      // 添加到 body
-      document.body.appendChild(textArea);
-
-      // 确保元素在DOM中并可见
-      textArea.style.display = 'block';
-      textArea.focus({ preventScroll: true });
-
-      // 选择所有文本
-      textArea.select();
-      textArea.setSelectionRange(0, text.length);
-
-      // 双重检查选择
-      if (textArea.selectionStart !== 0 || textArea.selectionEnd !== text.length) {
-        warnLog('InviteFriends', 'Selection range incorrect, retrying');
-        textArea.setSelectionRange(0, text.length);
-      }
-
-      // 执行复制
-      const successful = document.execCommand('copy');
-      debugLog('InviteFriends', 'execCommand result', successful);
-
-      // 立即清理DOM
-      document.body.removeChild(textArea);
-
-      if (successful) {
-        debugLog('InviteFriends', 'Fallback copy success');
-        // 验证复制是否成功
-        try {
-          const pastedText = await navigator.clipboard.readText();
-          if (pastedText === text) {
-            debugLog('InviteFriends', 'Verification successful: text copied to clipboard');
-            showToast('success', `${type === 'code' ? '邀请码' : '链接'}已复制!`);
-            return;
-          } else {
-            warnLog('InviteFriends', 'Verification failed: clipboard content differs');
-          }
-        } catch (verifyErr) {
-          debugLog('InviteFriends', 'Could not verify clipboard content, assuming success');
-          // 如果无法验证，假设复制成功
-          showToast('success', `${type === 'code' ? '邀请码' : '链接'}已复制!`);
-          return;
-        }
-      }
-
-      // 如果execCommand失败或验证失败，显示手动复制界面
-      throw new Error('execCommand failed');
-    } catch (err: any) {
-      errorLog('InviteFriends', 'Fallback copy failed', err);
       showToast('error', '复制失败，请重试或手动复制');
     }
   };
@@ -284,7 +174,7 @@ const InviteFriends: React.FC = () => {
         <div className="w-full max-w-xs mb-10 z-10">
           <div className="text-sm text-gray-500 mb-3 font-medium ml-2">我的邀请码</div>
           <div
-            onClick={() => copyToClipboard(inviteCode, 'code')}
+            onClick={() => handleCopy(inviteCode, 'code')}
             className="bg-white border border-red-200 rounded-2xl p-5 flex items-center justify-between active:bg-red-50 transition-all cursor-pointer shadow-sm hover:shadow-md"
           >
             <span className="text-3xl font-bold text-gray-800 tracking-widest font-mono">
@@ -301,7 +191,7 @@ const InviteFriends: React.FC = () => {
           onClick={() => {
             debugLog('InviteFriends', 'Share button clicked', { inviteLink });
             if (inviteLink) {
-              copyToClipboard(inviteLink, 'link');
+              handleCopy(inviteLink, 'link');
             } else {
               showToast('warning', '邀请码加载中，请稍后再试');
             }

@@ -1,13 +1,14 @@
 import { useState, useCallback } from 'react';
-import { fetchProfile } from '../../../../services/api';
-import { getStoredToken } from '../../../../services/client';
+import { fetchProfile } from '@/services/api';
+import { getStoredToken } from '@/services/client';
 import {
   getRightsDeclarationList,
   getRightsDeclarationReviewStatus,
   type RightsDeclarationRecord,
-} from '../../../../services/rightsDeclaration';
-import { UserInfo } from '../../../../types';
-import { isSuccess, extractData } from '../../../../utils/apiHelpers';
+} from '@/services/rightsDeclaration';
+import { UserInfo } from '@/types';
+import { isSuccess, extractData } from '@/utils/apiHelpers';
+import { errorLog } from '@/utils/logger';
 
 /**
  * useClaimData - 管理确权页的用户信息、历史记录、审核统计
@@ -57,7 +58,7 @@ export function useClaimData(showToast: (type: string, title: string, message?: 
         setUserInfo(data.userInfo);
       }
     } catch (error) {
-      console.error('获取用户信息失败:', error);
+      errorLog('useClaimData', '获取用户信息失败', error);
     }
 
     await loadHistory(token);
@@ -81,7 +82,7 @@ export function useClaimData(showToast: (type: string, title: string, message?: 
           setHistory(data.list);
         }
       } catch (error) {
-        console.error('获取申报历史失败:', error);
+        errorLog('useClaimData', '获取申报历史失败', error);
         showToast('error', '加载失败', '获取申报历史失败');
       } finally {
         setHistoryLoading(false);
@@ -109,7 +110,7 @@ export function useClaimData(showToast: (type: string, title: string, message?: 
           });
         }
       } catch (error) {
-        console.error('获取审核统计失败:', error);
+        errorLog('useClaimData', '获取审核统计失败', error);
         setReviewStats((prev) => ({ ...prev, isLoading: false }));
       }
     },

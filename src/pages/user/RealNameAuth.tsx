@@ -9,10 +9,10 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ShieldCheck, Clock, CheckCircle, AlertCircle, UserCheck } from 'lucide-react';
-import PageContainer from '../../../components/layout/PageContainer';
-import { LoadingSpinner } from '../../../components/common';
-import { formatIdCard } from '../../../utils/format';
-import { useRealNameAuth, RealNameState } from '../../../hooks/useRealNameAuth';
+import PageContainer from '@/layouts/PageContainer';
+import { LoadingSpinner } from '@/components/common';
+import { formatIdCard } from '@/utils/format';
+import { useRealNameAuth, RealNameState } from '@/hooks/useRealNameAuth';
 
 /**
  * RealNameAuth 实名认证页面组件

@@ -2,7 +2,7 @@
  * 藏品页面状态机配置
  * 复用全局状态机配置
  */
-import { useStateMachine } from '../../../../hooks/useStateMachine';
+import { useStateMachine } from '@/hooks/useStateMachine';
 import {
   loadingMachineConfig,
   formMachineConfig,
@@ -10,7 +10,7 @@ import {
   LoadingEvent,
   FormState,
   FormEvent,
-} from '../../../../hooks/stateMachineConfigs';
+} from '@/hooks/stateMachineConfigs';
 
 /**
  * 藏品页面状态机 Hook

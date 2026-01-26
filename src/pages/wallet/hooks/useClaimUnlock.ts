@@ -3,10 +3,11 @@ import {
   checkOldAssetsUnlockStatus,
   unlockOldAssets,
   type CheckOldAssetsUnlockStatusResult,
-} from '../../../../services/user';
-import { getStoredToken } from '../../../../services/client';
-import { UserInfo } from '../../../../types';
-import { isSuccess, extractData, extractError } from '../../../../utils/apiHelpers';
+} from '@/services/user';
+import { getStoredToken } from '@/services/client';
+import { UserInfo } from '@/types';
+import { isSuccess, extractData, extractError } from '@/utils/apiHelpers';
+import { errorLog } from '@/utils/logger';
 
 export type UnlockStatusState = {
   hasSelfTrade: boolean;
@@ -86,7 +87,7 @@ export const useClaimUnlock = ({ showToast, userInfo, setUserInfo }: UseClaimUnl
         }));
       }
     } catch (error) {
-      console.error('获取解锁状态失败:', error);
+      errorLog('useClaimUnlock', '获取解锁状态失败', error);
       setUnlockStatus((prev) => ({
         ...prev,
         isLoading: false,
@@ -147,7 +148,7 @@ export const useClaimUnlock = ({ showToast, userInfo, setUserInfo }: UseClaimUnl
         showToast('error', '解锁失败', errorMsg);
       }
     } catch (error: any) {
-      console.error('解锁旧资产失败:', error);
+      errorLog('useClaimUnlock', '解锁旧资产失败', error);
       showToast('error', '解锁失败', error.message || '网络错误，请重试');
     } finally {
       setUnlockLoading(false);

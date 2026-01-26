@@ -11,29 +11,55 @@
 
 import React from 'react';
 import { Wallet, Award, Users } from 'lucide-react';
-import PageContainer from '../../../components/layout/PageContainer';
-import { normalizeAssetUrl } from '../../../services/api';
-import { TeamMember } from '../../../types';
-import { formatTime } from '../../../utils/format';
-import { useNavigate } from 'react-router-dom';
-import { MemberDetailData } from '../../../services/user';
-import { formatAmount } from '../../../utils/format';
+import PageContainer from '@/layouts/PageContainer';
+import { normalizeAssetUrl } from '@/services/api';
+import { TeamMember } from '@/types';
+import { formatTime } from '@/utils/format';
+import { useNavigate, useParams } from 'react-router-dom';
+import { MemberDetailData } from '@/services/user';
+import { formatAmount } from '@/utils/format';
+import { LoadingSpinner, EmptyState } from '@/components/common';
+import { useFriendDetail } from './hooks/useFriendDetail';
 
 interface FriendDetailProps {
   friend?: TeamMember;
-  id: string;
+  id?: string;
   memberDetail?: MemberDetailData;
 }
 
-const FriendDetail: React.FC<FriendDetailProps> = ({ friend, id, memberDetail }) => {
+const FriendDetail: React.FC<FriendDetailProps> = ({ friend: propFriend, id: propId, memberDetail: propMemberDetail }) => {
   const navigate = useNavigate();
+  const { id: routeId } = useParams<{ id: string }>();
+  const { friend: hookFriend, memberDetail: hookMemberDetail, loading, error } = useFriendDetail();
+  
+  // 优先使用传入的 props，其次使用 hook 加载的数据
+  const id = propId || routeId || '';
+  const friend = propFriend || hookFriend;
+  const memberDetail = propMemberDetail || hookMemberDetail;
 
-  if (!friend || !memberDetail) {
+  // 加载中
+  if (loading) {
     return (
       <PageContainer title="好友详情" onBack={() => navigate(-1)}>
-        <div className="flex flex-col items-center justify-center pt-20 text-gray-400">
-          <p>未找到好友信息</p>
-          <p className="text-xs mt-2">ID: {id}</p>
+        <div className="flex items-center justify-center min-h-screen bg-gray-50">
+          <LoadingSpinner />
+        </div>
+      </PageContainer>
+    );
+  }
+
+  // 错误状态
+  if (error || !friend || !memberDetail) {
+    return (
+      <PageContainer title="好友详情" onBack={() => navigate(-1)}>
+        <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 px-4">
+          <EmptyState title={error || '好友不存在'} />
+          <button
+            onClick={() => navigate(-1)}
+            className="mt-4 px-6 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors"
+          >
+            返回
+          </button>
         </div>
       </PageContainer>
     );

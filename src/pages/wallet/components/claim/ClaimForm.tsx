@@ -1,6 +1,6 @@
 import React from 'react';
 import ClaimFormSection from './ClaimFormSection';
-import { useNotification } from '../../../../../context/NotificationContext';
+import { useNotification } from '@/context/NotificationContext';
 import useClaimForm from '../../hooks/useClaimForm';
 import useImageUploads from '../../hooks/useImageUploads';
 import useClaimSubmit from '../../hooks/useClaimSubmit';

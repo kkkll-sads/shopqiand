@@ -5,8 +5,8 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { CreditCard, Trash2, Edit2, ChevronRight, Plus } from 'lucide-react';
-import SubPageLayout from '../../../components/SubPageLayout';
-import { LoadingSpinner, BankPicker } from '../../../components/common';
+import PageContainer from '@/layouts/PageContainer';
+import { LoadingSpinner, BankPicker } from '@/components/common';
 import {
   PaymentAccountItem,
   fetchPaymentAccountList,
@@ -14,13 +14,13 @@ import {
   deletePaymentAccount,
   editPaymentAccount,
   setDefaultPaymentAccount,
-} from '../../../services/api';
-import { getStoredToken } from '../../../services/client';
-import { isSuccess, extractData } from '../../../utils/apiHelpers';
-import { useErrorHandler } from '../../../hooks/useErrorHandler';
-import { useNotification } from '../../../context/NotificationContext';
-import { useStateMachine } from '../../../hooks/useStateMachine';
-import { FormEvent, FormState, LoadingEvent, LoadingState } from '../../../types/states';
+} from '@/services/api';
+import { getStoredToken } from '@/services/client';
+import { isSuccess, extractData } from '@/utils/apiHelpers';
+import { useErrorHandler } from '@/hooks/useErrorHandler';
+import { useNotification } from '@/context/NotificationContext';
+import { useStateMachine } from '@/hooks/useStateMachine';
+import { FormEvent, FormState, LoadingEvent, LoadingState } from '@/types/states';
 
 type PaymentAccountFormValues = {
   type: string;
@@ -504,7 +504,7 @@ const CardManagement: React.FC = () => {
   );
 
   return (
-    <SubPageLayout
+    <PageContainer
       title={mode === 'add' ? '新增账户' : mode === 'edit' ? '编辑账户' : '银行卡'}
       onBack={() => {
         if (mode === 'add' || mode === 'edit') {
@@ -573,7 +573,7 @@ const CardManagement: React.FC = () => {
           </button>
         </div>
       )}
-    </SubPageLayout>
+    </PageContainer>
   );
 };
 

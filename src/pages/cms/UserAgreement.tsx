@@ -3,7 +3,7 @@
  * 已迁移: 使用 StaticContentPage 内置导航
  */
 import React from 'react';
-import { StaticContentPage } from '../../../components/business';
+import { StaticContentPage } from '@/components/business';
 
 const UserAgreement: React.FC = () => {
   return (

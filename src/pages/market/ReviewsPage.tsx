@@ -7,16 +7,16 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Star, ThumbsUp, MessageSquare, ChevronDown, Play, Share2, MoreHorizontal, X } from 'lucide-react';
-import { useStateMachine } from '../../../hooks/useStateMachine';
-import { LoadingEvent, LoadingState } from '../../../types/states';
-import { LoadingSpinner } from '../../../components/common';
-import { fetchProductReviews, ReviewItem, ReviewListData } from '../../../services/shop';
-import { isSuccess, extractData, extractError } from '../../../utils/apiHelpers';
-import { formatDateShort } from '../../../utils/format';
-import { useErrorHandler } from '../../../hooks/useErrorHandler';
-import EmptyState from '../../../components/common/EmptyState';
-import { errorLog } from '../../../utils/logger';
-import { normalizeUrl } from '../../utils/url';
+import { useStateMachine } from '@/hooks/useStateMachine';
+import { LoadingEvent, LoadingState } from '@/types/states';
+import { LoadingSpinner } from '@/components/common';
+import { fetchProductReviews, ReviewItem, ReviewListData } from '@/services/shop';
+import { isSuccess, extractData, extractError } from '@/utils/apiHelpers';
+import { formatDateShort } from '@/utils/format';
+import { useErrorHandler } from '@/hooks/useErrorHandler';
+import EmptyState from '@/components/common/EmptyState';
+import { errorLog } from '@/utils/logger';
+import { normalizeUrl } from '@/utils/url';
 
 const ReviewsPage: React.FC = () => {
   const navigate = useNavigate();

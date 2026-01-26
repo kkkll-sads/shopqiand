@@ -3,33 +3,34 @@
  * 已迁移: 使用 React Router 导航
  */
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { FileText, ShoppingBag, X, AlertCircle, CheckCircle, ArrowRight, RefreshCw } from 'lucide-react';
-import PageContainer from '../../../components/layout/PageContainer';
-import { FilterBar } from '../../../components/FilterBar';
-import { SkeletonAssetPage, SkeletonTransactionCard } from '../../../components/common';
-import { useInfiniteScroll } from '../../hooks/useInfiniteScroll';
-import PullToRefresh from '../../components/PullToRefresh';
+import PageContainer from '@/layouts/PageContainer';
+import { FilterBar } from '@/components/common/FilterBar';
+import { SkeletonAssetPage, SkeletonTransactionCard } from '@/components/common';
+import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
+import PullToRefresh from '@/components/common/PullToRefresh';
 import {
   getAllLog,
   AllLogItem,
   MyCollectionItem,
   fetchProfile,
   normalizeAssetUrl,
-} from '../../../services/api';
-import { getStoredToken } from '../../../services/client';
-import { Product, UserInfo } from '../../../types';
-import { useNotification } from '../../../context/NotificationContext';
-import { useAuthStore } from '../../stores/authStore';
+} from '@/services/api';
+import { getStoredToken } from '@/services/client';
+import { Product, UserInfo } from '@/types';
+import { useNotification } from '@/context/NotificationContext';
+import { useAuthStore } from '@/stores/authStore';
 import AssetHeaderCard from './components/asset/AssetHeaderCard';
 import AssetActionsGrid from './components/asset/AssetActionsGrid';
-import { extractData } from '../../../utils/apiHelpers';
-import { ConsignmentStatus, DeliveryStatus } from '../../../constants/statusEnums';
-import { debugLog, errorLog } from '../../../utils/logger';
-import { useAssetActionModal } from '../../../hooks/useAssetActionModal';
-import { useAssetTabs, TabConfig } from '../../../hooks/useAssetTabs';
-import { BALANCE_TYPE_OPTIONS, getBalanceTypeLabel } from '../../../constants/balanceTypes';
-import { useAppStore, MARKET_CACHE_TTL } from '../../stores/appStore';
+import { extractData } from '@/utils/apiHelpers';
+import { ConsignmentStatus, DeliveryStatus } from '@/constants/statusEnums';
+import { debugLog, errorLog } from '@/utils/logger';
+import { useAssetActionModal } from '@/hooks/useAssetActionModal';
+import { useAssetTabs, TabConfig } from '@/hooks/useAssetTabs';
+import { BALANCE_TYPE_OPTIONS, getBalanceTypeLabel } from '@/constants/balanceTypes';
+import { useAppStore, MARKET_CACHE_TTL } from '@/stores/appStore';
+import { setScrollRestoreInProgress } from '@/components/common/ScrollToTop';
 
 interface AssetViewProps {
   onProductSelect?: (product: Product) => void;
@@ -38,8 +39,12 @@ interface AssetViewProps {
 
 const AssetView: React.FC<AssetViewProps> = ({ onProductSelect, initialTab = 0 }) => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { showToast, showDialog } = useNotification();
   const { listCaches, setListCache } = useAppStore();
+
+  // 固定头部高度（PageContainer 的 header 高度）
+  const HEADER_HEIGHT = 52;
 
   // 缓存相关 refs
   const restoredFromCacheRef = useRef(false);
@@ -180,17 +185,58 @@ const AssetView: React.FC<AssetViewProps> = ({ onProductSelect, initialTab = 0 }
   useEffect(() => {
     // 只有在从缓存恢复且数据已渲染时才恢复滚动位置
     if (restoredFromCacheRef.current && tabs.data.length > 0 && scrollTopRef.current > 0) {
+      // 设置标记，防止 ScrollToTop 重置滚动
+      setScrollRestoreInProgress(location.pathname, true);
+
+      let restoreAttempts = 0;
+      const maxAttempts = 5;
+
       const restoreScroll = () => {
         if (scrollTopRef.current > 0) {
-          const targetScroll = scrollTopRef.current;
+          // 恢复滚动位置（已保存的 scrollTop 是相对于内容区域的，需要加上头部高度）
+          const targetScroll = scrollTopRef.current + HEADER_HEIGHT;
           window.scrollTo({ top: targetScroll, behavior: 'instant' });
-          // 验证是否恢复成功
-          if (Math.abs(window.scrollY - targetScroll) > 10) {
-            // 如果恢复失败，重试
-            setTimeout(() => {
-              window.scrollTo({ top: targetScroll, behavior: 'instant' });
-            }, 100);
+          
+          // 验证是否恢复成功（考虑头部高度）
+          const currentScroll = window.scrollY;
+          const actualContentScroll = Math.max(0, currentScroll - HEADER_HEIGHT);
+          const diff = Math.abs(actualContentScroll - scrollTopRef.current);
+
+          // 如果恢复成功（误差小于 10px）或达到最大尝试次数
+          if (diff < 10 || restoreAttempts >= maxAttempts) {
+            if (diff < 10) {
+              debugLog('AssetView', '滚动位置恢复成功', {
+                target: scrollTopRef.current,
+                actual: actualContentScroll,
+                attempts: restoreAttempts + 1,
+              });
+            } else {
+              debugLog('AssetView', '滚动位置恢复失败（达到最大尝试次数）', {
+                target: scrollTopRef.current,
+                actual: actualContentScroll,
+                attempts: restoreAttempts + 1,
+              });
+            }
+            
+            // 清除标记
+            setScrollRestoreInProgress(location.pathname, false);
+            restoredFromCacheRef.current = false;
+            return;
           }
+
+          // 如果未成功，继续尝试
+          restoreAttempts++;
+          if (restoreAttempts < maxAttempts) {
+            setTimeout(restoreScroll, 100);
+          } else {
+            // 达到最大尝试次数，清除标记
+            setScrollRestoreInProgress(location.pathname, false);
+            restoredFromCacheRef.current = false;
+          }
+        } else {
+          // scrollTop 为 0，直接清除标记
+          setScrollRestoreInProgress(location.pathname, false);
+          restoredFromCacheRef.current = false;
         }
       };
 
@@ -204,18 +250,21 @@ const AssetView: React.FC<AssetViewProps> = ({ onProductSelect, initialTab = 0 }
         });
       });
 
-      // 恢复完成后，重置标志
-      restoredFromCacheRef.current = false;
+      // 超时保护：5秒后强制清除标记
+      setTimeout(() => {
+        setScrollRestoreInProgress(location.pathname, false);
+        restoredFromCacheRef.current = false;
+      }, 5000);
     }
-  }, [tabs.data.length]); // 监听数据长度变化
+  }, [tabs.data.length, location.pathname]); // 监听数据长度变化
 
   // ========================================
   // 缓存保存逻辑：组件卸载时保存状态
   // ========================================
   useEffect(() => {
-    // 更新滚动位置 ref
+    // 更新滚动位置 ref（保存相对于内容区域的滚动位置，减去头部高度）
     const handleScrollForCache = () => {
-      scrollTopRef.current = window.scrollY;
+      scrollTopRef.current = Math.max(0, window.scrollY - HEADER_HEIGHT);
     };
 
     window.addEventListener('scroll', handleScrollForCache);

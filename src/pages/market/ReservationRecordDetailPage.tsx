@@ -4,13 +4,13 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Calendar, DollarSign, Zap, Package, CheckCircle2, Clock, XCircle, Wallet, TrendingUp, Sparkles, Award } from 'lucide-react';
-import { fetchReservationDetail, ReservationDetailData } from '../../../services/collection';
-import { ReservationStatus } from '../../../constants/statusEnums';
-import { isSuccess, extractData } from '../../../utils/apiHelpers';
-import { LoadingSpinner } from '../../../components/common';
-import { useStateMachine } from '../../../hooks/useStateMachine';
-import { LoadingEvent, LoadingState } from '../../../types/states';
-import { errorLog } from '../../../utils/logger';
+import { fetchReservationDetail, ReservationDetailData } from '@/services/collection';
+import { ReservationStatus } from '@/constants/statusEnums';
+import { isSuccess, extractData } from '@/utils/apiHelpers';
+import { LoadingSpinner } from '@/components/common';
+import { useStateMachine } from '@/hooks/useStateMachine';
+import { LoadingEvent, LoadingState } from '@/types/states';
+import { errorLog } from '@/utils/logger';
 
 const ReservationRecordDetailPage: React.FC = () => {
     const navigate = useNavigate();
@@ -339,7 +339,7 @@ const ReservationRecordDetailPage: React.FC = () => {
 
             {/* 底部按钮 */}
             {record.status === ReservationStatus.APPROVED && (
-                <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-gray-100 safe-area-bottom">
+                <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-gray-100 pb-safe">
                     <button
                         onClick={() => navigate('/my-collection')}
                         className="w-full py-3.5 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-xl font-bold shadow-lg shadow-red-200 active:scale-[0.98] transition-all flex items-center justify-center gap-2"

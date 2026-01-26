@@ -5,12 +5,12 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowRight, HelpCircle } from 'lucide-react';
-import { UserInfo } from '../../../../../types';
-import { formatAmount } from '../../../../../utils/format';
-import { fetchAnnouncements } from '../../../../../services/cms';
+import { UserInfo } from '@/types';
+import { formatAmount } from '@/utils/format';
+import { fetchAnnouncements } from '@/services/cms';
 import BalanceHelpModal from './BalanceHelpModal';
-import { extractData } from '../../../../../utils/apiHelpers';
-import { errorLog } from '../../../../../utils/logger';
+import { extractData } from '@/utils/apiHelpers';
+import { errorLog } from '@/utils/logger';
 
 interface AssetHeaderCardProps {
   userInfo: UserInfo | null;

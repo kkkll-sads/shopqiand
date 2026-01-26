@@ -80,7 +80,7 @@ export default defineConfig(({ mode }) => {
     },
     resolve: {
       alias: {
-        '@': path.resolve(__dirname, '.'),
+        '@': path.resolve(__dirname, './src'),
       },
     },
     build: {
@@ -91,6 +91,8 @@ export default defineConfig(({ mode }) => {
       assetsDir: 'assets',
       // 确保资源内联阈值合理（小于 4KB 的资源会被内联，避免小文件加载问题）
       assetsInlineLimit: 4096,
+      // 生产环境移除 console (使用 esbuild，更快)
+      minify: 'esbuild',
       rollupOptions: {
         output: {
           // 按需拆分常见依赖，避免引用不存在的包导致构建失败
@@ -100,6 +102,10 @@ export default defineConfig(({ mode }) => {
               if (id.includes('react') || id.includes('react-dom')) {
                 return 'react-vendor';
               }
+              // 路由库单独打包
+              if (id.includes('react-router')) {
+                return 'router-vendor';
+              }
               // 图标库单独打包
               if (id.includes('lucide-react')) {
                 return 'ui-icons';
@@ -107,6 +113,10 @@ export default defineConfig(({ mode }) => {
               // 大数据文件单独打包（如省市区数据）
               if (id.includes('element-china-area-data')) {
                 return 'area-data';
+              }
+              // 状态管理库单独打包
+              if (id.includes('zustand')) {
+                return 'state-vendor';
               }
               // 其他第三方依赖
               return 'vendor';

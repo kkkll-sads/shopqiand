@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MessageSquare, FileText, Bell, CheckCircle, AlertCircle, Info, Package, Truck, Wallet, Receipt } from 'lucide-react';
-import SubPageLayout from '../../../components/SubPageLayout';
-import { LoadingSpinner, EmptyState } from '../../../components/common';
-import { formatDateShort } from '../../../utils/format';
+import PageContainer from '@/layouts/PageContainer';
+import { LoadingSpinner, EmptyState } from '@/components/common';
+import { formatDateShort } from '@/utils/format';
 import {
   fetchAnnouncements,
   AnnouncementItem,
@@ -15,17 +15,17 @@ import {
   RechargeOrderItem,
   WithdrawOrderItem,
   ShopOrderItem,
-} from '../../../services/api';
-import { getStoredToken } from '../../../services/client';
+} from '@/services/api';
+import { getStoredToken } from '@/services/client';
 // ✅ 引入统一 API 处理工具
-import { extractData } from '../../../utils/apiHelpers';
+import { extractData } from '@/utils/apiHelpers';
 // ✅ 引入枚举常量替换魔法数字
-import { RechargeOrderStatus, WithdrawOrderStatus } from '../../../constants/statusEnums';
-import { STORAGE_KEYS } from '../../../constants/storageKeys';
-import { useStateMachine } from '../../../hooks/useStateMachine';
-import { LoadingEvent, LoadingState } from '../../../types/states';
-import { useInfiniteScroll } from '../../hooks/useInfiniteScroll';
-import { debugLog, errorLog } from '../../../utils/logger';
+import { RechargeOrderStatus, WithdrawOrderStatus } from '@/constants/statusEnums';
+import { STORAGE_KEYS } from '@/constants/storageKeys';
+import { useStateMachine } from '@/hooks/useStateMachine';
+import { LoadingEvent, LoadingState } from '@/types/states';
+import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
+import { debugLog, errorLog } from '@/utils/logger';
 
 interface MessageItem {
   id: string;
@@ -634,7 +634,7 @@ const MessageCenter: React.FC = () => {
   };
 
   return (
-    <SubPageLayout
+    <PageContainer
       title="消息中心"
       onBack={() => navigate(-1)}
       rightAction={
@@ -770,7 +770,7 @@ const MessageCenter: React.FC = () => {
           <div className="py-4 text-center text-xs text-gray-400">加载中...</div>
         )}
       </div>
-    </SubPageLayout>
+    </PageContainer>
   );
 };
 

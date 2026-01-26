@@ -9,17 +9,17 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ClipboardList, Send, Clock, CheckCircle, XCircle, AlertCircle, Image as ImageIcon, Plus, X, Check } from 'lucide-react';
-import PageContainer from '../../../components/layout/PageContainer';
-import { LoadingSpinner, ResultModal } from '../../../components/common';
-import { useModal } from '../../../hooks';
-import { useNotification } from '../../../context/NotificationContext';
-import { submitQuestionnaire, getMyQuestionnaireList, QuestionnaireItem } from '../../../services/questionnaire';
-import { isSuccess, extractData, extractError } from '../../../utils/apiHelpers';
-import { uploadImage } from '../../../services/common';
-import { getStoredToken } from '../../../services/client';
-import { useStateMachine } from '../../../hooks/useStateMachine';
-import { FormEvent, FormState, LoadingEvent, LoadingState } from '../../../types/states';
-import { errorLog } from '../../../utils/logger';
+import PageContainer from '@/layouts/PageContainer';
+import { LoadingSpinner, ResultModal } from '@/components/common';
+import { useModal } from '@/hooks';
+import { useNotification } from '@/context/NotificationContext';
+import { submitQuestionnaire, getMyQuestionnaireList, QuestionnaireItem } from '@/services/questionnaire';
+import { isSuccess, extractData, extractError } from '@/utils/apiHelpers';
+import { uploadImage } from '@/services/common';
+import { getStoredToken } from '@/services/client';
+import { useStateMachine } from '@/hooks/useStateMachine';
+import { FormEvent, FormState, LoadingEvent, LoadingState } from '@/types/states';
+import { errorLog } from '@/utils/logger';
 
 interface ImageUploadState {
   file: File;

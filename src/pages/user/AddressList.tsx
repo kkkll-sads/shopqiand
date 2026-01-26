@@ -9,20 +9,20 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, MapPin, Pencil, Trash2 } from 'lucide-react';
-import SubPageLayout from '../../../components/SubPageLayout';
-import { RegionPicker } from '../../../components/common';
+import PageContainer from '@/layouts/PageContainer';
+import { RegionPicker } from '@/components/common';
 import {
   AddressItem,
   deleteAddress,
   fetchAddressList,
   saveAddress,
-} from '../../../services/api';
-import { getStoredToken } from '../../../services/client';
-import { useNotification } from '../../../context/NotificationContext';
-import { isSuccess } from '../../../utils/apiHelpers';
-import { useErrorHandler } from '../../../hooks/useErrorHandler';
-import { useStateMachine } from '../../../hooks/useStateMachine';
-import { FormEvent, FormState, LoadingEvent, LoadingState } from '../../../types/states';
+} from '@/services/api';
+import { getStoredToken } from '@/services/client';
+import { useNotification } from '@/context/NotificationContext';
+import { isSuccess } from '@/utils/apiHelpers';
+import { useErrorHandler } from '@/hooks/useErrorHandler';
+import { useStateMachine } from '@/hooks/useStateMachine';
+import { FormEvent, FormState, LoadingEvent, LoadingState } from '@/types/states';
 
 type AddressFormValues = {
   name: string;
@@ -309,7 +309,7 @@ const AddressList: React.FC = () => {
     ['1', 1, true, 'true'].includes(addr.is_default);
 
   return (
-    <SubPageLayout
+    <PageContainer
       title={
         mode === 'add'
           ? '新增收货地址'
@@ -536,7 +536,7 @@ const AddressList: React.FC = () => {
         initialCity={formValues.city}
         initialDistrict={formValues.district}
       />
-    </SubPageLayout>
+    </PageContainer>
   );
 };
 

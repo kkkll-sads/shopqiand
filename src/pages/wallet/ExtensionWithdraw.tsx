@@ -5,24 +5,24 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Loader2, X, ChevronRight } from 'lucide-react';
-import PageContainer from '../../../components/layout/PageContainer';
+import PageContainer from '@/layouts/PageContainer';
 import {
   fetchProfile,
   fetchPaymentAccountList,
   submitStaticIncomeWithdraw,
   PaymentAccountItem,
-} from '../../../services/api';
-import { getStoredToken } from '../../../services/client';
-import { UserInfo } from '../../../types';
+} from '@/services/api';
+import { getStoredToken } from '@/services/client';
+import { UserInfo } from '@/types';
 
-import { formatAmount } from '../../../utils/format';
-import { useNotification } from '../../../context/NotificationContext';
-import { useAuthStore } from '../../stores/authStore';
-import { isSuccess, extractError } from '../../../utils/apiHelpers';
-import { useErrorHandler } from '../../../hooks/useErrorHandler';
-import { useStateMachine } from '../../../hooks/useStateMachine';
-import { FormEvent, FormState, LoadingEvent, LoadingState } from '../../../types/states';
-import { errorLog } from '../../../utils/logger';
+import { formatAmount } from '@/utils/format';
+import { useNotification } from '@/context/NotificationContext';
+import { useAuthStore } from '@/stores/authStore';
+import { isSuccess, extractError } from '@/utils/apiHelpers';
+import { useErrorHandler } from '@/hooks/useErrorHandler';
+import { useStateMachine } from '@/hooks/useStateMachine';
+import { FormEvent, FormState, LoadingEvent, LoadingState } from '@/types/states';
+import { errorLog } from '@/utils/logger';
 
 const ExtensionWithdraw: React.FC = () => {
   const navigate = useNavigate();

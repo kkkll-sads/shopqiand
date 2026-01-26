@@ -2,18 +2,16 @@
  * ServiceRecharge - 确权金划转页面
  * 已迁移: 使用 React Router 导航
  */
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Loader2, ChevronLeft, CreditCard, Wallet, AlertCircle, ShieldCheck } from 'lucide-react';
-import { rechargeServiceFee, fetchProfile } from '../../../services/api';
-import { getStoredToken } from '../../../services/client';
-import { useAuthStore } from '../../stores/authStore';
-import { UserInfo } from '../../../types';
-import { formatAmount } from '../../../utils/format';
-import { isSuccess, extractError } from '../../../utils/apiHelpers';
-import { useStateMachine } from '../../../hooks/useStateMachine';
-import { FormEvent, FormState, LoadingEvent, LoadingState } from '../../../types/states';
-import { errorLog } from '../../../utils/logger';
+import { rechargeServiceFee, fetchProfile } from '@/services/api';
+import { getStoredToken } from '@/services/client';
+import { useAuthStore } from '@/stores/authStore';
+import { UserInfo } from '@/types';
+import { formatAmount } from '@/utils/format';
+import { isSuccess, extractError } from '@/utils/apiHelpers';
+import { errorLog } from '@/utils/logger';
 
 const ServiceRecharge: React.FC = () => {
   const navigate = useNavigate();
@@ -23,73 +21,39 @@ const ServiceRecharge: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [showConfirmModal, setShowConfirmModal] = useState<boolean>(false);
-  const userInfoMachine = useStateMachine<LoadingState, LoadingEvent>({
-    initial: LoadingState.IDLE,
-    transitions: {
-      [LoadingState.IDLE]: { [LoadingEvent.LOAD]: LoadingState.LOADING },
-      [LoadingState.LOADING]: {
-        [LoadingEvent.SUCCESS]: LoadingState.SUCCESS,
-        [LoadingEvent.ERROR]: LoadingState.ERROR,
-      },
-      [LoadingState.SUCCESS]: {
-        [LoadingEvent.LOAD]: LoadingState.LOADING,
-        [LoadingEvent.RETRY]: LoadingState.LOADING,
-      },
-      [LoadingState.ERROR]: {
-        [LoadingEvent.LOAD]: LoadingState.LOADING,
-        [LoadingEvent.RETRY]: LoadingState.LOADING,
-      },
-    },
-  });
-  const submitMachine = useStateMachine<FormState, FormEvent>({
-    initial: FormState.IDLE,
-    transitions: {
-      [FormState.IDLE]: { [FormEvent.SUBMIT]: FormState.SUBMITTING },
-      [FormState.VALIDATING]: {
-        [FormEvent.VALIDATION_SUCCESS]: FormState.SUBMITTING,
-        [FormEvent.VALIDATION_ERROR]: FormState.ERROR,
-      },
-      [FormState.SUBMITTING]: {
-        [FormEvent.SUBMIT_SUCCESS]: FormState.SUCCESS,
-        [FormEvent.SUBMIT_ERROR]: FormState.ERROR,
-      },
-      [FormState.SUCCESS]: {
-        [FormEvent.SUBMIT]: FormState.SUBMITTING,
-        [FormEvent.RESET]: FormState.IDLE,
-      },
-      [FormState.ERROR]: {
-        [FormEvent.SUBMIT]: FormState.SUBMITTING,
-        [FormEvent.RESET]: FormState.IDLE,
-      },
-    },
-  });
-  const loading = submitMachine.state === FormState.SUBMITTING;
+  const [loading, setLoading] = useState(false);
+  const [userInfoLoading, setUserInfoLoading] = useState(false);
 
-  useEffect(() => {
-    loadUserInfo();
-  }, []);
+  // 防止重复加载
+  const loadedRef = useRef(false);
 
   const loadUserInfo = async () => {
     const token = getStoredToken();
     if (!token) return;
     try {
-      userInfoMachine.send(LoadingEvent.LOAD);
+      setUserInfoLoading(true);
       const response = await fetchProfile(token);
       if (isSuccess(response) && response.data?.userInfo) {
         setUserInfo(response.data.userInfo);
         useAuthStore.getState().updateUser(response.data.userInfo);
-        userInfoMachine.send(LoadingEvent.SUCCESS);
       }
     } catch (err) {
       errorLog('ServiceRecharge', '加载用户信息失败', err);
-      userInfoMachine.send(LoadingEvent.ERROR);
+    } finally {
+      setUserInfoLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (loadedRef.current) return;
+    loadedRef.current = true;
+    loadUserInfo();
+  }, []);
 
   const handleRecharge = async () => {
     const token = getStoredToken();
     if (!token) return;
-    submitMachine.send(FormEvent.SUBMIT);
+    setLoading(true);
     try {
       const response = await rechargeServiceFee({
         amount: Number(amount),
@@ -106,18 +70,15 @@ const ServiceRecharge: React.FC = () => {
           setSuccess(null);
           navigate(-1);
         }, 1000);
-        submitMachine.send(FormEvent.SUBMIT_SUCCESS);
       } else {
         setError(extractError(response, '划转失败'));
         setShowConfirmModal(false);
-        submitMachine.send(FormEvent.SUBMIT_ERROR);
       }
     } catch (err: any) {
       setError(err?.message || '划转失败');
       setShowConfirmModal(false);
-      submitMachine.send(FormEvent.SUBMIT_ERROR);
     } finally {
-      // 状态机已处理成功/失败
+      setLoading(false);
     }
   };
 
@@ -229,7 +190,7 @@ const ServiceRecharge: React.FC = () => {
       </div>
 
       {/* Bottom Action */}
-      <div className="p-5 safe-area-bottom bg-white/80 backdrop-blur border-t border-gray-100">
+      <div className="p-5 pb-safe bg-white/80 backdrop-blur border-t border-gray-100">
         <button
           onClick={() => {
             const val = Number(amount);

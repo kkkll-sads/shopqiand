@@ -14,15 +14,15 @@ import {
     SignInRulesData,
     SignInProgressData,
     fetchTeamMembers
-} from '../../../services/api';
-import { getStoredToken } from '../../../services/client';
-import { useNotification } from '../../../context/NotificationContext';
+} from '@/services/api';
+import { getStoredToken } from '@/services/client';
+import { useNotification } from '@/context/NotificationContext';
 // ✅ 引入统一 API 处理工具
-import { isSuccess, extractData, extractError } from '../../../utils/apiHelpers';
-import { STORAGE_KEYS } from '../../../constants/storageKeys';
-import { useStateMachine } from '../../../hooks/useStateMachine';
-import { LoadingEvent, LoadingState } from '../../../types/states';
-import { errorLog } from '../../../utils/logger';
+import { isSuccess, extractData, extractError } from '@/utils/apiHelpers';
+import { STORAGE_KEYS } from '@/constants/storageKeys';
+import { useStateMachine } from '@/hooks/useStateMachine';
+import { LoadingEvent, LoadingState } from '@/types/states';
+import { errorLog } from '@/utils/logger';
 
 const SignIn: React.FC = () => {
     const navigate = useNavigate();

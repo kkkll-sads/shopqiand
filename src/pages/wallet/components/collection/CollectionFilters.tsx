@@ -2,8 +2,8 @@
  * 藏品筛选器组件
  */
 import React from 'react';
-import { SearchInput, SortSelector } from '../../../../../components/common';
-import type { SortOrder } from '../../../../../components/common';
+import { SearchInput, SortSelector } from '@/components/common';
+import type { SortOrder } from '@/components/common';
 
 interface SortOption {
   value: string;

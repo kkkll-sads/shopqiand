@@ -5,12 +5,12 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, Clock, CheckCircle, XCircle, AlertTriangle, Ban, FileText } from 'lucide-react';
-import { getMyWithdrawList, WithdrawRecordItem } from '../../../services/wallet';
-import { isSuccess } from '../../../utils/apiHelpers';
-import { useErrorHandler } from '../../../hooks/useErrorHandler';
-import { LoadingSpinner } from '../../../components/common';
-import { useStateMachine } from '../../../hooks/useStateMachine';
-import { LoadingEvent, LoadingState } from '../../../types/states';
+import { getMyWithdrawList, WithdrawRecordItem } from '@/services/wallet';
+import { isSuccess } from '@/utils/apiHelpers';
+import { useErrorHandler } from '@/hooks/useErrorHandler';
+import { LoadingSpinner } from '@/components/common';
+import { useStateMachine } from '@/hooks/useStateMachine';
+import { LoadingEvent, LoadingState } from '@/types/states';
 
 const WithdrawOrderList: React.FC = () => {
     const navigate = useNavigate();

@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronLeft } from 'lucide-react';
-import { useNotification } from '../../../context/NotificationContext';
+import { useNotification } from '@/context/NotificationContext';
 import useClaimData from './hooks/useClaimData';
 import ClaimSteps from './components/claim/ClaimSteps';
 import ClaimHistoryList from './components/claim/ClaimHistoryList';

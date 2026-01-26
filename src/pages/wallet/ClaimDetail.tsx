@@ -5,36 +5,20 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ChevronLeft, Clock, CheckCircle2, AlertCircle, FileText, ImageIcon, Copy } from 'lucide-react';
-import { useNotification } from '../../../context/NotificationContext';
-import { getRightsDeclarationDetail, RightsDeclarationDetail } from '../../../services/rightsDeclaration';
-import { getStoredToken } from '../../../services/client';
-import { isSuccess, extractError } from '../../../utils/apiHelpers';
-import { useStateMachine } from '../../../hooks/useStateMachine';
-import { LoadingEvent, LoadingState } from '../../../types/states';
+import { useNotification } from '@/context/NotificationContext';
+import { getRightsDeclarationDetail, RightsDeclarationDetail } from '@/services/rightsDeclaration';
+import { getStoredToken } from '@/services/client';
+import { isSuccess, extractError } from '@/utils/apiHelpers';
+import { useLoadingMachine, LoadingEvent, LoadingState } from '@/hooks';
+import { errorLog } from '@/utils/logger';
+import { copyToClipboard } from '@/utils/clipboard';
 
 const ClaimDetail: React.FC = () => {
     const navigate = useNavigate();
     const { id } = useParams<{ id: string }>();
     const { showToast } = useNotification();
     const [record, setRecord] = useState<RightsDeclarationDetail | null>(null);
-    const loadMachine = useStateMachine<LoadingState, LoadingEvent>({
-        initial: LoadingState.IDLE,
-        transitions: {
-            [LoadingState.IDLE]: { [LoadingEvent.LOAD]: LoadingState.LOADING },
-            [LoadingState.LOADING]: {
-                [LoadingEvent.SUCCESS]: LoadingState.SUCCESS,
-                [LoadingEvent.ERROR]: LoadingState.ERROR,
-            },
-            [LoadingState.SUCCESS]: {
-                [LoadingEvent.LOAD]: LoadingState.LOADING,
-                [LoadingEvent.RETRY]: LoadingState.LOADING,
-            },
-            [LoadingState.ERROR]: {
-                [LoadingEvent.LOAD]: LoadingState.LOADING,
-                [LoadingEvent.RETRY]: LoadingState.LOADING,
-            },
-        },
-    });
+    const loadMachine = useLoadingMachine();
     const loading = loadMachine.state === LoadingState.LOADING;
 
     useEffect(() => {
@@ -62,7 +46,7 @@ const ClaimDetail: React.FC = () => {
                 loadMachine.send(LoadingEvent.ERROR);
             }
         } catch (error: any) {
-            console.error('加载详情失败:', error);
+            errorLog('ClaimDetail', '加载详情失败', error);
             showToast('error', '加载失败', '网络错误，请重试');
             loadMachine.send(LoadingEvent.ERROR);
         } finally {
@@ -70,43 +54,15 @@ const ClaimDetail: React.FC = () => {
         }
     };
 
-    const copyToClipboard = async (text: string) => {
+    const handleCopy = async (text: string) => {
         if (!text || text.trim() === '') {
             showToast('error', '内容为空，无法复制');
             return;
         }
-
-        if (navigator.clipboard && navigator.clipboard.writeText) {
-            try {
-                await navigator.clipboard.writeText(text);
-                showToast('success', '复制成功');
-                return;
-            } catch (err: any) {
-                console.warn('Modern clipboard API failed:', err);
-            }
-        }
-
-        try {
-            const textArea = document.createElement('textarea');
-            textArea.value = text;
-            textArea.style.position = 'absolute';
-            textArea.style.left = '-9999px';
-            textArea.setAttribute('readonly', '');
-
-            document.body.appendChild(textArea);
-            textArea.select();
-            textArea.setSelectionRange(0, text.length);
-
-            const successful = document.execCommand('copy');
-            document.body.removeChild(textArea);
-
-            if (successful) {
-                showToast('success', '复制成功');
-                return;
-            }
-            throw new Error('execCommand failed');
-        } catch (err: any) {
-            console.error('Fallback copy failed:', err);
+        const success = await copyToClipboard(text);
+        if (success) {
+            showToast('success', '复制成功');
+        } else {
             showToast('error', '复制失败', '请手动复制');
         }
     };
@@ -230,7 +186,7 @@ const ClaimDetail: React.FC = () => {
                         <span className="text-gray-500 text-sm">记录编号</span>
                         <div className="flex items-center gap-2">
                             <span className="text-gray-900 font-medium font-mono text-sm">#{record.id}</span>
-                            <button onClick={() => copyToClipboard(record.id.toString())} className="text-gray-400 hover:text-gray-600">
+                            <button onClick={() => handleCopy(record.id.toString())} className="text-gray-400 hover:text-gray-600">
                                 <Copy size={12} />
                             </button>
                         </div>

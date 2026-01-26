@@ -2,10 +2,10 @@
  * 藏品列表筛选排序 Hook
  */
 import { useMemo, useCallback } from 'react';
-import { MyCollectionItem } from '../../../../services/api';
-import { ConsignmentStatus } from '../../../../constants/statusEnums';
-import type { SortOrder } from '../../../../components/common';
-import { debugLog } from '../../../../utils/logger';
+import { MyCollectionItem } from '@/services/api';
+import { ConsignmentStatus } from '@/constants/statusEnums';
+import type { SortOrder } from '@/components/common';
+import { debugLog } from '@/utils/logger';
 
 export interface FilterState {
   selectedSession: string;

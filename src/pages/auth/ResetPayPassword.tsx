@@ -8,7 +8,7 @@
 
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { PasswordForm } from '../../../components/business';
+import { PasswordForm } from '@/components/business';
 
 /**
  * ResetPayPassword 修改支付密码页面组件

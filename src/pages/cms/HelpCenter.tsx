@@ -4,11 +4,11 @@
  */
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import PageContainer from '../../../components/layout/PageContainer';
-import { LoadingSpinner, EmptyState } from '../../../components/common';
-import { fetchHelpCategories, fetchHelpQuestions, HelpCategoryItem, HelpQuestionItem } from '../../../services/api';
-import { extractData } from '../../../utils/apiHelpers';
-import { warnLog, errorLog } from '../../../utils/logger';
+import PageContainer from '@/layouts/PageContainer';
+import { LoadingSpinner, EmptyState } from '@/components/common';
+import { fetchHelpCategories, fetchHelpQuestions, HelpCategoryItem, HelpQuestionItem } from '@/services/api';
+import { extractData } from '@/utils/apiHelpers';
+import { warnLog, errorLog } from '@/utils/logger';
 
 /**
  * 帮助分类接口

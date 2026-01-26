@@ -5,14 +5,15 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FileText, Receipt, ShoppingCart, CreditCard } from 'lucide-react';
-import PageContainer from '../../../components/layout/PageContainer';
-import { LoadingSpinner } from '../../../components/common';
-import { getAllLog, AllLogItem } from '../../../services/wallet';
-import { getStoredToken } from '../../../services/client';
-import { extractData, extractError } from '../../../utils/apiHelpers';
-import { getBalanceTypeLabel } from '../../../constants/balanceTypes';
-import { useStateMachine } from '../../../hooks/useStateMachine';
-import { LoadingEvent, LoadingState } from '../../../types/states';
+import PageContainer from '@/layouts/PageContainer';
+import { LoadingSpinner } from '@/components/common';
+import { getAllLog, AllLogItem } from '@/services/wallet';
+import { getStoredToken } from '@/services/client';
+import { extractData, extractError } from '@/utils/apiHelpers';
+import { getBalanceTypeLabel } from '@/constants/balanceTypes';
+import { useStateMachine } from '@/hooks/useStateMachine';
+import { LoadingEvent, LoadingState } from '@/types/states';
+import { errorLog } from '@/utils/logger';
 
 const OrderFundDetail: React.FC = () => {
   const navigate = useNavigate();
@@ -83,7 +84,7 @@ const OrderFundDetail: React.FC = () => {
         loadMachine.send(LoadingEvent.ERROR);
       }
     } catch (e: any) {
-      console.error('[OrderFundDetail] 加载失败:', e);
+      errorLog('OrderFundDetail', '加载失败', e);
       if (isRefresh) setError(e?.message || '加载数据失败');
       loadMachine.send(LoadingEvent.ERROR);
     } finally {

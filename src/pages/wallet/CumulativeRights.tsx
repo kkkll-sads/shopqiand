@@ -30,20 +30,20 @@ import {
   MoreHorizontal,
   Pickaxe,
 } from 'lucide-react';
-import PageContainer from '../../../components/layout/PageContainer';
-import { LoadingSpinner } from '../../../components/common';
+import PageContainer from '@/layouts/PageContainer';
+import { LoadingSpinner } from '@/components/common';
 import {
   fetchAccountOverview,
   AccountOverviewData,
   AccountBalanceInfo,
   AccountIncomeInfo,
   CollectionInfo,
-} from '../../../services/wallet';
-import { getStoredToken } from '../../../services/client';
-import { formatAmount } from '../../../utils/format';
-import { isSuccess, extractError } from '../../../utils/apiHelpers';
-import { useStateMachine } from '../../../hooks/useStateMachine';
-import { LoadingEvent, LoadingState } from '../../../types/states';
+} from '@/services/wallet';
+import { getStoredToken } from '@/services/client';
+import { formatAmount } from '@/utils/format';
+import { isSuccess, extractError } from '@/utils/apiHelpers';
+import { useStateMachine } from '@/hooks/useStateMachine';
+import { LoadingEvent, LoadingState } from '@/types/states';
 
 const CumulativeRights: React.FC = () => {
   const navigate = useNavigate();

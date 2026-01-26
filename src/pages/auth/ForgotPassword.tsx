@@ -7,7 +7,7 @@
  */
 
 import React from 'react';
-import { PasswordForm } from '../../../components/business';
+import { PasswordForm } from '@/components/business';
 
 /**
  * ForgotPassword 找回密码页面组件

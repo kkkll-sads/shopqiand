@@ -5,14 +5,14 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Gift, ChevronRight, CheckCircle, ArrowRight, Zap, Trophy, Users, ShoppingBag, CreditCard, FileText, UserCheck } from 'lucide-react';
-import PageContainer from '../../../components/layout/PageContainer';
-import { LoadingSpinner } from '../../../components/common';
-import { useNotification } from '../../../context/NotificationContext';
-import { getActivityList, ActivityItem } from '../../../services/activity';
-import { isSuccess } from '../../../utils/apiHelpers';
-import { useStateMachine } from '../../../hooks/useStateMachine';
-import { LoadingEvent, LoadingState } from '../../../types/states';
-import { errorLog } from '../../../utils/logger';
+import PageContainer from '@/layouts/PageContainer';
+import { LoadingSpinner } from '@/components/common';
+import { useNotification } from '@/context/NotificationContext';
+import { getActivityList, ActivityItem } from '@/services/activity';
+import { isSuccess } from '@/utils/apiHelpers';
+import { useStateMachine } from '@/hooks/useStateMachine';
+import { LoadingEvent, LoadingState } from '@/types/states';
+import { errorLog } from '@/utils/logger';
 
 const ActivityCenter: React.FC = () => {
     const navigate = useNavigate();

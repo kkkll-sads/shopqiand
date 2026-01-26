@@ -8,8 +8,8 @@
 
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import PageContainer from '../../../components/layout/PageContainer';
-import { warnLog } from '../../../utils/logger';
+import PageContainer from '@/layouts/PageContainer';
+import { warnLog } from '@/utils/logger';
 
 /**
  * 通知设置键类型

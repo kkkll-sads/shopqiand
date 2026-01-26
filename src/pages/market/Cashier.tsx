@@ -10,10 +10,10 @@
 
 import React from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { LoadingSpinner } from '../../../components/common';
+import { LoadingSpinner } from '@/components/common';
 import { Coins, CreditCard, ChevronLeft, ShieldCheck, Wallet, Sparkles } from 'lucide-react';
-import { useCashier } from '../../../hooks/useCashier';
-import { sum, toNumber } from '../../../utils/currency';
+import { useCashier } from '@/hooks/useCashier';
+import { sum, toNumber } from '@/utils/currency';
 
 const Cashier: React.FC = () => {
   const navigate = useNavigate();

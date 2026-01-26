@@ -5,42 +5,19 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, Search, Clock, CheckCircle2, AlertCircle, FileText } from 'lucide-react';
-import { getRightsDeclarationList, RightsDeclarationRecord } from '../../../services/rightsDeclaration';
-import { getStoredToken } from '../../../services/client';
-import { useNotification } from '../../../context/NotificationContext';
-import { isSuccess, extractError } from '../../../utils/apiHelpers';
-import { useStateMachine } from '../../../hooks/useStateMachine';
-import { LoadingEvent, LoadingState } from '../../../types/states';
-import { useErrorHandler } from '../../../hooks/useErrorHandler';
-import { useInfiniteScroll } from '../../hooks/useInfiniteScroll';
+import { getRightsDeclarationList, RightsDeclarationRecord } from '@/services/rightsDeclaration';
+import { getStoredToken } from '@/services/client';
+import { useNotification } from '@/context/NotificationContext';
+import { isSuccess, extractError } from '@/utils/apiHelpers';
+import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
+import { errorLog } from '@/utils/logger';
 
 const ClaimHistory: React.FC = () => {
     const navigate = useNavigate();
     const { showToast } = useNotification();
 
-    // ✅ 使用统一错误处理Hook（Toast模式）
-    const { handleError } = useErrorHandler({ showToast: true, persist: false });
-
     const [history, setHistory] = useState<RightsDeclarationRecord[]>([]);
-    const loadMachine = useStateMachine<LoadingState, LoadingEvent>({
-        initial: LoadingState.IDLE,
-        transitions: {
-            [LoadingState.IDLE]: { [LoadingEvent.LOAD]: LoadingState.LOADING },
-            [LoadingState.LOADING]: {
-                [LoadingEvent.SUCCESS]: LoadingState.SUCCESS,
-                [LoadingEvent.ERROR]: LoadingState.ERROR,
-            },
-            [LoadingState.SUCCESS]: {
-                [LoadingEvent.LOAD]: LoadingState.LOADING,
-                [LoadingEvent.RETRY]: LoadingState.LOADING,
-            },
-            [LoadingState.ERROR]: {
-                [LoadingEvent.LOAD]: LoadingState.LOADING,
-                [LoadingEvent.RETRY]: LoadingState.LOADING,
-            },
-        },
-    });
-    const loading = loadMachine.state === LoadingState.LOADING;
+    const [loading, setLoading] = useState(false);
 
     const [page, setPage] = useState(1);
     const [hasMore, setHasMore] = useState(true);
@@ -64,12 +41,11 @@ const ClaimHistory: React.FC = () => {
     }, [page]);
 
     const loadHistory = async (pageNum: number, append: boolean = false) => {
-        loadMachine.send(LoadingEvent.LOAD);
+        setLoading(true);
         try {
             const token = getStoredToken();
             if (!token) {
                 showToast('error', '登录过期', '请重新登录');
-                loadMachine.send(LoadingEvent.ERROR);
                 return;
             }
 
@@ -86,26 +62,14 @@ const ClaimHistory: React.FC = () => {
                 }
 
                 setHasMore(pageNum * 10 < total);
-                loadMachine.send(LoadingEvent.SUCCESS);
             } else {
-                // ✅ 使用统一错误处理
-                handleError(response, {
-                    toastTitle: '加载失败',
-                    customMessage: '获取历史记录失败',
-                    context: { page: 'ClaimHistory' }
-                });
-                loadMachine.send(LoadingEvent.ERROR);
+                showToast('error', '加载失败', '获取历史记录失败');
             }
         } catch (error: any) {
-            // ✅ 使用统一错误处理
-            handleError(error, {
-                toastTitle: '加载失败',
-                customMessage: '网络错误，请重试',
-                context: { page: 'ClaimHistory' }
-            });
-            loadMachine.send(LoadingEvent.ERROR);
+            errorLog('ClaimHistory', '加载历史记录失败', error);
+            showToast('error', '加载失败', '网络错误，请重试');
         } finally {
-            // 状态机已处理成功/失败
+            setLoading(false);
         }
     };
 

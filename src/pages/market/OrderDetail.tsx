@@ -1,16 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Package, Phone, MapPin, Copy, Check, Truck, Calendar, Gift, Star } from 'lucide-react';
-import { LoadingSpinner, LazyImage } from '../../../components/common';
-import { formatAmount } from '../../../utils/format';
-import { getOrderDetail, ShopOrderItem, confirmOrder, normalizeAssetUrl, payOrder, cancelOrder } from '../../../services/api';
-import { getStoredToken } from '../../../services/client';
-import { useNotification } from '../../../context/NotificationContext';
-import { ShopOrderPayStatus, ShopOrderShippingStatus } from '../../../constants/statusEnums';
-import { isSuccess, extractError } from '../../../utils/apiHelpers';
-import { useErrorHandler } from '../../../hooks/useErrorHandler';
-import { useStateMachine } from '../../../hooks/useStateMachine';
-import { LoadingEvent, LoadingState } from '../../../types/states';
+import { LoadingSpinner, LazyImage } from '@/components/common';
+import { formatAmount } from '@/utils/format';
+import { getOrderDetail, ShopOrderItem, confirmOrder, normalizeAssetUrl, payOrder, cancelOrder } from '@/services/api';
+import { getStoredToken } from '@/services/client';
+import { useNotification } from '@/context/NotificationContext';
+import { ShopOrderPayStatus, ShopOrderShippingStatus } from '@/constants/statusEnums';
+import { isSuccess, extractError } from '@/utils/apiHelpers';
+import { useErrorHandler, useLoadingMachine, LoadingEvent, LoadingState } from '@/hooks';
+import { copyToClipboard } from '@/utils/clipboard';
 
 const OrderDetail: React.FC = () => {
     const navigate = useNavigate();
@@ -28,24 +27,7 @@ const OrderDetail: React.FC = () => {
     const { handleError: handleOperationError } = useErrorHandler({ showToast: true, persist: false });
 
     const [order, setOrder] = useState<ShopOrderItem | null>(null);
-    const loadMachine = useStateMachine<LoadingState, LoadingEvent>({
-        initial: LoadingState.IDLE,
-        transitions: {
-            [LoadingState.IDLE]: { [LoadingEvent.LOAD]: LoadingState.LOADING },
-            [LoadingState.LOADING]: {
-                [LoadingEvent.SUCCESS]: LoadingState.SUCCESS,
-                [LoadingEvent.ERROR]: LoadingState.ERROR,
-            },
-            [LoadingState.SUCCESS]: {
-                [LoadingEvent.LOAD]: LoadingState.LOADING,
-                [LoadingEvent.RETRY]: LoadingState.LOADING,
-            },
-            [LoadingState.ERROR]: {
-                [LoadingEvent.LOAD]: LoadingState.LOADING,
-                [LoadingEvent.RETRY]: LoadingState.LOADING,
-            },
-        },
-    });
+    const loadMachine = useLoadingMachine();
     const loading = loadMachine.state === LoadingState.LOADING;
 
     useEffect(() => {
@@ -68,8 +50,9 @@ const OrderDetail: React.FC = () => {
                 if (errorMsg.includes('订单不存在')) {
                     showToast('error', '订单不存在', errorMsg);
                     // 延迟一下再跳转，让用户看到提示
+                    // 使用 replace: true 防止用户返回到不存在的订单详情页
                     setTimeout(() => {
-                        navigate('/orders/points/0');
+                        navigate('/orders/points/0', { replace: true });
                     }, 1500);
                     loadMachine.send(LoadingEvent.ERROR);
                     return;
@@ -175,7 +158,10 @@ const OrderDetail: React.FC = () => {
                     const response = await cancelOrder({ id, token });
                     if (isSuccess(response)) {
                         showToast('success', response.msg || '订单取消成功');
-                        loadOrder();
+                        // 取消成功后，替换当前历史记录跳转到订单列表
+                        // 使用 replace: true 防止用户返回到已取消的订单详情页
+                        const targetPath = order?.pay_type === 'score' ? '/orders/points/0' : '/orders/product/0';
+                        navigate(targetPath, { replace: true });
                     } else {
                         handleOperationError(response, {
                             toastTitle: '取消失败',
@@ -194,35 +180,13 @@ const OrderDetail: React.FC = () => {
         });
     };
 
-    const copyOrderNo = async (text: string) => {
-        // 兼容非 HTTPS 环境
-        const copyText = (text: string) => {
-            if (navigator.clipboard && navigator.clipboard.writeText) {
-                return navigator.clipboard.writeText(text);
-            }
-            // fallback: 使用传统方式
-            const textarea = document.createElement('textarea');
-            textarea.value = text;
-            textarea.style.position = 'fixed';
-            textarea.style.opacity = '0';
-            document.body.appendChild(textarea);
-            textarea.select();
-            try {
-                document.execCommand('copy');
-                return Promise.resolve();
-            } catch (e) {
-                return Promise.reject(e);
-            } finally {
-                document.body.removeChild(textarea);
-            }
-        };
-
-        try {
-            await copyText(text);
+    const handleCopyOrderNo = async (text: string) => {
+        const success = await copyToClipboard(text);
+        if (success) {
             setCopiedOrderNo(true);
             showToast('success', '复制成功', '订单号已复制到剪贴板');
             setTimeout(() => setCopiedOrderNo(false), 2000);
-        } catch (error) {
+        } else {
             showToast('error', '复制失败', '请手动复制');
         }
     };
@@ -515,7 +479,7 @@ const OrderDetail: React.FC = () => {
                             <div className="flex items-center gap-2">
                                 <span className="text-gray-900 text-xs font-mono">{order.order_no || order.id}</span>
                                 <button
-                                    onClick={() => copyOrderNo(order.order_no || String(order.id))}
+                                    onClick={() => handleCopyOrderNo(order.order_no || String(order.id))}
                                     className="p-1.5 hover:bg-gray-50 rounded-lg transition-colors active:scale-95"
                                     aria-label="复制订单号"
                                 >
@@ -565,7 +529,7 @@ const OrderDetail: React.FC = () => {
             </div>
 
             {/* Bottom Actions */}
-            <div className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-xl border-t border-gray-100 shadow-[0_-8px_30px_rgba(0,0,0,0.12)] max-w-[480px] mx-auto safe-area-bottom z-[1000]">
+            <div className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-xl border-t border-gray-100 shadow-[0_-8px_30px_rgba(0,0,0,0.12)] max-w-[480px] mx-auto pb-safe z-[1000]">
                 <div className="p-4 flex gap-3">
                     {(order.status === ShopOrderPayStatus.UNPAID || order.status === 'pending' || String(order.status) === '0') && (
                         <>

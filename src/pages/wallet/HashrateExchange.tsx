@@ -5,15 +5,15 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, Zap, Server, Shield, Leaf, Activity } from 'lucide-react';
-import { LoadingSpinner } from '../../../components/common';
+import { LoadingSpinner } from '@/components/common';
 
-import { fetchProfile, exchangeScoreToGreenPower } from '../../../services/api';
-import { getStoredToken } from '../../../services/client';
-import { useAuthStore } from '../../stores/authStore';
-import { UserInfo } from '../../../types';
-import { useNotification } from '../../../context/NotificationContext';
-import { isSuccess, extractData, extractError } from '../../../utils/apiHelpers';
-import { errorLog } from '../../../utils/logger';
+import { fetchProfile, exchangeScoreToGreenPower } from '@/services/api';
+import { getStoredToken } from '@/services/client';
+import { useAuthStore } from '@/stores/authStore';
+import { UserInfo } from '@/types';
+import { useNotification } from '@/context/NotificationContext';
+import { isSuccess, extractData, extractError } from '@/utils/apiHelpers';
+import { errorLog } from '@/utils/logger';
 
 const HashrateExchange: React.FC = () => {
     const navigate = useNavigate();
@@ -187,7 +187,7 @@ const HashrateExchange: React.FC = () => {
             </div>
 
             {/* Bottom Action */}
-            <div className="p-5 safe-area-bottom bg-white/80 backdrop-blur border-t border-gray-100">
+            <div className="p-5 pb-safe bg-white/80 backdrop-blur border-t border-gray-100">
                 <button
                     onClick={handleExchange}
                     disabled={confirming || (userInfo ? userInfo.score < calculateCost() : true)}

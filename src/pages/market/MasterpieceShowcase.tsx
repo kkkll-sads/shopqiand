@@ -8,13 +8,13 @@
 
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import PageContainer from '../../../components/layout/PageContainer';
-import { LoadingSpinner } from '../../../components/common';
-import GridShowcase from '../../../components/GridShowcase';
-import { normalizeAssetUrl, fetchShopProducts, ShopProductItem } from '../../../services/api';
-import { useStateMachine } from '../../../hooks/useStateMachine';
-import { LoadingEvent, LoadingState } from '../../../types/states';
-import { errorLog } from '../../../utils/logger';
+import PageContainer from '@/layouts/PageContainer';
+import { LoadingSpinner } from '@/components/common';
+import GridShowcase from '@/components/common/GridShowcase';
+import { normalizeAssetUrl, fetchShopProducts, ShopProductItem } from '@/services/api';
+import { useStateMachine } from '@/hooks/useStateMachine';
+import { LoadingEvent, LoadingState } from '@/types/states';
+import { errorLog } from '@/utils/logger';
 
 /**
  * MasterpieceShowcase 佳作鉴赏页面组件

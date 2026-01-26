@@ -2,7 +2,7 @@
  * 批量寄售按钮组件
  */
 import React from 'react';
-import { BatchConsignableListData } from '../../../../../services/api';
+import { BatchConsignableListData } from '@/services/api';
 
 interface BatchConsignButtonProps {
   batchData: BatchConsignableListData | null;

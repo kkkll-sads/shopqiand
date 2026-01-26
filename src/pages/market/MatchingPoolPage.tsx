@@ -9,18 +9,16 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Clock, CheckCircle, XCircle, Loader, TrendingUp, Zap } from 'lucide-react';
-import { LoadingSpinner } from '../../../components/common';
+import { LoadingSpinner } from '@/components/common';
 import {
     fetchMatchingPool,
     cancelBid,
     MatchingPoolItem,
     MatchingPoolStatus,
-} from '../../../services/api';
-import { useNotification } from '../../../context/NotificationContext';
-import { isSuccess, extractError } from '../../../utils/apiHelpers';
-import { useStateMachine } from '../../../hooks/useStateMachine';
-import { LoadingEvent, LoadingState } from '../../../types/states';
-import { errorLog } from '../../../utils/logger';
+} from '@/services/api';
+import { useNotification } from '@/context/NotificationContext';
+import { isSuccess, extractError } from '@/utils/apiHelpers';
+import { errorLog } from '@/utils/logger';
 
 // 状态显示配置
 const STATUS_CONFIG: Record<MatchingPoolStatus, {
@@ -66,30 +64,12 @@ const MatchingPoolPage: React.FC = () => {
     const [total, setTotal] = useState(0);
     const [hasMore, setHasMore] = useState(false);
     const [cancellingId, setCancellingId] = useState<number | null>(null);
-    const loadMachine = useStateMachine<LoadingState, LoadingEvent>({
-        initial: LoadingState.IDLE,
-        transitions: {
-            [LoadingState.IDLE]: { [LoadingEvent.LOAD]: LoadingState.LOADING },
-            [LoadingState.LOADING]: {
-                [LoadingEvent.SUCCESS]: LoadingState.SUCCESS,
-                [LoadingEvent.ERROR]: LoadingState.ERROR,
-            },
-            [LoadingState.SUCCESS]: {
-                [LoadingEvent.LOAD]: LoadingState.LOADING,
-                [LoadingEvent.RETRY]: LoadingState.LOADING,
-            },
-            [LoadingState.ERROR]: {
-                [LoadingEvent.LOAD]: LoadingState.LOADING,
-                [LoadingEvent.RETRY]: LoadingState.LOADING,
-            },
-        },
-    });
-    const loading = loadMachine.state === LoadingState.LOADING;
+    const [loading, setLoading] = useState(false);
 
     // 加载撮合池数据
     const loadMatchingPool = async (pageNum: number, statusFilter?: MatchingPoolStatus) => {
         try {
-            loadMachine.send(LoadingEvent.LOAD);
+            setLoading(true);
             setError(null);
 
             const response = await fetchMatchingPool({
@@ -109,17 +89,14 @@ const MatchingPoolPage: React.FC = () => {
                 }
                 setTotal(response.data.total || 0);
                 setHasMore(newList.length === 20);
-                loadMachine.send(LoadingEvent.SUCCESS);
             } else {
                 setError(extractError(response, '加载失败'));
-                loadMachine.send(LoadingEvent.ERROR);
             }
         } catch (err: any) {
             errorLog('MatchingPoolPage', '加载撮合池列表失败', err);
             setError(err?.msg || '网络连接异常');
-            loadMachine.send(LoadingEvent.ERROR);
         } finally {
-            // 状态机已处理成功/失败
+            setLoading(false);
         }
     };
 

@@ -4,11 +4,11 @@
  */
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import SubPageLayout from '../../../components/SubPageLayout';
-import { MyCollectionItem } from '../../../services/api';
-import { useInfiniteScroll } from '../../hooks/useInfiniteScroll';
-import { debugLog } from '../../../utils/logger';
-import type { SortOrder } from '../../../components/common';
+import PageContainer from '@/layouts/PageContainer';
+import { MyCollectionItem } from '@/services/api';
+import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
+import { debugLog } from '@/utils/logger';
+import type { SortOrder } from '@/components/common';
 
 // 子组件
 import {
@@ -33,8 +33,8 @@ import {
   hasConsignedBefore,
 } from './hooks';
 
-import { LoadingEvent, FormEvent } from '../../../types/states';
-import { DeliveryStatus } from '../../../constants/statusEnums';
+import { LoadingEvent, FormEvent } from '@/types/states';
+import { DeliveryStatus } from '@/constants/statusEnums';
 
 interface MyCollectionProps {
   onItemSelect?: (item: MyCollectionItem) => void;
@@ -275,7 +275,7 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onItemSelect, initialConsig
 
   // ========== 渲染 ==========
   return (
-    <SubPageLayout title="我的藏品" onBack={() => navigate(-1)}>
+    <PageContainer title="我的藏品" onBack={() => navigate(-1)}>
       <div className="flex-1 overflow-hidden flex flex-col">
         {/* 固定区域：Tab + 筛选器 */}
         <div className="sticky top-0 z-20 bg-white shadow-sm">
@@ -340,7 +340,7 @@ const MyCollection: React.FC<MyCollectionProps> = ({ onItemSelect, initialConsig
           onConsign={handleModalConsign}
         />
       </div>
-    </SubPageLayout>
+    </PageContainer>
   );
 };
 

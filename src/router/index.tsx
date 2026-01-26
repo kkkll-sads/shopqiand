@@ -5,7 +5,7 @@
  */
 import React, { Suspense, lazy } from 'react';
 import { createBrowserRouter, Navigate, type RouteObject } from 'react-router-dom';
-import { LoadingSpinner } from '../../components/common';
+import { LoadingSpinner } from '@/components/common';
 import { MainLayout, AuthLayout } from '../layouts';
 
 // ========================================
@@ -13,80 +13,80 @@ import { MainLayout, AuthLayout } from '../layouts';
 // ========================================
 
 // 主 Tab 页面
-const HomeEntry = lazy(() => import('../pages/HomeEntryWrapper'));
-const MarketEntry = lazy(() => import('../pages/MarketEntryWrapper'));
-const RightsEntry = lazy(() => import('../pages/RightsEntryWrapper'));
-const ProfileEntry = lazy(() => import('../pages/ProfileEntryWrapper'));
-const LivePage = lazy(() => import('../pages/live/LivePageWrapper'));
+const HomeEntry = lazy(() => import('@/pages/cms/Home'));
+const MarketEntry = lazy(() => import('@/pages/market/Market'));
+const RightsEntry = lazy(() => import('@/pages/wallet/ClaimStation'));
+const ProfileEntry = lazy(() => import('@/pages/user/Profile'));
+const LivePage = lazy(() => import('@/pages/live/LivePage'));
 
 // 认证页面
-const Login = lazy(() => import('../pages/auth/LoginWrapper'));
-const Register = lazy(() => import('../pages/auth/RegisterWrapper'));
-const ForgotPassword = lazy(() => import('../pages/auth/ForgotPasswordWrapper'));
-const ResetLoginPassword = lazy(() => import('../pages/auth/ResetLoginPasswordWrapper'));
-const ResetPayPassword = lazy(() => import('../pages/auth/ResetPayPasswordWrapper'));
+const Login = lazy(() => import('@/pages/auth/Login'));
+const Register = lazy(() => import('@/pages/auth/Register'));
+const ForgotPassword = lazy(() => import('@/pages/auth/ForgotPassword'));
+const ResetLoginPassword = lazy(() => import('@/pages/auth/ResetLoginPassword'));
+const ResetPayPassword = lazy(() => import('@/pages/auth/ResetPayPassword'));
 
 // 用户页面
-const Settings = lazy(() => import('../pages/user/SettingsWrapper'));
-const EditProfile = lazy(() => import('../pages/user/EditProfileWrapper'));
-const AddressList = lazy(() => import('../pages/user/AddressListWrapper'));
-const RealNameAuth = lazy(() => import('../pages/user/RealNameAuthWrapper'));
-const AgentAuth = lazy(() => import('../pages/user/AgentAuthWrapper'));
-const MyFriends = lazy(() => import('../pages/user/MyFriendsWrapper'));
-const FriendDetail = lazy(() => import('../pages/user/FriendDetailWrapper'));
-const InviteFriends = lazy(() => import('../pages/user/InviteFriendsWrapper'));
-const AccountDeletion = lazy(() => import('../pages/user/AccountDeletionWrapper'));
-const NotificationSettings = lazy(() => import('../pages/user/NotificationSettingsWrapper'));
-const UserSurvey = lazy(() => import('../pages/user/UserSurveyWrapper'));
-const ActivityCenter = lazy(() => import('../pages/user/ActivityCenterWrapper'));
+const Settings = lazy(() => import('@/pages/user/Settings'));
+const EditProfile = lazy(() => import('@/pages/user/EditProfile'));
+const AddressList = lazy(() => import('@/pages/user/AddressList'));
+const RealNameAuth = lazy(() => import('@/pages/user/RealNameAuth'));
+const AgentAuth = lazy(() => import('@/pages/user/AgentAuth'));
+const MyFriends = lazy(() => import('@/pages/user/MyFriends'));
+const FriendDetail = lazy(() => import('@/pages/user/FriendDetail'));
+const InviteFriends = lazy(() => import('@/pages/user/InviteFriends'));
+const AccountDeletion = lazy(() => import('@/pages/user/AccountDeletion'));
+const NotificationSettings = lazy(() => import('@/pages/user/NotificationSettings'));
+const UserSurvey = lazy(() => import('@/pages/user/UserSurvey'));
+const ActivityCenter = lazy(() => import('@/pages/user/ActivityCenter'));
 
 // CMS/内容页面
-const News = lazy(() => import('../pages/cms/NewsWrapper'));
-const AnnouncementDetail = lazy(() => import('../pages/cms/AnnouncementDetailWrapper'));
-const MessageCenter = lazy(() => import('../pages/cms/MessageCenterWrapper'));
-const SignIn = lazy(() => import('../pages/cms/SignInWrapper'));
-const HelpCenter = lazy(() => import('../pages/cms/HelpCenterWrapper'));
-const OnlineService = lazy(() => import('../pages/cms/OnlineServiceWrapper'));
-const AboutUs = lazy(() => import('../pages/cms/AboutUsWrapper'));
-const PrivacyPolicy = lazy(() => import('../pages/cms/PrivacyPolicyWrapper'));
-const UserAgreement = lazy(() => import('../pages/cms/UserAgreementWrapper'));
+const News = lazy(() => import('@/pages/cms/News'));
+const AnnouncementDetail = lazy(() => import('@/pages/cms/AnnouncementDetail'));
+const MessageCenter = lazy(() => import('@/pages/cms/MessageCenter'));
+const SignIn = lazy(() => import('@/pages/cms/SignIn'));
+const HelpCenter = lazy(() => import('@/pages/cms/HelpCenter'));
+const OnlineService = lazy(() => import('@/pages/cms/OnlineService'));
+const AboutUs = lazy(() => import('@/pages/cms/AboutUs'));
+const PrivacyPolicy = lazy(() => import('@/pages/cms/PrivacyPolicy'));
+const UserAgreement = lazy(() => import('@/pages/cms/UserAgreement'));
 
 // 市场/交易页面
-const ProductDetail = lazy(() => import('../pages/market/ProductDetailWrapper'));
-const TradingZone = lazy(() => import('../pages/market/TradingZoneWrapper'));
-const MasterpieceShowcase = lazy(() => import('../pages/market/MasterpieceShowcaseWrapper'));
-const ReservationPage = lazy(() => import('../pages/market/ReservationPageWrapper'));
-const ReservationRecordPage = lazy(() => import('../pages/market/ReservationRecordPageWrapper'));
-const ReservationRecordDetailPage = lazy(() => import('../pages/market/ReservationRecordDetailPageWrapper'));
-const SearchPage = lazy(() => import('../pages/market/SearchPageWrapper'));
-const ReviewsPage = lazy(() => import('../pages/market/ReviewsPageWrapper'));
-const SubmitReview = lazy(() => import('../pages/market/SubmitReviewWrapper'));
-const OrderListPage = lazy(() => import('../pages/market/OrderListPageWrapper'));
-const OrderDetail = lazy(() => import('../pages/market/OrderDetailWrapper'));
-const CollectionOrderDetail = lazy(() => import('../pages/market/CollectionOrderDetailWrapper'));
-const Cashier = lazy(() => import('../pages/market/CashierWrapper'));
+const ProductDetail = lazy(() => import('@/pages/market/ProductDetail'));
+const TradingZone = lazy(() => import('@/pages/market/TradingZone'));
+const MasterpieceShowcase = lazy(() => import('@/pages/market/MasterpieceShowcase'));
+const ReservationPage = lazy(() => import('@/pages/market/ReservationPage'));
+const ReservationRecordPage = lazy(() => import('@/pages/market/ReservationRecordPage'));
+const ReservationRecordDetailPage = lazy(() => import('@/pages/market/ReservationRecordDetailPage'));
+const SearchPage = lazy(() => import('@/pages/market/SearchPage'));
+const ReviewsPage = lazy(() => import('@/pages/market/ReviewsPage'));
+const SubmitReview = lazy(() => import('@/pages/market/SubmitReview'));
+const OrderListPage = lazy(() => import('@/pages/market/OrderListPage'));
+const OrderDetail = lazy(() => import('@/pages/market/OrderDetail'));
+const CollectionOrderDetail = lazy(() => import('@/pages/market/CollectionOrderDetail'));
+const Cashier = lazy(() => import('@/pages/market/Cashier'));
 
 // 钱包/资产页面
-const AssetView = lazy(() => import('../pages/wallet/AssetViewWrapper'));
-const AssetHistory = lazy(() => import('../pages/wallet/AssetHistoryWrapper'));
-const BalanceRecharge = lazy(() => import('../pages/wallet/BalanceRechargeWrapper'));
-const BalanceWithdraw = lazy(() => import('../pages/wallet/BalanceWithdrawWrapper'));
-const RechargeOrderDetail = lazy(() => import('../pages/wallet/RechargeOrderDetailWrapper'));
-const WithdrawOrderDetail = lazy(() => import('../pages/wallet/WithdrawOrderDetailWrapper'));
-const ServiceRecharge = lazy(() => import('../pages/wallet/ServiceRechargeWrapper'));
-const ExtensionWithdraw = lazy(() => import('../pages/wallet/ExtensionWithdrawWrapper'));
-const CardManagement = lazy(() => import('../pages/wallet/CardManagementWrapper'));
-const ConsignmentVoucher = lazy(() => import('../pages/wallet/ConsignmentVoucherWrapper'));
-const CumulativeRights = lazy(() => import('../pages/wallet/CumulativeRightsWrapper'));
-const MyCollection = lazy(() => import('../pages/wallet/MyCollectionWrapper'));
-const MyCollectionDetail = lazy(() => import('../pages/wallet/MyCollectionDetailWrapper'));
-const ClaimHistory = lazy(() => import('../pages/wallet/ClaimHistoryWrapper'));
-const ClaimDetail = lazy(() => import('../pages/wallet/ClaimDetailWrapper'));
-const HashrateExchange = lazy(() => import('../pages/wallet/HashrateExchangeWrapper'));
-const MoneyLogDetail = lazy(() => import('../pages/wallet/MoneyLogDetailWrapper'));
-const OrderFundDetail = lazy(() => import('../pages/wallet/OrderFundDetailWrapper'));
-const RechargeOrderList = lazy(() => import('../pages/wallet/RechargeOrderListWrapper'));
-const WithdrawOrderList = lazy(() => import('../pages/wallet/WithdrawOrderListWrapper'));
+const AssetView = lazy(() => import('@/pages/wallet/AssetView'));
+const AssetHistory = lazy(() => import('@/pages/wallet/AssetHistory'));
+const BalanceRecharge = lazy(() => import('@/pages/wallet/BalanceRecharge'));
+const BalanceWithdraw = lazy(() => import('@/pages/wallet/BalanceWithdraw'));
+const RechargeOrderDetail = lazy(() => import('@/pages/wallet/RechargeOrderDetail'));
+const WithdrawOrderDetail = lazy(() => import('@/pages/wallet/WithdrawOrderDetail'));
+const ServiceRecharge = lazy(() => import('@/pages/wallet/ServiceRecharge'));
+const ExtensionWithdraw = lazy(() => import('@/pages/wallet/ExtensionWithdraw'));
+const CardManagement = lazy(() => import('@/pages/wallet/CardManagement'));
+const ConsignmentVoucher = lazy(() => import('@/pages/wallet/ConsignmentVoucher'));
+const CumulativeRights = lazy(() => import('@/pages/wallet/CumulativeRights'));
+const MyCollection = lazy(() => import('@/pages/wallet/MyCollection'));
+const MyCollectionDetail = lazy(() => import('@/pages/wallet/MyCollectionDetail'));
+const ClaimHistory = lazy(() => import('@/pages/wallet/ClaimHistory'));
+const ClaimDetail = lazy(() => import('@/pages/wallet/ClaimDetail'));
+const HashrateExchange = lazy(() => import('@/pages/wallet/HashrateExchange'));
+const MoneyLogDetail = lazy(() => import('@/pages/wallet/MoneyLogDetail'));
+const OrderFundDetail = lazy(() => import('@/pages/wallet/OrderFundDetail'));
+const RechargeOrderList = lazy(() => import('@/pages/wallet/RechargeOrderList'));
+const WithdrawOrderList = lazy(() => import('@/pages/wallet/WithdrawOrderList'));
 
 // ========================================
 // 懒加载包装组件

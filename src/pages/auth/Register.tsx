@@ -22,17 +22,17 @@ import {
   Eye,
   EyeOff,
 } from 'lucide-react';
-import { register, RegisterParams, fetchAnnouncements, AnnouncementItem } from '../../../services/api';
-import { sendSmsCode } from '../../../services/common';
-import { isValidPhone } from '../../../utils/validation';
-import { useNotification } from '../../../context/NotificationContext';
-import { isSuccess, extractError } from '../../../utils/apiHelpers';
-import PopupAnnouncementModal from '../../../components/common/PopupAnnouncementModal';
+import { register, RegisterParams, fetchAnnouncements, AnnouncementItem } from '@/services/api';
+import { sendSmsCode } from '@/services/common';
+import { isValidPhone } from '@/utils/validation';
+import { useNotification } from '@/context/NotificationContext';
+import { isSuccess, extractError } from '@/utils/apiHelpers';
+import PopupAnnouncementModal from '@/components/common/PopupAnnouncementModal';
 import { useNavigate } from 'react-router-dom';
-import { useAuthStore } from '../../stores/authStore';
-import { useStateMachine } from '../../../hooks/useStateMachine';
-import { FormEvent, FormState } from '../../../types/states';
-import { debugLog, errorLog } from '../../../utils/logger';
+import { useAuthStore } from '@/stores/authStore';
+import { useStateMachine } from '@/hooks/useStateMachine';
+import { FormEvent, FormState } from '@/types/states';
+import { debugLog, errorLog } from '@/utils/logger';
 
 /**
  * Register 注册页面组件

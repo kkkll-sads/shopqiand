@@ -8,14 +8,14 @@
 
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import PageContainer from '../../../components/layout/PageContainer';
-import { ConfirmModal } from '../../../components/common';
-import { cancelAccount } from '../../../services/api';
-import { useAuthStore } from '../../stores/authStore';
-import { useModal } from '../../../hooks';
-import { useNotification } from '../../../context/NotificationContext';
-import { useStateMachine } from '../../../hooks/useStateMachine';
-import { FormEvent, FormState } from '../../../types/states';
+import PageContainer from '@/layouts/PageContainer';
+import { ConfirmModal } from '@/components/common';
+import { cancelAccount } from '@/services/api';
+import { useAuthStore } from '@/stores/authStore';
+import { useModal } from '@/hooks';
+import { useNotification } from '@/context/NotificationContext';
+import { useStateMachine } from '@/hooks/useStateMachine';
+import { FormEvent, FormState } from '@/types/states';
 
 /** 注销提示列表 */
 const tips = [

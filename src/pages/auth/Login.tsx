@@ -11,16 +11,16 @@
 
 import React, { useState, useEffect } from 'react';
 import { Eye, EyeOff, User, Lock, Check, HeadphonesIcon } from 'lucide-react';
-import { login as loginApi, LoginParams, fetchProfile, fetchRealNameStatus } from '../../../services/api';
-import { useNotification } from '../../../context/NotificationContext';
-import { bizLog, debugLog, errorLog, warnLog } from '../../../utils/logger';
-import { isSuccess } from '../../../utils/apiHelpers';
-import { useErrorHandler } from '../../../hooks/useErrorHandler';
-import { sendSmsCode } from '../../../services/common';
+import { login as loginApi, LoginParams, fetchProfile, fetchRealNameStatus } from '@/services/api';
+import { useNotification } from '@/context/NotificationContext';
+import { bizLog, debugLog, errorLog, warnLog } from '@/utils/logger';
+import { isSuccess } from '@/utils/apiHelpers';
+import { useErrorHandler } from '@/hooks/useErrorHandler';
+import { sendSmsCode } from '@/services/common';
 import { useNavigate } from 'react-router-dom';
-import { useAuthStore } from '../../stores/authStore';
-import { useStateMachine } from '../../../hooks/useStateMachine';
-import { FormEvent, FormState } from '../../../types/states';
+import { useAuthStore } from '@/stores/authStore';
+import { useStateMachine } from '@/hooks/useStateMachine';
+import { FormEvent, FormState } from '@/types/states';
 
 // localStorage 存储键名
 const STORAGE_KEY_PHONE = 'login_remembered_phone';

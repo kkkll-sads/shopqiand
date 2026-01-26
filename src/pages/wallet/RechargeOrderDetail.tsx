@@ -5,38 +5,23 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Copy, FileText, Calendar, CreditCard, Receipt, CheckCircle, XCircle, Clock, Image as ImageIcon } from 'lucide-react';
-import { LoadingSpinner } from '../../../components/common';
-import { formatTime } from '../../../utils/format';
-import { useNotification } from '../../../context/NotificationContext';
-import SubPageLayout from '../../../components/SubPageLayout';
-import { getRechargeOrderDetail, RechargeOrderDetail as RechargeOrderDetailType } from '../../../services/wallet';
-import { extractData, isSuccess } from '../../../utils/apiHelpers';
-import { useStateMachine } from '../../../hooks/useStateMachine';
-import { LoadingEvent, LoadingState } from '../../../types/states';
+import { LoadingSpinner } from '@/components/common';
+import { formatTime } from '@/utils/format';
+import { useNotification } from '@/context/NotificationContext';
+import PageContainer from '@/layouts/PageContainer';
+import { getRechargeOrderDetail, RechargeOrderDetail as RechargeOrderDetailType } from '@/services/wallet';
+import { extractData, isSuccess } from '@/utils/apiHelpers';
+import { useLoadingMachine, LoadingEvent, LoadingState } from '@/hooks';
+import { errorLog } from '@/utils/logger';
+import { copyToClipboard } from '@/utils/clipboard';
+import { getRechargeOrderStatusConfig } from '@/constants/statusEnums';
 
 const RechargeOrderDetail: React.FC = () => {
     const navigate = useNavigate();
     const { orderId } = useParams<{ orderId: string }>();
     const { showToast } = useNotification();
     const [order, setOrder] = useState<RechargeOrderDetailType | null>(null);
-    const loadMachine = useStateMachine<LoadingState, LoadingEvent>({
-        initial: LoadingState.IDLE,
-        transitions: {
-            [LoadingState.IDLE]: { [LoadingEvent.LOAD]: LoadingState.LOADING },
-            [LoadingState.LOADING]: {
-                [LoadingEvent.SUCCESS]: LoadingState.SUCCESS,
-                [LoadingEvent.ERROR]: LoadingState.ERROR,
-            },
-            [LoadingState.SUCCESS]: {
-                [LoadingEvent.LOAD]: LoadingState.LOADING,
-                [LoadingEvent.RETRY]: LoadingState.LOADING,
-            },
-            [LoadingState.ERROR]: {
-                [LoadingEvent.LOAD]: LoadingState.LOADING,
-                [LoadingEvent.RETRY]: LoadingState.LOADING,
-            },
-        },
-    });
+    const loadMachine = useLoadingMachine();
     const loading = loadMachine.state === LoadingState.LOADING;
 
     useEffect(() => {
@@ -54,7 +39,7 @@ const RechargeOrderDetail: React.FC = () => {
                     loadMachine.send(LoadingEvent.ERROR);
                 }
             } catch (error) {
-                console.error('Fetch recharge detail failed:', error);
+                errorLog('RechargeOrderDetail', '获取充值详情失败', error);
                 showToast('error', '加载失败', '网络错误，请稍后重试');
                 loadMachine.send(LoadingEvent.ERROR);
             } finally {
@@ -65,54 +50,26 @@ const RechargeOrderDetail: React.FC = () => {
         fetchDetail();
     }, [orderId, showToast]);
 
-    const copyToClipboard = async (text: string) => {
+    const handleCopy = async (text: string) => {
         if (!text || text.trim() === '') {
             showToast('error', '内容为空，无法复制');
             return;
         }
-
-        if (navigator.clipboard && navigator.clipboard.writeText) {
-            try {
-                await navigator.clipboard.writeText(text);
-                showToast('success', '复制成功');
-                return;
-            } catch (err: any) {
-                console.warn('Modern clipboard API failed:', err);
-            }
-        }
-
-        try {
-            const textArea = document.createElement('textarea');
-            textArea.value = text;
-            textArea.style.position = 'absolute';
-            textArea.style.left = '-9999px';
-            textArea.setAttribute('readonly', '');
-
-            document.body.appendChild(textArea);
-            textArea.select();
-            textArea.setSelectionRange(0, text.length);
-
-            const successful = document.execCommand('copy');
-            document.body.removeChild(textArea);
-
-            if (successful) {
-                showToast('success', '复制成功');
-                return;
-            }
-            throw new Error('execCommand failed');
-        } catch (err: any) {
-            console.error('Fallback copy failed:', err);
+        const success = await copyToClipboard(text);
+        if (success) {
+            showToast('success', '复制成功');
+        } else {
             showToast('error', '复制失败', '请手动复制');
         }
     };
 
-    const getStatusConfig = (status: number) => {
-        const configs = {
-            0: { text: '待审核', color: 'text-orange-600', bgColor: 'bg-gradient-to-r from-orange-400 to-orange-500', icon: Clock },
-            1: { text: '已通过', color: 'text-green-600', bgColor: 'bg-gradient-to-r from-green-400 to-green-500', icon: CheckCircle },
-            2: { text: '已拒绝', color: 'text-red-600', bgColor: 'bg-gradient-to-r from-red-400 to-red-500', icon: XCircle },
-        } as const;
-        return configs[status as keyof typeof configs] || configs[0];
+    // 获取状态图标组件
+    const getStatusIcon = (iconName: string) => {
+        switch (iconName) {
+            case 'check-circle': return CheckCircle;
+            case 'x-circle': return XCircle;
+            default: return Clock;
+        }
     };
 
     if (loading) {
@@ -131,11 +88,11 @@ const RechargeOrderDetail: React.FC = () => {
         );
     }
 
-    const statusConfig = getStatusConfig(order.status);
-    const StatusIcon = statusConfig.icon;
+    const statusConfig = getRechargeOrderStatusConfig(order.status);
+    const StatusIcon = getStatusIcon(statusConfig.iconName);
 
     return (
-        <SubPageLayout title="充值订单详情" onBack={() => navigate(-1)}>
+        <PageContainer title="充值订单详情" onBack={() => navigate(-1)}>
             <div className="p-4 space-y-4 pb-safe">
                 {/* 状态横幅 */}
                 <div className={`${statusConfig.bgColor} rounded-xl p-6 text-white shadow-lg relative overflow-hidden`}>
@@ -182,7 +139,7 @@ const RechargeOrderDetail: React.FC = () => {
                         <div className="flex items-center gap-2">
                             <span className="text-sm font-mono text-gray-800">{order.order_no}</span>
                             <button
-                                onClick={() => copyToClipboard(order.order_no)}
+                                onClick={() => handleCopy(order.order_no)}
                                 className="text-orange-600 hover:text-orange-700 active:scale-95 transition-transform"
                             >
                                 <Copy size={14} />
@@ -270,7 +227,7 @@ const RechargeOrderDetail: React.FC = () => {
                     )}
                 </div>
             </div>
-        </SubPageLayout>
+        </PageContainer>
     );
 };
 

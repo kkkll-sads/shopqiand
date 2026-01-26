@@ -5,20 +5,18 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Filter, FileText, ChevronRight } from 'lucide-react';
-import { FilterBar } from '../../../components/FilterBar';
-import { SearchInput } from '../../../components/common';
+import { FilterBar } from '@/components/common/FilterBar';
+import { SearchInput } from '@/components/common';
 import {
   getAllLog,
   AllLogItem,
-} from '../../../services/api';
-import { getStoredToken } from '../../../services/client';
-import { isSuccess, extractData } from '../../../utils/apiHelpers';
-import { BALANCE_TYPE_OPTIONS, getBalanceTypeLabel } from '../../../constants/balanceTypes';
-import { useStateMachine } from '../../../hooks/useStateMachine';
-import { LoadingEvent, LoadingState } from '../../../types/states';
-import { useInfiniteScroll } from '../../hooks/useInfiniteScroll';
-import { errorLog, debugLog } from '../../../utils/logger';
-import { useAppStore, MARKET_CACHE_TTL } from '../../stores/appStore';
+} from '@/services/api';
+import { getStoredToken } from '@/services/client';
+import { isSuccess, extractData } from '@/utils/apiHelpers';
+import { BALANCE_TYPE_OPTIONS, getBalanceTypeLabel } from '@/constants/balanceTypes';
+import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
+import { errorLog, debugLog } from '@/utils/logger';
+import { useAppStore, MARKET_CACHE_TTL } from '@/stores/appStore';
 
 const AssetHistory: React.FC = () => {
   const navigate = useNavigate();
@@ -61,25 +59,7 @@ const AssetHistory: React.FC = () => {
   const [allLogs, setAllLogs] = useState<AllLogItem[]>([]);
   const [page, setPage] = useState<number>(1);
   const [hasMore, setHasMore] = useState<boolean>(false);
-  const loadMachine = useStateMachine<LoadingState, LoadingEvent>({
-    initial: LoadingState.IDLE,
-    transitions: {
-      [LoadingState.IDLE]: { [LoadingEvent.LOAD]: LoadingState.LOADING },
-      [LoadingState.LOADING]: {
-        [LoadingEvent.SUCCESS]: LoadingState.SUCCESS,
-        [LoadingEvent.ERROR]: LoadingState.ERROR,
-      },
-      [LoadingState.SUCCESS]: {
-        [LoadingEvent.LOAD]: LoadingState.LOADING,
-        [LoadingEvent.RETRY]: LoadingState.LOADING,
-      },
-      [LoadingState.ERROR]: {
-        [LoadingEvent.LOAD]: LoadingState.LOADING,
-        [LoadingEvent.RETRY]: LoadingState.LOADING,
-      },
-    },
-  });
-  const loading = loadMachine.state === LoadingState.LOADING;
+  const [loading, setLoading] = useState(false);
 
   // ========================================
   // 缓存恢复逻辑：组件挂载时检查并恢复缓存
@@ -110,10 +90,6 @@ const AssetHistory: React.FC = () => {
       restoredFromCacheRef.current = true;
       // 保存滚动位置到 ref，等待数据渲染完成后再恢复
       scrollTopRef.current = cache.scrollTop;
-
-      // 设置状态机为成功状态
-      loadMachine.send(LoadingEvent.LOAD);
-      loadMachine.send(LoadingEvent.SUCCESS);
     }
   }, []); // 仅在组件挂载时执行一次
 
@@ -228,11 +204,10 @@ const AssetHistory: React.FC = () => {
     const token = getStoredToken();
     if (!token) {
       setError('请先登录');
-      loadMachine.send(LoadingEvent.ERROR);
       return;
     }
 
-    loadMachine.send(LoadingEvent.LOAD);
+    setLoading(true);
     if (isRefresh) setError(null);
 
     try {
@@ -277,17 +252,14 @@ const AssetHistory: React.FC = () => {
           setAllLogs(prev => [...prev, ...(data.list || [])]);
         }
         setHasMore((data.list?.length || 0) >= 10 && (data.current_page || 1) * 10 < (data.total || 0));
-        loadMachine.send(LoadingEvent.SUCCESS);
       } else {
         if (isRefresh) setError(res.msg || '获取明细失败');
-        loadMachine.send(LoadingEvent.ERROR);
       }
     } catch (e: any) {
       errorLog('AssetHistory', '加载失败', e);
       if (isRefresh) setError(e?.message || '加载数据失败');
-      loadMachine.send(LoadingEvent.ERROR);
     } finally {
-      // 状态机已处理成功/失败
+      setLoading(false);
     }
   };
 

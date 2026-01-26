@@ -5,19 +5,19 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { FileText, Calendar, Hash, Package, Receipt, TrendingUp, TrendingDown, Copy, Check } from 'lucide-react';
-import PageContainer from '../../../components/layout/PageContainer';
-import { LoadingSpinner, LazyImage } from '../../../components/common';
-import { getMoneyLogDetail, MoneyLogDetailData } from '../../../services/wallet';
-import { isSuccess, extractData, extractError } from '../../../utils/apiHelpers';
-import { useNotification } from '../../../context/NotificationContext';
-import { formatAmount, formatTime } from '../../../utils/format';
-import { getBalanceTypeLabel } from '../../../constants/balanceTypes';
-import { getStoredToken } from '../../../services/client';
-import { normalizeAssetUrl } from '../../../services/config';
-import { BizTypeMap, BizType } from '../../../constants/statusEnums';
-import { useStateMachine } from '../../../hooks/useStateMachine';
-import { LoadingEvent, LoadingState } from '../../../types/states';
-import { errorLog } from '../../../utils/logger';
+import PageContainer from '@/layouts/PageContainer';
+import { LoadingSpinner, LazyImage } from '@/components/common';
+import { getMoneyLogDetail, MoneyLogDetailData } from '@/services/wallet';
+import { isSuccess, extractData, extractError } from '@/utils/apiHelpers';
+import { useNotification } from '@/context/NotificationContext';
+import { formatAmount, formatTime } from '@/utils/format';
+import { getBalanceTypeLabel } from '@/constants/balanceTypes';
+import { getStoredToken } from '@/services/client';
+import { normalizeAssetUrl } from '@/services/config';
+import { BizTypeMap, BizType } from '@/constants/statusEnums';
+import { useStateMachine } from '@/hooks/useStateMachine';
+import { LoadingEvent, LoadingState } from '@/types/states';
+import { errorLog } from '@/utils/logger';
 
 const MoneyLogDetail: React.FC = () => {
   const navigate = useNavigate();

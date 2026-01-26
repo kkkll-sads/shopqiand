@@ -1,6 +1,6 @@
 import React from 'react';
-import { ShopOrderItem, ShopOrderItemDetail, normalizeAssetUrl } from '../../../../../services/api';
-import { ShopOrderPayStatus } from '../../../../../constants/statusEnums';
+import { ShopOrderItem, ShopOrderItemDetail, normalizeAssetUrl } from '@/services/api';
+import { ShopOrderPayStatus } from '@/constants/statusEnums';
 import { Package, Gift, ChevronRight, Sparkles, Clock, Truck, CheckCircle } from 'lucide-react';
 
 interface PointOrderCardProps {

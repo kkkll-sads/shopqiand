@@ -10,17 +10,17 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Clock, CreditCard, ShoppingBag, FileText, CheckCircle, XCircle, AlertCircle, ShieldCheck, Copy, Package, Calendar, Receipt, Check } from 'lucide-react';
-import PageContainer from '../../../components/layout/PageContainer';
-import { LoadingSpinner, LazyImage } from '../../../components/common';
-import { getCollectionOrderDetail, CollectionOrderDetailData } from '../../../services/collection';
-import { normalizeAssetUrl } from '../../../services/config';
-import { isSuccess, extractData, extractError } from '../../../utils/apiHelpers';
-import { formatTime, formatAmount } from '../../../utils/format';
-import { getStoredToken } from '../../../services/client';
-import { useNotification } from '../../../context/NotificationContext';
-import { useStateMachine } from '../../../hooks/useStateMachine';
-import { LoadingEvent, LoadingState } from '../../../types/states';
-import { errorLog } from '../../../utils/logger';
+import PageContainer from '@/layouts/PageContainer';
+import { LoadingSpinner, LazyImage } from '@/components/common';
+import { getCollectionOrderDetail, CollectionOrderDetailData } from '@/services/collection';
+import { normalizeAssetUrl } from '@/services/config';
+import { isSuccess, extractData, extractError } from '@/utils/apiHelpers';
+import { formatTime, formatAmount } from '@/utils/format';
+import { getStoredToken } from '@/services/client';
+import { useNotification } from '@/context/NotificationContext';
+import { useLoadingMachine, LoadingEvent, LoadingState } from '@/hooks';
+import { errorLog } from '@/utils/logger';
+import { copyToClipboard } from '@/utils/clipboard';
 
 const CollectionOrderDetail: React.FC = () => {
   const navigate = useNavigate();
@@ -31,24 +31,7 @@ const CollectionOrderDetail: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [order, setOrder] = useState<CollectionOrderDetailData | null>(null);
   const [copiedOrderNo, setCopiedOrderNo] = useState(false);
-  const loadMachine = useStateMachine<LoadingState, LoadingEvent>({
-    initial: LoadingState.IDLE,
-    transitions: {
-      [LoadingState.IDLE]: { [LoadingEvent.LOAD]: LoadingState.LOADING },
-      [LoadingState.LOADING]: {
-        [LoadingEvent.SUCCESS]: LoadingState.SUCCESS,
-        [LoadingEvent.ERROR]: LoadingState.ERROR,
-      },
-      [LoadingState.SUCCESS]: {
-        [LoadingEvent.LOAD]: LoadingState.LOADING,
-        [LoadingEvent.RETRY]: LoadingState.LOADING,
-      },
-      [LoadingState.ERROR]: {
-        [LoadingEvent.LOAD]: LoadingState.LOADING,
-        [LoadingEvent.RETRY]: LoadingState.LOADING,
-      },
-    },
-  });
+  const loadMachine = useLoadingMachine();
   const loading = loadMachine.state === LoadingState.LOADING;
 
   useEffect(() => {
@@ -96,35 +79,13 @@ const CollectionOrderDetail: React.FC = () => {
     }
   };
 
-  const copyOrderNo = async (text: string) => {
-    // 兼容非 HTTPS 环境
-    const copyText = (text: string) => {
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        return navigator.clipboard.writeText(text);
-      }
-      // fallback: 使用传统方式
-      const textarea = document.createElement('textarea');
-      textarea.value = text;
-      textarea.style.position = 'fixed';
-      textarea.style.opacity = '0';
-      document.body.appendChild(textarea);
-      textarea.select();
-      try {
-        document.execCommand('copy');
-        return Promise.resolve();
-      } catch (e) {
-        return Promise.reject(e);
-      } finally {
-        document.body.removeChild(textarea);
-      }
-    };
-    
-    try {
-      await copyText(text);
+  const handleCopyOrderNo = async (text: string) => {
+    const success = await copyToClipboard(text);
+    if (success) {
       setCopiedOrderNo(true);
       showToast('success', '复制成功', '订单号已复制到剪贴板');
       setTimeout(() => setCopiedOrderNo(false), 2000);
-    } catch (error) {
+    } else {
       showToast('error', '复制失败', '请手动复制');
     }
   };
@@ -378,7 +339,7 @@ const CollectionOrderDetail: React.FC = () => {
                               {item.hash}
                             </span>
                             <button
-                              onClick={() => copyOrderNo(item.hash)}
+                              onClick={() => handleCopyOrderNo(item.hash)}
                               className="text-gray-400 hover:text-gray-600"
                             >
                               <Copy size={10} />
@@ -501,7 +462,7 @@ const CollectionOrderDetail: React.FC = () => {
         if (!buttonText) return null;
 
         return (
-          <div className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-xl border-t border-gray-100 shadow-[0_-8px_30px_rgba(0,0,0,0.12)] max-w-[480px] mx-auto safe-area-bottom">
+          <div className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-xl border-t border-gray-100 shadow-[0_-8px_30px_rgba(0,0,0,0.12)] max-w-[480px] mx-auto pb-safe">
             <div className="p-4">
               <button
                 onClick={buttonAction || undefined}

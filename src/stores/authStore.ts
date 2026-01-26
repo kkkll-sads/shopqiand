@@ -4,9 +4,10 @@
  */
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import type { UserInfo, LoginSuccessPayload } from '../../types';
-import { STORAGE_KEYS as GLOBAL_STORAGE_KEYS } from '../../constants/storageKeys';
+import type { UserInfo, LoginSuccessPayload } from '@/types';
+import { STORAGE_KEYS as GLOBAL_STORAGE_KEYS } from '@/constants/storageKeys';
 import { useAppStore } from './appStore';
+import { errorLog } from '@/utils/logger';
 
 // 存储键名常量
 const STORAGE_KEYS = {
@@ -111,7 +112,7 @@ export const useAuthStore = create<AuthState>()(
             // 忽略 sessionStorage 清空失败
           }
         } catch (error) {
-          console.error('清空缓存失败:', error);
+          errorLog('authStore', '清空缓存失败', error);
         }
       },
 

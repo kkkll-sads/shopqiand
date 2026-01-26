@@ -8,10 +8,10 @@
  * 
  * @version 2.0.0 - 支持 SKU 多规格
  */
-import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { Minus, Plus, X } from 'lucide-react';
-import { LazyImage } from '../../../components/common';
-import { SkuSpec, Sku, PriceRange } from '../../../services/shop';
+import { LazyImage } from '@/components/common';
+import { SkuSpec, Sku, PriceRange } from '@/services/shop';
 
 // 兼容旧版规格接口
 export interface ProductSpec {
@@ -38,6 +38,8 @@ export interface BuySpecSheetProps {
   skuSpecs?: SkuSpec[];
   skus?: Sku[];
   priceRange?: PriceRange | null;
+  // 预选规格值（从SKU切换器传入）
+  preSelectedValueIds?: Record<number, number>;
   // 回调
   onConfirm: (
     quantity: number, 
@@ -78,6 +80,7 @@ const BuySpecSheet: React.FC<BuySpecSheetProps> = ({
   skuSpecs = [],
   skus = [],
   priceRange = null,
+  preSelectedValueIds = {},
   onConfirm,
 }) => {
   const [quantity, setQuantity] = useState(1);
@@ -85,15 +88,23 @@ const BuySpecSheet: React.FC<BuySpecSheetProps> = ({
   const [selectedSpecs, setSelectedSpecs] = useState<Record<string, string>>({});
   // 新版：记录选中的规格值ID（specId -> valueId）
   const [selectedValueIds, setSelectedValueIds] = useState<Record<number, number>>({});
+  // 记录上次的 visible 状态，用于检测弹窗打开时机
+  const prevVisibleRef = useRef(false);
 
-  // 重置状态
+  // 重置状态（仅在弹窗打开时）
   useEffect(() => {
-    if (visible) {
+    // 仅在弹窗从关闭变为打开时初始化状态
+    if (visible && !prevVisibleRef.current) {
       setQuantity(1);
       setSelectedSpecs({});
-      setSelectedValueIds({});
+      // 使用预选值初始化
+      const initialValues = Object.keys(preSelectedValueIds).length > 0 
+        ? { ...preSelectedValueIds } 
+        : {};
+      setSelectedValueIds(initialValues);
     }
-  }, [visible]);
+    prevVisibleRef.current = visible;
+  }, [visible, preSelectedValueIds]);
 
   // 标准化 SKU 数据格式（兼容数组和字符串）
   const normalizedSkus = useMemo(() => {
@@ -181,6 +192,30 @@ const BuySpecSheet: React.FC<BuySpecSheetProps> = ({
     }
     return price;
   }, [useSkuMode, matchedSku, priceRange, price]);
+
+  // 计算当前显示的消费金价格（根据 SKU 动态变化）
+  const displayScorePrice = useMemo(() => {
+    if (useSkuMode) {
+      if (matchedSku) {
+        return matchedSku.score_price || 0;
+      }
+      // 未完全选择规格时，显示消费金价格范围
+      if (normalizedSkus.length > 0) {
+        const scorePrices = normalizedSkus
+          .map(sku => sku.score_price || 0)
+          .filter(p => p > 0);
+        if (scorePrices.length > 0) {
+          const minScore = Math.min(...scorePrices);
+          const maxScore = Math.max(...scorePrices);
+          if (minScore !== maxScore) {
+            return { min: minScore, max: maxScore }; // 返回区间对象
+          }
+          return minScore;
+        }
+      }
+    }
+    return scorePrice;
+  }, [useSkuMode, matchedSku, normalizedSkus, scorePrice]);
 
   // 计算当前显示的库存
   const displayStock = useMemo(() => {
@@ -354,12 +389,23 @@ const BuySpecSheet: React.FC<BuySpecSheetProps> = ({
       );
     }
 
-    // 消费金
-    if (scorePrice > 0) {
+    // 消费金（根据 SKU 动态显示）
+    if (typeof displayScorePrice === 'object' && displayScorePrice !== null) {
+      // 显示消费金价格区间
       if (parts.length > 0) parts.push(<span key="plus3" className="text-gray-400 mx-1">+</span>);
       parts.push(
         <span key="score" className="text-red-500">
-          <span className="text-2xl font-bold">{scorePrice}</span>
+          <span className="text-xl font-bold">{displayScorePrice.min}</span>
+          <span className="text-sm mx-0.5">-</span>
+          <span className="text-xl font-bold">{displayScorePrice.max}</span>
+          <span className="text-sm ml-0.5">消费金</span>
+        </span>
+      );
+    } else if (typeof displayScorePrice === 'number' && displayScorePrice > 0) {
+      if (parts.length > 0) parts.push(<span key="plus3" className="text-gray-400 mx-1">+</span>);
+      parts.push(
+        <span key="score" className="text-red-500">
+          <span className="text-2xl font-bold">{displayScorePrice}</span>
           <span className="text-sm ml-0.5">消费金</span>
         </span>
       );
@@ -420,47 +466,155 @@ const BuySpecSheet: React.FC<BuySpecSheetProps> = ({
           </div>
         </div>
 
-        {/* SKU 规格选择区（新版） */}
+        {/* SKU 规格选择区（新版 - 京东风格） */}
         {useSkuMode && (
-          <div className="px-4 py-3 border-t border-gray-100 max-h-[240px] overflow-y-auto">
-            {skuSpecs.map((spec) => (
-              <div key={spec.id} className="mb-4 last:mb-0">
-                <div className="text-sm text-gray-700 mb-2 font-medium">{spec.name}</div>
-                <div className="flex flex-wrap gap-2">
-                  {spec.values.map((value) => {
-                    const isSelected = selectedValueIds[spec.id] === value.id;
-                    const selectable = isValueSelectable(spec.id, value.id);
-                    
-                    return (
-                      <button
-                        key={value.id}
-                        onClick={() => selectable && handleSelectSkuValue(spec.id, value.id)}
-                        disabled={!selectable}
-                        className={`relative px-4 py-1.5 rounded-full text-sm border transition-all ${
-                          isSelected
-                            ? 'border-red-500 bg-red-50 text-red-500'
-                            : selectable
-                              ? 'border-gray-200 text-gray-700 hover:border-gray-300 active:scale-95'
-                              : 'border-gray-100 text-gray-300 cursor-not-allowed bg-gray-50'
-                        }`}
-                      >
-                        {value.image && (
-                          <span className="inline-block w-4 h-4 rounded mr-1 overflow-hidden align-middle">
-                            <img src={value.image} alt="" className="w-full h-full object-cover" />
-                          </span>
-                        )}
-                        {value.value}
-                        {!selectable && (
-                          <span className="absolute inset-0 flex items-center justify-center">
-                            <span className="w-full h-[1px] bg-gray-300 transform rotate-[-20deg]" />
-                          </span>
-                        )}
-                      </button>
-                    );
-                  })}
+          <div className="px-4 py-3 border-t border-gray-100 max-h-[320px] overflow-y-auto">
+            {skuSpecs.map((spec, specIndex) => {
+              // 检查是否有图片（规格值图片或对应SKU图片）
+              const hasSpecImages = spec.values.some(v => v.image);
+              const hasSkuImages = specIndex === 0 && normalizedSkus.some(sku => sku.image);
+              const showGridMode = hasSpecImages || hasSkuImages;
+              
+              // 获取规格值对应的价格和图片
+              const getValueInfo = (valueId: number) => {
+                // 找到包含此规格值的SKU
+                const relatedSkus = normalizedSkus.filter(sku => {
+                  const ids = String(sku.spec_value_ids).split(',').map(Number);
+                  return ids[specIndex] === valueId;
+                });
+                
+                if (relatedSkus.length === 0) return { price: null, image: null };
+                
+                // 获取价格范围
+                const prices = relatedSkus.map(s => s.score_price || s.price || 0).filter(p => p > 0);
+                const minPrice = prices.length > 0 ? Math.min(...prices) : null;
+                const maxPrice = prices.length > 0 ? Math.max(...prices) : null;
+                
+                // 获取图片（优先使用SKU图片）
+                const skuWithImage = relatedSkus.find(s => s.image);
+                const image = skuWithImage?.image || spec.values.find(v => v.id === valueId)?.image;
+                
+                return { 
+                  minPrice, 
+                  maxPrice,
+                  image,
+                  isScorePrice: relatedSkus.some(s => s.score_price && s.score_price > 0)
+                };
+              };
+              
+              return (
+                <div key={spec.id} className="mb-4 last:mb-0">
+                  <div className="text-sm text-gray-700 mb-2 font-medium">{spec.name}</div>
+                  
+                  {/* 网格模式（有图片时） */}
+                  {showGridMode ? (
+                    <div className="grid grid-cols-3 gap-2">
+                      {spec.values.map((value) => {
+                        const isSelected = selectedValueIds[spec.id] === value.id;
+                        const selectable = isValueSelectable(spec.id, value.id);
+                        const { minPrice, maxPrice, image, isScorePrice } = getValueInfo(value.id);
+                        
+                        return (
+                          <button
+                            key={value.id}
+                            onClick={() => selectable && handleSelectSkuValue(spec.id, value.id)}
+                            disabled={!selectable}
+                            className={`relative rounded-lg overflow-hidden border-2 transition-all ${
+                              isSelected
+                                ? 'border-red-500 bg-red-50'
+                                : selectable
+                                  ? 'border-gray-200 hover:border-gray-300 active:scale-[0.98]'
+                                  : 'border-gray-100 opacity-50 cursor-not-allowed'
+                            }`}
+                          >
+                            {/* 图片区域 */}
+                            {image && (
+                              <div className="aspect-square bg-gray-100">
+                                <img 
+                                  src={image} 
+                                  alt={value.value}
+                                  className="w-full h-full object-cover"
+                                />
+                              </div>
+                            )}
+                            
+                            {/* 信息区域 */}
+                            <div className="p-2 text-center">
+                              <div className={`text-xs font-medium truncate ${
+                                isSelected ? 'text-red-600' : 'text-gray-700'
+                              }`}>
+                                {value.value}
+                              </div>
+                              {minPrice !== null && (
+                                <div className={`text-xs mt-0.5 ${
+                                  isSelected ? 'text-red-500' : 'text-gray-500'
+                                }`}>
+                                  {isScorePrice ? (
+                                    minPrice === maxPrice 
+                                      ? `${minPrice}消费金`
+                                      : `${minPrice}-${maxPrice}`
+                                  ) : (
+                                    minPrice === maxPrice
+                                      ? `¥${minPrice}`
+                                      : `¥${minPrice}-${maxPrice}`
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                            
+                            {/* 选中标记 */}
+                            {isSelected && (
+                              <div className="absolute top-1 right-1 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center">
+                                <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                                </svg>
+                              </div>
+                            )}
+                            
+                            {/* 不可选遮罩 */}
+                            {!selectable && (
+                              <div className="absolute inset-0 bg-white/60 flex items-center justify-center">
+                                <span className="text-[10px] text-gray-400">无货</span>
+                              </div>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    /* 标签模式（无图片时） */
+                    <div className="flex flex-wrap gap-2">
+                      {spec.values.map((value) => {
+                        const isSelected = selectedValueIds[spec.id] === value.id;
+                        const selectable = isValueSelectable(spec.id, value.id);
+                        
+                        return (
+                          <button
+                            key={value.id}
+                            onClick={() => selectable && handleSelectSkuValue(spec.id, value.id)}
+                            disabled={!selectable}
+                            className={`relative px-4 py-1.5 rounded-full text-sm border transition-all ${
+                              isSelected
+                                ? 'border-red-500 bg-red-50 text-red-500'
+                                : selectable
+                                  ? 'border-gray-200 text-gray-700 hover:border-gray-300 active:scale-95'
+                                  : 'border-gray-100 text-gray-300 cursor-not-allowed bg-gray-50'
+                            }`}
+                          >
+                            {value.value}
+                            {!selectable && (
+                              <span className="absolute inset-0 flex items-center justify-center">
+                                <span className="w-full h-[1px] bg-gray-300 transform rotate-[-20deg]" />
+                              </span>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
 

@@ -5,12 +5,13 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Clock } from 'lucide-react';
-import PageContainer from '../../../components/layout/PageContainer';
-import { EmptyState } from '../../../components/common';
-import { NewsItem } from '../../../types';
+import PageContainer from '@/layouts/PageContainer';
+import { EmptyState, LoadingSpinner } from '@/components/common';
+import { NewsItem } from '@/types';
+import { useAnnouncementDetail } from './hooks/useAnnouncementDetail';
 
 interface AnnouncementDetailProps {
-  newsItem: NewsItem;
+  newsItem?: NewsItem;
 }
 
 /**
@@ -48,8 +49,40 @@ const formatTimestamp = (date: string | number | undefined): string => {
   return `${year}-${month}-${day} ${hours}:${minutes}`;
 };
 
-const AnnouncementDetail: React.FC<AnnouncementDetailProps> = ({ newsItem }) => {
+const AnnouncementDetail: React.FC<AnnouncementDetailProps> = ({ newsItem: propNewsItem }) => {
   const navigate = useNavigate();
+  const { newsItem: hookNewsItem, loading, error } = useAnnouncementDetail();
+  
+  // 优先使用传入的 newsItem，其次使用 hook 加载的数据
+  const newsItem = propNewsItem || hookNewsItem;
+
+  // 加载中
+  if (loading) {
+    return (
+      <PageContainer title="公告详情" onBack={() => navigate(-1)}>
+        <div className="flex items-center justify-center min-h-screen bg-gray-50">
+          <LoadingSpinner />
+        </div>
+      </PageContainer>
+    );
+  }
+
+  // 错误状态
+  if (error || !newsItem) {
+    return (
+      <PageContainer title="公告详情" onBack={() => navigate(-1)}>
+        <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 px-4">
+          <EmptyState title={error || '公告不存在'} />
+          <button
+            onClick={() => navigate(-1)}
+            className="mt-4 px-6 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors"
+          >
+            返回
+          </button>
+        </div>
+      </PageContainer>
+    );
+  }
 
   /**
    * 渲染内容（将换行符转换为段落）

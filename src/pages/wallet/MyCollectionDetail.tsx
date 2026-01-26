@@ -5,16 +5,16 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ChevronLeft, Share2, Copy, Shield, Fingerprint, Award, ExternalLink, ArrowRightLeft, Store, X, Cpu, FileText } from 'lucide-react';
-import { MyCollectionItem, fetchProfile, fetchRealNameStatus, fetchUserCollectionDetail, getConsignmentCheck, consignCollectionItem, computeConsignmentPrice, getMyCollection, normalizeAssetUrl, toMining } from '../../../services/api';
-import { getStoredToken } from '../../../services/client';
-import { UserInfo } from '../../../types';
-import { useNotification } from '../../../context/NotificationContext';
-import { LoadingSpinner } from '../../../components/common';
-import { isSuccess, extractData } from '../../../utils/apiHelpers';
-import { ConsignmentStatus } from '../../../constants/statusEnums';
-import { useStateMachine } from '../../../hooks/useStateMachine';
-import { FormEvent, FormState, LoadingEvent, LoadingState } from '../../../types/states';
-import { useAppStore } from '../../stores/appStore';
+import { MyCollectionItem, fetchProfile, fetchRealNameStatus, fetchUserCollectionDetail, getConsignmentCheck, consignCollectionItem, computeConsignmentPrice, getMyCollection, normalizeAssetUrl, toMining } from '@/services/api';
+import { getStoredToken } from '@/services/client';
+import { UserInfo } from '@/types';
+import { useNotification } from '@/context/NotificationContext';
+import { LoadingSpinner } from '@/components/common';
+import { isSuccess, extractData } from '@/utils/apiHelpers';
+import { ConsignmentStatus } from '@/constants/statusEnums';
+import { useAppStore } from '@/stores/appStore';
+import { errorLog } from '@/utils/logger';
+import { copyToClipboard } from '@/utils/clipboard';
 
 interface MyCollectionDetailProps {
     item?: MyCollectionItem | null;
@@ -25,87 +25,17 @@ const MyCollectionDetail: React.FC<MyCollectionDetailProps> = ({ item: initialIt
     const navigate = useNavigate();
     const { id } = useParams<{ id: string }>();
     const clearListCache = useAppStore((state) => state.clearListCache);
+    const { selectedCollectionItem, setSelectedCollectionItem } = useAppStore();
     const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
-    const [item, setItem] = useState<any>(initialItem || null);
+    // 优先使用传入的 item，其次使用 store 中的 selectedCollectionItem
+    const [item, setItem] = useState<any>(initialItem || selectedCollectionItem || null);
     const { showToast, showDialog } = useNotification();
-    const loadMachine = useStateMachine<LoadingState, LoadingEvent>({
-        initial: LoadingState.IDLE,
-        transitions: {
-            [LoadingState.IDLE]: { [LoadingEvent.LOAD]: LoadingState.LOADING },
-            [LoadingState.LOADING]: {
-                [LoadingEvent.SUCCESS]: LoadingState.SUCCESS,
-                [LoadingEvent.ERROR]: LoadingState.ERROR,
-            },
-            [LoadingState.SUCCESS]: {
-                [LoadingEvent.LOAD]: LoadingState.LOADING,
-                [LoadingEvent.RETRY]: LoadingState.LOADING,
-            },
-            [LoadingState.ERROR]: {
-                [LoadingEvent.LOAD]: LoadingState.LOADING,
-                [LoadingEvent.RETRY]: LoadingState.LOADING,
-            },
-        },
-    });
-    const actionMachine = useStateMachine<FormState, FormEvent>({
-        initial: FormState.IDLE,
-        transitions: {
-            [FormState.IDLE]: { [FormEvent.SUBMIT]: FormState.SUBMITTING },
-            [FormState.VALIDATING]: {
-                [FormEvent.VALIDATION_SUCCESS]: FormState.SUBMITTING,
-                [FormEvent.VALIDATION_ERROR]: FormState.ERROR,
-            },
-            [FormState.SUBMITTING]: {
-                [FormEvent.SUBMIT_SUCCESS]: FormState.SUCCESS,
-                [FormEvent.SUBMIT_ERROR]: FormState.ERROR,
-            },
-            [FormState.SUCCESS]: {
-                [FormEvent.SUBMIT]: FormState.SUBMITTING,
-                [FormEvent.RESET]: FormState.IDLE,
-            },
-            [FormState.ERROR]: {
-                [FormEvent.SUBMIT]: FormState.SUBMITTING,
-                [FormEvent.RESET]: FormState.IDLE,
-            },
-        },
-    });
-    const loading = loadMachine.state === LoadingState.LOADING;
+    const [loading, setLoading] = useState(false);
+    const [actionLoading, setActionLoading] = useState(false);
 
     // 可靠的复制函数
-    const copyToClipboard = async (text: string, successMsg: string) => {
-        const execCommandCopy = (): boolean => {
-            try {
-                const textArea = document.createElement("textarea");
-                textArea.value = text;
-                textArea.style.cssText = "position:fixed;top:0;left:0;width:2em;height:2em;padding:0;border:none;outline:none;box-shadow:none;background:transparent;";
-                document.body.appendChild(textArea);
-                textArea.focus();
-                textArea.select();
-                textArea.setSelectionRange(0, text.length);
-                const successful = document.execCommand('copy');
-                document.body.removeChild(textArea);
-                return successful;
-            } catch (err) {
-                return false;
-            }
-        };
-
-        const clipboardApiCopy = async (): Promise<boolean> => {
-            try {
-                if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
-                    await navigator.clipboard.writeText(text);
-                    return true;
-                }
-                return false;
-            } catch (err) {
-                return false;
-            }
-        };
-
-        let success = execCommandCopy();
-        if (!success) {
-            success = await clipboardApiCopy();
-        }
-
+    const handleCopy = async (text: string, successMsg: string = '复制成功') => {
+        const success = await copyToClipboard(text);
         if (success) {
             showToast('success', successMsg);
         } else {
@@ -116,7 +46,6 @@ const MyCollectionDetail: React.FC<MyCollectionDetailProps> = ({ item: initialIt
     const [showConsignmentModal, setShowConsignmentModal] = useState(false);
     const [consignmentCheckData, setConsignmentCheckData] = useState<any>(null);
     const [consignmentTicketCount, setConsignmentTicketCount] = useState(0);
-    const actionLoading = actionMachine.state === FormState.SUBMITTING;
     const [actionError, setActionError] = useState<string | null>(null);
     const [hasConvertedToMining, setHasConvertedToMining] = useState(false);
 
@@ -124,16 +53,14 @@ const MyCollectionDetail: React.FC<MyCollectionDetailProps> = ({ item: initialIt
         const loadData = async () => {
             const token = getStoredToken();
             if (!token) {
-                loadMachine.send(LoadingEvent.ERROR);
                 return;
             }
 
             try {
-                loadMachine.send(LoadingEvent.LOAD);
+                setLoading(true);
                 const userCollectionId = initialItem?.user_collection_id || initialItem?.id || (id ? Number(id) : undefined);
 
                 if (!userCollectionId) {
-                    loadMachine.send(LoadingEvent.ERROR);
                     return;
                 }
 
@@ -168,12 +95,10 @@ const MyCollectionDetail: React.FC<MyCollectionDetailProps> = ({ item: initialIt
                     setUserInfo(currentInfo);
                     setConsignmentTicketCount(parseInt(String(currentInfo.consignment_coupon || 0)) || 0);
                 }
-                loadMachine.send(LoadingEvent.SUCCESS);
             } catch (e) {
-                console.error(e);
-                loadMachine.send(LoadingEvent.ERROR);
+                errorLog('MyCollectionDetail', '加载数据失败', e);
             } finally {
-                // 状态机已处理成功/失败
+                setLoading(false);
             }
         };
         loadData();
@@ -199,7 +124,7 @@ const MyCollectionDetail: React.FC<MyCollectionDetailProps> = ({ item: initialIt
                 const checkData = extractData(res);
                 setConsignmentCheckData(checkData ?? null);
             } catch (e) {
-                console.error('Failed to load consignment check:', e);
+                errorLog('MyCollectionDetail', '加载寄售检查失败', e);
                 setActionError('加载寄售检查失败');
             }
         };
@@ -277,7 +202,7 @@ const MyCollectionDetail: React.FC<MyCollectionDetailProps> = ({ item: initialIt
                                 className="text-sm text-gray-600 font-[courier,monospace] font-bold tracking-widest mb-3 relative z-10 drop-shadow-sm cursor-pointer hover:text-amber-600 transition-colors flex items-center justify-center gap-2"
                                 onClick={() => {
                                     const assetCode = item.asset_code || `37-DATA-****-${String(item.id || 8821).padStart(4, '0')}`;
-                                    copyToClipboard(assetCode, '确权编号已复制');
+                                    handleCopy(assetCode, '确权编号已复制');
                                 }}
                             >
                                 <span>确权编号：{item.asset_code || `37-DATA-****-${String(item.id || 8821).padStart(4, '0')}`}</span>
@@ -411,7 +336,7 @@ const MyCollectionDetail: React.FC<MyCollectionDetailProps> = ({ item: initialIt
                                 <button
                                     onClick={() => {
                                         const hashValue = item.hash || item.fingerprint || item.md5 || item.tx_hash || '0x7d9a8b1c4e2f3a6b9c8d7e6f5a4b3c2d1e0f9a8b7c6d5e4f3a2b1c0d9e8f7a6';
-                                        copyToClipboard(hashValue, '已复制存证哈希');
+                                        handleCopy(hashValue, '已复制存证哈希');
                                     }}
                                     className="flex-1 bg-gray-700 hover:bg-gray-600 text-white text-[10px] py-1.5 rounded flex items-center justify-center gap-1 transition-colors"
                                 >
@@ -454,7 +379,7 @@ const MyCollectionDetail: React.FC<MyCollectionDetailProps> = ({ item: initialIt
 
                 return !isSold && !isMining;
             })() && (
-                    <div className="fixed bottom-0 left-0 right-0 p-4 bg-white/90 backdrop-blur-md border-t border-gray-100 z-[9999] pointer-events-auto">
+                    <div className="fixed bottom-0 left-0 right-0 p-4 pb-safe bg-white/90 backdrop-blur-md border-t border-gray-100 z-[9999] pointer-events-auto">
                         <div className="flex justify-between items-center mb-3 px-1">
                             <span className="text-sm text-gray-500 font-medium">当前估值</span>
                             <div className="text-right">
@@ -482,7 +407,7 @@ const MyCollectionDetail: React.FC<MyCollectionDetailProps> = ({ item: initialIt
                                                 return;
                                             }
 
-                                            actionMachine.send(FormEvent.SUBMIT);
+                                            setActionLoading(true);
                                             try {
                                                 const res = await toMining({ user_collection_id: Number(collectionId), token });
                                                 if (isSuccess(res)) {
@@ -490,16 +415,13 @@ const MyCollectionDetail: React.FC<MyCollectionDetailProps> = ({ item: initialIt
                                                     setHasConvertedToMining(true);
                                                     clearListCache('myCollection'); // 清除我的藏品列表缓存
                                                     setTimeout(() => navigate(-1), 1000);
-                                                    actionMachine.send(FormEvent.SUBMIT_SUCCESS);
                                                 } else {
                                                     showToast('error', '转换失败', res.msg || '操作失败');
-                                                    actionMachine.send(FormEvent.SUBMIT_ERROR);
                                                 }
                                             } catch (err: any) {
                                                 showToast('error', '转换失败', err.message || '系统错误');
-                                                actionMachine.send(FormEvent.SUBMIT_ERROR);
                                             } finally {
-                                                // 状态机已处理成功/失败
+                                                setActionLoading(false);
                                             }
                                         }
                                     });
@@ -684,7 +606,7 @@ const MyCollectionDetail: React.FC<MyCollectionDetailProps> = ({ item: initialIt
                                         return;
                                     }
 
-                                    actionMachine.send(FormEvent.SUBMIT);
+                                    setActionLoading(true);
                                     setActionError(null);
 
                                     try {
@@ -692,7 +614,7 @@ const MyCollectionDetail: React.FC<MyCollectionDetailProps> = ({ item: initialIt
 
                                         if (!collectionId) {
                                             setActionError('无法获取藏品ID，请返回重试');
-                                            actionMachine.send(FormEvent.SUBMIT_ERROR);
+                                            setActionLoading(false);
                                             return;
                                         }
 
@@ -714,20 +636,17 @@ const MyCollectionDetail: React.FC<MyCollectionDetailProps> = ({ item: initialIt
                                             setShowConsignmentModal(false);
                                             clearListCache('myCollection'); // 清除我的藏品列表缓存
                                             setTimeout(() => navigate(-1), 1000);
-                                            actionMachine.send(FormEvent.SUBMIT_SUCCESS);
                                         } else {
                                             const errorMsg = res.msg || res.message || '寄售申请失败';
                                             setActionError(errorMsg);
                                             showToast('error', '操作失败', errorMsg);
-                                            actionMachine.send(FormEvent.SUBMIT_ERROR);
                                         }
                                     } catch (err: any) {
                                         const errorMsg = err?.msg || err?.message || '寄售申请失败';
                                         setActionError(errorMsg);
                                         showToast('error', '提交失败', errorMsg);
-                                        actionMachine.send(FormEvent.SUBMIT_ERROR);
                                     } finally {
-                                        // 状态机已处理成功/失败
+                                        setActionLoading(false);
                                     }
                                 }}
                                 disabled={actionLoading}

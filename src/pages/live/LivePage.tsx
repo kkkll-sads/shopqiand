@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { PlayCircle, Radio, Video } from 'lucide-react';
-import { fetchProfile } from '../../../services/user';
-import { fetchLiveVideoConfig } from '../../../services/common';
-import { getStoredToken } from '../../../services/client';
-import { isSuccess, extractData } from '../../../utils/apiHelpers';
-import { LoadingSpinner, MediaBrowser } from '../../../components/common';
-import { useErrorHandler } from '../../../hooks/useErrorHandler';
-import { useStateMachine } from '../../../hooks/useStateMachine';
-import { LoadingEvent, LoadingState } from '../../../types/states';
-import { warnLog } from '../../../utils/logger';
+import { fetchProfile } from '@/services/user';
+import { fetchLiveVideoConfig } from '@/services/common';
+import { getStoredToken } from '@/services/client';
+import { isSuccess, extractData } from '@/utils/apiHelpers';
+import { LoadingSpinner, MediaBrowser } from '@/components/common';
+import { useErrorHandler } from '@/hooks/useErrorHandler';
+import { useStateMachine } from '@/hooks/useStateMachine';
+import { LoadingEvent, LoadingState } from '@/types/states';
+import { warnLog } from '@/utils/logger';
 
 const LivePage: React.FC = () => {
     const [activeTab, setActiveTab] = useState('live');

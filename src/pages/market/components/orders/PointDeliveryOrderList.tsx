@@ -1,9 +1,9 @@
 import React from 'react';
 import { Package } from 'lucide-react';
-import { ShopOrderItem, ShopOrderItemDetail } from '../../../../../services/api';
+import { ShopOrderItem, ShopOrderItemDetail } from '@/services/api';
 import PointOrderCard from './PointOrderCard';
-import { useNotification } from '../../../../../context/NotificationContext';
-import { debugLog } from '../../../../../utils/logger';
+import { useNotification } from '@/context/NotificationContext';
+import { debugLog } from '@/utils/logger';
 
 interface PointDeliveryOrderListProps {
   category: 'points' | 'delivery';

@@ -7,7 +7,7 @@
  */
 
 import React from 'react';
-import { PasswordForm } from '../../../components/business';
+import { PasswordForm } from '@/components/business';
 
 /**
  * ResetLoginPassword 重置登录密码页面组件

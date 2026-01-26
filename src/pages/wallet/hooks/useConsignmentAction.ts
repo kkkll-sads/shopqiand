@@ -2,7 +2,7 @@
  * 寄售操作 Hook
  * 处理寄售、提货、批量寄售等操作
  */
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import {
   rightsDeliver,
   consignCollectionItem,
@@ -12,13 +12,12 @@ import {
   batchConsign,
   MyCollectionItem,
   BatchConsignableListData,
-} from '../../../../services/api';
-import { getStoredToken } from '../../../../services/client';
-import { useNotification } from '../../../../context/NotificationContext';
-import { ConsignmentStatus, DeliveryStatus } from '../../../../constants/statusEnums';
-import { isSuccess, extractError, extractData } from '../../../../utils/apiHelpers';
-import { FormEvent } from '../../../../types/states';
-import { debugLog, warnLog, errorLog } from '../../../../utils/logger';
+} from '@/services/api';
+import { getStoredToken } from '@/services/client';
+import { useNotification } from '@/context/NotificationContext';
+import { ConsignmentStatus, DeliveryStatus } from '@/constants/statusEnums';
+import { isSuccess, extractError, extractData } from '@/utils/apiHelpers';
+import { debugLog, warnLog, errorLog } from '@/utils/logger';
 
 interface UseConsignmentActionOptions {
   onActionStart: () => void;
@@ -102,6 +101,16 @@ export function formatSeconds(secs: number): string {
 export function useConsignmentAction(options: UseConsignmentActionOptions) {
   const { onActionStart, onActionSuccess, onActionError, onBatchStart, onBatchSuccess, onBatchError } = options;
   const { showToast, showDialog } = useNotification();
+
+  // 使用 ref 存储回调函数，避免它们成为 useCallback 的依赖项导致无限循环
+  const callbacksRef = useRef({
+    onActionStart, onActionSuccess, onActionError,
+    onBatchStart, onBatchSuccess, onBatchError
+  });
+  callbacksRef.current = {
+    onActionStart, onActionSuccess, onActionError,
+    onBatchStart, onBatchSuccess, onBatchError
+  };
 
   // 寄售检查数据
   const [consignmentCheckData, setConsignmentCheckData] = useState<any>(null);
@@ -275,21 +284,21 @@ export function useConsignmentAction(options: UseConsignmentActionOptions) {
       }
 
       const doRightsDeliver = () => {
-        onActionStart();
+        callbacksRef.current.onActionStart();
         rightsDeliver({ user_collection_id: collectionId, token })
           .then((res) => {
             if (isSuccess(res)) {
               showToast('success', '操作成功', extractError(res, '权益分割已提交'));
               onSuccess();
-              onActionSuccess();
+              callbacksRef.current.onActionSuccess();
             } else {
               showToast('error', '操作失败', extractError(res, '权益分割失败'));
-              onActionError();
+              callbacksRef.current.onActionError();
             }
           })
           .catch((err: any) => {
             showToast('error', '提交失败', extractError(err, '权益分割失败'));
-            onActionError();
+            callbacksRef.current.onActionError();
           });
       };
 
@@ -305,7 +314,7 @@ export function useConsignmentAction(options: UseConsignmentActionOptions) {
         doRightsDeliver();
       }
     },
-    [showToast, showDialog, onActionStart, onActionSuccess, onActionError]
+    [showToast, showDialog]
   );
 
   // 执行寄售
@@ -395,7 +404,7 @@ export function useConsignmentAction(options: UseConsignmentActionOptions) {
         return;
       }
 
-      onActionStart();
+      callbacksRef.current.onActionStart();
       consignCollectionItem({ user_collection_id: collectionId, price: priceValue, token })
         .then((res) => {
           if (isSuccess(res)) {
@@ -412,18 +421,18 @@ export function useConsignmentAction(options: UseConsignmentActionOptions) {
 
             showToast('success', '提交成功', successDescription);
             onSuccess();
-            onActionSuccess();
+            callbacksRef.current.onActionSuccess();
           } else {
             showToast('error', '提交失败', extractError(res, '寄售申请失败'));
-            onActionError();
+            callbacksRef.current.onActionError();
           }
         })
         .catch((err: any) => {
           setActionError(extractError(err, '寄售申请失败'));
-          onActionError();
+          callbacksRef.current.onActionError();
         });
     },
-    [showToast, consignmentCheckData, onActionStart, onActionSuccess, onActionError]
+    [showToast, consignmentCheckData]
   );
 
   // 批量寄售
@@ -440,7 +449,7 @@ export function useConsignmentAction(options: UseConsignmentActionOptions) {
         return;
       }
 
-      onBatchStart();
+      callbacksRef.current.onBatchStart();
       try {
         const consignments = batchData.items.map((item) => ({
           user_collection_id: item.user_collection_id,
@@ -478,18 +487,18 @@ export function useConsignmentAction(options: UseConsignmentActionOptions) {
               cancelText: null,
             });
           }
-          onBatchSuccess();
+          callbacksRef.current.onBatchSuccess();
         } else {
           showToast('error', '', extractError(response, '批量寄售失败'));
-          onBatchError();
+          callbacksRef.current.onBatchError();
         }
       } catch (error) {
         errorLog('useConsignmentAction', '批量寄售错误', error);
         showToast('error', '批量寄售失败', '网络错误，请稍后重试');
-        onBatchError();
+        callbacksRef.current.onBatchError();
       }
     },
-    [showToast, showDialog, onBatchStart, onBatchSuccess, onBatchError]
+    [showToast, showDialog]
   );
 
   // 清除检查数据

@@ -10,14 +10,14 @@ import {
   PaymentAccountItem,
   submitWithdraw,
   fetchProfile,
-} from '../../../services/api';
-import { getStoredToken } from '../../../services/client';
+} from '@/services/api';
+import { getStoredToken } from '@/services/client';
 
-import { useNotification } from '../../../context/NotificationContext';
-import { isSuccess, extractError } from '../../../utils/apiHelpers';
-import { useErrorHandler } from '../../../hooks/useErrorHandler';
-import { useStateMachine } from '../../../hooks/useStateMachine';
-import { FormEvent, FormState, LoadingEvent, LoadingState } from '../../../types/states';
+import { useNotification } from '@/context/NotificationContext';
+import { isSuccess, extractError } from '@/utils/apiHelpers';
+import { useErrorHandler } from '@/hooks/useErrorHandler';
+import { useStateMachine } from '@/hooks/useStateMachine';
+import { FormEvent, FormState, LoadingEvent, LoadingState } from '@/types/states';
 
 const BalanceWithdraw: React.FC = () => {
   const navigate = useNavigate();
@@ -368,7 +368,7 @@ const BalanceWithdraw: React.FC = () => {
       </div>
 
       {/* Bottom Action */}
-      <div className="p-5 safe-area-bottom bg-white/80 backdrop-blur border-t border-gray-100">
+      <div className="p-5 pb-safe bg-white/80 backdrop-blur border-t border-gray-100">
         <button
           onClick={handleWithdrawClick}
           className="w-full py-4 rounded-xl bg-gradient-to-r from-red-600 to-red-500 text-white font-bold text-lg shadow-lg shadow-red-200 active:scale-[0.98] transition-transform flex items-center justify-center gap-2 disabled:opacity-50 disabled:shadow-none"

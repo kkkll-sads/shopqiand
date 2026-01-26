@@ -1,22 +1,21 @@
 /**
  * 藏品列表数据加载 Hook
  */
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import {
   getMyCollection,
   fetchProfile,
   getBatchConsignableList,
   MyCollectionItem,
   BatchConsignableListData,
-} from '../../../../services/api';
-import { getStoredToken } from '../../../../services/client';
-import { useAuthStore } from '../../../stores/authStore';
-import { UserInfo } from '../../../../types';
-import { ConsignmentStatus, DeliveryStatus } from '../../../../constants/statusEnums';
-import { isSuccess, extractError } from '../../../../utils/apiHelpers';
-import { debugLog, errorLog } from '../../../../utils/logger';
+} from '@/services/api';
+import { getStoredToken } from '@/services/client';
+import { useAuthStore } from '@/stores/authStore';
+import { UserInfo } from '@/types';
+import { ConsignmentStatus, DeliveryStatus } from '@/constants/statusEnums';
+import { isSuccess, extractError } from '@/utils/apiHelpers';
+import { debugLog, errorLog } from '@/utils/logger';
 import { deduplicateCollections } from './useCollectionFilters';
-import { LoadingEvent } from './useCollectionStateMachines';
 
 export type CategoryTab = 'hold' | 'consign' | 'sold' | 'dividend';
 
@@ -33,6 +32,10 @@ interface UseCollectionDataOptions {
  */
 export function useCollectionData(options: UseCollectionDataOptions) {
   const { activeTab, page, onLoadStart, onLoadSuccess, onLoadError } = options;
+
+  // 使用 ref 存储回调函数，避免它们成为 useCallback 的依赖项导致无限循环
+  const callbacksRef = useRef({ onLoadStart, onLoadSuccess, onLoadError });
+  callbacksRef.current = { onLoadStart, onLoadSuccess, onLoadError };
 
   const [error, setError] = useState<string | null>(null);
   const [myCollections, setMyCollections] = useState<MyCollectionItem[]>([]);
@@ -82,11 +85,11 @@ export function useCollectionData(options: UseCollectionDataOptions) {
     const token = getStoredToken();
     if (!token) {
       setError('请先登录');
-      onLoadError();
+      callbacksRef.current.onLoadError();
       return;
     }
 
-    onLoadStart();
+    callbacksRef.current.onLoadStart();
     setError(null);
 
     let hasError = false;
@@ -185,15 +188,15 @@ export function useCollectionData(options: UseCollectionDataOptions) {
       }
 
       if (hasError) {
-        onLoadError();
+        callbacksRef.current.onLoadError();
       } else {
-        onLoadSuccess();
+        callbacksRef.current.onLoadSuccess();
       }
     } catch (e: any) {
       setError(e?.message || '加载数据失败');
-      onLoadError();
+      callbacksRef.current.onLoadError();
     }
-  }, [activeTab, page, onLoadStart, onLoadSuccess, onLoadError]);
+  }, [activeTab, page]);
 
   // 重置列表
   const resetCollections = useCallback(() => {

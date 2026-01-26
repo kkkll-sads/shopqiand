@@ -10,16 +10,16 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { UserPlus, Loader2 } from 'lucide-react';
-import PageContainer from '../../../components/layout/PageContainer';
-import { LoadingSpinner, EmptyState, ListItem } from '../../../components/common';
-import { fetchTeamMembers, normalizeAssetUrl } from '../../../services/api';
-import { TeamMember } from '../../../types';
-import { formatTime } from '../../../utils/format';
-import { extractData, extractError } from '../../../utils/apiHelpers';
+import PageContainer from '@/layouts/PageContainer';
+import { LoadingSpinner, EmptyState, ListItem } from '@/components/common';
+import { fetchTeamMembers, normalizeAssetUrl } from '@/services/api';
+import { TeamMember } from '@/types';
+import { formatTime } from '@/utils/format';
+import { extractData, extractError } from '@/utils/apiHelpers';
 import { useNavigate } from 'react-router-dom';
-import { useStateMachine } from '../../../hooks/useStateMachine';
-import { LoadingEvent, LoadingState } from '../../../types/states';
-import { useInfiniteScroll } from '../../hooks/useInfiniteScroll';
+import { useStateMachine } from '@/hooks/useStateMachine';
+import { LoadingEvent, LoadingState } from '@/types/states';
+import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
 
 const PAGE_SIZE = 10;
 

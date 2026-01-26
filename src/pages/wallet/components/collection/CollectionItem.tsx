@@ -4,9 +4,9 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronRight } from 'lucide-react';
-import { MyCollectionItem, normalizeAssetUrl } from '../../../../../services/api';
-import { formatTime } from '../../../../../utils/format';
-import { ConsignmentStatus, DeliveryStatus } from '../../../../../constants/statusEnums';
+import { MyCollectionItem, normalizeAssetUrl } from '@/services/api';
+import { formatTime } from '@/utils/format';
+import { ConsignmentStatus, DeliveryStatus } from '@/constants/statusEnums';
 import { hasConsignedBefore } from '../../hooks/useConsignmentAction';
 
 interface CollectionItemProps {

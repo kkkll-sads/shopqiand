@@ -3,10 +3,12 @@
  * 处理列表状态的保存和恢复
  */
 import React, { useRef, useEffect, useCallback } from 'react';
-import { useAppStore, MARKET_CACHE_TTL } from '../../../stores/appStore';
-import { MyCollectionItem } from '../../../../services/api';
-import { debugLog } from '../../../../utils/logger';
-import type { SortOrder } from '../../../../components/common';
+import { useLocation } from 'react-router-dom';
+import { useAppStore, MARKET_CACHE_TTL } from '@/stores/appStore';
+import { MyCollectionItem } from '@/services/api';
+import { debugLog } from '@/utils/logger';
+import { setScrollRestoreInProgress } from '@/components/common/ScrollToTop';
+import type { SortOrder } from '@/components/common';
 
 export type CategoryTab = 'hold' | 'consign' | 'sold' | 'dividend';
 
@@ -34,6 +36,7 @@ interface UseCollectionCacheOptions {
 export function useCollectionCache(options: UseCollectionCacheOptions) {
   const { scrollContainerRef, onRestoreState, onLoadingComplete } = options;
   const { listCaches, setListCache } = useAppStore();
+  const location = useLocation();
 
   // 缓存相关 refs
   const restoredFromCacheRef = useRef(false);
@@ -135,41 +138,116 @@ export function useCollectionCache(options: UseCollectionCacheOptions) {
   const restoreScrollPosition = useCallback(
     (dataLength: number) => {
       if (restoredFromCacheRef.current && dataLength > 0 && scrollTopRef.current > 0) {
+        const container = scrollContainerRef.current;
+        if (!container) return;
+
+        // 设置标记，防止 ScrollToTop 重置滚动
+        setScrollRestoreInProgress(location.pathname, true);
+        
+        // 标记容器，防止 ScrollToTop 重置
+        container.setAttribute('data-scroll-restore', 'true');
+
+        let restoreAttempts = 0;
+        const maxAttempts = 5;
+
         const restoreScroll = () => {
-          if (scrollContainerRef.current && scrollTopRef.current > 0) {
-            const targetScroll = scrollTopRef.current;
-            scrollContainerRef.current.scrollTo({ top: targetScroll, behavior: 'instant' });
-            if (Math.abs(scrollContainerRef.current.scrollTop - targetScroll) > 10) {
-              setTimeout(() => {
-                if (scrollContainerRef.current) {
-                  scrollContainerRef.current.scrollTo({ top: targetScroll, behavior: 'instant' });
-                }
-              }, 100);
+          if (!container || !scrollTopRef.current) return;
+
+          const targetScroll = scrollTopRef.current;
+          container.scrollTo({ top: targetScroll, behavior: 'instant' });
+          
+          const currentScroll = container.scrollTop;
+          const diff = Math.abs(currentScroll - targetScroll);
+
+          // 如果恢复成功（误差小于 10px）或达到最大尝试次数
+          if (diff < 10 || restoreAttempts >= maxAttempts) {
+            if (diff < 10) {
+              debugLog('useCollectionCache', '滚动位置恢复成功', {
+                target: targetScroll,
+                actual: currentScroll,
+                attempts: restoreAttempts + 1,
+              });
+            } else {
+              debugLog('useCollectionCache', '滚动位置恢复失败（达到最大尝试次数）', {
+                target: targetScroll,
+                actual: currentScroll,
+                attempts: restoreAttempts + 1,
+              });
             }
+            
+            // 清除标记
+            setScrollRestoreInProgress(location.pathname, false);
+            container.removeAttribute('data-scroll-restore');
+            restoredFromCacheRef.current = false;
+            return;
+          }
+
+          // 如果未成功，继续尝试
+          restoreAttempts++;
+          if (restoreAttempts < maxAttempts) {
+            setTimeout(restoreScroll, 100);
+          } else {
+            // 达到最大尝试次数，清除标记
+            setScrollRestoreInProgress(location.pathname, false);
+            container.removeAttribute('data-scroll-restore');
+            restoredFromCacheRef.current = false;
           }
         };
 
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => {
-            restoreScroll();
-            setTimeout(restoreScroll, 100);
-            setTimeout(restoreScroll, 300);
-          });
+        // 使用 ResizeObserver 确保容器大小已确定
+        const resizeObserver = new ResizeObserver(() => {
+          if (container.scrollHeight >= scrollTopRef.current) {
+            resizeObserver.disconnect();
+            // 使用多次 rAF + setTimeout 确保 DOM 完全渲染
+            requestAnimationFrame(() => {
+              requestAnimationFrame(() => {
+                restoreScroll();
+                setTimeout(restoreScroll, 100);
+                setTimeout(restoreScroll, 300);
+              });
+            });
+          }
         });
 
-        restoredFromCacheRef.current = false;
+        resizeObserver.observe(container);
+
+        // 如果容器已经有足够的高度，直接开始恢复
+        if (container.scrollHeight >= scrollTopRef.current) {
+          resizeObserver.disconnect();
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+              restoreScroll();
+              setTimeout(restoreScroll, 100);
+              setTimeout(restoreScroll, 300);
+            });
+          });
+        }
+
+        // 超时保护：5秒后强制清除标记
+        setTimeout(() => {
+          resizeObserver.disconnect();
+          setScrollRestoreInProgress(location.pathname, false);
+          if (container) {
+            container.removeAttribute('data-scroll-restore');
+          }
+          restoredFromCacheRef.current = false;
+        }, 5000);
       }
     },
-    [scrollContainerRef]
+    [scrollContainerRef, location.pathname]
   );
+
+  // 使用 useCallback 确保函数引用稳定
+  const isRestoredFromCache = useCallback(() => restoredFromCacheRef.current, []);
+  const clearRestoredFlag = useCallback(() => {
+    restoredFromCacheRef.current = false;
+  }, []);
 
   return {
     restoredFromCacheRef,
     updateStateRef,
     restoreScrollPosition,
-    isRestoredFromCache: () => restoredFromCacheRef.current,
-    clearRestoredFlag: () => {
-      restoredFromCacheRef.current = false;
-    },
+    isRestoredFromCache,
+    clearRestoredFlag,
   };
 }

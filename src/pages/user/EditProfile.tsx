@@ -10,14 +10,14 @@
 
 import React, { useMemo, useRef, useState } from 'react';
 import { ChevronRight } from 'lucide-react';
-import PageContainer from '../../../components/layout/PageContainer';
-import { uploadImage, updateAvatar, updateNickname } from '../../../services/api';
-import { getStoredToken } from '../../../services/client';
-import { useAuthStore } from '../../stores/authStore';
-import { UserInfo } from '../../../types';
-import { useNotification } from '../../../context/NotificationContext';
+import PageContainer from '@/layouts/PageContainer';
+import { uploadImage, updateAvatar, updateNickname } from '@/services/api';
+import { getStoredToken } from '@/services/client';
+import { useAuthStore } from '@/stores/authStore';
+import { UserInfo } from '@/types';
+import { useNotification } from '@/context/NotificationContext';
 import { useNavigate } from 'react-router-dom';
-import { errorLog } from '../../../utils/logger';
+import { errorLog } from '@/utils/logger';
 
 /**
  * EditProfile 编辑资料页面组件

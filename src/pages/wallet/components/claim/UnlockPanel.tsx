@@ -1,6 +1,6 @@
 import React from 'react';
 import { AlertCircle, Check, Lock, ShoppingBag, Ticket, Users, X } from 'lucide-react';
-import { UserInfo } from '../../../../../types';
+import { UserInfo } from '@/types';
 import { UnlockStatusState } from '../../hooks/useClaimUnlock';
 
 interface UnlockPanelProps {

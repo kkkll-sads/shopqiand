@@ -3,10 +3,10 @@
  */
 import React from 'react';
 import { X, CheckCircle } from 'lucide-react';
-import { MyCollectionItem, normalizeAssetUrl, computeConsignmentPrice } from '../../../../../services/api';
-import { toString, toNumber, multiply } from '../../../../../utils/currency';
-import { useNotification } from '../../../../../context/NotificationContext';
-import { UserInfo } from '../../../../../types';
+import { MyCollectionItem, normalizeAssetUrl, computeConsignmentPrice } from '@/services/api';
+import { toString, toNumber, multiply } from '@/utils/currency';
+import { useNotification } from '@/context/NotificationContext';
+import { UserInfo } from '@/types';
 import {
   check48Hours,
   formatSeconds,
@@ -14,7 +14,7 @@ import {
   hasConsignedSuccessfully,
   isDelivered,
 } from '../../hooks/useConsignmentAction';
-import { debugLog } from '../../../../../utils/logger';
+import { debugLog } from '@/utils/logger';
 
 interface AssetConsignModalProps {
   visible: boolean;

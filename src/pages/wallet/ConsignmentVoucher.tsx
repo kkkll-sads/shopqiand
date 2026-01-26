@@ -5,17 +5,17 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Receipt, FileText, ShoppingBag, Clock, Tag, Calendar } from 'lucide-react';
-import PageContainer from '../../../components/layout/PageContainer';
-import { LoadingSpinner, EmptyState } from '../../../components/common';
-import { fetchProfile } from '../../../services/api';
-import { getStoredToken } from '../../../services/client';
-import { fetchConsignmentCoupons, ConsignmentCouponItem } from '../../../services/consignment';
-import { formatTime } from '../../../utils/format';
-import { isSuccess, extractError, extractData } from '../../../utils/apiHelpers';
-import { useStateMachine } from '../../../hooks/useStateMachine';
-import { LoadingEvent, LoadingState } from '../../../types/states';
-import { UserInfo } from '../../../types';
-import { errorLog } from '../../../utils/logger';
+import PageContainer from '@/layouts/PageContainer';
+import { LoadingSpinner, EmptyState } from '@/components/common';
+import { fetchProfile } from '@/services/api';
+import { getStoredToken } from '@/services/client';
+import { fetchConsignmentCoupons, ConsignmentCouponItem } from '@/services/consignment';
+import { formatTime } from '@/utils/format';
+import { isSuccess, extractError, extractData } from '@/utils/apiHelpers';
+import { useStateMachine } from '@/hooks/useStateMachine';
+import { LoadingEvent, LoadingState } from '@/types/states';
+import { UserInfo } from '@/types';
+import { errorLog } from '@/utils/logger';
 
 const ConsignmentVoucher: React.FC = () => {
   const navigate = useNavigate();

@@ -6,21 +6,22 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, Copy, Shield, Award, Gavel, TrendingUp, BadgeCheck } from 'lucide-react';
-import { LoadingSpinner } from '../../../components/common';
-import PopupAnnouncementModal from '../../../components/common/PopupAnnouncementModal';
-import { Product } from '../../../types';
+import { LoadingSpinner } from '@/components/common';
+import PopupAnnouncementModal from '@/components/common/PopupAnnouncementModal';
+import { Product } from '@/types';
 import {
   fetchCollectionItemDetail,
   CollectionItemDetailData,
   fetchAnnouncements,
   AnnouncementItem,
-} from '../../../services/api';
-import { useNotification } from '../../../context/NotificationContext';
-import { debugLog, errorLog } from '../../../utils/logger';
-import { isSuccess, extractData } from '../../../utils/apiHelpers';
-import { useErrorHandler } from '../../../hooks/useErrorHandler';
-import { useStateMachine } from '../../../hooks/useStateMachine';
-import { LoadingEvent, LoadingState } from '../../../types/states';
+} from '@/services/api';
+import { useNotification } from '@/context/NotificationContext';
+import { debugLog, errorLog } from '@/utils/logger';
+import { isSuccess, extractData } from '@/utils/apiHelpers';
+import { useErrorHandler } from '@/hooks/useErrorHandler';
+import { useStateMachine } from '@/hooks/useStateMachine';
+import { LoadingEvent, LoadingState } from '@/types/states';
+import { copyToClipboard } from '@/utils/clipboard';
 
 // 全局预加载数据存储
 declare global {
@@ -236,24 +237,13 @@ const CollectionCertificate: React.FC<CollectionCertificateProps> = ({
     product.zoneId = detailZoneId as any;
   }
 
-  // 复制到剪贴板
-  const copyToClipboard = (text: string) => {
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-      return navigator.clipboard.writeText(text);
-    }
-    const textarea = document.createElement('textarea');
-    textarea.value = text;
-    textarea.style.position = 'fixed';
-    textarea.style.opacity = '0';
-    document.body.appendChild(textarea);
-    textarea.select();
-    try {
-      document.execCommand('copy');
-      return Promise.resolve();
-    } catch (e) {
-      return Promise.reject(e);
-    } finally {
-      document.body.removeChild(textarea);
+  // 复制到剪贴板的包装函数
+  const handleCopy = async (text: string) => {
+    const success = await copyToClipboard(text);
+    if (success) {
+      showToast('success', '复制成功', 'Tx Hash 已复制到剪贴板');
+    } else {
+      showToast('error', '复制失败', '请手动复制');
     }
   };
 
@@ -453,13 +443,7 @@ const CollectionCertificate: React.FC<CollectionCertificateProps> = ({
               <div className="bg-gray-900 text-green-500 font-mono text-[10px] p-3 rounded break-all leading-relaxed relative group hover:bg-gray-800 transition-colors">
                 {txHash && (
                   <button
-                    onClick={() => {
-                      copyToClipboard(txHash).then(() => {
-                        showToast('success', '复制成功', 'Tx Hash 已复制到剪贴板');
-                      }).catch(() => {
-                        showToast('error', '复制失败', '请手动复制');
-                      });
-                    }}
+                    onClick={() => handleCopy(txHash)}
                     className="absolute right-2 top-2 p-1 rounded hover:bg-white/10 transition-colors cursor-pointer"
                     title="点击复制"
                   >
@@ -499,7 +483,7 @@ const CollectionCertificate: React.FC<CollectionCertificateProps> = ({
 
       {/* Bottom Action */}
       {!hideActions && (
-        <div className="fixed bottom-0 left-0 right-0 p-4 bg-white/90 backdrop-blur-md border-t border-gray-100 z-50">
+        <div className="fixed bottom-0 left-0 right-0 p-4 pb-safe bg-white/90 backdrop-blur-md border-t border-gray-100 z-50">
           <div className="flex justify-end mb-2">
             <span className="text-[10px] text-gray-900 bg-white px-1 py-0.5">
               本次申购需冻结：¥{displayPriceNum.toFixed(2)} | 消耗算力：5

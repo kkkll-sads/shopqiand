@@ -5,8 +5,8 @@
 import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Headphones, MessageCircle, Clock, ChevronRight } from 'lucide-react';
-import PageContainer from '../../../components/layout/PageContainer';
-import { openChatWidget } from '../../../components/common';
+import PageContainer from '@/layouts/PageContainer';
+import { openChatWidget } from '@/components/common';
 
 /**
  * OnlineService 在线客服页面组件

@@ -5,12 +5,11 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, FileText, Clock, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
-import { getMyRechargeOrders, RechargeOrderItem } from '../../../services/wallet';
-import { isSuccess } from '../../../utils/apiHelpers';
-import { useErrorHandler } from '../../../hooks/useErrorHandler';
-import { LoadingSpinner } from '../../../components/common';
-import { useStateMachine } from '../../../hooks/useStateMachine';
-import { LoadingEvent, LoadingState } from '../../../types/states';
+import { getMyRechargeOrders, RechargeOrderItem } from '@/services/wallet';
+import { isSuccess } from '@/utils/apiHelpers';
+import { useErrorHandler, useLoadingMachine, LoadingEvent, LoadingState } from '@/hooks';
+import { LoadingSpinner } from '@/components/common';
+import { getOrderListStatusColor } from '@/constants/statusEnums';
 
 interface RechargeOrderListProps {
     onOrderSelect?: (orderId: string) => void;
@@ -25,24 +24,7 @@ const RechargeOrderList: React.FC<RechargeOrderListProps> = ({ onOrderSelect }) 
 
     const { handleError } = useErrorHandler({ showToast: true, persist: false });
     const loadRef = useRef(false);
-    const loadMachine = useStateMachine<LoadingState, LoadingEvent>({
-        initial: LoadingState.IDLE,
-        transitions: {
-            [LoadingState.IDLE]: { [LoadingEvent.LOAD]: LoadingState.LOADING },
-            [LoadingState.LOADING]: {
-                [LoadingEvent.SUCCESS]: LoadingState.SUCCESS,
-                [LoadingEvent.ERROR]: LoadingState.ERROR,
-            },
-            [LoadingState.SUCCESS]: {
-                [LoadingEvent.LOAD]: LoadingState.LOADING,
-                [LoadingEvent.RETRY]: LoadingState.LOADING,
-            },
-            [LoadingState.ERROR]: {
-                [LoadingEvent.LOAD]: LoadingState.LOADING,
-                [LoadingEvent.RETRY]: LoadingState.LOADING,
-            },
-        },
-    });
+    const loadMachine = useLoadingMachine();
     const loading = loadMachine.state === LoadingState.LOADING;
 
     useEffect(() => {
@@ -96,14 +78,6 @@ const RechargeOrderList: React.FC<RechargeOrderListProps> = ({ onOrderSelect }) 
     const handleLoadMore = () => {
         if (!loading && hasMore) {
             loadOrders(page + 1, false, activeTab);
-        }
-    };
-
-    const getStatusColor = (status: number) => {
-        switch (status) {
-            case 1: return 'text-green-600 bg-green-50 border-green-100';
-            case 2: return 'text-red-600 bg-red-50 border-red-100';
-            default: return 'text-red-600 bg-red-50 border-red-100';
         }
     };
 
@@ -177,7 +151,7 @@ const RechargeOrderList: React.FC<RechargeOrderListProps> = ({ onOrderSelect }) 
                                     <span className="text-xs px-2 py-0.5 bg-gray-100 text-gray-500 rounded text-[10px]">{order.payment_type_text || order.payment_type}</span>
                                 </div>
                             </div>
-                            <div className={`px-2 py-1 rounded-lg text-xs font-bold flex items-center gap-1 border ${getStatusColor(order.status)}`}>
+                            <div className={`px-2 py-1 rounded-lg text-xs font-bold flex items-center gap-1 border ${getOrderListStatusColor(order.status, 'recharge')}`}>
                                 {getStatusIcon(order.status)}
                                 {order.status_text}
                             </div>

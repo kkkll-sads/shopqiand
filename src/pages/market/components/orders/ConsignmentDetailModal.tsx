@@ -1,7 +1,7 @@
 import React from 'react';
 import { Calendar, CreditCard, FileText, MapPin, Phone, User, X } from 'lucide-react';
 import { ConsignmentDetailData } from '@/services/api';
-import { formatAmount, formatTime } from '../../../../../utils/format';
+import { formatAmount, formatTime } from '@/utils/format';
 
 interface ConsignmentDetailModalProps {
   visible: boolean;

@@ -5,37 +5,22 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Copy, FileText, Calendar, CreditCard, Receipt, CheckCircle, XCircle, Clock, AlertTriangle, ArrowLeft } from 'lucide-react';
-import { LoadingSpinner } from '../../../components/common';
-import { useNotification } from '../../../context/NotificationContext';
-import SubPageLayout from '../../../components/SubPageLayout';
-import { getMyWithdrawList, WithdrawRecordItem } from '../../../services/wallet';
-import { isSuccess } from '../../../utils/apiHelpers';
-import { useStateMachine } from '../../../hooks/useStateMachine';
-import { LoadingEvent, LoadingState } from '../../../types/states';
+import { LoadingSpinner } from '@/components/common';
+import { useNotification } from '@/context/NotificationContext';
+import PageContainer from '@/layouts/PageContainer';
+import { getMyWithdrawList, WithdrawRecordItem } from '@/services/wallet';
+import { isSuccess } from '@/utils/apiHelpers';
+import { useLoadingMachine, LoadingEvent, LoadingState } from '@/hooks';
+import { errorLog } from '@/utils/logger';
+import { copyToClipboard } from '@/utils/clipboard';
+import { getWithdrawOrderStatusConfig } from '@/constants/statusEnums';
 
 const WithdrawOrderDetail: React.FC = () => {
     const navigate = useNavigate();
     const { orderId } = useParams<{ orderId: string }>();
     const { showToast } = useNotification();
     const [order, setOrder] = useState<WithdrawRecordItem | null>(null);
-    const loadMachine = useStateMachine<LoadingState, LoadingEvent>({
-        initial: LoadingState.IDLE,
-        transitions: {
-            [LoadingState.IDLE]: { [LoadingEvent.LOAD]: LoadingState.LOADING },
-            [LoadingState.LOADING]: {
-                [LoadingEvent.SUCCESS]: LoadingState.SUCCESS,
-                [LoadingEvent.ERROR]: LoadingState.ERROR,
-            },
-            [LoadingState.SUCCESS]: {
-                [LoadingEvent.LOAD]: LoadingState.LOADING,
-                [LoadingEvent.RETRY]: LoadingState.LOADING,
-            },
-            [LoadingState.ERROR]: {
-                [LoadingEvent.LOAD]: LoadingState.LOADING,
-                [LoadingEvent.RETRY]: LoadingState.LOADING,
-            },
-        },
-    });
+    const loadMachine = useLoadingMachine();
     const loading = loadMachine.state === LoadingState.LOADING;
 
     useEffect(() => {
@@ -60,7 +45,7 @@ const WithdrawOrderDetail: React.FC = () => {
                     loadMachine.send(LoadingEvent.ERROR);
                 }
             } catch (error) {
-                console.error('Fetch withdraw detail failed:', error);
+                errorLog('WithdrawOrderDetail', '获取提现详情失败', error);
                 showToast('error', '加载失败', '网络错误，请稍后重试');
                 loadMachine.send(LoadingEvent.ERROR);
             } finally {
@@ -71,56 +56,27 @@ const WithdrawOrderDetail: React.FC = () => {
         fetchDetail();
     }, [orderId, showToast]);
 
-    const copyToClipboard = async (text: string) => {
+    const handleCopy = async (text: string) => {
         if (!text || text.trim() === '') {
             showToast('error', '内容为空，无法复制');
             return;
         }
-
-        if (navigator.clipboard && navigator.clipboard.writeText) {
-            try {
-                await navigator.clipboard.writeText(text);
-                showToast('success', '复制成功');
-                return;
-            } catch (err: any) {
-                console.warn('Modern clipboard API failed:', err);
-            }
-        }
-
-        try {
-            const textArea = document.createElement('textarea');
-            textArea.value = text;
-            textArea.style.position = 'absolute';
-            textArea.style.left = '-9999px';
-            textArea.setAttribute('readonly', '');
-
-            document.body.appendChild(textArea);
-            textArea.select();
-            textArea.setSelectionRange(0, text.length);
-
-            const successful = document.execCommand('copy');
-            document.body.removeChild(textArea);
-
-            if (successful) {
-                showToast('success', '复制成功');
-                return;
-            }
-            throw new Error('execCommand failed');
-        } catch (err: any) {
-            console.error('Fallback copy failed:', err);
+        const success = await copyToClipboard(text);
+        if (success) {
+            showToast('success', '复制成功');
+        } else {
             showToast('error', '复制失败', '请手动复制');
         }
     };
 
-    const getStatusConfig = (status: number) => {
-        const configs = {
-            0: { text: '待审核', color: 'text-orange-600', bgColor: 'bg-gradient-to-r from-orange-400 to-orange-500', icon: Clock },
-            1: { text: '已通过', color: 'text-green-600', bgColor: 'bg-gradient-to-r from-green-400 to-green-500', icon: CheckCircle },
-            2: { text: '已拒绝', color: 'text-red-600', bgColor: 'bg-gradient-to-r from-red-400 to-red-500', icon: XCircle },
-            3: { text: '已打款', color: 'text-blue-600', bgColor: 'bg-gradient-to-r from-blue-400 to-blue-500', icon: CheckCircle },
-            4: { text: '打款失败', color: 'text-gray-600', bgColor: 'bg-gradient-to-r from-gray-400 to-gray-500', icon: AlertTriangle },
-        } as const;
-        return configs[status as keyof typeof configs] || configs[0];
+    // 获取状态图标组件
+    const getStatusIcon = (iconName: string) => {
+        switch (iconName) {
+            case 'check-circle': return CheckCircle;
+            case 'x-circle': return XCircle;
+            case 'alert-triangle': return AlertTriangle;
+            default: return Clock;
+        }
     };
 
     const formatTime = (timestamp: number) => {
@@ -154,11 +110,11 @@ const WithdrawOrderDetail: React.FC = () => {
         );
     }
 
-    const statusConfig = getStatusConfig(order.status);
-    const StatusIcon = statusConfig.icon;
+    const statusConfig = getWithdrawOrderStatusConfig(order.status);
+    const StatusIcon = getStatusIcon(statusConfig.iconName);
 
     return (
-        <SubPageLayout title="提现详情" onBack={() => navigate(-1)}>
+        <PageContainer title="提现详情" onBack={() => navigate(-1)}>
             <div className="p-4 space-y-4 pb-safe">
                 {/* 状态横幅 */}
                 <div className={`${statusConfig.bgColor} rounded-xl p-6 text-white shadow-lg relative overflow-hidden`}>
@@ -213,7 +169,7 @@ const WithdrawOrderDetail: React.FC = () => {
                             <div className="flex items-center gap-2">
                                 <span className="text-sm font-mono text-gray-800">{order.order_no}</span>
                                 <button
-                                    onClick={() => copyToClipboard(order.order_no!)}
+                                    onClick={() => handleCopy(order.order_no!)}
                                     className="text-orange-600 hover:text-orange-700 active:scale-95 transition-transform"
                                 >
                                     <Copy size={14} />
@@ -303,7 +259,7 @@ const WithdrawOrderDetail: React.FC = () => {
                     </div>
                 </div>
             </div>
-        </SubPageLayout>
+        </PageContainer>
     );
 };
 

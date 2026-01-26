@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { uploadImage } from '../../../../services/common';
-import { getStoredToken } from '../../../../services/client';
-import { isSuccess, extractData, extractError } from '../../../../utils/apiHelpers';
+import { uploadImage } from '@/services/common';
+import { getStoredToken } from '@/services/client';
+import { isSuccess, extractData, extractError } from '@/utils/apiHelpers';
+import { errorLog } from '@/utils/logger';
 
 export type ImageUploadState = {
   file: File;
@@ -60,7 +61,7 @@ export const useImageUploads = ({
             throw new Error(extractError(res, '上传失败'));
           }
         } catch (error: any) {
-          console.error('图片上传失败:', error);
+          errorLog('useImageUploads', '图片上传失败', error);
           setImageUploadStates((prev) =>
             prev.map((s) =>
               s.file === state.file ? { ...s, uploading: false, error: error?.message || '上传失败' } : s,

@@ -1,6 +1,6 @@
 import React from 'react';
 import { History } from 'lucide-react';
-import { RightsDeclarationRecord } from '../../../../../services/rightsDeclaration';
+import { RightsDeclarationRecord } from '@/services/rightsDeclaration';
 
 interface ClaimHistoryListProps {
   history: RightsDeclarationRecord[];

@@ -2,8 +2,8 @@
 import React, { useState, useMemo, useEffect, useCallback, useRef, TouchEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, Filter, LayoutGrid, List, Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
-import { LoadingSpinner, EmptyState, LazyImage, SkeletonProductGrid } from '../../../components/common';
-import { Product } from '../../../types';
+import { LoadingSpinner, EmptyState, LazyImage, SkeletonProductGrid } from '@/components/common';
+import { Product } from '@/types';
 import {
   fetchShopProducts,
   fetchShopProductsBySales,
@@ -11,11 +11,11 @@ import {
   fetchShopProductCategories,
   normalizeAssetUrl,
   ShopProductItem,
-} from '../../../services/api';
-import { useStateMachine } from '../../../hooks/useStateMachine';
-import { LoadingEvent, LoadingState } from '../../../types/states';
-import { useAppStore, MARKET_CACHE_TTL } from '../../stores/appStore';
-import { errorLog, debugLog } from '../../../utils/logger';
+} from '@/services/api';
+import { useStateMachine } from '@/hooks/useStateMachine';
+import { LoadingEvent, LoadingState } from '@/types/states';
+import { useAppStore, MARKET_CACHE_TTL } from '@/stores/appStore';
+import { errorLog, debugLog } from '@/utils/logger';
 
 interface MarketProps {
   onProductSelect?: (product: Product) => void;

@@ -7,16 +7,16 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Star, X, Camera, Loader2, Video as VideoIcon } from 'lucide-react';
-import { LoadingSpinner, LazyImage } from '../../../components/common';
-import { useNotification } from '../../../context/NotificationContext';
-import { useErrorHandler } from '../../../hooks/useErrorHandler';
-import { useStateMachine } from '../../../hooks/useStateMachine';
-import { FormEvent, FormState, LoadingEvent, LoadingState } from '../../../types/states';
-import { submitReview, SubmitReviewParams } from '../../../services/shop';
-import { uploadImage, uploadVideo } from '../../../services/common';
-import { getStoredToken } from '../../../services/client';
-import { isSuccess, extractData, extractError } from '../../../utils/apiHelpers';
-import { errorLog, warnLog } from '../../../utils/logger';
+import { LoadingSpinner, LazyImage } from '@/components/common';
+import { useNotification } from '@/context/NotificationContext';
+import { useErrorHandler } from '@/hooks/useErrorHandler';
+import { useStateMachine } from '@/hooks/useStateMachine';
+import { FormEvent, FormState, LoadingEvent, LoadingState } from '@/types/states';
+import { submitReview, SubmitReviewParams } from '@/services/shop';
+import { uploadImage, uploadVideo } from '@/services/common';
+import { getStoredToken } from '@/services/client';
+import { isSuccess, extractData, extractError } from '@/utils/apiHelpers';
+import { errorLog, warnLog } from '@/utils/logger';
 
 interface ImageUploadState {
   file?: File;
@@ -570,7 +570,7 @@ const SubmitReview: React.FC = () => {
       </div>
 
       {/* 底部提交按钮 */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 p-4 safe-area-bottom max-w-[480px] mx-auto">
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 p-4 pb-safe max-w-[480px] mx-auto">
         <button
           onClick={handleSubmit}
           disabled={submitting || !content.trim()}

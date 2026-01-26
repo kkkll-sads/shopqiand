@@ -1,36 +1,31 @@
 /**
  * ShopProductDetail - 商城商品详情页（京东风格）
- * 
- * 专门用于消费金商城商品的详情展示
- * 参考京东APP商品详情页设计
+ * 已重构: 拆分为多个子组件和 hooks
  */
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  ChevronLeft, ChevronRight, Store, MessageCircle,
-  Truck, Shield, RotateCcw, Headphones, ThumbsUp, Gift
+  ChevronLeft, ChevronRight, Headphones, Truck, ThumbsUp, Gift
 } from 'lucide-react';
-import { LazyImage, openChatWidget } from '../../../components/common';
-import BottomSheet from '../../../components/common/BottomSheet';
-import AddressSheet from '../../../components/business/AddressSheet';
-import ServiceSheet from '../../../components/business/ServiceSheet';
-import BuySpecSheet from '../../components/shop/BuySpecSheet';
-import { Product } from '../../../types';
+import BottomSheet from '@/components/common/BottomSheet';
+import AddressSheet from '@/components/business/AddressSheet';
+import ServiceSheet from '@/components/business/ServiceSheet';
+import BuySpecSheet from '@/components/shop/BuySpecSheet';
+import { LoadingSpinner } from '@/components/common';
+import { Product } from '@/types';
+import { ShopProductDetailData } from '@/services/api';
+import { useNotification } from '@/context/NotificationContext';
+import { debugLog } from '@/utils/logger';
 import {
-  fetchShopProductDetail,
-  ShopProductDetailData,
-  createOrder,
-  fetchReviewSummary,
-  ReviewSummaryData,
-} from '../../../services/api';
-import { useNotification } from '../../../context/NotificationContext';
-import { isSuccess, extractData } from '../../../utils/apiHelpers';
-import { useErrorHandler } from '../../../hooks/useErrorHandler';
-import { useStateMachine } from '../../../hooks/useStateMachine';
-import { FormEvent, FormState, LoadingEvent, LoadingState } from '../../../types/states';
-import { LoadingSpinner } from '../../../components/common';
-import { multiply, round as roundCurrency, subtract } from '../../../utils/currency';
-import { warnLog, errorLog, debugLog } from '../../../utils/logger';
+  ProductGallery,
+  ProductInfo,
+  ProductSpecs,
+  ProductActions,
+  SkuSwitcher,
+} from './components/product';
+import { Sku } from '@/services/shop';
+import { useProductDetail } from './hooks/useProductDetail';
+import { useProductBuy } from './hooks/useProductBuy';
 
 interface ShopProductDetailProps {
   product: Product;
@@ -44,156 +39,58 @@ const ShopProductDetail: React.FC<ShopProductDetailProps> = ({
   initialData = null
 }) => {
   const navigate = useNavigate();
-  const { showToast, showDialog } = useNotification();
+  const { showToast } = useNotification();
 
-  const { handleError: handleBuyError } = useErrorHandler({ showToast: true, persist: false });
-  const {
-    errorMessage,
-    hasError,
-    handleError,
-    clearError
-  } = useErrorHandler();
-
-  const [detailData, setDetailData] = useState<ShopProductDetailData | null>(initialData);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
-  // 收藏功能已移除
   const [activeTab, setActiveTab] = useState<'product' | 'reviews' | 'detail' | 'recommend'>('product');
   const [scrollY, setScrollY] = useState(0);
   const [headerStyle, setHeaderStyle] = useState<'transparent' | 'white'>('transparent');
-  const imageContainerRef = useRef<HTMLDivElement>(null);
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  
+  const [showAddressSheet, setShowAddressSheet] = useState(false);
+  const [showServiceSheet, setShowServiceSheet] = useState(false);
+  const [showBuySpecSheet, setShowBuySpecSheet] = useState(false);
+  const [preSelectedValueIds, setPreSelectedValueIds] = useState<Record<number, number>>({});
+  const [skuPreviewImage, setSkuPreviewImage] = useState<string | null>(null);
 
   // 各区块 ref，用于滚动定位和自动切换 Tab
   const productSectionRef = useRef<HTMLDivElement>(null);
   const reviewsSectionRef = useRef<HTMLDivElement>(null);
   const detailSectionRef = useRef<HTMLDivElement>(null);
 
-  // 评价数据
-  const [reviewSummary, setReviewSummary] = useState<ReviewSummaryData | null>(null);
+  // Product Detail Hook
+  const {
+    detailData,
+    reviewSummary,
+    loading,
+    hasError,
+    errorMessage,
+    displayTitle,
+    displayPrice,
+    maxPrice,
+    showPriceRange,
+    scorePrice,
+    salesCount,
+    reviewCount,
+    detailImages,
+    safeShopImages,
+    hasSelectableSpecs,
+  } = useProductDetail({ product, initialData });
 
-  // 底部弹窗状态
-  const [showAddressSheet, setShowAddressSheet] = useState(false);
-  const [showServiceSheet, setShowServiceSheet] = useState(false);
-
-  // 规格选择弹窗状态
-  const [showBuySpecSheet, setShowBuySpecSheet] = useState(false);
-  const [selectedSpecs, setSelectedSpecs] = useState<Record<string, string>>({});
-  const [buyQuantity, setBuyQuantity] = useState(1);
-  const [selectedSkuId, setSelectedSkuId] = useState<number | undefined>(undefined);
-
-  // 状态机
-  const detailMachine = useStateMachine<LoadingState, LoadingEvent>({
-    initial: initialData ? LoadingState.SUCCESS : LoadingState.IDLE,
-    transitions: {
-      [LoadingState.IDLE]: { [LoadingEvent.LOAD]: LoadingState.LOADING },
-      [LoadingState.LOADING]: {
-        [LoadingEvent.SUCCESS]: LoadingState.SUCCESS,
-        [LoadingEvent.ERROR]: LoadingState.ERROR,
-      },
-      [LoadingState.SUCCESS]: {
-        [LoadingEvent.LOAD]: LoadingState.LOADING,
-        [LoadingEvent.RETRY]: LoadingState.LOADING,
-      },
-      [LoadingState.ERROR]: {
-        [LoadingEvent.LOAD]: LoadingState.LOADING,
-        [LoadingEvent.RETRY]: LoadingState.LOADING,
-      },
-    },
+  // Product Buy Hook
+  const {
+    selectedSpecs,
+    buyQuantity,
+    selectedSkuId,
+    buying,
+    handleConfirmBuy,
+    setBuyQuantity,
+    setSelectedSpecs,
+    setSelectedSkuId,
+  } = useProductBuy({
+    productId: product.id,
+    productTitle: displayTitle,
+    isPhysical: detailData?.is_physical === '1',
   });
-
-  const buyMachine = useStateMachine<FormState, FormEvent>({
-    initial: FormState.IDLE,
-    transitions: {
-      [FormState.IDLE]: { [FormEvent.SUBMIT]: FormState.SUBMITTING },
-      [FormState.VALIDATING]: {
-        [FormEvent.VALIDATION_SUCCESS]: FormState.SUBMITTING,
-        [FormEvent.VALIDATION_ERROR]: FormState.ERROR,
-      },
-      [FormState.SUBMITTING]: {
-        [FormEvent.SUBMIT_SUCCESS]: FormState.SUCCESS,
-        [FormEvent.SUBMIT_ERROR]: FormState.ERROR,
-      },
-      [FormState.SUCCESS]: {
-        [FormEvent.SUBMIT]: FormState.SUBMITTING,
-        [FormEvent.RESET]: FormState.IDLE,
-      },
-      [FormState.ERROR]: {
-        [FormEvent.SUBMIT]: FormState.SUBMITTING,
-        [FormEvent.RESET]: FormState.IDLE,
-      },
-    },
-  });
-
-  const loading = detailMachine.state === LoadingState.LOADING;
-  const buying = buyMachine.state === FormState.SUBMITTING;
-
-  // 加载商品详情
-  useEffect(() => {
-    if (initialData) {
-      setDetailData(initialData);
-      detailMachine.send(LoadingEvent.SUCCESS);
-      return;
-    }
-
-    const loadDetail = async () => {
-      try {
-        detailMachine.send(LoadingEvent.LOAD);
-        clearError();
-
-        const response = await fetchShopProductDetail(product.id);
-        const data = extractData(response);
-
-        if (data) {
-          setDetailData(data);
-          detailMachine.send(LoadingEvent.SUCCESS);
-        } else {
-          handleError(response, {
-            persist: true,
-            showToast: false,
-            customMessage: '获取商品详情失败'
-          });
-          detailMachine.send(LoadingEvent.ERROR);
-        }
-      } catch (err: any) {
-        handleError(err, {
-          persist: true,
-          showToast: false,
-          customMessage: '数据加载失败，请重试',
-          context: { productId: product.id }
-        });
-        detailMachine.send(LoadingEvent.ERROR);
-      }
-    };
-
-    loadDetail();
-  }, [product.id, initialData]);
-
-  // 加载评价摘要
-  useEffect(() => {
-    const loadReviews = async () => {
-      try {
-        const response = await fetchReviewSummary(product.id);
-        if (isSuccess(response) && response.data) {
-          setReviewSummary(response.data);
-        }
-      } catch (err) {
-        warnLog('ShopProductDetail', '加载评价失败', err);
-      }
-    };
-    loadReviews();
-  }, [product.id]);
-
-  // 图片滑动处理
-  const handleImageScroll = () => {
-    if (imageContainerRef.current) {
-      const scrollLeft = imageContainerRef.current.scrollLeft;
-      const width = imageContainerRef.current.offsetWidth;
-      const newIndex = Math.round(scrollLeft / width);
-      if (newIndex !== currentImageIndex) {
-        setCurrentImageIndex(newIndex);
-      }
-    }
-  };
 
   // 页面滚动监听 - 导航栏跟随变化 + Tab 自动切换
   useEffect(() => {
@@ -201,15 +98,13 @@ const ShopProductDetail: React.FC<ShopProductDetailProps> = ({
       const currentScrollY = window.scrollY;
       setScrollY(currentScrollY);
 
-      // 滚动超过图片区域（约 300px）时，导航栏变为白色背景
       if (currentScrollY > 300) {
         setHeaderStyle('white');
       } else {
         setHeaderStyle('transparent');
       }
 
-      // 根据滚动位置自动切换 Tab
-      const offset = 100; // 导航栏高度补偿
+      const offset = 100;
       const detailTop = detailSectionRef.current?.offsetTop ?? Infinity;
       const reviewsTop = reviewsSectionRef.current?.offsetTop ?? Infinity;
 
@@ -226,128 +121,61 @@ const ShopProductDetail: React.FC<ShopProductDetailProps> = ({
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // 打开规格选择弹窗
-  const handleOpenBuySheet = () => {
+  const handleBuy = () => {
     if (buying) return;
     setShowBuySpecSheet(true);
   };
 
-  // 确认购买（从规格选择弹窗确认后调用）
-  const handleConfirmBuy = async (quantity: number, specs?: Record<string, string>, skuId?: number) => {
-    if (buying) return;
-
-    // 保存选择的数量、规格和 SKU ID
-    setBuyQuantity(quantity);
-    if (specs) {
-      setSelectedSpecs(specs);
+  // 计算显示的图片列表（包含SKU预览图）
+  const displayImages = useMemo(() => {
+    if (skuPreviewImage && !safeShopImages.includes(skuPreviewImage)) {
+      return [skuPreviewImage, ...safeShopImages];
     }
-    if (skuId) {
-      setSelectedSkuId(skuId);
+    return safeShopImages;
+  }, [safeShopImages, skuPreviewImage]);
+
+  // 当 SKU 预览图变化时，切换到第一张（预览图）
+  useEffect(() => {
+    if (skuPreviewImage) {
+      setCurrentImageIndex(0);
     }
-    setShowBuySpecSheet(false);
+  }, [skuPreviewImage]);
 
-    // 显示确认对话框
-    const specText = specs && Object.keys(specs).length > 0
-      ? ` (${Object.values(specs).join('、')})`
-      : '';
+  const mainImage = displayImages[currentImageIndex] || detailData?.thumbnail || product.image;
 
-    showDialog({
-      title: '确认购买',
-      description: `确定要购买 ${quantity} 件 ${product.title}${specText} 吗？`,
-      confirmText: '立即支付',
-      cancelText: '取消',
-      onConfirm: async () => {
-        try {
-          buyMachine.send(FormEvent.SUBMIT);
-          // 构建订单项，如果是多规格商品需要传 sku_id
-          const orderItem: { product_id: number; quantity: number; sku_id?: number } = {
-            product_id: Number(product.id),
-            quantity,
-          };
-          if (skuId) {
-            orderItem.sku_id = skuId;
-          }
-          const response = await createOrder({
-            items: [orderItem],
-            pay_type: 'money',
-          });
-
-          if (isSuccess(response)) {
-            let orderId: number | string | null = null;
-            if (response.data) {
-              if (typeof response.data === 'object' && 'order_id' in response.data) {
-                orderId = (response.data as any).order_id;
-              } else if (typeof response.data === 'object' && 'id' in response.data) {
-                orderId = (response.data as any).id;
-              }
-            }
-
-            if (orderId) {
-              navigate(`/cashier/${orderId}`);
-            } else {
-              showToast('success', '订单创建成功');
-              setTimeout(() => navigate('/orders/points/0'), 1500);
-            }
-            buyMachine.send(FormEvent.SUBMIT_SUCCESS);
-          } else {
-            handleBuyError(response, {
-              toastTitle: '订单创建失败',
-              customMessage: '订单创建失败',
-              context: { productId: product.id }
-            });
-            buyMachine.send(FormEvent.SUBMIT_ERROR);
-          }
-        } catch (err: any) {
-          handleBuyError(err, {
-            toastTitle: '订单创建失败',
-            customMessage: '系统错误',
-            context: { productId: product.id }
-          });
-          buyMachine.send(FormEvent.SUBMIT_ERROR);
-        }
-      }
-    });
-  };
-
-  // 检查是否有可选择的规格
-  const hasSelectableSpecs = useMemo(() => {
-    const hasSku = detailData?.has_sku === '1';
-    if (hasSku && detailData?.sku_specs && detailData.sku_specs.length > 0) {
-      return true; // 新版SKU规格
-    }
-
-    // 检查旧版规格格式
+  // 规格处理逻辑
+  const getSpecsForBuySheet = () => {
     const rawSpecs = detailData?.specs || [];
     if (!Array.isArray(rawSpecs) || rawSpecs.length === 0) {
-      return false;
+      return [];
     }
 
-    // 检查是否是标准格式：{id, name, values[]}
     const firstSpec = rawSpecs[0];
     if (firstSpec && firstSpec.id && firstSpec.name && Array.isArray(firstSpec.values)) {
-      return rawSpecs.some(spec => spec.values && spec.values.length > 0);
+      return rawSpecs
+        .filter(spec => spec && spec.id && spec.name && Array.isArray(spec.values))
+        .map(spec => ({
+          id: spec.id,
+          name: spec.name,
+          values: spec.values || []
+        }));
     }
 
-    // 兼容格式：{name, value} - 需要检查是否有多个不同的name或value
-    const uniqueNames = new Set(rawSpecs.map((s: any) => s?.name).filter(Boolean));
-    const uniqueValues = new Set(rawSpecs.map((s: any) => s?.value).filter(Boolean));
-    // 如果有多个不同的name，说明有多个规格分组
-    // 或者有多个不同的value，说明有多个规格值可选
-    return uniqueNames.size > 1 || uniqueValues.size > 1;
-  }, [detailData]);
+    const specGroups = new Map<string, Set<string>>();
+    rawSpecs.forEach((spec: any) => {
+      if (spec && spec.name && spec.value) {
+        if (!specGroups.has(spec.name)) {
+          specGroups.set(spec.name, new Set());
+        }
+        specGroups.get(spec.name)!.add(spec.value);
+      }
+    });
 
-  // 直接购买（无规格商品）
-  const handleBuy = async () => {
-    if (buying) return;
-
-    // 如果有规格，打开规格选择弹窗
-    if (hasSelectableSpecs) {
-      setShowBuySpecSheet(true);
-      return;
-    }
-
-    // 无规格商品，打开数量选择弹窗
-    setShowBuySpecSheet(true);
+    return Array.from(specGroups.entries()).map(([name, values], index) => ({
+      id: `spec-${index}`,
+      name: name,
+      values: Array.from(values)
+    }));
   };
 
   if (loading) {
@@ -366,64 +194,30 @@ const ShopProductDetail: React.FC<ShopProductDetailProps> = ({
     );
   }
 
-  // 商品数据
-  const displayTitle = detailData?.name || product.title;
-  const hasSku = detailData?.has_sku === '1';
-  const priceRange = detailData?.price_range;
-  // 多规格商品显示价格区间，单规格商品显示固定价格
-  const displayPrice = hasSku && priceRange
-    ? priceRange.min
-    : Number(detailData?.price ?? product.price);
-  const maxPrice = hasSku && priceRange ? priceRange.max : displayPrice;
-  const showPriceRange = hasSku && priceRange && priceRange.min !== priceRange.max;
-  const scorePrice = detailData?.score_price || product.score_price || 0;
-
-  // 使用精确的金额计算工具（避免浮点数精度问题）
-  const originalPrice = roundCurrency(multiply(displayPrice, 1.15), 0).toNumber();
-  const savedAmount = subtract(originalPrice, displayPrice).toNumber();
-
-  // 从 API 数据获取真实的销量和评价数，如果没有则显示 0
-  // 注意：如果后端没有返回 sales_count，可以使用 reviewSummary.total 作为评价数
-  const salesCount = (detailData as any)?.sales_count ?? (detailData as any)?.sales ?? 0;
-  const reviewCount = reviewSummary?.total ?? 0;
-
-  // 商品图片列表 - 防御性处理确保 detail_images 是数组
-  const detailImages = Array.isArray(detailData?.detail_images) ? detailData.detail_images : [];
-
-  // 轮播图优先使用 images 字段，如果不为空则使用 images，否则使用缩略图
-  // 注意：不再混合 detailImages 到轮播图中，因为 detailImages 单独用于详情展示
-  const serverImages = Array.isArray(detailData?.images) ? detailData.images : [];
-  const shopImages: string[] = serverImages.length > 0
-    ? serverImages
-    : [detailData?.thumbnail || product.image].filter(Boolean) as string[];
-
-  // 确保 shopImages 有内容，避免空数组导致的问题
-  const safeShopImages = shopImages.length > 0 ? shopImages : [product.image].filter(Boolean);
-  const mainImage = safeShopImages[currentImageIndex] || detailData?.thumbnail || product.image;
-
   return (
-    <div className="min-h-screen bg-[#f5f5f5] pb-[56px]" ref={scrollContainerRef}>
-      {/* 顶部Tab导航栏 - 滚动跟随变化 */}
+    <div className="min-h-screen bg-[#f5f5f5] pb-[56px]">
+      {/* 顶部Tab导航栏 */}
       <header
-        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${headerStyle === 'white'
-          ? 'bg-white shadow-sm'
-          : 'bg-transparent'
-          }`}
+        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
+          headerStyle === 'white' ? 'bg-white shadow-sm' : 'bg-transparent'
+        }`}
       >
         <div className={`flex items-center px-2 py-2 ${headerStyle === 'white' ? 'border-b border-gray-100' : ''}`}>
           <button
             onClick={() => navigate(-1)}
-            className={`p-2 -ml-1 rounded-full transition-colors ${headerStyle === 'white'
-              ? 'active:bg-gray-100'
-              : 'bg-black/20 active:bg-black/30'
-              }`}
+            className={`p-2 -ml-1 rounded-full transition-colors ${
+              headerStyle === 'white'
+                ? 'active:bg-gray-100'
+                : 'bg-black/20 active:bg-black/30'
+            }`}
           >
             <ChevronLeft size={22} className={headerStyle === 'white' ? 'text-gray-700' : 'text-white'} />
           </button>
 
-          {/* Tab导航 - 滚动后显示 */}
-          <div className={`flex-1 flex items-center justify-center gap-6 transition-opacity duration-300 ${headerStyle === 'white' ? 'opacity-100' : 'opacity-0 pointer-events-none'
-            }`}>
+          {/* Tab导航 */}
+          <div className={`flex-1 flex items-center justify-center gap-6 transition-opacity duration-300 ${
+            headerStyle === 'white' ? 'opacity-100' : 'opacity-0 pointer-events-none'
+          }`}>
             {[
               { key: 'product', label: '商品', ref: productSectionRef },
               { key: 'reviews', label: '大家评', ref: reviewsSectionRef },
@@ -433,10 +227,11 @@ const ShopProductDetail: React.FC<ShopProductDetailProps> = ({
                 key={tab.key}
                 onClick={() => {
                   setActiveTab(tab.key as any);
-                  // 点击 Tab 滚动到对应区域
                   tab.ref.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
                 }}
-                className={`text-sm py-1 relative ${activeTab === tab.key ? 'text-gray-900 font-bold' : 'text-gray-500'}`}
+                className={`text-sm py-1 relative ${
+                  activeTab === tab.key ? 'text-gray-900 font-bold' : 'text-gray-500'
+                }`}
               >
                 {tab.label}
                 {activeTab === tab.key && (
@@ -445,151 +240,48 @@ const ShopProductDetail: React.FC<ShopProductDetailProps> = ({
               </button>
             ))}
           </div>
-
-          {/* 标题 - 滚动后显示 */}
-          {headerStyle === 'transparent' && (
-            <div className="flex-1" />
-          )}
-
-          <div className="flex items-center gap-1">
-            {/* 分享按钮已移除 */}
-          </div>
         </div>
       </header>
 
       {/* 商品主图轮播 */}
       <div className="relative" ref={productSectionRef}>
-        {/* 图片轮播 */}
-        <div
-          ref={imageContainerRef}
-          className="relative bg-white overflow-x-auto snap-x snap-mandatory flex"
-          style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-          onScroll={handleImageScroll}
-        >
-          {safeShopImages.map((img, idx) => (
-            <div key={idx} className="w-full flex-shrink-0 snap-center aspect-square">
-              <LazyImage
-                src={img || ''}
-                alt={`${displayTitle} ${idx + 1}`}
-                className="w-full h-full object-cover"
-              />
-            </div>
-          ))}
-        </div>
-
-        {/* 图片指示器和功能按钮 */}
-        <div className="absolute bottom-3 right-3 flex items-center gap-2">
-          <div className="bg-black/50 text-white text-xs px-2.5 py-1 rounded-full">
-            图集 {currentImageIndex + 1}/{safeShopImages.length}
-          </div>
-        </div>
+        <ProductGallery
+          images={displayImages}
+          currentIndex={currentImageIndex}
+          onIndexChange={setCurrentImageIndex}
+        />
       </div>
 
-      {/* 规格缩略图选择器 */}
-      {safeShopImages.length > 1 && (
-        <div className="bg-white px-3 py-2 flex gap-2 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
-          {safeShopImages.slice(0, 6).map((img, idx) => (
-            <div
-              key={idx}
-              onClick={() => {
-                setCurrentImageIndex(idx);
-                if (imageContainerRef.current) {
-                  imageContainerRef.current.scrollTo({
-                    left: idx * imageContainerRef.current.offsetWidth,
-                    behavior: 'smooth'
-                  });
-                }
-              }}
-              className={`relative flex-shrink-0 w-14 h-14 rounded-lg overflow-hidden border-2 transition-all ${currentImageIndex === idx ? 'border-red-600' : 'border-gray-200'
-                }`}
-            >
-              <img src={img} alt="" className="w-full h-full object-cover" />
-            </div>
-          ))}
-          {safeShopImages.length > 6 && (
-            <div className="flex-shrink-0 w-14 h-14 rounded-lg bg-gray-100 flex items-center justify-center">
-              <span className="text-xs text-gray-500">共{safeShopImages.length}款</span>
-            </div>
-          )}
-        </div>
+      {/* SKU图片切换器 */}
+      {detailData?.has_sku === '1' && detailData?.sku_specs && detailData?.skus && (
+        <SkuSwitcher
+          skuSpecs={detailData.sku_specs}
+          skus={detailData.skus}
+          selectedSkuId={selectedSkuId}
+          onSkuSelect={(sku, specValueIds) => {
+            setPreSelectedValueIds(specValueIds);
+            if (sku) {
+              setSelectedSkuId(sku.id);
+              // 切换主图到 SKU 图片
+              if (sku.image) {
+                setSkuPreviewImage(sku.image);
+              }
+            }
+          }}
+        />
       )}
 
-      {/* 价格促销区 */}
-      <div className="bg-white px-3 py-2.5">
-        {/* 价格行 */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-baseline flex-wrap">
-            {/* 现金价格：支持价格区间显示 */}
-            {displayPrice > 0 && (
-              <>
-                <span className="text-red-600 text-lg font-bold font-[DINAlternate-Bold] mr-1">¥</span>
-                <span className="text-red-600 text-3xl font-bold font-[DINAlternate-Bold]">{displayPrice}</span>
-                {showPriceRange && (
-                  <>
-                    <span className="text-red-600 text-lg mx-1">-</span>
-                    <span className="text-red-600 text-lg font-bold font-[DINAlternate-Bold] mr-1">¥</span>
-                    <span className="text-red-600 text-3xl font-bold font-[DINAlternate-Bold]">{maxPrice}</span>
-                  </>
-                )}
-              </>
-            )}
-            {/* 消费金价格 */}
-            {scorePrice > 0 && (
-              <span className="text-red-600 text-sm font-bold ml-1 bg-red-50 px-1.5 py-0.5 rounded-md border border-red-100">
-                {displayPrice > 0 ? '+' : ''}{scorePrice}消费金
-              </span>
-            )}
-          </div>
-          <div className="flex items-center gap-1">
-            <span className="bg-gradient-to-r from-red-600 to-red-500 text-white text-[10px] px-2 py-0.5 rounded font-bold shadow-sm shadow-red-500/30">
-              热销
-            </span>
-          </div>
-        </div>
+      {/* 商品信息区 */}
+      <ProductInfo
+        title={displayTitle}
+        price={displayPrice}
+        maxPrice={maxPrice}
+        showPriceRange={showPriceRange}
+        scorePrice={scorePrice}
+        salesCount={salesCount}
+      />
 
-        {/* 保障标签行 */}
-        <div className="flex items-center gap-2 mt-2">
-          <span className="flex items-center gap-0.5 text-[10px] text-green-600 bg-green-50 px-1.5 py-0.5 rounded">
-            <Shield size={10} />
-            正品保障
-          </span>
-          <span className="flex items-center gap-0.5 text-[10px] text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">
-            <Truck size={10} />
-            极速发货
-          </span>
-          <span className="text-gray-500 text-xs ml-auto">已售{salesCount > 0 ? `${salesCount}+` : '0'}</span>
-        </div>
-      </div>
-
-      {/* 商品标题区 */}
-      <div className="bg-white px-3 py-2 border-t border-gray-50">
-        <div className="flex items-start gap-1.5">
-          <span className="flex-shrink-0 bg-red-600 text-white text-[10px] px-1.5 py-0.5 rounded-[4px] font-bold leading-none mt-1">
-            自营
-          </span>
-          <span className="flex-shrink-0 bg-gradient-to-r from-red-500 to-red-600 text-white text-[10px] px-1.5 py-0.5 rounded-[4px] font-bold leading-none mt-1">
-            树交所
-          </span>
-          <h1 className="text-[15px] font-bold text-gray-900 leading-snug line-clamp-2">
-            {displayTitle}
-          </h1>
-        </div>
-
-        {/* 标签行 */}
-        <div className="flex items-center gap-1.5 mt-1.5 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
-          <span className="text-[10px] text-blue-600 border border-blue-200 px-1.5 py-0.5 rounded flex-shrink-0">
-            买贵双倍赔
-          </span>
-          <span className="text-[10px] text-blue-600 border border-blue-200 px-1.5 py-0.5 rounded flex-shrink-0">
-            7天价保
-          </span>
-          <span className="text-[10px] text-green-600 border border-green-200 px-1.5 py-0.5 rounded flex-shrink-0">
-            品质保障
-          </span>
-        </div>
-      </div>
-
-      {/* 服务保障 - 点击弹出安心保障详情 */}
+      {/* 服务保障 */}
       <div
         className="bg-white mt-1.5 px-3 py-2 active:bg-gray-50 cursor-pointer flex items-center justify-between"
         onClick={() => setShowServiceSheet(true)}
@@ -603,7 +295,7 @@ const ShopProductDetail: React.FC<ShopProductDetailProps> = ({
         <ChevronRight size={14} className="text-gray-400" />
       </div>
 
-      {/* 配送信息 - 点击弹出地址选择 */}
+      {/* 配送信息 */}
       <div
         className="bg-white mt-1.5 px-3 py-2 active:bg-gray-50 cursor-pointer"
         onClick={() => setShowAddressSheet(true)}
@@ -619,27 +311,15 @@ const ShopProductDetail: React.FC<ShopProductDetailProps> = ({
         <div className="text-[11px] text-gray-400 mt-1 ml-5">官方物流 · 全国包邮</div>
       </div>
 
-      {/* 规格选择入口 - 点击弹出规格选择 */}
-      <div
-        className="bg-white mt-1.5 px-3 py-3 active:bg-gray-50 cursor-pointer"
-        onClick={() => setShowBuySpecSheet(true)}
-      >
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="text-gray-500 text-sm">已选</span>
-            <span className="text-gray-800 text-sm font-medium">
-              {Object.keys(selectedSpecs).length > 0
-                ? `${Object.values(selectedSpecs).join('，')}，${buyQuantity}件`
-                : hasSelectableSpecs
-                  ? '请选择规格'
-                  : `${buyQuantity}件`}
-            </span>
-          </div>
-          <ChevronRight size={14} className="text-gray-400" />
-        </div>
-      </div>
+      {/* 规格选择入口 */}
+      <ProductSpecs
+        selectedSpecs={selectedSpecs}
+        quantity={buyQuantity}
+        hasSelectableSpecs={hasSelectableSpecs}
+        onOpen={() => setShowBuySpecSheet(true)}
+      />
 
-      {/* 买家评价区 - 点击跳转评价页面 */}
+      {/* 买家评价区 */}
       <div className="bg-white mt-2" ref={reviewsSectionRef}>
         <div
           className="px-4 py-3 flex items-center justify-between border-b border-gray-50 active:bg-gray-50 cursor-pointer"
@@ -656,7 +336,6 @@ const ShopProductDetail: React.FC<ShopProductDetailProps> = ({
           </div>
         </div>
 
-        {/* 评论列表 - 点击跳转评价页面 */}
         <div className="divide-y divide-gray-50">
           {(reviewSummary?.preview && reviewSummary.preview.length > 0) ? (
             reviewSummary.preview.map(review => (
@@ -718,36 +397,8 @@ const ShopProductDetail: React.FC<ShopProductDetailProps> = ({
         </div>
       </div>
 
-      {/* 底部操作栏 - 紧凑设计 */}
-      {!hideActions && (
-        <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 px-3 py-2 flex items-center z-50">
-          {/* 左侧图标按钮 */}
-          <div className="flex items-center gap-1">
-            <button className="flex flex-col items-center justify-center w-12 py-0.5">
-              <Store size={18} className="text-gray-500" />
-              <span className="text-[9px] text-gray-500">店铺</span>
-            </button>
-            <button
-              onClick={openChatWidget}
-              className="flex flex-col items-center justify-center w-12 py-0.5"
-            >
-              <MessageCircle size={18} className="text-gray-500" />
-              <span className="text-[9px] text-gray-500">客服</span>
-            </button>
-          </div>
-
-          {/* 右侧按钮 - 立即购买 */}
-          <div className="flex-1 ml-3">
-            <button
-              onClick={handleBuy}
-              disabled={buying}
-              className="w-full bg-gradient-to-r from-red-600 to-red-500 text-white py-3 rounded-full text-base font-bold active:scale-[0.98] transition-all disabled:opacity-70 shadow-lg shadow-red-600/20"
-            >
-              {buying ? '处理中...' : '立即购买'}
-            </button>
-          </div>
-        </div>
-      )}
+      {/* 底部操作栏 */}
+      <ProductActions buying={buying} onBuy={handleBuy} hideActions={hideActions} />
 
       {/* 地址选择弹窗 */}
       <BottomSheet
@@ -786,51 +437,12 @@ const ShopProductDetail: React.FC<ShopProductDetailProps> = ({
         scorePrice={scorePrice}
         stock={detailData?.stock ?? 999}
         maxPurchase={detailData?.max_purchase ?? 99}
-        // 旧版规格（向后兼容）
-        specs={(() => {
-          const rawSpecs = detailData?.specs || [];
-          if (!Array.isArray(rawSpecs) || rawSpecs.length === 0) {
-            return [];
-          }
-
-          // 检查是否是标准格式：{id, name, values[]}
-          const firstSpec = rawSpecs[0];
-          if (firstSpec && firstSpec.id && firstSpec.name && Array.isArray(firstSpec.values)) {
-            // 标准格式，直接使用
-            return rawSpecs
-              .filter(spec => spec && spec.id && spec.name && Array.isArray(spec.values))
-              .map(spec => ({
-                id: spec.id,
-                name: spec.name,
-                values: spec.values || []
-              }));
-          }
-
-          // 兼容格式：{name, value} - 需要转换为分组格式
-          // 从 [{name: "5kg", value: "黑色"}, {name: "6kg", value: "红色"}] 
-          // 转换为按 name 分组的格式
-          const specGroups = new Map<string, Set<string>>();
-          rawSpecs.forEach((spec: any) => {
-            if (spec && spec.name && spec.value) {
-              if (!specGroups.has(spec.name)) {
-                specGroups.set(spec.name, new Set());
-              }
-              specGroups.get(spec.name)!.add(spec.value);
-            }
-          });
-
-          // 转换为组件期望的格式
-          return Array.from(specGroups.entries()).map(([name, values], index) => ({
-            id: `spec-${index}`,
-            name: name,
-            values: Array.from(values)
-          }));
-        })()}
-        // 新版 SKU 规格
+        specs={getSpecsForBuySheet()}
         hasSku={detailData?.has_sku === '1'}
         skuSpecs={detailData?.sku_specs || []}
         skus={detailData?.skus || []}
         priceRange={detailData?.price_range}
+        preSelectedValueIds={preSelectedValueIds}
         onConfirm={handleConfirmBuy}
       />
     </div>

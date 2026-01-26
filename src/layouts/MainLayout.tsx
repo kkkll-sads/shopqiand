@@ -4,12 +4,12 @@
  */
 import React from 'react';
 import { Outlet, useLocation, useNavigate, Navigate } from 'react-router-dom';
-import BottomNav from '../../components/BottomNav';
-import ScrollToTop from '../components/ScrollToTop';
-import { ChatWidget, DraggableChatButton } from '../../components/common';
-import { useAuthStore } from '../stores/authStore';
-import { useAppStore } from '../stores/appStore';
-import type { Tab } from '../../types';
+import BottomNav from '@/layouts/BottomNav';
+import ScrollToTop from '@/components/common/ScrollToTop';
+import { ChatWidget, DraggableChatButton } from '@/components/common';
+import { useAuthStore } from '@/stores/authStore';
+import { useAppStore } from '@/stores/appStore';
+import type { Tab } from '@/types';
 
 // 路径到 Tab 的映射
 const pathToTab: Record<string, Tab> = {
@@ -84,7 +84,10 @@ const MainLayout: React.FC = () => {
     if (tab === 'market' && currentPath === '/market') {
       clearMarketCache();
     }
-    navigate(tabToPath[tab]);
+    // 导航到目标 Tab（如果已经在目标页面，BottomNav 会处理滚动到顶部）
+    if (currentPath !== tabToPath[tab]) {
+      navigate(tabToPath[tab]);
+    }
   };
 
   return (
