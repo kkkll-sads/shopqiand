@@ -2,8 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronRight, Search, Wallet, Vault, Zap, FileBadge, ClipboardList, Clock, CheckCircle2, AlertCircle } from 'lucide-react';
 import { Banner, NewsItem } from '@/types';
-import { fetchBanners, normalizeAssetUrl, fetchReservations, ReservationItem } from '@/services/api';
-import { isSuccess } from '@/utils/apiHelpers';
+import { fetchBanners, normalizeAssetUrl, fetchReservations, ReservationItem, fetchAnnouncements } from '@/services/api';
+import { isSuccess, extractData } from '@/utils/apiHelpers';
 import { SkeletonSubscriptionCard } from '@/components/common';
 import { errorLog } from '@/utils/logger';
 
@@ -11,13 +11,16 @@ interface HomeProps {
   announcements?: NewsItem[];
 }
 
-const Home: React.FC<HomeProps> = ({ announcements = [] }) => {
+const Home: React.FC<HomeProps> = ({ announcements: announcementsProp = [] }) => {
   const navigate = useNavigate();
   const [currentBanner, setCurrentBanner] = useState(0);
   const [noticeIndex, setNoticeIndex] = useState(0);
   const [banners, setBanners] = useState<Banner[]>([]);
+  const [localAnnouncements, setLocalAnnouncements] = useState<NewsItem[]>([]);
   const [reservationRecords, setReservationRecords] = useState<ReservationItem[]>([]);
   const [loadingRecords, setLoadingRecords] = useState(true);
+  const announcements =
+    announcementsProp.length > 0 ? announcementsProp : localAnnouncements;
   const touchStartRef = useRef(0);
   const touchEndRef = useRef(0);
   const bannerTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -125,6 +128,34 @@ const Home: React.FC<HomeProps> = ({ announcements = [] }) => {
     };
 
     load();
+  }, []);
+
+  // 加载首页公告栏数据（滚动公告）
+  useEffect(() => {
+    const loadAnnouncements = async () => {
+      try {
+        const response = await fetchAnnouncements({
+          page: 1,
+          limit: 10,
+          type: 'normal',
+        });
+        const data = extractData(response) as { list?: { id: number; title: string; createtime?: string; content?: string }[] } | null;
+        const list = data?.list ?? [];
+        const mapped: NewsItem[] = list.map((item) => ({
+          id: String(item.id),
+          date: item.createtime ?? '',
+          title: item.title ?? '',
+          isUnread: false,
+          type: 'announcement' as const,
+          content: item.content,
+        }));
+        setLocalAnnouncements(mapped);
+      } catch (error) {
+        errorLog('Home', '加载首页公告失败', error);
+        setLocalAnnouncements([]);
+      }
+    };
+    loadAnnouncements();
   }, []);
 
   // 加载申购记录

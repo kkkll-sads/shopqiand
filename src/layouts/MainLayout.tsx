@@ -2,13 +2,18 @@
  * 主布局组件
  * 包含底部导航栏和认证守卫
  */
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Outlet, useLocation, useNavigate, Navigate } from 'react-router-dom';
 import BottomNav from '@/layouts/BottomNav';
 import ScrollToTop from '@/components/common/ScrollToTop';
 import { ChatWidget, DraggableChatButton } from '@/components/common';
+import PopupAnnouncementModal from '@/components/common/PopupAnnouncementModal';
 import { useAuthStore } from '@/stores/authStore';
 import { useAppStore } from '@/stores/appStore';
+import { fetchAnnouncements } from '@/services/cms';
+import type { AnnouncementItem } from '@/services/cms';
+import { extractData } from '@/utils/apiHelpers';
+import { errorLog } from '@/utils/logger';
 import type { Tab } from '@/types';
 
 // 路径到 Tab 的映射
@@ -47,12 +52,51 @@ const publicRoutes = [
 // 需要登录但不需要实名的路由
 const authOnlyRoutes = ['/real-name-auth', '/settings', '/profile', '/live', '/rights'];
 
+const POPUP_DISMISSED_KEY_PREFIX = 'popup_dismissed_';
+
 const MainLayout: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { isLoggedIn, isRealNameVerified } = useAuthStore();
-  const { clearMarketCache } = useAppStore();
+  const {
+    clearMarketCache,
+    popupQueue,
+    setPopupQueue,
+    showPopupAnnouncement,
+    setShowPopupAnnouncement,
+  } = useAppStore();
   const currentPath = location.pathname;
+
+  // 拉取弹窗公告（进入主布局时）
+  useEffect(() => {
+    const loadPopupAnnouncements = async () => {
+      try {
+        const response = await fetchAnnouncements({
+          page: 1,
+          limit: 10,
+          type: 'normal',
+          is_popup: 1,
+        });
+        const data = extractData(response) as { list?: AnnouncementItem[] } | null;
+        const rawList = data?.list ?? [];
+        const list = rawList.filter((item) => item.is_popup === 1);
+        const filtered = list.filter((item) => {
+          const dismissed = localStorage.getItem(
+            `${POPUP_DISMISSED_KEY_PREFIX}${item.id}`
+          );
+          const today = new Date().toDateString();
+          return dismissed !== today;
+        });
+        if (filtered.length > 0) {
+          setPopupQueue(filtered);
+          setShowPopupAnnouncement(true);
+        }
+      } catch (err) {
+        errorLog('MainLayout', '拉取弹窗公告失败', err);
+      }
+    };
+    loadPopupAnnouncements();
+  }, [setPopupQueue, setShowPopupAnnouncement]);
 
   // 根据当前路径确定激活的 Tab
   const activeTab = pathToTab[location.pathname] || 'home';
@@ -90,6 +134,29 @@ const MainLayout: React.FC = () => {
     }
   };
 
+  const handlePopupClose = () => {
+    const next = popupQueue.slice(1);
+    setPopupQueue(next);
+    if (next.length === 0) {
+      setShowPopupAnnouncement(false);
+    }
+  };
+
+  const handlePopupDontShowToday = () => {
+    const current = popupQueue[0];
+    if (current?.id != null) {
+      try {
+        localStorage.setItem(
+          `${POPUP_DISMISSED_KEY_PREFIX}${current.id}`,
+          new Date().toDateString()
+        );
+      } catch (e) {
+        // ignore
+      }
+    }
+    handlePopupClose();
+  };
+
   return (
     <div className="bg-gray-100 min-h-screen-dynamic font-sans antialiased text-gray-900 max-w-md mx-auto relative shadow-2xl">
       <ScrollToTop />
@@ -97,6 +164,13 @@ const MainLayout: React.FC = () => {
       <ChatWidget autoOpen={0} />
       {/* 可拖动客服悬浮按钮 */}
       <DraggableChatButton />
+      {/* 全局弹窗公告 */}
+      <PopupAnnouncementModal
+        visible={showPopupAnnouncement && popupQueue.length > 0}
+        announcement={popupQueue[0] ?? null}
+        onClose={handlePopupClose}
+        onDontShowToday={handlePopupDontShowToday}
+      />
       <div className="min-h-screen-dynamic bg-gray-50 pb-safe">
         <Outlet />
       </div>
