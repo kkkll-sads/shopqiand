@@ -253,7 +253,7 @@ const ShopProductDetail: React.FC<ShopProductDetailProps> = ({
       </div>
 
       {/* SKU图片切换器 */}
-      {detailData?.has_sku === '1' && detailData?.sku_specs && detailData?.skus && (
+      {(detailData?.has_sku === '1' || detailData?.has_sku === 1) && detailData?.sku_specs?.length && detailData?.skus?.length ? (
         <SkuSwitcher
           skuSpecs={detailData.sku_specs}
           skus={detailData.skus}
@@ -269,7 +269,7 @@ const ShopProductDetail: React.FC<ShopProductDetailProps> = ({
             }
           }}
         />
-      )}
+      ) : null}
 
       {/* 商品信息区 */}
       <ProductInfo
@@ -438,7 +438,7 @@ const ShopProductDetail: React.FC<ShopProductDetailProps> = ({
         stock={detailData?.stock ?? 999}
         maxPurchase={detailData?.max_purchase ?? 99}
         specs={getSpecsForBuySheet()}
-        hasSku={detailData?.has_sku === '1'}
+        hasSku={detailData?.has_sku === '1' || detailData?.has_sku === 1}
         skuSpecs={detailData?.sku_specs || []}
         skus={detailData?.skus || []}
         priceRange={detailData?.price_range}

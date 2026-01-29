@@ -111,8 +111,11 @@ const BuySpecSheet: React.FC<BuySpecSheetProps> = ({
     return skus.map(normalizeSpecValueIds);
   }, [skus]);
   
-  // 判断是否使用新版 SKU 模式
-  const useSkuMode = hasSku && skuSpecs.length > 0 && normalizedSkus.length > 0;
+  // 判断是否使用新版 SKU 模式（有 skuSpecs 且 skus 非空即启用，兼容后端 has_sku 为数字 1 或未返回）
+  const useSkuMode =
+    (hasSku || (skuSpecs.length > 0 && normalizedSkus.length > 0)) &&
+    skuSpecs.length > 0 &&
+    normalizedSkus.length > 0;
 
   /**
    * 根据已选规格值ID查找匹配的 SKU
