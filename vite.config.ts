@@ -1,6 +1,9 @@
 import path from 'path';
 import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
+import legacy from '@vitejs/plugin-legacy';
+import { browserslistToTargets } from 'lightningcss';
+import browserslist from 'browserslist';
 
 // 统一的后端前缀，前端代码里都以这个作为基础路径
 const API_PREFIX = '/api';
@@ -73,7 +76,14 @@ export default defineConfig(({ mode }) => {
       // 配置 history API fallback，支持单页应用路由
       historyApiFallback: true,
     },
-    plugins: [react()],
+    plugins: [
+      react(),
+      legacy({
+        targets: ['> 0.5%', 'last 2 versions', 'not dead', 'Android >= 5', 'iOS >= 10'],
+        additionalLegacyPolyfills: ['regenerator-runtime/runtime'],
+        modernPolyfills: true,
+      }),
+    ],
     define: {
       'process.env.API_KEY': JSON.stringify(env.GEMINI_API_KEY),
       'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY),
@@ -83,7 +93,19 @@ export default defineConfig(({ mode }) => {
         '@': path.resolve(__dirname, './src'),
       },
     },
+    // lightningcss 配置：用于生产构建的 CSS 最终处理
+    css: {
+      lightningcss: {
+        targets: browserslistToTargets(
+          browserslist('> 0.5%, last 2 versions, not dead, Android >= 5, iOS >= 10'),
+        ),
+      },
+    },
     build: {
+      // 降低构建目标以获得更好的兼容性
+      target: 'es2015',
+      // 使用 lightningcss 进行 CSS 压缩和最终兼容性处理
+      cssMinify: 'lightningcss',
       chunkSizeWarningLimit: 800, // 调高警告阈值，结合手动分包
       // 确保 CSS 文件正确提取
       cssCodeSplit: true,

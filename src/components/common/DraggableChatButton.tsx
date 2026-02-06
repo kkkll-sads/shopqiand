@@ -38,7 +38,8 @@ const DraggableChatButton: React.FC = () => {
   const [showDeleteButton, setShowDeleteButton] = useState(false);
   const [isButtonHidden, setIsButtonHidden] = useState(() => {
     try {
-      return localStorage.getItem(HIDDEN_STORAGE_KEY) === 'true';
+      // 使用 sessionStorage：关闭状态仅当前会话有效，刷新/重开页面后按钮自动恢复
+      return sessionStorage.getItem(HIDDEN_STORAGE_KEY) === 'true';
     } catch {
       return false;
     }
@@ -134,7 +135,7 @@ const DraggableChatButton: React.FC = () => {
     setIsButtonHidden(true);
     setShowDeleteButton(false);
     try {
-      localStorage.setItem(HIDDEN_STORAGE_KEY, 'true');
+      sessionStorage.setItem(HIDDEN_STORAGE_KEY, 'true');
     } catch (e) {}
   }, []);
 
