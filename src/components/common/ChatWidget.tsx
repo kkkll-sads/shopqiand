@@ -59,12 +59,15 @@ interface ChatWidgetProps {
 }
 
 /**
- * 加载客服 widget 脚本
+ * 加载客服 widget 脚本（带重试机制）
  */
-const loadChatWidgetScript = (): Promise<void> => {
+const loadChatWidgetScript = (retryCount: number = 0): Promise<void> => {
+  const MAX_RETRIES = 3;
+  
   return new Promise((resolve, reject) => {
     // 如果已经加载过，直接返回
     if (window.ChatWidget) {
+      debugLog('ChatWidget', 'ChatWidget 已加载');
       resolve();
       return;
     }
@@ -72,6 +75,7 @@ const loadChatWidgetScript = (): Promise<void> => {
     // 检查是否已存在脚本
     const existingScript = document.querySelector('script[src*="chat.bskhu.cn"]');
     if (existingScript) {
+      debugLog('ChatWidget', '等待已存在的脚本加载完成');
       // 等待脚本加载完成
       const checkInterval = setInterval(() => {
         if (window.ChatWidget) {
@@ -86,22 +90,27 @@ const loadChatWidgetScript = (): Promise<void> => {
         if (window.ChatWidget) {
           resolve();
         } else {
+          errorLog('ChatWidget', '等待现有脚本加载超时');
           reject(new Error('ChatWidget 加载超时'));
         }
       }, 10000);
       return;
     }
 
+    debugLog('ChatWidget', `开始加载客服脚本 (尝试 ${retryCount + 1}/${MAX_RETRIES + 1})`);
+    
     // 创建并加载脚本
     const script = document.createElement('script');
     script.src = 'https://chat.bskhu.cn/chat/widget.js';
     script.async = true;
     
     script.onload = () => {
+      debugLog('ChatWidget', '脚本加载完成，等待初始化');
       // 等待 ChatWidget 对象可用
       const checkInterval = setInterval(() => {
         if (window.ChatWidget) {
           clearInterval(checkInterval);
+          debugLog('ChatWidget', 'ChatWidget 对象可用');
           resolve();
         }
       }, 50);
@@ -111,13 +120,33 @@ const loadChatWidgetScript = (): Promise<void> => {
         if (window.ChatWidget) {
           resolve();
         } else {
-          reject(new Error('ChatWidget 初始化失败'));
+          errorLog('ChatWidget', 'ChatWidget 初始化超时');
+          // 尝试重试
+          if (retryCount < MAX_RETRIES) {
+            warnLog('ChatWidget', `初始化失败，${2000}ms 后重试...`);
+            setTimeout(() => {
+              loadChatWidgetScript(retryCount + 1).then(resolve).catch(reject);
+            }, 2000);
+          } else {
+            reject(new Error('ChatWidget 初始化失败（已达最大重试次数）'));
+          }
         }
       }, 5000);
     };
     
     script.onerror = () => {
-      reject(new Error('ChatWidget 脚本加载失败'));
+      errorLog('ChatWidget', '脚本加载失败');
+      // 尝试重试
+      if (retryCount < MAX_RETRIES) {
+        warnLog('ChatWidget', `加载失败，${2000}ms 后重试...`);
+        setTimeout(() => {
+          // 移除失败的脚本
+          script.remove();
+          loadChatWidgetScript(retryCount + 1).then(resolve).catch(reject);
+        }, 2000);
+      } else {
+        reject(new Error('ChatWidget 脚本加载失败（已达最大重试次数）'));
+      }
     };
 
     document.body.appendChild(script);
@@ -234,9 +263,16 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({
 // 导出工具函数，方便其他组件调用
 export const openChatWidget = () => {
   if (window.ChatWidget) {
+    debugLog('ChatWidget', '打开客服窗口');
     window.ChatWidget.open();
+    return true;
   } else {
     warnLog('ChatWidget', '客服组件未初始化');
+    // 给用户友好提示
+    if (typeof window !== 'undefined') {
+      alert('客服系统正在加载中，请稍后再试');
+    }
+    return false;
   }
 };
 

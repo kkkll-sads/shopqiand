@@ -19,7 +19,7 @@ const HIDDEN_STORAGE_KEY = 'chat_button_hidden';
 const BUTTON_SIZE = 56;
 const EDGE_MARGIN = 8;
 const BOTTOM_NAV_HEIGHT = 80;
-const CLICK_THRESHOLD = 3;
+const CLICK_THRESHOLD = 10; // 提高到10像素，避免轻微抖动被误判为拖动
 const LONG_PRESS_DURATION = 800; // 长按时间
 const HIDE_DELAY = 3000; // 静止后隐藏延时
 const HIDDEN_OFFSET = 28; // 半隐藏时露出的宽度
@@ -270,8 +270,23 @@ const DraggableChatButton: React.FC = () => {
         updateButtonStyle(snappedPos.x, snappedPos.y, 1, true);
         savePosition(snappedPos);
       } else if (!state.hasMoved && !showDeleteButton) {
-        // 点击事件
-        openChatWidget();
+        // 点击事件 - 添加调试日志
+        console.log('[DraggableChatButton] 触摸点击触发');
+        
+        // 添加触觉反馈（如果支持）
+        if ('vibrate' in navigator) {
+          navigator.vibrate(50);
+        }
+        
+        // 添加视觉反馈
+        updateButtonStyle(state.position.x, state.position.y, 0.95, true);
+        setTimeout(() => {
+          updateButtonStyle(state.position.x, state.position.y, 1, true);
+        }, 100);
+        
+        // 调用客服打开函数
+        const opened = openChatWidget();
+        console.log('[DraggableChatButton] 客服窗口打开结果:', opened);
       }
 
       // 恢复缩放
@@ -381,7 +396,18 @@ const DraggableChatButton: React.FC = () => {
         updateButtonStyle(snappedPos.x, snappedPos.y, 1, true);
         savePosition(snappedPos);
       } else if (!state.hasMoved && !showDeleteButton) {
-        openChatWidget();
+        // 点击事件 - 添加调试日志
+        console.log('[DraggableChatButton] 鼠标点击触发');
+        
+        // 添加视觉反馈
+        updateButtonStyle(state.position.x, state.position.y, 0.95, true);
+        setTimeout(() => {
+          updateButtonStyle(state.position.x, state.position.y, 1, true);
+        }, 100);
+        
+        // 调用客服打开函数
+        const opened = openChatWidget();
+        console.log('[DraggableChatButton] 客服窗口打开结果:', opened);
       }
 
       updateButtonStyle(state.position.x, state.position.y, 1, true);
@@ -446,6 +472,19 @@ const DraggableChatButton: React.FC = () => {
       document.removeEventListener('touchstart', handleClickOutside);
     };
   }, [showDeleteButton]);
+
+  // 备用简单点击处理（兜底方案）
+  const handleSimpleClick = useCallback((e: React.MouseEvent | React.TouchEvent) => {
+    // 只有当原生事件处理没有拦截时才会执行
+    console.log('[DraggableChatButton] 备用点击处理被触发');
+    const state = stateRef.current;
+    
+    // 确保不是在拖动状态
+    if (!state.isDragging && !state.hasMoved) {
+      e.stopPropagation();
+      openChatWidget();
+    }
+  }, []);
 
   // 如果按钮被隐藏，不渲染
   if (isButtonHidden) {

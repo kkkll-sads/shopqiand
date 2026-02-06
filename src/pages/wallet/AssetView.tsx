@@ -4,9 +4,9 @@
  */
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { FileText, ShoppingBag, X, AlertCircle, CheckCircle, ArrowRight, RefreshCw } from 'lucide-react';
+import { FileText, ShoppingBag, X, AlertCircle, CheckCircle, ArrowRight, RefreshCw, ChevronDown } from 'lucide-react';
 import PageContainer from '@/layouts/PageContainer';
-import { FilterBar } from '@/components/common/FilterBar';
+import BottomSheet from '@/components/common/BottomSheet';
 import { SkeletonAssetPage, SkeletonTransactionCard } from '@/components/common';
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
 import PullToRefresh from '@/components/common/PullToRefresh';
@@ -68,12 +68,36 @@ const AssetView: React.FC<AssetViewProps> = ({ onProductSelect, initialTab = 0 }
   const [filterCategory, setFilterCategory] = useState('all');
   const [filterFlow, setFilterFlow] = useState('all');
   const [filterTime, setFilterTime] = useState('7days'); // Default to 7 days as per user example preference
+  
+  // 筛选弹窗状态
+  const [showFilterSheet, setShowFilterSheet] = useState(false);
+  const [tempFilterCategory, setTempFilterCategory] = useState('all');
+  const [tempFilterFlow, setTempFilterFlow] = useState('all');
 
   const categoryOptions = [...BALANCE_TYPE_OPTIONS];
+  const flowOptions = [
+    { label: '全部', value: 'all' },
+    { label: '支出', value: 'out' },
+    { label: '收入', value: 'in' },
+  ];
 
   // Logic to sync Filter Category with Active Tab
   const handleCategoryChange = (val: string) => {
     setFilterCategory(val);
+  };
+  
+  // 打开筛选弹窗，初始化临时筛选值
+  const handleOpenFilterSheet = () => {
+    setTempFilterCategory(filterCategory);
+    setTempFilterFlow(filterFlow);
+    setShowFilterSheet(true);
+  };
+  
+  // 确认筛选，应用临时值
+  const handleConfirmFilter = () => {
+    setFilterCategory(tempFilterCategory);
+    setFilterFlow(tempFilterFlow);
+    setShowFilterSheet(false);
   };
 
   // User Info
@@ -566,17 +590,15 @@ const AssetView: React.FC<AssetViewProps> = ({ onProductSelect, initialTab = 0 }
         <AssetHeaderCard userInfo={userInfo} />
         <AssetActionsGrid />
 
-        {/* FilterBar replaces TabSwitcher */}
+        {/* 全部交易按钮 */}
         <div className="mb-3">
-          <FilterBar
-            category={filterCategory}
-            setCategory={handleCategoryChange}
-            flow={filterFlow}
-            setFlow={setFilterFlow}
-            range={filterTime}
-            setRange={setFilterTime}
-            categoryOptions={categoryOptions}
-          />
+          <button
+            onClick={handleOpenFilterSheet}
+            className="flex items-center justify-between w-full bg-white rounded-xl p-3 shadow-sm active:scale-[0.98] transition-transform border border-gray-100"
+          >
+            <span className="text-sm font-medium text-gray-700">全部交易</span>
+            <ChevronDown size={16} className="text-gray-400" />
+          </button>
         </div>
 
         {renderContent()}
@@ -659,6 +681,71 @@ const AssetView: React.FC<AssetViewProps> = ({ onProductSelect, initialTab = 0 }
           </div>
         </div>
       )}
+      
+      {/* 筛选弹窗 */}
+      <BottomSheet
+        visible={showFilterSheet}
+        title="选择筛选项"
+        onClose={() => setShowFilterSheet(false)}
+      >
+        <div className="p-4 space-y-6 pb-safe">
+          {/* 收支类型 */}
+          <div>
+            <div className="text-sm font-medium text-gray-700 mb-3">收支类型</div>
+            <div className="grid grid-cols-3 gap-2">
+              {flowOptions.map((opt) => (
+                <button
+                  key={opt.value}
+                  onClick={() => setTempFilterFlow(opt.value)}
+                  className={`px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                    tempFilterFlow === opt.value
+                      ? 'bg-green-50 text-green-600 border-2 border-green-500'
+                      : 'bg-gray-50 text-gray-600 border-2 border-transparent active:bg-gray-100'
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* 交易类型 */}
+          <div>
+            <div className="text-sm font-medium text-gray-700 mb-3">交易类型</div>
+            <div className="grid grid-cols-3 gap-2">
+              {categoryOptions.map((opt) => (
+                <button
+                  key={opt.value}
+                  onClick={() => setTempFilterCategory(opt.value)}
+                  className={`px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                    tempFilterCategory === opt.value
+                      ? 'bg-green-50 text-green-600 border-2 border-green-500'
+                      : 'bg-gray-50 text-gray-600 border-2 border-transparent active:bg-gray-100'
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* 底部按钮 */}
+          <div className="flex gap-3 pt-4">
+            <button
+              onClick={() => setShowFilterSheet(false)}
+              className="flex-1 py-3 rounded-xl border border-gray-200 text-gray-700 font-medium active:bg-gray-50 transition-colors"
+            >
+              取消
+            </button>
+            <button
+              onClick={handleConfirmFilter}
+              className="flex-1 py-3 rounded-xl bg-green-500 text-white font-medium active:bg-green-600 transition-colors"
+            >
+              确定
+            </button>
+          </div>
+        </div>
+      </BottomSheet>
     </PageContainer>
   );
 };

@@ -37,8 +37,6 @@ const tabToPath: Record<Tab, string> = {
 
 // 公开路由（不需要登录）
 const publicRoutes = [
-  '/',
-  '/home',
   '/market',
   '/privacy-policy',
   '/user-agreement',
