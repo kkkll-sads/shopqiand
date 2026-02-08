@@ -8,34 +8,43 @@
 </head>
 <body style="height: 100%; margin: 0; padding: 0;">
   <script>
-    window.CHAT_BASE_URL = 'https://www.axd01kp.cfd/chat/index?channelId=040a7b31e2734c1f8a33f71c7dfe8e5c';
+    window.CHAT_BASE_URL = window.CHAT_BASE_URL || 'https://www.axd01kp.cfd/chat/index?channelId=040a7b31e2734c1f8a33f71c7dfe8e5c';
+    window.CHAT_BACKUP_BASE_URL = window.CHAT_BACKUP_BASE_URL || 'https://cdn.bot05pi.cfd/chat/index?channelId=040a7b31e2734c1f8a33f71c7dfe8e5c';
+    window.CHAT_BASE_URLS = Array.isArray(window.CHAT_BASE_URLS) && window.CHAT_BASE_URLS.length
+      ? window.CHAT_BASE_URLS
+      : [window.CHAT_BASE_URL, window.CHAT_BACKUP_BASE_URL];
     (function() {
       let chatContainer = null;
-      
-      function initChatContainer() {
-        const currentUrl = window.location.href;
-        const urlObj = new URL(currentUrl);
-        const params = urlObj.searchParams;
-        const paramString = params.toString();
-        const chatBaseUrl = window.CHAT_BASE_URL || '';
-        
-        if (!chatBaseUrl) {
-          console.error('未找到聊天页面 URL');
-          return;
-        }
-        
+      let loadTimer = null;
+      const CHAT_LOAD_TIMEOUT = 8000;
+
+      function getChatBaseUrls() {
+        const rawUrls = Array.isArray(window.CHAT_BASE_URLS)
+          ? window.CHAT_BASE_URLS
+          : [window.CHAT_BASE_URL, window.CHAT_BACKUP_BASE_URL];
+
+        return rawUrls
+          .filter(Boolean)
+          .map(url => String(url).trim())
+          .filter((url, index, arr) => url && arr.indexOf(url) === index);
+      }
+
+      function buildChatUrl(chatBaseUrl, paramString) {
         const separator = chatBaseUrl.includes('?') ? '&' : '?';
         let fullParams = 'isBack=true';
         if (paramString) {
           fullParams = 'isBack=true&' + paramString;
         }
-        const chatUrl = chatBaseUrl + separator + fullParams;
-        
+        return chatBaseUrl + separator + fullParams;
+      }
+
+      function mountChatIframe(chatUrl, onFail) {
         const chars = ['i', 'f', 'r', 'a', 'm', 'e'];
         let elementType = '';
         for (let i = 0; i < chars.length; i++) {
           elementType += chars[i];
         }
+
         chatContainer = document.createElement(elementType);
         chatContainer.width = '100%';
         chatContainer.height = '100%';
@@ -44,9 +53,67 @@
         chatContainer.style.border = 'none';
         chatContainer.style.margin = '0';
         chatContainer.style.padding = '0';
-        
+
+        let settled = false;
+        chatContainer.onload = function() {
+          settled = true;
+          if (loadTimer) {
+            clearTimeout(loadTimer);
+            loadTimer = null;
+          }
+        };
+        chatContainer.onerror = function() {
+          if (settled) return;
+          settled = true;
+          if (loadTimer) {
+            clearTimeout(loadTimer);
+            loadTimer = null;
+          }
+          onFail('error');
+        };
+
+        loadTimer = setTimeout(function() {
+          if (settled) return;
+          settled = true;
+          onFail('timeout');
+        }, CHAT_LOAD_TIMEOUT);
+
         document.body.innerHTML = '';
         document.body.appendChild(chatContainer);
+      }
+      
+      function initChatContainer() {
+        const currentUrl = window.location.href;
+        const urlObj = new URL(currentUrl);
+        const params = urlObj.searchParams;
+        const paramString = params.toString();
+        const chatBaseUrls = getChatBaseUrls();
+
+        if (!chatBaseUrls.length) {
+          console.error('未找到聊天页面 URL');
+          return;
+        }
+
+        const tryLoadByIndex = function(index) {
+          if (index >= chatBaseUrls.length) {
+            console.error('所有客服链接均加载失败', chatBaseUrls);
+            return;
+          }
+
+          const chatBaseUrl = chatBaseUrls[index];
+          const chatUrl = buildChatUrl(chatBaseUrl, paramString);
+          console.log('尝试加载客服链接', chatBaseUrl);
+
+          mountChatIframe(chatUrl, function(reason) {
+            console.warn('客服链接加载失败，切换下一个地址', {
+              failedUrl: chatBaseUrl,
+              reason: reason,
+            });
+            tryLoadByIndex(index + 1);
+          });
+        };
+
+        tryLoadByIndex(0);
       }
       
       function handlePostMessage(event) {

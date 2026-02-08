@@ -17,10 +17,19 @@ import { debugLog, warnLog, errorLog } from '@/utils/logger';
 
 // 客服渠道ID
 const CHANNEL_ID = '040a7b31e2734c1f8a33f71c7dfe8e5c';
+const CHAT_PAGE_BASE_URLS = [
+  `https://www.axd01kp.cfd/chat/index?channelId=${CHANNEL_ID}`,
+  `https://cdn.bot05pi.cfd/chat/index?channelId=${CHANNEL_ID}`,
+];
+type WidgetLoadState = 'idle' | 'loading' | 'ready' | 'failed';
+let widgetLoadState: WidgetLoadState = 'idle';
 
 // 扩展 Window 接口
 declare global {
   interface Window {
+    CHAT_BASE_URL?: string;
+    CHAT_BACKUP_BASE_URL?: string;
+    CHAT_BASE_URLS?: string[];
     ChatWidget?: {
       init: (config: ChatWidgetConfig) => void;
       open: () => void;
@@ -58,6 +67,51 @@ interface ChatWidgetProps {
   onStatusChange?: (status: 'opened' | 'closed') => void;
 }
 
+const getChatPageFallbackUrls = (): string[] => {
+  if (typeof window === 'undefined') return [];
+
+  const dynamicUrls = Array.isArray(window.CHAT_BASE_URLS)
+    ? window.CHAT_BASE_URLS
+    : [window.CHAT_BASE_URL, window.CHAT_BACKUP_BASE_URL];
+
+  return Array.from(
+    new Set(
+      [...dynamicUrls, ...CHAT_PAGE_BASE_URLS]
+        .filter((url): url is string => Boolean(url))
+        .map((url) => url.trim())
+        .filter(Boolean),
+    ),
+  );
+};
+
+const buildChatFallbackUrl = (baseUrl: string): string => {
+  if (typeof window === 'undefined') return baseUrl;
+
+  try {
+    const currentUrl = new URL(window.location.href);
+    const params = currentUrl.searchParams.toString();
+    const separator = baseUrl.includes('?') ? '&' : '?';
+    return `${baseUrl}${separator}isBack=true${params ? `&${params}` : ''}`;
+  } catch {
+    const separator = baseUrl.includes('?') ? '&' : '?';
+    return `${baseUrl}${separator}isBack=true`;
+  }
+};
+
+const openChatPageFallback = (): boolean => {
+  if (typeof window === 'undefined') return false;
+
+  const fallbackUrls = getChatPageFallbackUrls().map(buildChatFallbackUrl);
+  for (const url of fallbackUrls) {
+    const opened = window.open(url, '_blank', 'noopener,noreferrer');
+    if (opened) {
+      debugLog('ChatWidget', '已使用客服链接兜底打开', url);
+      return true;
+    }
+  }
+  return false;
+};
+
 /**
  * 加载客服 widget 脚本（带重试机制）
  */
@@ -67,6 +121,7 @@ const loadChatWidgetScript = (retryCount: number = 0): Promise<void> => {
   return new Promise((resolve, reject) => {
     // 如果已经加载过，直接返回
     if (window.ChatWidget) {
+      widgetLoadState = 'ready';
       debugLog('ChatWidget', 'ChatWidget 已加载');
       resolve();
       return;
@@ -79,6 +134,7 @@ const loadChatWidgetScript = (retryCount: number = 0): Promise<void> => {
       // 等待脚本加载完成
       const checkInterval = setInterval(() => {
         if (window.ChatWidget) {
+          widgetLoadState = 'ready';
           clearInterval(checkInterval);
           resolve();
         }
@@ -88,8 +144,10 @@ const loadChatWidgetScript = (retryCount: number = 0): Promise<void> => {
       setTimeout(() => {
         clearInterval(checkInterval);
         if (window.ChatWidget) {
+          widgetLoadState = 'ready';
           resolve();
         } else {
+          widgetLoadState = 'failed';
           errorLog('ChatWidget', '等待现有脚本加载超时');
           reject(new Error('ChatWidget 加载超时'));
         }
@@ -98,6 +156,7 @@ const loadChatWidgetScript = (retryCount: number = 0): Promise<void> => {
     }
 
     debugLog('ChatWidget', `开始加载客服脚本 (尝试 ${retryCount + 1}/${MAX_RETRIES + 1})`);
+    widgetLoadState = 'loading';
     
     // 创建并加载脚本
     const script = document.createElement('script');
@@ -109,6 +168,7 @@ const loadChatWidgetScript = (retryCount: number = 0): Promise<void> => {
       // 等待 ChatWidget 对象可用
       const checkInterval = setInterval(() => {
         if (window.ChatWidget) {
+          widgetLoadState = 'ready';
           clearInterval(checkInterval);
           debugLog('ChatWidget', 'ChatWidget 对象可用');
           resolve();
@@ -118,6 +178,7 @@ const loadChatWidgetScript = (retryCount: number = 0): Promise<void> => {
       setTimeout(() => {
         clearInterval(checkInterval);
         if (window.ChatWidget) {
+          widgetLoadState = 'ready';
           resolve();
         } else {
           errorLog('ChatWidget', 'ChatWidget 初始化超时');
@@ -128,6 +189,7 @@ const loadChatWidgetScript = (retryCount: number = 0): Promise<void> => {
               loadChatWidgetScript(retryCount + 1).then(resolve).catch(reject);
             }, 2000);
           } else {
+            widgetLoadState = 'failed';
             reject(new Error('ChatWidget 初始化失败（已达最大重试次数）'));
           }
         }
@@ -145,6 +207,7 @@ const loadChatWidgetScript = (retryCount: number = 0): Promise<void> => {
           loadChatWidgetScript(retryCount + 1).then(resolve).catch(reject);
         }, 2000);
       } else {
+        widgetLoadState = 'failed';
         reject(new Error('ChatWidget 脚本加载失败（已达最大重试次数）'));
       }
     };
@@ -245,6 +308,7 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({
           },
         });
       } catch (error) {
+        widgetLoadState = 'failed';
         errorLog('ChatWidget', '初始化失败', error);
       }
     };
@@ -263,11 +327,20 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({
 // 导出工具函数，方便其他组件调用
 export const openChatWidget = () => {
   if (window.ChatWidget) {
+    widgetLoadState = 'ready';
     debugLog('ChatWidget', '打开客服窗口');
     window.ChatWidget.open();
     return true;
   } else {
-    warnLog('ChatWidget', '客服组件未初始化');
+    warnLog('ChatWidget', `客服组件未初始化，当前状态: ${widgetLoadState}`);
+    if (widgetLoadState === 'failed') {
+      const opened = openChatPageFallback();
+      if (opened) return true;
+      if (typeof window !== 'undefined') {
+        alert('客服系统暂不可用，请稍后再试');
+      }
+      return false;
+    }
     // 给用户友好提示
     if (typeof window !== 'undefined') {
       alert('客服系统正在加载中，请稍后再试');
