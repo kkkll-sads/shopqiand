@@ -8,6 +8,7 @@ import { setNeedLoginHandler, clearNeedLoginHandler } from '@/services/needLogin
 import { useAuthStore } from '@/stores/authStore';
 import { fetchProfile, fetchRealNameStatus } from '@/services/api';
 import { isSuccess } from '@/utils/apiHelpers';
+import { applyBackdropBlurCompatibilityClass } from '@/utils/backdropCompat';
 import '@/styles/main.css';
 import '@/styles/notifications.css';
 
@@ -80,6 +81,9 @@ const rootElement = document.getElementById('root');
 if (!rootElement) {
   throw new Error("Could not find root element to mount to");
 }
+
+// 启动时根据设备能力切换 backdrop 兼容模式，避免低端机样式异常
+applyBackdropBlurCompatibilityClass();
 
 const root = ReactDOM.createRoot(rootElement);
 root.render(

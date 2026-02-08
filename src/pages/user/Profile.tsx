@@ -256,7 +256,7 @@ const Profile: React.FC<{ unreadCount?: number }> = ({ unreadCount: propUnreadCo
               {/* 标签行：用户身份 + 代理状态 */}
               <div className="flex items-center gap-2">
                 {/* 用户类型标签 - 胶囊样式 */}
-                <div className="flex items-center bg-gray-900/5 backdrop-blur-sm rounded-full px-2 py-0.5 border border-gray-200/50">
+                <div className="flex items-center profile-user-type-pill rounded-full px-2 py-0.5">
                   <div className="w-3.5 h-3.5 rounded-full bg-gradient-to-br from-red-400 to-red-600 flex items-center justify-center mr-1 shadow-sm">
                     {(() => {
                       const statusConfig = {
@@ -327,7 +327,7 @@ const Profile: React.FC<{ unreadCount?: number }> = ({ unreadCount: propUnreadCo
       <div className="px-4 relative z-10">
         <div className="relative rounded-2xl shadow-xl overflow-hidden text-white font-sans">
           {/* 渐变背景 - 和总资产页面一致 */}
-          <div className="absolute inset-0 bg-gradient-to-br from-[#FF884D] to-[#FF5500] z-0">
+          <div className="absolute inset-0 profile-balance-card-bg z-0">
             <div className="absolute top-0 right-0 w-40 h-40 bg-white opacity-10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
             <div className="absolute bottom-0 left-0 w-32 h-32 bg-orange-300 opacity-20 rounded-full blur-2xl translate-y-1/2 -translate-x-1/4"></div>
           </div>
@@ -335,14 +335,14 @@ const Profile: React.FC<{ unreadCount?: number }> = ({ unreadCount: propUnreadCo
           <div className="relative z-10 p-4">
             <div className="flex justify-between items-start mb-3">
               <div className="flex items-center gap-2">
-                <span className="text-sm font-medium text-white/90">供应链专项金</span>
-                <span className="bg-white/20 text-white text-[10px] px-2 py-0.5 rounded-full font-bold">
+                <span className="text-sm font-medium profile-balance-text-soft">供应链专项金</span>
+                <span className="profile-balance-chip text-[10px] px-2 py-0.5 rounded-full font-bold">
                   采购本金
                 </span>
               </div>
               <button
                 onClick={() => navigate('/balance-recharge')}
-                className="text-white/90 text-sm font-medium flex items-center gap-0.5 active:opacity-70"
+                className="profile-balance-text-soft text-sm font-medium flex items-center gap-0.5 active:opacity-70"
               >
                 去充值 <ChevronRight size={14} />
               </button>
@@ -362,12 +362,12 @@ const Profile: React.FC<{ unreadCount?: number }> = ({ unreadCount: propUnreadCo
             </div>
 
             {/* Bottom Grid: 4 columns in one row */}
-            <div className="grid grid-cols-4 gap-1 pt-3 border-t border-white/20">
+            <div className="grid grid-cols-4 gap-1 pt-3 profile-balance-divider">
               <div
                 className="text-center cursor-pointer active:opacity-70"
                 onClick={() => navigate('/asset-view?tab=1')}
               >
-                <div className="text-[10px] text-white/70 mb-1 whitespace-nowrap">可调度收益</div>
+                <div className="text-[10px] profile-balance-text-dim mb-1 whitespace-nowrap">可调度收益</div>
                 <div className="text-sm font-bold font-[DINAlternate-Bold,Roboto,sans-serif] truncate">
                   {formatPriceSmart(userInfo?.withdrawable_money)}
                 </div>
@@ -377,7 +377,7 @@ const Profile: React.FC<{ unreadCount?: number }> = ({ unreadCount: propUnreadCo
                 className="text-center cursor-pointer active:opacity-70"
                 onClick={() => navigate('/market')}
               >
-                <div className="text-[10px] text-white/70 mb-1 whitespace-nowrap">消费金</div>
+                <div className="text-[10px] profile-balance-text-dim mb-1 whitespace-nowrap">消费金</div>
                 <div className="text-sm font-bold font-[DINAlternate-Bold,Roboto,sans-serif] truncate">
                   {formatPriceSmart(userInfo?.score)}
                 </div>
@@ -387,7 +387,7 @@ const Profile: React.FC<{ unreadCount?: number }> = ({ unreadCount: propUnreadCo
                 className="text-center cursor-pointer active:opacity-70"
                 onClick={() => navigate('/hashrate-exchange')}
               >
-                <div className="text-[10px] text-white/70 mb-1 whitespace-nowrap">绿色算力</div>
+                <div className="text-[10px] profile-balance-text-dim mb-1 whitespace-nowrap">绿色算力</div>
                 <div className="text-sm font-bold font-[DINAlternate-Bold,Roboto,sans-serif] truncate">
                   {formatPriceSmart(userInfo?.green_power)}
                 </div>
@@ -397,7 +397,7 @@ const Profile: React.FC<{ unreadCount?: number }> = ({ unreadCount: propUnreadCo
                 className="text-center cursor-pointer active:opacity-70"
                 onClick={() => navigate('/asset-view?tab=3')}
               >
-                <div className="text-[10px] text-white/70 mb-1 whitespace-nowrap">确权金</div>
+                <div className="text-[10px] profile-balance-text-dim mb-1 whitespace-nowrap">确权金</div>
                 <div className="text-sm font-bold font-[DINAlternate-Bold,Roboto,sans-serif] truncate">
                   {formatPriceSmart(userInfo?.service_fee_balance)}
                 </div>

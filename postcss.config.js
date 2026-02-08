@@ -12,6 +12,10 @@ import postcssLightningcss from 'postcss-lightningcss';
  * 4. CSS 逻辑属性 padding-inline/padding-block 等（Chrome 87+）
  */
 const fixTailwindV4Compat = () => {
+  const shouldStripAdvancedColorSupports = (params = '') => (
+    /color\s*:\s*color-mix\(/i.test(params) ||
+    /color\s*:\s*lab\(/i.test(params)
+  );
   // CSS 逻辑属性 → 物理属性 映射（仅 LTR 方向，适用于中文站）
   const logicalToPhysical = {
     'padding-inline': ['padding-left', 'padding-right'],
@@ -73,6 +77,13 @@ const fixTailwindV4Compat = () => {
           atRule.params.includes('-moz-orient')
         ) {
           atRule.replaceWith(atRule.nodes);
+          return;
+        }
+
+        // 1.1 移除高级色彩支持块，避免部分 Android/WebView 误判支持后产生错误覆盖
+        // 保留前面生成的 rgba/hex 兜底声明，提升跨机型一致性
+        if (shouldStripAdvancedColorSupports(atRule.params)) {
+          atRule.remove();
         }
       },
     },
@@ -108,8 +119,26 @@ const fixTailwindV4Compat = () => {
 };
 fixTailwindV4Compat.postcss = true;
 
+// 最终阶段再清理一遍高级色彩 @supports（防止被后续插件重新注入）
+const stripAdvancedColorSupports = () => ({
+  postcssPlugin: 'strip-advanced-color-supports',
+  OnceExit(root) {
+    root.walkAtRules('supports', (atRule) => {
+      if (
+        /color\s*:\s*color-mix\(/i.test(atRule.params) ||
+        /color\s*:\s*lab\(/i.test(atRule.params)
+      ) {
+        atRule.remove();
+      }
+    });
+  },
+});
+stripAdvancedColorSupports.postcss = true;
+
 export default {
   plugins: [
+    // 必须放在最前：其 OnceExit 会在所有插件之后执行，才能清理 Tailwind/LightningCSS 末阶段注入的高级色彩 supports
+    stripAdvancedColorSupports(),
     tailwindcss(),
     // 修复 Tailwind v4 在老版浏览器中的兼容性问题
     fixTailwindV4Compat(),

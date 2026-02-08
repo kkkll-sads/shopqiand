@@ -110,7 +110,7 @@ export const EmbeddedBrowser: React.FC<EmbeddedBrowserProps> = ({
 
             {/* 支付提示遮罩层 */}
             {showInstructionOverlay && (
-                <div className="absolute inset-0 z-50 backdrop-blur-sm flex items-center justify-center p-4" style={{ backgroundColor: 'rgb(0 0 0 / 0.4)' }}>
+                <div className="absolute inset-0 z-50 backdrop-blur-sm flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0, 0, 0, 0.4)' }}>
                     <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm relative animate-in zoom-in-95 duration-200">
                         {/* 关闭按钮 */}
                         <button

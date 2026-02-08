@@ -91,6 +91,102 @@
   --duration-slow: 350ms;
 }
 
+/* 锁定 Tailwind 调色板为 sRGB，避免部分 WebView 在 lab 颜色空间下出现偏色 */
+:root,
+:host {
+  --color-red-50: #fef2f2;
+  --color-red-100: #ffe2e2;
+  --color-red-200: #ffcaca;
+  --color-red-300: #ffa3a3;
+  --color-red-400: #ff6568;
+  --color-red-500: #fb2c36;
+  --color-red-600: #e40014;
+  --color-red-700: #bf000f;
+  --color-red-900: #82181a;
+  --color-orange-50: #fff7ed;
+  --color-orange-100: #ffedd5;
+  --color-orange-200: #ffd7a8;
+  --color-orange-300: #ffb96d;
+  --color-orange-400: #ff8b1a;
+  --color-orange-500: #fe6e00;
+  --color-orange-600: #f05100;
+  --color-orange-700: #c53c00;
+  --color-amber-50: #fffbeb;
+  --color-amber-100: #fef3c6;
+  --color-amber-200: #fee685;
+  --color-amber-300: #ffd236;
+  --color-amber-400: #fcbb00;
+  --color-amber-500: #f99c00;
+  --color-amber-600: #dd7400;
+  --color-amber-700: #b75000;
+  --color-amber-900: #7b3306;
+  --color-yellow-50: #fefce8;
+  --color-yellow-100: #fef9c2;
+  --color-yellow-200: #fff085;
+  --color-yellow-300: #ffe02a;
+  --color-yellow-400: #fac800;
+  --color-yellow-500: #edb200;
+  --color-yellow-600: #cd8900;
+  --color-yellow-700: #a36100;
+  --color-yellow-800: #874b00;
+  --color-green-50: #f0fdf4;
+  --color-green-100: #dcfce7;
+  --color-green-200: #b9f8cf;
+  --color-green-400: #05df72;
+  --color-green-500: #00c758;
+  --color-green-600: #00a544;
+  --color-green-700: #008138;
+  --color-emerald-50: #ecfdf5;
+  --color-emerald-100: #d0fae5;
+  --color-emerald-200: #a4f4cf;
+  --color-emerald-500: #00bb7f;
+  --color-emerald-600: #009767;
+  --color-emerald-700: #007956;
+  --color-teal-50: #f0fdfa;
+  --color-teal-500: #00baa7;
+  --color-teal-600: #009588;
+  --color-cyan-50: #ecfeff;
+  --color-cyan-500: #00b7d7;
+  --color-cyan-600: #0092b5;
+  --color-sky-50: #f0f9ff;
+  --color-sky-600: #0084cc;
+  --color-blue-50: #eff6ff;
+  --color-blue-100: #dbeafe;
+  --color-blue-200: #bedbff;
+  --color-blue-400: #54a2ff;
+  --color-blue-500: #3080ff;
+  --color-blue-600: #155dfc;
+  --color-blue-700: #1447e6;
+  --color-indigo-50: #eef2ff;
+  --color-indigo-500: #625fff;
+  --color-indigo-600: #4f39f6;
+  --color-purple-50: #faf5ff;
+  --color-purple-100: #f3e8ff;
+  --color-purple-200: #e9d5ff;
+  --color-purple-500: #ac4bff;
+  --color-purple-600: #9810fa;
+  --color-pink-50: #fdf2f8;
+  --color-pink-500: #f6339a;
+  --color-pink-600: #e30076;
+  --color-rose-500: #ff2357;
+  --color-rose-600: #e70044;
+  --color-slate-50: #f8fafc;
+  --color-slate-400: #90a1b9;
+  --color-slate-600: #45556c;
+  --color-gray-50: #f9fafb;
+  --color-gray-100: #f3f4f6;
+  --color-gray-200: #e5e7eb;
+  --color-gray-300: #d1d5dc;
+  --color-gray-400: #99a1af;
+  --color-gray-500: #6a7282;
+  --color-gray-600: #4a5565;
+  --color-gray-700: #364153;
+  --color-gray-800: #1e2939;
+  --color-gray-900: #101828;
+  --color-black: #000000;
+  --color-white: #ffffff;
+}
+
 /* ========================================
    全局基础样式
    ======================================== */
@@ -199,6 +295,57 @@ body.certificate-page textarea {
 }
 
 /* ========================================
+   Backdrop Blur 兼容兜底
+   ======================================== */
+
+/* 低端机开关：统一关闭所有 blur 效果 */
+.no-backdrop-blur [class*='backdrop-blur'] {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
+/* 针对源码中的直接 backdrop-filter 声明 */
+.no-backdrop-blur .card-glass,
+.no-backdrop-blur .gns-dialog-overlay,
+.no-backdrop-blur .bar-wrap {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
+/* blur 关闭后提高背景不透明度，保证可读性 */
+.no-backdrop-blur [class*='backdrop-blur'][class*='bg-white'] {
+  background-color: rgba(255, 255, 255, 0.96) !important;
+}
+
+.no-backdrop-blur [class*='backdrop-blur'][class*='bg-gray'] {
+  background-color: rgba(249, 250, 251, 0.96) !important;
+}
+
+.no-backdrop-blur [class*='backdrop-blur'][class*='bg-black'] {
+  background-color: rgba(0, 0, 0, 0.62) !important;
+}
+
+/* 不支持 backdrop-filter 的浏览器，自动使用无 blur 兜底 */
+@supports not ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
+  [class*='backdrop-blur'] {
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+  }
+
+  [class*='backdrop-blur'][class*='bg-white'] {
+    background-color: rgba(255, 255, 255, 0.96) !important;
+  }
+
+  [class*='backdrop-blur'][class*='bg-gray'] {
+    background-color: rgba(249, 250, 251, 0.96) !important;
+  }
+
+  [class*='backdrop-blur'][class*='bg-black'] {
+    background-color: rgba(0, 0, 0, 0.62) !important;
+  }
+}
+
+/* ========================================
    组件样式
    ======================================== */
 
@@ -213,6 +360,34 @@ body.certificate-page textarea {
 
 .bg-gradient-warm {
   background: var(--gradient-warm);
+}
+
+/* 个人中心颜色兼容兜底（老版 Android/WebView） */
+.profile-user-type-pill {
+  background-color: rgba(17, 24, 39, 0.06);
+  border: 1px solid rgba(229, 231, 235, 0.6);
+}
+
+.profile-balance-card-bg {
+  background-color: #ff6a2d;
+  background-image: linear-gradient(135deg, #ff884d 0%, #ff5500 100%);
+}
+
+.profile-balance-chip {
+  background-color: rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+}
+
+.profile-balance-text-soft {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.profile-balance-text-dim {
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.profile-balance-divider {
+  border-top: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 /* ========================================
