@@ -35,4 +35,11 @@ export function useCollectionStateMachines() {
   };
 }
 
-export { LoadingState, LoadingEvent, FormState, FormEvent };
+export {
+  loadingMachineConfig,
+  formMachineConfig,
+  LoadingState,
+  LoadingEvent,
+  FormState,
+  FormEvent,
+};

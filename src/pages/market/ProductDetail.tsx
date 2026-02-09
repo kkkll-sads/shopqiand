@@ -59,10 +59,12 @@ const ProductDetail: React.FC<ProductDetailProps> = ({
         if (data) {
           // 将详情数据转换为 Product 对象
           const productData: Product = {
-            id: Number(id),
+            id: String(id),
             title: data.name || '',
             image: data.thumbnail || data.images?.[0] || '',
-            price: String(data.price || 0),
+            price: Number(data.price || 0),
+            artist: '',
+            category: 'shop',
             productType: 'shop',
             score_price: data.score_price || 0,
           };

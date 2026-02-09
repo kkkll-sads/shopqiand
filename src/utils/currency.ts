@@ -34,7 +34,7 @@ function toDecimal(value: number | string | Decimal | null | undefined): Decimal
  * add('100.50', 50.25) // Decimal(150.75)
  */
 export function add(...values: (number | string | Decimal | null | undefined)[]): Decimal {
-  return values.reduce((sum, val) => sum.plus(toDecimal(val)), new Decimal(0));
+  return values.reduce<Decimal>((sum, val) => sum.plus(toDecimal(val)), new Decimal(0));
 }
 
 /**
@@ -165,6 +165,26 @@ export function toString(
     return new Decimal(0).toFixed(decimals);
   }
   return decimal.toFixed(decimals);
+}
+
+/**
+ * 货币格式化（不带符号）
+ */
+export function formatCurrency(
+  value: Decimal | number | string | null | undefined,
+  decimals: number = 2
+): string {
+  return toString(value, decimals);
+}
+
+/**
+ * 人民币格式化（带 ¥ 符号）
+ */
+export function formatYuan(
+  value: Decimal | number | string | null | undefined,
+  decimals: number = 2
+): string {
+  return `¥${formatCurrency(value, decimals)}`;
 }
 
 /**

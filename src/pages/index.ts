@@ -1,11 +1,9 @@
 /**
- * 页面包装器统一导出
+ * 页面入口统一导出
  *
- * 包装器为原始页面组件提供 React Router 兼容的 props
+ * 说明：历史上的 *EntryWrapper 文件已移除，这里只导出现存页面入口。
  */
-
-// 主 Tab 页面
-export { default as HomeWrapper } from './HomeEntryWrapper';
-export { default as MarketWrapper } from './MarketEntryWrapper';
-export { default as ProfileWrapper } from './ProfileEntryWrapper';
-export { default as RightsWrapper } from './RightsEntryWrapper';
+export { default as HomePage } from './cms/Home';
+export { default as MarketPage } from './market/Market';
+export { default as RightsPage } from './wallet/ClaimStation';
+export { default as ProfilePage } from './user/Profile';

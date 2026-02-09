@@ -88,7 +88,8 @@ export function useAccountMatching({
 
         if (pay_url) {
           showToast('success', '订单创建成功', '正在加载支付页面...');
-          onPaymentUrl(pay_url, order_id || order_no || null);
+          const resolvedOrderId = order_id ?? order_no ?? null;
+          onPaymentUrl(String(pay_url), resolvedOrderId === null ? null : String(resolvedOrderId));
         } else {
           // Fallback to manual view if no pay_url
           onMatched(selected);

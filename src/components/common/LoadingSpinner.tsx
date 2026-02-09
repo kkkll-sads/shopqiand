@@ -33,7 +33,7 @@ interface LoadingSpinnerProps {
  * @param size - 尺寸类型
  * @returns 包含类名和图标大小的对象
  */
-const getSizeConfig = (size: 'sm' | 'md' | 'lg' | number) => {
+const getSizeConfig = (size: 'sm' | 'md' | 'lg' | number | string) => {
     if (typeof size === 'number') {
         return { iconSize: size, textClass: 'text-sm', gapClass: 'gap-2' };
     }
@@ -42,7 +42,10 @@ const getSizeConfig = (size: 'sm' | 'md' | 'lg' | number) => {
         md: { iconSize: 24, textClass: 'text-sm', gapClass: 'gap-2' },
         lg: { iconSize: 32, textClass: 'text-base', gapClass: 'gap-3' },
     };
-    return sizeMap[size] || sizeMap.md;
+    if (size === 'sm' || size === 'md' || size === 'lg') {
+        return sizeMap[size];
+    }
+    return sizeMap.md;
 };
 
 /**

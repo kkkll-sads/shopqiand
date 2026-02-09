@@ -92,8 +92,7 @@ export default defineConfig(({ mode }) => {
       },
     },
     build: {
-      // 降低构建目标以获得更好的兼容性
-      target: 'es2015',
+      // 由 @vitejs/plugin-legacy 接管兼容目标，避免与 build.target 冲突警告
       // 使用 esbuild 压缩 CSS，避免最终阶段重新注入 lab/color-mix 高级色彩 supports
       cssMinify: 'esbuild',
       chunkSizeWarningLimit: 800, // 调高警告阈值，结合手动分包

@@ -232,7 +232,7 @@ const CollectionOrderDetail: React.FC = () => {
               <div className="flex items-center gap-2">
                 <span className="text-gray-900 text-xs font-mono">{order.order_no}</span>
                 <button
-                  onClick={() => copyOrderNo(order.order_no)}
+                  onClick={() => handleCopyOrderNo(order.order_no)}
                   className="p-1.5 hover:bg-gray-50 rounded-lg transition-colors active:scale-95"
                   aria-label="复制订单号"
                 >
@@ -480,4 +480,3 @@ const CollectionOrderDetail: React.FC = () => {
 };
 
 export default CollectionOrderDetail;
-

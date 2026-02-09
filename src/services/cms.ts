@@ -1,6 +1,8 @@
-import { apiFetch, ApiResponse } from './networking';
+import { apiFetch } from './networking';
+import type { ApiResponse } from './networking';
 import { API_ENDPOINTS } from './config';
 import { NeedLoginError } from './networking';
+import { authedFetch } from './client';
 import { warnLog } from '@/utils/logger';
 
 // 通用单页内容类型
@@ -199,8 +201,6 @@ export async function markAnnouncementRead(id: number | string, token?: string):
     const formData = new FormData();
     formData.append('id', String(id));
 
-    // 使用 authedFetch 自动带上 token
-    const { authedFetch } = await import('./client');
     return authedFetch(API_ENDPOINTS.announcement.markRead, {
         method: 'POST',
         body: formData,

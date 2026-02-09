@@ -17,7 +17,8 @@
  * @version 1.0.0
  */
 
-import React, { Component, ErrorInfo, ReactNode } from 'react';
+import React from 'react';
+import type { ErrorInfo, ReactNode } from 'react';
 import ErrorFallback from './ErrorFallback';
 import { errorLog } from '@/utils/logger';
 
@@ -64,15 +65,17 @@ interface ErrorBoundaryState {
  *   <Dashboard />
  * </ErrorBoundary>
  */
-class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
-    constructor(props: ErrorBoundaryProps) {
-        super(props);
-        // 初始化状态
-        this.state = {
-            hasError: false,
-            error: null,
-        };
-    }
+class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
+    declare props: ErrorBoundaryProps;
+    declare setState: (
+        state:
+            | ErrorBoundaryState
+            | ((prevState: Readonly<ErrorBoundaryState>) => ErrorBoundaryState)
+    ) => void;
+    state: ErrorBoundaryState = {
+        hasError: false,
+        error: null,
+    };
 
     /**
      * 静态方法：从错误中派生状态

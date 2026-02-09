@@ -32,7 +32,7 @@ const isScrollRestoreInProgress = (pathname: string): boolean => {
   return stored === pathname || global === pathname;
 };
 
-const ScrollToTop: React.FC = () => {
+const ScrollToTop = () => {
   const { pathname } = useLocation();
 
   useEffect(() => {

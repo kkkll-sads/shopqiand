@@ -126,8 +126,7 @@ const ReviewsPage: React.FC = () => {
   // 格式化时间
   const formatTime = (timestamp: number): string => {
     if (!timestamp) return '';
-    const date = new Date(timestamp * 1000);
-    return formatDateShort(date);
+    return formatDateShort(timestamp);
   };
 
   // 根据筛选条件过滤评论（前端筛选已由后端处理，这里保留以防万一）

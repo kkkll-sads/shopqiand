@@ -17,7 +17,8 @@
  */
 
 // 从 networking.ts 导入统一的 API 响应类型
-export type { ApiResponse } from '@/services/networking';
+import type { ApiResponse } from '@/services/networking';
+export type { ApiResponse };
 
 /**
  * 判断 API 响应是否成功

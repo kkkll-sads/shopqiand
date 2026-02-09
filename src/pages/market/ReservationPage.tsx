@@ -56,8 +56,16 @@ const ReservationPage: React.FC<ReservationPageProps> = ({ product: propProduct,
     const navigate = useNavigate();
     const { showToast } = useNotification();
     const { selectedProduct } = useAppStore();
+    const fallbackProduct: Product = {
+        id: '0',
+        title: '',
+        image: '',
+        artist: '',
+        price: 0,
+        category: '',
+    };
     // 优先使用传入的 product，其次使用 store 中的 selectedProduct
-    const product = propProduct || selectedProduct || { id: 0, title: '', image: '' } as Product;
+    const product = propProduct || selectedProduct || fallbackProduct;
     const [extraHashrate, setExtraHashrate] = useState(0);
     const [quantity, setQuantity] = useState(1); // 申购数量，默认1，最大100
     const [showConfirmModal, setShowConfirmModal] = useState(false);

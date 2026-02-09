@@ -13,6 +13,7 @@
  * npm test -- apiHelpers.test.ts
  */
 
+import { describe, test, expect, vi } from 'vitest';
 import {
     isSuccess,
     extractData,
@@ -24,8 +25,8 @@ import {
     hasErrorCode,
     isLoginExpired,
     isApiResponse,
-    ApiResponse,
 } from '../apiHelpers';
+import type { ApiResponse } from '../apiHelpers';
 
 // ============================================================================
 // Mock Data
@@ -180,7 +181,7 @@ describe('extractErrorFromException', () => {
 
 describe('withErrorHandling', () => {
     test('应该在成功时返回 data', async () => {
-        const apiFn = jest.fn().mockResolvedValue(mockSuccessResponse);
+        const apiFn = vi.fn().mockResolvedValue(mockSuccessResponse);
         const result = await withErrorHandling(apiFn);
 
         expect(result).toEqual({ name: 'Test User' });
@@ -188,8 +189,8 @@ describe('withErrorHandling', () => {
     });
 
     test('应该在失败时返回 null 并调用 onError', async () => {
-        const apiFn = jest.fn().mockResolvedValue(mockFailureResponse);
-        const onError = jest.fn();
+        const apiFn = vi.fn().mockResolvedValue(mockFailureResponse);
+        const onError = vi.fn();
         const result = await withErrorHandling(apiFn, onError);
 
         expect(result).toBeNull();
@@ -197,8 +198,8 @@ describe('withErrorHandling', () => {
     });
 
     test('应该在 API 抛出异常时返回 null 并调用 onError', async () => {
-        const apiFn = jest.fn().mockRejectedValue(new Error('网络错误'));
-        const onError = jest.fn();
+        const apiFn = vi.fn().mockRejectedValue(new Error('网络错误'));
+        const onError = vi.fn();
         const result = await withErrorHandling(apiFn, onError);
 
         expect(result).toBeNull();
@@ -206,14 +207,14 @@ describe('withErrorHandling', () => {
     });
 
     test('应该在没有 onError 回调时仍然正常工作', async () => {
-        const apiFn = jest.fn().mockResolvedValue(mockFailureResponse);
+        const apiFn = vi.fn().mockResolvedValue(mockFailureResponse);
         const result = await withErrorHandling(apiFn);
 
         expect(result).toBeNull();
     });
 
     test('应该在 code=undefined 时返回 data', async () => {
-        const apiFn = jest.fn().mockResolvedValue(mockUndefinedCodeResponse);
+        const apiFn = vi.fn().mockResolvedValue(mockUndefinedCodeResponse);
         const result = await withErrorHandling(apiFn);
 
         expect(result).toEqual({ value: 123 });
@@ -226,33 +227,33 @@ describe('withErrorHandling', () => {
 
 describe('withErrorThrow', () => {
     test('应该在成功时返回 data', async () => {
-        const apiFn = jest.fn().mockResolvedValue(mockSuccessResponse);
+        const apiFn = vi.fn().mockResolvedValue(mockSuccessResponse);
         const result = await withErrorThrow(apiFn);
 
         expect(result).toEqual({ name: 'Test User' });
     });
 
     test('应该在失败时抛出错误', async () => {
-        const apiFn = jest.fn().mockResolvedValue(mockFailureResponse);
+        const apiFn = vi.fn().mockResolvedValue(mockFailureResponse);
 
         await expect(withErrorThrow(apiFn)).rejects.toThrow('操作失败');
     });
 
     test('应该在 API 抛出异常时传递异常', async () => {
-        const apiFn = jest.fn().mockRejectedValue(new Error('网络错误'));
+        const apiFn = vi.fn().mockRejectedValue(new Error('网络错误'));
 
         await expect(withErrorThrow(apiFn)).rejects.toThrow('网络错误');
     });
 
     test('应该在 data 为 null 时抛出错误', async () => {
         const response: ApiResponse = { code: 1, data: null };
-        const apiFn = jest.fn().mockResolvedValue(response);
+        const apiFn = vi.fn().mockResolvedValue(response);
 
         await expect(withErrorThrow(apiFn)).rejects.toThrow('服务器返回数据为空');
     });
 
     test('应该在 code=undefined 时返回 data', async () => {
-        const apiFn = jest.fn().mockResolvedValue(mockUndefinedCodeResponse);
+        const apiFn = vi.fn().mockResolvedValue(mockUndefinedCodeResponse);
         const result = await withErrorThrow(apiFn);
 
         expect(result).toEqual({ value: 123 });
@@ -265,9 +266,9 @@ describe('withErrorThrow', () => {
 
 describe('batchApiCalls', () => {
     test('应该并行执行多个请求并返回成功/失败统计', async () => {
-        const apiFn1 = jest.fn().mockResolvedValue(mockSuccessResponse);
-        const apiFn2 = jest.fn().mockResolvedValue(mockFailureResponse);
-        const apiFn3 = jest.fn().mockResolvedValue(mockUndefinedCodeResponse);
+        const apiFn1 = vi.fn().mockResolvedValue(mockSuccessResponse);
+        const apiFn2 = vi.fn().mockResolvedValue(mockFailureResponse);
+        const apiFn3 = vi.fn().mockResolvedValue(mockUndefinedCodeResponse);
 
         const result = await batchApiCalls([apiFn1, apiFn2, apiFn3]);
 
@@ -277,8 +278,8 @@ describe('batchApiCalls', () => {
     });
 
     test('应该在所有请求成功时返回所有数据', async () => {
-        const apiFn1 = jest.fn().mockResolvedValue({ code: 1, data: { id: 1 } });
-        const apiFn2 = jest.fn().mockResolvedValue({ code: 1, data: { id: 2 } });
+        const apiFn1 = vi.fn().mockResolvedValue({ code: 1, data: { id: 1 } });
+        const apiFn2 = vi.fn().mockResolvedValue({ code: 1, data: { id: 2 } });
 
         const result = await batchApiCalls([apiFn1, apiFn2]);
 
@@ -287,8 +288,8 @@ describe('batchApiCalls', () => {
     });
 
     test('应该在所有请求失败时返回所有错误', async () => {
-        const apiFn1 = jest.fn().mockRejectedValue(new Error('错误1'));
-        const apiFn2 = jest.fn().mockRejectedValue(new Error('错误2'));
+        const apiFn1 = vi.fn().mockRejectedValue(new Error('错误1'));
+        const apiFn2 = vi.fn().mockRejectedValue(new Error('错误2'));
 
         const result = await batchApiCalls([apiFn1, apiFn2]);
 
@@ -386,8 +387,13 @@ describe('isApiResponse', () => {
 
 describe('Integration Tests', () => {
     test('场景1：用户登录成功', async () => {
+        type LoginPayload = {
+            token: string;
+            userInfo: { id: number; name: string };
+        };
+
         // Mock API
-        const loginApi = jest.fn().mockResolvedValue({
+        const loginApi = vi.fn().mockResolvedValue({
             code: 1,
             data: {
                 token: 'abc123',
@@ -396,7 +402,9 @@ describe('Integration Tests', () => {
         });
 
         // 调用
-        const result = await withErrorHandling(loginApi);
+        const result = await withErrorHandling<LoginPayload>(
+            loginApi as () => Promise<ApiResponse<LoginPayload>>
+        );
 
         // 验证
         expect(result).toBeDefined();
@@ -406,12 +414,12 @@ describe('Integration Tests', () => {
 
     test('场景2：用户登录失败', async () => {
         // Mock API
-        const loginApi = jest.fn().mockResolvedValue({
+        const loginApi = vi.fn().mockResolvedValue({
             code: 0,
             msg: '账号或密码错误',
         });
 
-        const onError = jest.fn();
+        const onError = vi.fn();
 
         // 调用
         const result = await withErrorHandling(loginApi, onError);
@@ -423,9 +431,9 @@ describe('Integration Tests', () => {
 
     test('场景3：网络错误', async () => {
         // Mock API
-        const loginApi = jest.fn().mockRejectedValue(new Error('Network Error'));
+        const loginApi = vi.fn().mockRejectedValue(new Error('Network Error'));
 
-        const onError = jest.fn();
+        const onError = vi.fn();
 
         // 调用
         const result = await withErrorHandling(loginApi, onError);
@@ -437,9 +445,9 @@ describe('Integration Tests', () => {
 
     test('场景4：批量加载多个资源', async () => {
         // Mock APIs
-        const fetchProfile = jest.fn().mockResolvedValue({ code: 1, data: { name: 'User' } });
-        const fetchBalance = jest.fn().mockResolvedValue({ code: 1, data: { balance: 100 } });
-        const fetchOrders = jest.fn().mockResolvedValue({ code: 0, msg: '订单加载失败' });
+        const fetchProfile = vi.fn().mockResolvedValue({ code: 1, data: { name: 'User' } });
+        const fetchBalance = vi.fn().mockResolvedValue({ code: 1, data: { balance: 100 } });
+        const fetchOrders = vi.fn().mockResolvedValue({ code: 0, msg: '订单加载失败' });
 
         // 调用
         const { success, failed, total } = await batchApiCalls([
