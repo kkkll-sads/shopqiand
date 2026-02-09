@@ -79,7 +79,8 @@ export default defineConfig(({ mode }) => {
       legacy({
         targets: ['> 0.5%', 'last 2 versions', 'not dead', 'Android >= 5', 'iOS >= 10'],
         additionalLegacyPolyfills: ['regenerator-runtime/runtime'],
-        modernPolyfills: true,
+        // 现代浏览器走 modern bundle，不再注入额外现代 polyfills，降低首屏 JS 体积
+        modernPolyfills: false,
       }),
     ],
     define: {

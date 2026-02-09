@@ -2,6 +2,7 @@ import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 
 const distAssetsDir = join(process.cwd(), 'dist', 'assets');
+const MAX_TOTAL_CSS_BYTES = 200_000;
 
 const checks = [
   {
@@ -58,6 +59,13 @@ if (findings.length > 0) {
 let totalSize = 0;
 for (const file of cssFiles) {
   totalSize += statSync(file).size;
+}
+
+if (totalSize > MAX_TOTAL_CSS_BYTES) {
+  console.error(
+    `[check:css-compat] CSS size budget exceeded: ${totalSize} bytes > ${MAX_TOTAL_CSS_BYTES} bytes.`
+  );
+  process.exit(1);
 }
 
 console.log(`[check:css-compat] Passed. CSS bundles: ${cssFiles.length}, total size: ${totalSize} bytes.`);
