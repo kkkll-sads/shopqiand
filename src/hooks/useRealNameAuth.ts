@@ -83,6 +83,16 @@ interface RealNameContext {
   callbackSuccess: boolean | null;
 }
 
+interface PendingRealNameCallback {
+  authToken: string;
+  callbackCode: string | null;
+  callbackSuccess: boolean | null;
+  createdAt: number;
+}
+
+const REAL_NAME_CALLBACK_STORAGE_KEY = 'real_name_h5_callback_pending';
+const REAL_NAME_CALLBACK_MAX_AGE_MS = 30 * 60 * 1000;
+
 /**
  * 状态转换表
  */
@@ -184,22 +194,44 @@ export function useRealNameAuth(): UseRealNameAuthReturn {
    */
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
-    const authToken = urlParams.get('authToken');
+    const authToken = urlParams.get('authToken') || urlParams.get('auth_token');
 
     if (authToken) {
+      const callbackPayload: PendingRealNameCallback = {
+        authToken,
+        callbackCode: urlParams.get('code'),
+        callbackSuccess: parseCallbackSuccess(urlParams.get('success')),
+        createdAt: Date.now(),
+      };
+
+      // 保存回调参数，避免部分机型回跳时刷新导致参数丢失
+      savePendingCallback(callbackPayload);
+
       // 从H5核身页面返回，清除URL参数
       window.history.replaceState({}, '', window.location.pathname);
 
       // 触发回调处理
       send(RealNameEvent.VERIFY_CALLBACK, {
-        authToken,
-        callbackCode: urlParams.get('code'),
-        callbackSuccess: urlParams.get('success') === 'true',
+        authToken: callbackPayload.authToken,
+        callbackCode: callbackPayload.callbackCode,
+        callbackSuccess: callbackPayload.callbackSuccess,
       });
-    } else {
-      // 正常加载
-      send(RealNameEvent.LOAD);
+      return;
     }
+
+    // URL参数已被清除时，尝试从会话缓存恢复回调上下文
+    const pendingCallback = readPendingCallback();
+    if (pendingCallback) {
+      send(RealNameEvent.VERIFY_CALLBACK, {
+        authToken: pendingCallback.authToken,
+        callbackCode: pendingCallback.callbackCode,
+        callbackSuccess: pendingCallback.callbackSuccess,
+      });
+      return;
+    }
+
+    // 正常加载
+    send(RealNameEvent.LOAD);
   }, [send]);
 
   /**
@@ -217,6 +249,15 @@ export function useRealNameAuth(): UseRealNameAuthReturn {
   useEffect(() => {
     if (state === RealNameState.PROCESSING) {
       handleAuthCallback();
+    }
+  }, [state]);
+
+  /**
+   * 认证完成后清理回调缓存，避免重复处理
+   */
+  useEffect(() => {
+    if (state === RealNameState.SUCCESS || state === RealNameState.PENDING) {
+      clearPendingCallback();
     }
   }, [state]);
 
@@ -263,6 +304,7 @@ export function useRealNameAuth(): UseRealNameAuthReturn {
 
       // 根据认证状态分发到不同状态
       if (data.real_name_status === RealNameStatus.APPROVED) {
+        clearPendingCallback();
         // ✅ 同步更新 authStore 中的实名状态（确保状态一致）
         useAuthStore.getState().setRealNameVerified(true, data.real_name || '');
         send(RealNameEvent.LOAD_SUCCESS_VERIFIED, {
@@ -271,6 +313,7 @@ export function useRealNameAuth(): UseRealNameAuthReturn {
           idCard: data.id_card || '',
         });
       } else if (data.real_name_status === RealNameStatus.PENDING) {
+        clearPendingCallback();
         send(RealNameEvent.LOAD_SUCCESS_PENDING, {
           status: data,
         });
@@ -303,6 +346,7 @@ export function useRealNameAuth(): UseRealNameAuthReturn {
     if (context.callbackCode && context.callbackCode !== '0') {
       const errorMsg = getErrorMsgByCode(context.callbackCode);
       showToast('error', '核身失败', errorMsg);
+      clearPendingCallback();
       send(RealNameEvent.VERIFY_ERROR, { error: errorMsg });
       return;
     }
@@ -310,11 +354,13 @@ export function useRealNameAuth(): UseRealNameAuthReturn {
     if (context.callbackSuccess === false) {
       const errorMsg = '人脸核身验证失败，请重试';
       showToast('error', '核身失败', errorMsg);
+      clearPendingCallback();
       send(RealNameEvent.VERIFY_ERROR, { error: errorMsg });
       return;
     }
 
     if (!context.authToken) {
+      clearPendingCallback();
       send(RealNameEvent.VERIFY_ERROR, {
         error: 'authToken缺失',
       });
@@ -355,6 +401,7 @@ export function useRealNameAuth(): UseRealNameAuthReturn {
           result.statusDesc ||
           getErrorMsgByStatus(result.status, result.reasonType);
         showToast('error', '核身失败', errorMsg);
+        clearPendingCallback();
         send(RealNameEvent.VERIFY_ERROR, { error: errorMsg });
       }
     } catch (e: any) {
@@ -376,6 +423,7 @@ export function useRealNameAuth(): UseRealNameAuthReturn {
       const errorMsg = 'auth_token 参数缺失，请重新进行人脸核身验证';
       errorLog('useRealNameAuth', 'submitRealNameWithAuthToken 失败', errorMsg);
       showToast('error', '提交失败', errorMsg);
+      clearPendingCallback();
       send(RealNameEvent.SUBMIT_ERROR, {
         error: errorMsg,
       });
@@ -404,6 +452,7 @@ export function useRealNameAuth(): UseRealNameAuthReturn {
         showToast('success', '提交成功', '实名认证提交成功');
         // ✅ 更新 authStore 中的实名状态
         useAuthStore.getState().setRealNameVerified(true, context.realName);
+        clearPendingCallback();
         send(RealNameEvent.SUBMIT_SUCCESS);
       }
     } catch (e: any) {
@@ -483,6 +532,7 @@ export function useRealNameAuth(): UseRealNameAuthReturn {
    * 重试（返回表单）
    */
   const handleRetry = () => {
+    clearPendingCallback();
     send(RealNameEvent.RETRY);
   };
 
@@ -518,6 +568,73 @@ export function useRealNameAuth(): UseRealNameAuthReturn {
     handleRetryLoad,
     updateForm,
   };
+}
+
+function parseCallbackSuccess(rawValue: string | null): boolean | null {
+  if (!rawValue) return null;
+
+  const value = rawValue.trim().toLowerCase();
+  if (['true', '1', 'yes', 'y', 'success'].includes(value)) {
+    return true;
+  }
+  if (['false', '0', 'no', 'n', 'fail', 'failed', 'error'].includes(value)) {
+    return false;
+  }
+  return null;
+}
+
+function savePendingCallback(payload: PendingRealNameCallback): void {
+  if (typeof window === 'undefined') return;
+
+  try {
+    sessionStorage.setItem(REAL_NAME_CALLBACK_STORAGE_KEY, JSON.stringify(payload));
+  } catch (error) {
+    warnLog('useRealNameAuth', '保存实名回调缓存失败', error);
+  }
+}
+
+function readPendingCallback(): PendingRealNameCallback | null {
+  if (typeof window === 'undefined') return null;
+
+  try {
+    const raw = sessionStorage.getItem(REAL_NAME_CALLBACK_STORAGE_KEY);
+    if (!raw) return null;
+
+    const parsed = JSON.parse(raw) as Partial<PendingRealNameCallback>;
+    const createdAt = Number(parsed.createdAt || 0);
+
+    if (!parsed.authToken || typeof parsed.authToken !== 'string' || !createdAt) {
+      clearPendingCallback();
+      return null;
+    }
+
+    if (Date.now() - createdAt > REAL_NAME_CALLBACK_MAX_AGE_MS) {
+      clearPendingCallback();
+      return null;
+    }
+
+    return {
+      authToken: parsed.authToken,
+      callbackCode: typeof parsed.callbackCode === 'string' ? parsed.callbackCode : null,
+      callbackSuccess:
+        typeof parsed.callbackSuccess === 'boolean' ? parsed.callbackSuccess : null,
+      createdAt,
+    };
+  } catch (error) {
+    warnLog('useRealNameAuth', '读取实名回调缓存失败', error);
+    clearPendingCallback();
+    return null;
+  }
+}
+
+function clearPendingCallback(): void {
+  if (typeof window === 'undefined') return;
+
+  try {
+    sessionStorage.removeItem(REAL_NAME_CALLBACK_STORAGE_KEY);
+  } catch (error) {
+    warnLog('useRealNameAuth', '清理实名回调缓存失败', error);
+  }
 }
 
 /**
