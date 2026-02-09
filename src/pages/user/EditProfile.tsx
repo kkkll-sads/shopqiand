@@ -11,7 +11,7 @@
 import React, { useMemo, useRef, useState } from 'react';
 import { ChevronRight } from 'lucide-react';
 import PageContainer from '@/layouts/PageContainer';
-import { uploadImage, updateAvatar, updateNickname } from '@/services/api';
+import { uploadImage, updateAvatar, updateNickname } from '@/services';
 import { getStoredToken } from '@/services/client';
 import { useAuthStore } from '@/stores/authStore';
 import { UserInfo } from '@/types';

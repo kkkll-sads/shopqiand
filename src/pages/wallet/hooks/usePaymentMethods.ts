@@ -2,7 +2,7 @@
  * usePaymentMethods - 支付方式管理 Hook
  */
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { fetchCompanyAccountList, CompanyAccountItem } from '@/services/api';
+import { fetchCompanyAccountList, CompanyAccountItem } from '@/services';
 import { useNotification } from '@/context/NotificationContext';
 import { isSuccess } from '@/utils/apiHelpers';
 import { errorLog } from '@/utils/logger';

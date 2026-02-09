@@ -23,7 +23,7 @@ import {
   fetchH5AuthToken,
   h5Recheck,
   H5RecheckResult,
-} from '@/services/api';
+} from '@/services';
 import { getStoredToken } from '@/services/client';
 import { withErrorHandling, extractError } from '@/utils/apiHelpers';
 import { RealNameStatus } from '@/constants/statusEnums';

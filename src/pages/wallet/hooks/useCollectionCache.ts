@@ -5,7 +5,7 @@
 import React, { useRef, useEffect, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useAppStore, MARKET_CACHE_TTL } from '@/stores/appStore';
-import { MyCollectionItem } from '@/services/api';
+import { MyCollectionItem } from '@/services';
 import { debugLog } from '@/utils/logger';
 import { setScrollRestoreInProgress } from '@/components/common/ScrollToTop';
 import type { SortOrder } from '@/components/common';

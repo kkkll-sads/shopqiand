@@ -3,7 +3,7 @@
  */
 import React from 'react';
 import { Shield } from 'lucide-react';
-import { CompanyAccountItem } from '@/services/api';
+import { CompanyAccountItem } from '@/services';
 import { copyToClipboard } from '@/utils/clipboard';
 import { useNotification } from '@/context/NotificationContext';
 

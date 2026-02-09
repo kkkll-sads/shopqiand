@@ -34,7 +34,7 @@ import {
   fetchShopOrderStatistics,
   ShopOrderStatistics,
   fetchSignInInfo,
-} from '@/services/api';
+} from '@/services';
 import { getStoredToken } from '@/services/client';
 import { UserInfo } from '@/types';
 import { useAuthStore } from '@/stores/authStore';

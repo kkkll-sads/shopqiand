@@ -6,7 +6,7 @@
  */
 import React, { useState, useEffect } from 'react';
 import { MapPin, Clock, Truck, Package, Home, ChevronRight, Plus, Check, Loader2 } from 'lucide-react';
-import { fetchAddressList, AddressItem } from '@/services/api';
+import { fetchAddressList, AddressItem } from '@/services';
 import { getStoredToken } from '@/services/client';
 import { isSuccess } from '@/utils/apiHelpers';
 import { errorLog } from '@/utils/logger';

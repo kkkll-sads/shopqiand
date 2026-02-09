@@ -8,7 +8,7 @@ import {
   getBatchConsignableList,
   MyCollectionItem,
   BatchConsignableListData,
-} from '@/services/api';
+} from '@/services';
 import { getStoredToken } from '@/services/client';
 import { useAuthStore } from '@/stores/authStore';
 import { UserInfo } from '@/types';

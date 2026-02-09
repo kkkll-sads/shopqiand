@@ -6,7 +6,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import PageContainer from '@/layouts/PageContainer';
 import { LoadingSpinner, EmptyState } from '@/components/common';
-import { fetchHelpCategories, fetchHelpQuestions, HelpCategoryItem, HelpQuestionItem } from '@/services/api';
+import { fetchHelpCategories, fetchHelpQuestions, HelpCategoryItem, HelpQuestionItem } from '@/services';
 import { extractData } from '@/utils/apiHelpers';
 import { warnLog, errorLog } from '@/utils/logger';
 

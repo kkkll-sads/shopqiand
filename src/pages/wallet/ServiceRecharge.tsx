@@ -5,7 +5,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Loader2, ChevronLeft, CreditCard, Wallet, AlertCircle, ShieldCheck } from 'lucide-react';
-import { rechargeServiceFee, fetchProfile } from '@/services/api';
+import { rechargeServiceFee, fetchProfile } from '@/services';
 import { getStoredToken } from '@/services/client';
 import { useAuthStore } from '@/stores/authStore';
 import { UserInfo } from '@/types';

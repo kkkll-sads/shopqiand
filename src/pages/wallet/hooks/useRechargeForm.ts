@@ -2,7 +2,7 @@
  * useRechargeForm - 充值表单逻辑 Hook
  */
 import { useState, useCallback } from 'react';
-import { CompanyAccountItem, submitRechargeOrder } from '@/services/api';
+import { CompanyAccountItem, submitRechargeOrder } from '@/services';
 import { useNotification } from '@/context/NotificationContext';
 import { isSuccess } from '@/utils/apiHelpers';
 import { errorLog } from '@/utils/logger';

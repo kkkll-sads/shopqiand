@@ -12,7 +12,7 @@ import {
   batchConsign,
   MyCollectionItem,
   BatchConsignableListData,
-} from '@/services/api';
+} from '@/services';
 import { getStoredToken } from '@/services/client';
 import { useNotification } from '@/context/NotificationContext';
 import { ConsignmentStatus, DeliveryStatus } from '@/constants/statusEnums';

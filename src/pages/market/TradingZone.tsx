@@ -8,7 +8,7 @@ import { ArrowLeft, Clock, ClipboardList } from 'lucide-react';
 import { LoadingSpinner } from '@/components/common';
 import PopupAnnouncementModal from '@/components/common/PopupAnnouncementModal';
 import { Product } from '@/types';
-import { fetchAnnouncements, AnnouncementItem } from '@/services/api';
+import { fetchAnnouncements, AnnouncementItem } from '@/services';
 import { isSuccess } from '@/utils/apiHelpers';
 import { errorLog } from '@/utils/logger';
 import { ZoneFilters, ProductGrid, SessionCard } from './components/trading';

@@ -8,7 +8,7 @@ import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, Zap, Banknote, Wallet, Shield, X } from 'lucide-react';
 
 import { LoadingSpinner, PaymentRedirect } from '@/components/common';
-import { CompanyAccountItem, submitRechargeOrder, updateRechargeOrderRemark } from '@/services/api';
+import { CompanyAccountItem, submitRechargeOrder, updateRechargeOrderRemark } from '@/services';
 import { getStoredToken } from '@/services/client';
 import { useNotification } from '@/context/NotificationContext';
 import { isSuccess } from '@/utils/apiHelpers';

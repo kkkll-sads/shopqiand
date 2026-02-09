@@ -12,7 +12,7 @@ import React, { useState, useEffect } from 'react';
 import { Copy, Share2 } from 'lucide-react';
 import PageContainer from '@/layouts/PageContainer';
 import { LoadingSpinner } from '@/components/common';
-import { fetchPromotionCard } from '@/services/api';
+import { fetchPromotionCard } from '@/services';
 import { getStoredToken } from '@/services/client';
 import { useNotification } from '@/context/NotificationContext';
 import { extractData, extractError } from '@/utils/apiHelpers';

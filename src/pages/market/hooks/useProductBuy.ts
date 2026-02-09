@@ -8,7 +8,7 @@
  */
 import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { createOrder } from '@/services/api';
+import { createOrder } from '@/services';
 import { useNotification } from '@/context/NotificationContext';
 import { isSuccess } from '@/utils/apiHelpers';
 import { useErrorHandler } from '@/hooks/useErrorHandler';

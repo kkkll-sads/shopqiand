@@ -10,7 +10,7 @@ import {
   PaymentAccountItem,
   submitWithdraw,
   fetchProfile,
-} from '@/services/api';
+} from '@/services';
 import { getStoredToken } from '@/services/client';
 
 import { useNotification } from '@/context/NotificationContext';

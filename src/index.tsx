@@ -6,7 +6,7 @@ import { NotificationProvider } from '@/context/NotificationContext';
 import { GlobalNotificationSystem } from '@/components/common/GlobalNotificationSystem';
 import { setNeedLoginHandler, clearNeedLoginHandler } from '@/services/needLoginHandler';
 import { useAuthStore } from '@/stores/authStore';
-import { fetchProfile, fetchRealNameStatus } from '@/services/api';
+import { fetchProfile, fetchRealNameStatus } from '@/services';
 import { isSuccess } from '@/utils/apiHelpers';
 import { applyBackdropBlurCompatibilityClass } from '@/utils/backdropCompat';
 import '@/styles/main.css';

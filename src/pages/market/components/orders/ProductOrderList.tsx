@@ -1,6 +1,6 @@
 import React from 'react';
 import { Package } from 'lucide-react';
-import { MyConsignmentItem, PurchaseRecordItem, normalizeAssetUrl } from '@/services/api';
+import { MyConsignmentItem, PurchaseRecordItem, normalizeAssetUrl } from '@/services';
 
 interface ProductOrderListProps {
   activeTab: number;

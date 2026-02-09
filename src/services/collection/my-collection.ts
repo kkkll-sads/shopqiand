@@ -218,6 +218,3 @@ export async function getMyCollection(
     }
   );
 }
-
-// 兼容旧名称
-export const fetchMyCollectionList = getMyCollection;

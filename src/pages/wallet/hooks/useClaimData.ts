@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { fetchProfile } from '@/services/api';
+import { fetchProfile } from '@/services';
 import { getStoredToken } from '@/services/client';
 import {
   getRightsDeclarationList,

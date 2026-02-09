@@ -11,7 +11,7 @@ import {
   fetchPaymentAccountList,
   submitStaticIncomeWithdraw,
   PaymentAccountItem,
-} from '@/services/api';
+} from '@/services';
 import { getStoredToken } from '@/services/client';
 import { UserInfo } from '@/types';
 

@@ -6,7 +6,7 @@ import {
   confirmOrder,
   payOrder,
   deleteOrder,
-} from '@/services/api';
+} from '@/services';
 import { getStoredToken } from '@/services/client';
 import { useNotification } from '@/context/NotificationContext';
 import { isSuccess, extractError } from '@/utils/apiHelpers';

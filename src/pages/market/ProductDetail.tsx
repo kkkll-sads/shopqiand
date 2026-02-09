@@ -8,7 +8,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Product } from '@/types';
-import { CollectionItemDetailData, ShopProductDetailData, fetchShopProductDetail } from '@/services/api';
+import { CollectionItemDetailData, ShopProductDetailData, fetchShopProductDetail } from '@/services';
 import { LoadingSpinner } from '@/components/common';
 import ShopProductDetail from './ShopProductDetail';
 import CollectionCertificate from './CollectionCertificate';

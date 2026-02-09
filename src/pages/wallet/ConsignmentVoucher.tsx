@@ -7,7 +7,7 @@ import { useNavigate } from 'react-router-dom';
 import { Receipt, FileText, ShoppingBag, Clock, Tag, Calendar } from 'lucide-react';
 import PageContainer from '@/layouts/PageContainer';
 import { LoadingSpinner, EmptyState } from '@/components/common';
-import { fetchProfile } from '@/services/api';
+import { fetchProfile } from '@/services';
 import { getStoredToken } from '@/services/client';
 import { fetchConsignmentCoupons, ConsignmentCouponItem } from '@/services/consignment';
 import { formatTime } from '@/utils/format';

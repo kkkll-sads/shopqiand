@@ -15,7 +15,7 @@ import {
     cancelBid,
     MatchingPoolItem,
     MatchingPoolStatus,
-} from '@/services/api';
+} from '@/services';
 import { useNotification } from '@/context/NotificationContext';
 import { isSuccess, extractError } from '@/utils/apiHelpers';
 import { errorLog } from '@/utils/logger';

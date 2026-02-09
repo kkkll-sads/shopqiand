@@ -10,7 +10,7 @@ import {
     fetchCollectionSessions,
     ReservationItem,
     ReservationStatus as ReservationStatusType,
-} from '@/services/api';
+} from '@/services';
 import { SelectFilter, SortSelector } from '@/components/common';
 import type { SortOrder } from '@/components/common';
 import type { SelectOption } from '@/components/common';

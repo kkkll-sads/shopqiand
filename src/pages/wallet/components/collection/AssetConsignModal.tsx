@@ -3,7 +3,7 @@
  */
 import React from 'react';
 import { X, CheckCircle } from 'lucide-react';
-import { MyCollectionItem, normalizeAssetUrl, computeConsignmentPrice } from '@/services/api';
+import { MyCollectionItem, normalizeAssetUrl, computeConsignmentPrice } from '@/services';
 import { toString, toNumber, multiply } from '@/utils/currency';
 import { useNotification } from '@/context/NotificationContext';
 import { UserInfo } from '@/types';

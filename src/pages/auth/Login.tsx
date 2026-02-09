@@ -11,7 +11,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Eye, EyeOff, User, Lock, Check, HeadphonesIcon } from 'lucide-react';
-import { login as loginApi, LoginParams, fetchProfile, fetchRealNameStatus } from '@/services/api';
+import { login as loginApi, LoginParams, fetchProfile, fetchRealNameStatus } from '@/services';
 import { useNotification } from '@/context/NotificationContext';
 import { bizLog, debugLog, errorLog, warnLog } from '@/utils/logger';
 import { isSuccess } from '@/utils/apiHelpers';

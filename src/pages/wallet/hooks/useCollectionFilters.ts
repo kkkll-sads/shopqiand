@@ -2,7 +2,7 @@
  * 藏品列表筛选排序 Hook
  */
 import { useMemo, useCallback } from 'react';
-import { MyCollectionItem } from '@/services/api';
+import { MyCollectionItem } from '@/services';
 import { ConsignmentStatus } from '@/constants/statusEnums';
 import type { SortOrder } from '@/components/common';
 import { debugLog } from '@/utils/logger';

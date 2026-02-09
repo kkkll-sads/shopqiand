@@ -501,10 +501,6 @@ export async function getMyRechargeOrders(params: { page?: number; limit?: numbe
     });
 }
 
-// 兼容旧名称
-export const getMyOrderList = getMyRechargeOrders;
-
-
 export interface WithdrawRecordItem {
     id: number;
     amount: number | string;
@@ -531,9 +527,6 @@ export interface WithdrawRecordItem {
     money?: number;
     createtime?: number;
 }
-
-// 兼容旧名称
-export type WithdrawOrderItem = WithdrawRecordItem;
 
 export async function getMyWithdrawList(params: { page?: number; limit?: number; status?: number; token?: string } = {}): Promise<ApiResponse<{
     data: WithdrawRecordItem[];

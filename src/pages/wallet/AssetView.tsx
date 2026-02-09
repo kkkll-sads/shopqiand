@@ -16,7 +16,7 @@ import {
   MyCollectionItem,
   fetchProfile,
   normalizeAssetUrl,
-} from '@/services/api';
+} from '@/services';
 import { getStoredToken } from '@/services/client';
 import { Product, UserInfo } from '@/types';
 import { useNotification } from '@/context/NotificationContext';

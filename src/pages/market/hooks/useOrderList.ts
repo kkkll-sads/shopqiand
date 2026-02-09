@@ -15,7 +15,7 @@ import {
   MyConsignmentItem,
   PurchaseRecordItem,
   MyCollectionItem,
-} from '@/services/api';
+} from '@/services';
 import { getStoredToken } from '@/services/client';
 import { extractData } from '@/utils/apiHelpers';
 import { errorLog } from '@/utils/logger';

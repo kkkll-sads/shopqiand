@@ -5,7 +5,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ChevronLeft, Share2, Copy, Shield, Fingerprint, Award, ExternalLink, ArrowRightLeft, Store, X, Cpu, FileText } from 'lucide-react';
-import { MyCollectionItem, fetchProfile, fetchRealNameStatus, fetchUserCollectionDetail, getConsignmentCheck, consignCollectionItem, computeConsignmentPrice, getMyCollection, normalizeAssetUrl, toMining } from '@/services/api';
+import { MyCollectionItem, fetchProfile, fetchRealNameStatus, fetchUserCollectionDetail, getConsignmentCheck, consignCollectionItem, computeConsignmentPrice, getMyCollection, normalizeAssetUrl, toMining } from '@/services';
 import { getStoredToken } from '@/services/client';
 import { UserInfo } from '@/types';
 import { useNotification } from '@/context/NotificationContext';

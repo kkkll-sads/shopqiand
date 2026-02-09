@@ -13,7 +13,7 @@ import ServiceSheet from '@/components/business/ServiceSheet';
 import BuySpecSheet from '@/components/shop/BuySpecSheet';
 import { LoadingSpinner } from '@/components/common';
 import { Product } from '@/types';
-import { ShopProductDetailData } from '@/services/api';
+import { ShopProductDetailData } from '@/services';
 import { useNotification } from '@/context/NotificationContext';
 import { debugLog } from '@/utils/logger';
 import {

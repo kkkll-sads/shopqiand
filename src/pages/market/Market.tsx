@@ -11,7 +11,7 @@ import {
   fetchShopProductCategories,
   normalizeAssetUrl,
   ShopProductItem,
-} from '@/services/api';
+} from '@/services';
 import { useStateMachine } from '@/hooks/useStateMachine';
 import { LoadingEvent, LoadingState } from '@/types/states';
 import { useAppStore, MARKET_CACHE_TTL } from '@/stores/appStore';

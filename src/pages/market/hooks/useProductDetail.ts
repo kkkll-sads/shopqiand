@@ -8,7 +8,7 @@ import {
   fetchReviewSummary,
   ShopProductDetailData,
   ReviewSummaryData,
-} from '@/services/api';
+} from '@/services';
 import { useNotification } from '@/context/NotificationContext';
 import { isSuccess, extractData } from '@/utils/apiHelpers';
 import { useErrorHandler } from '@/hooks/useErrorHandler';

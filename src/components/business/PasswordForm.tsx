@@ -11,7 +11,7 @@ import {
   updatePayPassword,
   retrievePassword,
   resetPayPasswordBySms,
-} from '@/services/api';
+} from '@/services';
 import { sendSmsCode } from '@/services/common';
 import { useNotification } from '@/context/NotificationContext';
 import { useAuthStore } from '@/stores/authStore';

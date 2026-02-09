@@ -2,7 +2,7 @@
  * useAccountMatching - 账户匹配逻辑 Hook
  */
 import { useState, useCallback } from 'react';
-import { CompanyAccountItem, submitRechargeOrder } from '@/services/api';
+import { CompanyAccountItem, submitRechargeOrder } from '@/services';
 import { useNotification } from '@/context/NotificationContext';
 import { isSuccess } from '@/utils/apiHelpers';
 import { useErrorHandler } from '@/hooks/useErrorHandler';

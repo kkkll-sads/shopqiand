@@ -20,7 +20,7 @@ import {
   consignCollectionItem,
   computeConsignmentPrice,
   MyCollectionItem,
-} from '@/services/api';
+} from '@/services';
 import { getStoredToken } from '@/services/client';
 import { isSuccess, extractError } from '@/utils/apiHelpers';
 import { ConsignmentStatus, DeliveryStatus } from '@/constants/statusEnums';

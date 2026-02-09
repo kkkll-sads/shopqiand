@@ -61,8 +61,3 @@ export async function fetchArtistAllWorks(
   const path = `${API_ENDPOINTS.artist.allWorks}?${search.toString()}`;
   return authedFetch<ArtistAllWorksListData>(path, { method: 'GET' });
 }
-
-// 兼容旧名称
-export type ArtistApiItem = ArtistItem;
-export type ArtistListData = { list: ArtistItem[] };
-export const fetchArtists = fetchArtistList;

@@ -7,7 +7,7 @@ import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, Zap, Server, Shield, Leaf, Activity } from 'lucide-react';
 import { LoadingSpinner } from '@/components/common';
 
-import { fetchProfile, exchangeScoreToGreenPower } from '@/services/api';
+import { fetchProfile, exchangeScoreToGreenPower } from '@/services';
 import { getStoredToken } from '@/services/client';
 import { useAuthStore } from '@/stores/authStore';
 import { UserInfo } from '@/types';

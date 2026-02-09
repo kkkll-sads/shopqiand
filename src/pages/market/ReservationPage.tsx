@@ -6,7 +6,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, Shield, Zap, Wallet, AlertCircle, Info, CheckCircle2 } from 'lucide-react';
 import { Product, UserInfo } from '@/types';
-import { fetchProfile, bidBuy, fetchCollectionItemDetail, fetchCollectionSessionDetail } from '@/services/api';
+import { fetchProfile, bidBuy, fetchCollectionItemDetail, fetchCollectionSessionDetail } from '@/services';
 import { useNotification } from '@/context/NotificationContext';
 import { getStoredToken } from '@/services/client';
 import { isSuccess, extractData, extractError } from '@/utils/apiHelpers';

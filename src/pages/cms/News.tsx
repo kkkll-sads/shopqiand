@@ -9,7 +9,7 @@ import { EmptyState } from '@/components/common';
 import { useAppStore } from '@/stores/appStore';
 import { STORAGE_KEYS } from '@/constants/storageKeys';
 import { formatTime } from '@/utils/format';
-import { fetchAnnouncements, AnnouncementItem } from '@/services/api';
+import { fetchAnnouncements, AnnouncementItem } from '@/services';
 import { extractData } from '@/utils/apiHelpers';
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
 import { useStateMachine } from '@/hooks/useStateMachine';

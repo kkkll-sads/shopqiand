@@ -4,7 +4,7 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { useAppStore } from '@/stores/appStore';
-import { fetchAnnouncements, AnnouncementItem } from '@/services/api';
+import { fetchAnnouncements, AnnouncementItem } from '@/services';
 import { isSuccess } from '@/utils/apiHelpers';
 import { errorLog } from '@/utils/logger';
 import { NewsItem } from '@/types';

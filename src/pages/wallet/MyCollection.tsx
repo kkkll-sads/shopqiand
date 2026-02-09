@@ -5,7 +5,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import PageContainer from '@/layouts/PageContainer';
-import { MyCollectionItem } from '@/services/api';
+import { MyCollectionItem } from '@/services';
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
 import { debugLog } from '@/utils/logger';
 import type { SortOrder } from '@/components/common';

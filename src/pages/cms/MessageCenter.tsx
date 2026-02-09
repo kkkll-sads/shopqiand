@@ -7,15 +7,15 @@ import { formatDateShort } from '@/utils/format';
 import {
   fetchAnnouncements,
   AnnouncementItem,
-  getMyOrderList,
+  getMyRechargeOrders,
   getMyWithdrawList,
   fetchPendingPayOrders,
   fetchPendingShipOrders,
   fetchPendingConfirmOrders,
   RechargeOrderItem,
-  WithdrawOrderItem,
+  WithdrawRecordItem,
   ShopOrderItem,
-} from '@/services/api';
+} from '@/services';
 import { getStoredToken } from '@/services/client';
 // ✅ 引入统一 API 处理工具
 import { extractData } from '@/utils/apiHelpers';
@@ -252,7 +252,7 @@ const MessageCenter: React.FC = () => {
 
       // 2. 加载充值订单
       try {
-        const rechargeRes = await getMyOrderList({ page: pageNum, limit: 5, token });
+        const rechargeRes = await getMyRechargeOrders({ page: pageNum, limit: 5, token });
         const rechargeData = extractData(rechargeRes) as any;
         const rechargeList = rechargeData?.data || rechargeData?.list || [];
         if (rechargeList.length > 0) {
@@ -296,7 +296,7 @@ const MessageCenter: React.FC = () => {
         const withdrawData = extractData(withdrawRes) as any;
         const withdrawList = withdrawData?.data || withdrawData?.list || [];
         if (withdrawList.length > 0) {
-          withdrawList.forEach((item: WithdrawOrderItem) => {
+          withdrawList.forEach((item: WithdrawRecordItem) => {
             const id = `withdraw-${item.id}`;
             const timestamp = item.create_time ? item.create_time * 1000 : Date.now();
 
@@ -775,4 +775,3 @@ const MessageCenter: React.FC = () => {
 };
 
 export default MessageCenter;
-

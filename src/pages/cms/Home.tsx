@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronRight, Search, Wallet, Vault, Zap, FileBadge, ClipboardList, Clock, CheckCircle2, AlertCircle } from 'lucide-react';
 import { Banner, NewsItem } from '@/types';
-import { fetchBanners, normalizeAssetUrl, fetchReservations, ReservationItem, fetchAnnouncements } from '@/services/api';
+import { fetchBanners, normalizeAssetUrl, fetchReservations, ReservationItem, fetchAnnouncements } from '@/services';
 import { isSuccess, extractData } from '@/utils/apiHelpers';
 import { SkeletonSubscriptionCard } from '@/components/common';
 import { errorLog } from '@/utils/logger';

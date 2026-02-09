@@ -4,7 +4,7 @@
 import React from 'react';
 import { FileText, ShoppingBag } from 'lucide-react';
 import { SkeletonCollectionList } from '@/components/common';
-import { MyCollectionItem } from '@/services/api';
+import { MyCollectionItem } from '@/services';
 import CollectionItem from './CollectionItem';
 
 interface CollectionListProps {

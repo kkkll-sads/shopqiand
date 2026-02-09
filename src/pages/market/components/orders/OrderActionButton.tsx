@@ -2,7 +2,7 @@
  * OrderActionButton - 订单操作按钮组件
  */
 import React from 'react';
-import { ShopOrderItem } from '@/services/api';
+import { ShopOrderItem } from '@/services';
 
 interface OrderActionButtonProps {
   order: ShopOrderItem;

@@ -9,7 +9,7 @@ import {
   getConsignmentDetail,
   cancelConsignment,
   ConsignmentDetailData,
-} from '@/services/api';
+} from '@/services';
 import { getStoredToken } from '@/services/client';
 import { useNotification } from '@/context/NotificationContext';
 import { extractData, extractError } from '@/utils/apiHelpers';

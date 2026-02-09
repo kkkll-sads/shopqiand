@@ -2,7 +2,7 @@
  * useBalanceTransfer - 余额划转逻辑 Hook
  */
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { transferIncomeToPurchase } from '@/services/api';
+import { transferIncomeToPurchase } from '@/services';
 import { fetchProfile } from '@/services/user/profile';
 import { getStoredToken } from '@/services/client';
 import { useNotification } from '@/context/NotificationContext';

@@ -12,7 +12,7 @@
 import React from 'react';
 import { Wallet, Award, Users } from 'lucide-react';
 import PageContainer from '@/layouts/PageContainer';
-import { normalizeAssetUrl } from '@/services/api';
+import { normalizeAssetUrl } from '@/services';
 import { TeamMember } from '@/types';
 import { formatTime } from '@/utils/format';
 import { useNavigate, useParams } from 'react-router-dom';

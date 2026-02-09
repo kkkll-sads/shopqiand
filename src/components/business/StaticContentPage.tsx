@@ -26,7 +26,7 @@ import {
     fetchUserAgreementPage,
     fetchAboutUsPage,
     PageContent,
-} from '@/services/api';
+} from '@/services';
 import { isSuccess, extractError } from '@/utils/apiHelpers';
 import { APP_VERSION } from '@/constants';
 import { errorLog } from '@/utils/logger';

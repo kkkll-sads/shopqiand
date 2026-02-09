@@ -4,7 +4,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, CheckCircle, Shield, Zap } from 'lucide-react';
-import { CompanyAccountItem } from '@/services/api';
+import { CompanyAccountItem } from '@/services';
 import { LoadingSpinner } from '@/components/common';
 import { useNotification } from '@/context/NotificationContext';
 import AccountInfoCard from './AccountInfoCard';

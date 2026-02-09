@@ -12,7 +12,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { UserPlus, Loader2 } from 'lucide-react';
 import PageContainer from '@/layouts/PageContainer';
 import { LoadingSpinner, EmptyState, ListItem } from '@/components/common';
-import { fetchTeamMembers, normalizeAssetUrl } from '@/services/api';
+import { fetchTeamMembers, normalizeAssetUrl } from '@/services';
 import { TeamMember } from '@/types';
 import { formatTime } from '@/utils/format';
 import { extractData, extractError } from '@/utils/apiHelpers';

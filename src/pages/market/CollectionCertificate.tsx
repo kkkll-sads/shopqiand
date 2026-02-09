@@ -14,7 +14,7 @@ import {
   CollectionItemDetailData,
   fetchAnnouncements,
   AnnouncementItem,
-} from '@/services/api';
+} from '@/services';
 import { useNotification } from '@/context/NotificationContext';
 import { debugLog, errorLog } from '@/utils/logger';
 import { isSuccess, extractData } from '@/utils/apiHelpers';

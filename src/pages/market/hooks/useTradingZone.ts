@@ -9,7 +9,7 @@ import {
   CollectionItem,
   fetchAnnouncements,
   AnnouncementItem,
-} from '@/services/api';
+} from '@/services';
 import { isSuccess } from '@/utils/apiHelpers';
 import { debugLog, errorLog } from '@/utils/logger';
 

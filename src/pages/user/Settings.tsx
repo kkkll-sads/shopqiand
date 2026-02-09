@@ -13,7 +13,7 @@ import React, { useState } from 'react';
 import { ChevronRight, RefreshCw } from 'lucide-react';
 import PageContainer from '@/layouts/PageContainer';
 import { ListItem, UpdatePromptModal } from '@/components/common';
-import { normalizeAssetUrl, checkAppUpdate } from '@/services/api';
+import { normalizeAssetUrl, checkAppUpdate } from '@/services';
 import { formatPhone } from '@/utils/format';
 import { AppVersionInfo } from '@/services/app';
 import { APP_VERSION } from '@/constants';

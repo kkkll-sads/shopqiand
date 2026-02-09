@@ -14,7 +14,7 @@ import {
   deletePaymentAccount,
   editPaymentAccount,
   setDefaultPaymentAccount,
-} from '@/services/api';
+} from '@/services';
 import { getStoredToken } from '@/services/client';
 import { isSuccess, extractData } from '@/utils/apiHelpers';
 import { useErrorHandler } from '@/hooks/useErrorHandler';

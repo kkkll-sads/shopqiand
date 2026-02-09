@@ -10,7 +10,7 @@ import { SearchInput } from '@/components/common';
 import {
   getAllLog,
   AllLogItem,
-} from '@/services/api';
+} from '@/services';
 import { getStoredToken } from '@/services/client';
 import { isSuccess, extractData } from '@/utils/apiHelpers';
 import { BALANCE_TYPE_OPTIONS, getBalanceTypeLabel } from '@/constants/balanceTypes';

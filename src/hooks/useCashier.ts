@@ -21,7 +21,7 @@ import {
   getOrderDetail,
   fetchProfile,
   ShopOrderItem,
-} from '@/services/api';
+} from '@/services';
 import { getStoredToken } from '@/services/client';
 import { isSuccess as checkApiSuccess, extractData, extractError } from '@/utils/apiHelpers';
 import { CashierState, CashierEvent } from '@/types/states';

@@ -3,7 +3,7 @@
  */
 import { create } from 'zustand';
 import type { Tab, Product, NewsItem } from '@/types';
-import type { MyCollectionItem } from '@/services/api';
+import type { MyCollectionItem } from '@/services';
 
 /**
  * 市场页缓存状态

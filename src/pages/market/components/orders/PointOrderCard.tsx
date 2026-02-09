@@ -1,5 +1,5 @@
 import React from 'react';
-import { ShopOrderItem, ShopOrderItemDetail, normalizeAssetUrl } from '@/services/api';
+import { ShopOrderItem, ShopOrderItemDetail, normalizeAssetUrl } from '@/services';
 import { ShopOrderPayStatus } from '@/constants/statusEnums';
 import { Package, Gift, ChevronRight, Sparkles, Clock, Truck, CheckCircle } from 'lucide-react';
 

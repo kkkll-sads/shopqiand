@@ -10,7 +10,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import PageContainer from '@/layouts/PageContainer';
 import { ConfirmModal } from '@/components/common';
-import { cancelAccount } from '@/services/api';
+import { cancelAccount } from '@/services';
 import { useAuthStore } from '@/stores/authStore';
 import { useModal } from '@/hooks';
 import { useNotification } from '@/context/NotificationContext';

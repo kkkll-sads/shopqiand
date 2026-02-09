@@ -11,7 +11,7 @@ import { useNavigate } from 'react-router-dom';
 import PageContainer from '@/layouts/PageContainer';
 import { LoadingSpinner } from '@/components/common';
 import GridShowcase from '@/components/common/GridShowcase';
-import { normalizeAssetUrl, fetchShopProducts, ShopProductItem } from '@/services/api';
+import { normalizeAssetUrl, fetchShopProducts, ShopProductItem } from '@/services';
 import { useStateMachine } from '@/hooks/useStateMachine';
 import { LoadingEvent, LoadingState } from '@/types/states';
 import { errorLog } from '@/utils/logger';

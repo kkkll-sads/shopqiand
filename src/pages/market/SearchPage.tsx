@@ -5,7 +5,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ChevronLeft, Search, X, Clock, ExternalLink } from 'lucide-react';
-import { queryCollectionByCode, CollectionItemDetail } from '@/services/api';
+import { queryCollectionByCode, CollectionItemDetail } from '@/services';
 import { useNotification } from '@/context/NotificationContext';
 import { LoadingSpinner } from '@/components/common';
 import ProductDetail from './ProductDetail';

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Package, ArrowRight } from 'lucide-react';
-import { normalizeAssetUrl } from '@/services/api';
+import { normalizeAssetUrl } from '@/services';
 import { formatAmount, formatTime } from '@/utils/format';
 
 interface TransactionOrderListProps {

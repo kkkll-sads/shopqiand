@@ -22,7 +22,7 @@ import {
   Eye,
   EyeOff,
 } from 'lucide-react';
-import { register, RegisterParams, fetchAnnouncements, AnnouncementItem } from '@/services/api';
+import { register, RegisterParams, fetchAnnouncements, AnnouncementItem } from '@/services';
 import { sendSmsCode } from '@/services/common';
 import { isValidPhone } from '@/utils/validation';
 import { useNotification } from '@/context/NotificationContext';

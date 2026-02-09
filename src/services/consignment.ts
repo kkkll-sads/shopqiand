@@ -418,9 +418,6 @@ export async function deliverCollectionItem(params: DeliverParams): Promise<ApiR
     });
 }
 
-// 兼容旧名称
-export const applyDelivery = deliverCollectionItem;
-
 /**
  * 提货订单状态枚举
  */
