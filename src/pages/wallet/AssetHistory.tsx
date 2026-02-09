@@ -4,7 +4,7 @@
  */
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Filter, FileText, ChevronRight } from 'lucide-react';
+import { ArrowLeft, Filter, FileText } from 'lucide-react';
 import { FilterBar } from '@/components/common/FilterBar';
 import { SearchInput } from '@/components/common';
 import {
@@ -12,11 +12,12 @@ import {
   AllLogItem,
 } from '@/services';
 import { getStoredToken } from '@/services/client';
-import { isSuccess, extractData } from '@/utils/apiHelpers';
-import { BALANCE_TYPE_OPTIONS, getBalanceTypeLabel } from '@/constants/balanceTypes';
+import { extractData } from '@/utils/apiHelpers';
+import { BALANCE_TYPE_OPTIONS } from '@/constants/balanceTypes';
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
 import { errorLog, debugLog } from '@/utils/logger';
 import { useAppStore, MARKET_CACHE_TTL } from '@/stores/appStore';
+import AssetHistoryLogCard from './components/asset/AssetHistoryLogCard';
 
 const AssetHistory: React.FC = () => {
   const navigate = useNavigate();
@@ -60,6 +61,7 @@ const AssetHistory: React.FC = () => {
   const [page, setPage] = useState<number>(1);
   const [hasMore, setHasMore] = useState<boolean>(false);
   const [loading, setLoading] = useState(false);
+  const [expandedRows, setExpandedRows] = useState<Record<number, boolean>>({});
 
   // ========================================
   // 缓存恢复逻辑：组件挂载时检查并恢复缓存
@@ -263,124 +265,16 @@ const AssetHistory: React.FC = () => {
     }
   };
 
-  const formatTime = (timestamp: number | string | null): string => {
-    if (!timestamp) return '';
-    const date = new Date(typeof timestamp === 'string' ? parseInt(timestamp) * 1000 : timestamp * 1000);
-    return date.toLocaleString('zh-CN', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  };
-
-  const getTypeLabel = (type: string, fieldType?: string): string => {
-    // Use field_type if available for more precise identification
-    const typeToUse = fieldType || type;
-    return getBalanceTypeLabel(typeToUse);
-  };
-
   const handleItemClick = (item: AllLogItem) => {
-    navigate(`/money-log/${item.id}`, {
-      state: { flowNo: item.flow_no }
-    });
+    const flowNoQuery = item.flow_no ? `?flowNo=${encodeURIComponent(item.flow_no)}` : '';
+    navigate(`/money-log/${item.id}${flowNoQuery}`);
   };
 
-  // 获取类型标签的颜色样式
-  const getTypeTagStyle = (type: string, fieldType?: string): string => {
-    const typeToCheck = fieldType || type;
-    if (typeToCheck === 'green_power' || typeToCheck === '绿色能量' || typeToCheck === '算力') {
-      return 'bg-emerald-50 text-emerald-600';
-    }
-    if (typeToCheck === 'balance_available' || typeToCheck === 'balance' || typeToCheck === '余额') {
-      return 'bg-blue-50 text-blue-600';
-    }
-    if (typeToCheck === 'withdrawable_money' || typeToCheck === '可提现余额') {
-      return 'bg-indigo-50 text-indigo-600';
-    }
-    if (typeToCheck === 'service_fee_balance' || typeToCheck === '服务费') {
-      return 'bg-amber-50 text-amber-600';
-    }
-    if (typeToCheck === 'score' || typeToCheck === '积分' || typeToCheck === '消费金') {
-      return 'bg-purple-50 text-purple-600';
-    }
-    return 'bg-gray-100 text-gray-500';
-  };
-
-  const renderLogItem = (item: AllLogItem) => {
-    const isGreenPower = item.field_type === 'green_power' || item.type === 'green_power';
-    const isScore = item.type === 'score';
-    // 检查是否为签到记录
-    const isSignRecord = item.sign_record_id !== undefined || item.activity_name !== undefined;
-    const amountVal = Number(item.amount);
-
-    // Determine direction based on balance change if available, otherwise fallback to amount sign
-    let isPositive = amountVal > 0;
-    if (item.before_value !== undefined && item.after_value !== undefined) {
-      isPositive = Number(item.after_value) > Number(item.before_value);
-    } else if (item.before_balance !== undefined && item.after_balance !== undefined) {
-      // Fallback for some API responses that use 'balance' instead of 'value'
-      isPositive = Number(item.after_balance) > Number(item.before_balance);
-    } else if (item.flow_direction) {
-      // Fallback to explicit flow direction if available
-      isPositive = item.flow_direction === 'in';
-    }
-
-    const typeLabel = getTypeLabel(item.type, item.field_type);
-    const typeTagStyle = getTypeTagStyle(item.type, item.field_type);
-
-    return (
-      <div
-        key={`log-${item.id}`}
-        className="bg-white rounded-xl p-4 mb-3 border border-gray-100 shadow-sm relative cursor-pointer active:bg-gray-50 active:scale-[0.99] transition-all"
-        onClick={() => handleItemClick(item)}
-      >
-        <div className="flex justify-between items-start mb-2">
-          {/* 左侧：标题与标签 */}
-          <div className="flex-1 pr-4 min-w-0">
-            <div className="flex items-center gap-2 mb-1.5">
-              {/* Type Category Tag - 统一颜色方案 */}
-              <span className={`text-[10px] px-1.5 py-0.5 rounded flex-shrink-0 font-medium ${typeTagStyle}`}>
-                {typeLabel}
-              </span>
-              <span className="text-sm text-gray-700 font-medium truncate">
-                {isSignRecord ? item.activity_name || '签到奖励' : (item.memo || item.remark || '资金变动')}
-              </span>
-            </div>
-            <div className="text-xs text-gray-400">
-              {isSignRecord ? item.sign_date || formatTime(item.createtime || item.create_time) : formatTime(item.createtime || item.create_time)}
-            </div>
-          </div>
-
-          {/* 右侧：金额和箭头 */}
-          <div className="flex items-center gap-2 flex-shrink-0">
-            <div className="text-right">
-              <div className={`text-base font-bold font-[DINAlternate-Bold,Roboto,sans-serif] ${isGreenPower ? (isPositive ? 'text-emerald-500' : 'text-emerald-600') :
-                isPositive ? 'text-red-600' : 'text-gray-900'
-                }`}>
-                {isPositive ? '+' : ''}{Math.abs(amountVal).toFixed(2)}
-                <span className="text-xs font-normal ml-0.5 text-gray-400">
-                  {isGreenPower ? '算力' : isScore ? '' : '元'}
-                </span>
-              </div>
-            </div>
-            <ChevronRight size={16} className="text-gray-300" />
-          </div>
-        </div>
-
-        {/* 底部：余额变化 */}
-        <div className="mt-2 pt-2 border-t border-gray-50 flex justify-end">
-          <span className="text-xs text-gray-400 flex items-center font-mono">
-            {Number(item.before_value).toFixed(2)}
-            <span className="mx-1.5 text-gray-300">→</span>
-            <span className={isPositive ? (isGreenPower ? 'text-emerald-500' : 'text-red-500') : 'text-gray-600'}>
-              {Number(item.after_value || item.after_balance).toFixed(2)}
-            </span>
-          </span>
-        </div>
-      </div>
-    );
+  const toggleExpandedRow = (logId: number) => {
+    setExpandedRows(prev => ({
+      ...prev,
+      [logId]: !prev[logId]
+    }));
   };
 
   return (
@@ -435,7 +329,15 @@ const AssetHistory: React.FC = () => {
           </div>
         ) : (
           <div className="space-y-3 pb-safe">
-            {allLogs.map(renderLogItem)}
+            {allLogs.map((item) => (
+              <AssetHistoryLogCard
+                key={`log-${item.id}`}
+                item={item}
+                expanded={Boolean(expandedRows[item.id])}
+                onToggleExpand={toggleExpandedRow}
+                onOpenDetail={handleItemClick}
+              />
+            ))}
 
             {/* sentinel for infinite scroll */}
             <div ref={bottomRef} className="h-4" />

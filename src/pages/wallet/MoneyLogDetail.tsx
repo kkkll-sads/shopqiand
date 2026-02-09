@@ -4,7 +4,7 @@
  */
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { FileText, Calendar, Hash, Package, Receipt, TrendingUp, TrendingDown, Copy, Check } from 'lucide-react';
+import { FileText, Calendar, Hash, Package, Receipt, TrendingUp, Copy, Check } from 'lucide-react';
 import PageContainer from '@/layouts/PageContainer';
 import { LoadingSpinner, LazyImage } from '@/components/common';
 import { getMoneyLogDetail, MoneyLogDetailData } from '@/services/wallet';
@@ -18,6 +18,7 @@ import { BizTypeMap, BizType } from '@/constants/statusEnums';
 import { useStateMachine } from '@/hooks/useStateMachine';
 import { LoadingEvent, LoadingState } from '@/types/states';
 import { errorLog } from '@/utils/logger';
+import MoneyLogBreakdownCard from './components/asset/MoneyLogBreakdownCard';
 
 const MoneyLogDetail: React.FC = () => {
   const navigate = useNavigate();
@@ -298,61 +299,8 @@ const MoneyLogDetail: React.FC = () => {
           </div>
         )}
 
-        {/* 详细信息 */}
-        {detail.breakdown && typeof detail.breakdown === 'object' && Object.keys(detail.breakdown).length > 0 && (
-          <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-            <div className="flex items-center gap-2 mb-3">
-              <TrendingDown className="w-5 h-5 text-red-600" />
-              <h2 className="font-semibold text-gray-900 text-base">详细信息</h2>
-            </div>
-            <div className="space-y-2">
-              {Object.entries(detail.breakdown).map(([key, value]) => {
-                const fieldNameMap: Record<string, string> = {
-                  sign_date: '签到日期',
-                  sign_record_id: '签到记录ID',
-                  sign_days: '签到天数',
-                  streak: '连续签到天数',
-                  reward_money: '奖励金额',
-                  reward_score: '奖励积分',
-                  reward_type: '奖励类型',
-                  referrer_reward: '推荐人奖励',
-                  daily_reward: '每日奖励',
-                  total_reward: '累计奖励',
-                  activity_id: '活动ID',
-                  activity_name: '活动名称',
-                  score_consumed: '消费金消耗',
-                  green_power_gained: '获得绿色算力',
-                  exchange_rate: '兑换比例',
-                  recharge_amount: '充值金额',
-                  service_fee: '服务费',
-                  service_fee_rate: '服务费率',
-                  actual_amount: '实际到账',
-                  consign_price: '寄售价格',
-                  consignment_price: '寄售价格',
-                  platform_fee: '平台手续费',
-                  seller_income: '卖家收入',
-                  buyer_paid: '买家支付',
-                  match_price: '撮合价格',
-                  match_quantity: '撮合数量',
-                  commission: '佣金',
-                  order_no: '订单号',
-                  collection_id: '藏品ID',
-                  collection_name: '藏品名称',
-                };
-
-                const displayKey = fieldNameMap[key] || key;
-
-                return (
-                  <div key={key} className="flex justify-between items-center py-1.5 text-sm">
-                    <span className="text-gray-600">{displayKey}</span>
-                    <span className="text-gray-900 font-medium">
-                      {typeof value === 'object' ? JSON.stringify(value) : String(value)}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
+        {detail.breakdown && typeof detail.breakdown === 'object' && (
+          <MoneyLogBreakdownCard breakdown={detail.breakdown} />
         )}
       </div>
     </PageContainer>
