@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { PlayCircle, Radio, Video } from 'lucide-react';
-import { fetchProfile } from '@/services/user';
+import { fetchProfile } from '@/services/user/profile';
 import { fetchLiveVideoConfig } from '@/services/common';
 import { getStoredToken } from '@/services/client';
 import { isSuccess, extractData } from '@/utils/apiHelpers';

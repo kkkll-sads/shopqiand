@@ -16,7 +16,7 @@ import { normalizeAssetUrl } from '@/services/api';
 import { TeamMember } from '@/types';
 import { formatTime } from '@/utils/format';
 import { useNavigate, useParams } from 'react-router-dom';
-import { MemberDetailData } from '@/services/user';
+import { MemberDetailData } from '@/services/user/team';
 import { formatAmount } from '@/utils/format';
 import { LoadingSpinner, EmptyState } from '@/components/common';
 import { useFriendDetail } from './hooks/useFriendDetail';

@@ -11,7 +11,8 @@
  */
 import React, { useEffect } from 'react';
 import { getStoredToken } from '@/services/client';
-import { fetchProfile, fetchRealNameStatus } from '@/services/user';
+import { fetchProfile } from '@/services/user/profile';
+import { fetchRealNameStatus } from '@/services/user/realname';
 import { extractData, isSuccess } from '@/utils/apiHelpers';
 import { debugLog, warnLog, errorLog } from '@/utils/logger';
 

@@ -3,7 +3,7 @@ import {
   checkOldAssetsUnlockStatus,
   unlockOldAssets,
   type CheckOldAssetsUnlockStatusResult,
-} from '@/services/user';
+} from '@/services/user/assets';
 import { getStoredToken } from '@/services/client';
 import { UserInfo } from '@/types';
 import { isSuccess, extractData, extractError } from '@/utils/apiHelpers';
@@ -164,4 +164,3 @@ export const useClaimUnlock = ({ showToast, userInfo, setUserInfo }: UseClaimUnl
 };
 
 export default useClaimUnlock;
-

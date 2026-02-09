@@ -5,7 +5,7 @@
  * 
  * 实际实现已拆分到：
  * - shop.ts: 商品与订单服务
- * - collection.ts: 藏品与艺术家服务
+ * - collection/*: 藏品与艺术家服务
  * - consignment.ts: 寄售与提货服务
  * 
  * @author 树交所前端团队
@@ -102,7 +102,7 @@ export {
     fetchArtistDetail,
     fetchArtistAllWorks,
     fetchArtists,
-} from './collection';
+} from './collection/index';
 
 // 寄售与提货服务
 export {

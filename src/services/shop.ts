@@ -10,7 +10,7 @@
 import { ApiResponse } from './networking';
 import { API_ENDPOINTS } from './config';
 import { authedFetch, getStoredToken } from './client';
-import { fetchDefaultAddress } from './user';
+import { fetchDefaultAddress } from './user/address';
 import { bizLog, debugLog, warnLog, errorLog } from '@/utils/logger';
 import { extractData } from '@/utils/apiHelpers';
 

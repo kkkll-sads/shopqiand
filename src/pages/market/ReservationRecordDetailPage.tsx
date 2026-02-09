@@ -4,7 +4,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Calendar, DollarSign, Zap, Package, CheckCircle2, Clock, XCircle, Wallet, TrendingUp, Sparkles, Award } from 'lucide-react';
-import { fetchReservationDetail, ReservationDetailData } from '@/services/collection';
+import { fetchReservationDetail, ReservationDetailData } from '@/services/collection/trade';
 import { ReservationStatus } from '@/constants/statusEnums';
 import { isSuccess, extractData } from '@/utils/apiHelpers';
 import { LoadingSpinner } from '@/components/common';

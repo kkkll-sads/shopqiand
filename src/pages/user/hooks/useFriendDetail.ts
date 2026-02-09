@@ -4,7 +4,7 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { TeamMember } from '@/types';
-import { fetchMemberDetail, MemberDetailData } from '@/services/user';
+import { fetchMemberDetail, MemberDetailData } from '@/services/user/team';
 import { extractData, extractError } from '@/utils/apiHelpers';
 import { errorLog } from '@/utils/logger';
 import { useNotification } from '@/context/NotificationContext';

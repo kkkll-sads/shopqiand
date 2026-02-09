@@ -3,7 +3,7 @@
  */
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { transferIncomeToPurchase } from '@/services/api';
-import { fetchProfile } from '@/services/user';
+import { fetchProfile } from '@/services/user/profile';
 import { getStoredToken } from '@/services/client';
 import { useNotification } from '@/context/NotificationContext';
 import { isSuccess } from '@/utils/apiHelpers';

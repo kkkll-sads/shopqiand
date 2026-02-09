@@ -12,7 +12,7 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Clock, CreditCard, ShoppingBag, FileText, CheckCircle, XCircle, AlertCircle, ShieldCheck, Copy, Package, Calendar, Receipt, Check } from 'lucide-react';
 import PageContainer from '@/layouts/PageContainer';
 import { LoadingSpinner, LazyImage } from '@/components/common';
-import { getCollectionOrderDetail, CollectionOrderDetailData } from '@/services/collection';
+import { getCollectionOrderDetail, CollectionOrderDetailData } from '@/services/collection/my-collection';
 import { normalizeAssetUrl } from '@/services/config';
 import { isSuccess, extractData, extractError } from '@/utils/apiHelpers';
 import { formatTime, formatAmount } from '@/utils/format';
