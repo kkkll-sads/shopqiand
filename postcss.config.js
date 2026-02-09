@@ -120,9 +120,10 @@ const fixTailwindV4Compat = () => {
 fixTailwindV4Compat.postcss = true;
 
 // 最终阶段再清理一遍高级色彩 @supports（防止被后续插件重新注入）
-const stripAdvancedColorSupports = () => ({
-  postcssPlugin: 'strip-advanced-color-supports',
+const stripLegacyUnsafeRules = () => ({
+  postcssPlugin: 'strip-legacy-unsafe-rules',
   OnceExit(root) {
+    // 1) 移除高级色彩支持块，强制使用前面已生成的 sRGB 兜底变量
     root.walkAtRules('supports', (atRule) => {
       if (
         /color\s*:\s*color-mix\(/i.test(atRule.params) ||
@@ -131,14 +132,24 @@ const stripAdvancedColorSupports = () => ({
         atRule.remove();
       }
     });
+
+    // 2) 移除 Tailwind 生成的 @property，减少旧 WebView 解析负担
+    root.walkAtRules('property', (atRule) => {
+      atRule.remove();
+    });
+
+    // 3) 当前项目不使用 Shadow DOM，移除 :host 重复规则以缩小 CSS
+    root.walkRules((rule) => {
+      if (rule.selector && rule.selector.includes(':host')) {
+        rule.remove();
+      }
+    });
   },
 });
-stripAdvancedColorSupports.postcss = true;
+stripLegacyUnsafeRules.postcss = true;
 
 export default {
   plugins: [
-    // 必须放在最前：其 OnceExit 会在所有插件之后执行，才能清理 Tailwind/LightningCSS 末阶段注入的高级色彩 supports
-    stripAdvancedColorSupports(),
     tailwindcss(),
     // 修复 Tailwind v4 在老版浏览器中的兼容性问题
     fixTailwindV4Compat(),
@@ -155,5 +166,7 @@ export default {
         },
       },
     }),
+    // 必须放在最后：清理上游插件最终注入的高级规则
+    stripLegacyUnsafeRules(),
   ],
 };

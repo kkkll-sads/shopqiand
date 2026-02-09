@@ -8,12 +8,16 @@
     "dev:5657": "vite --port 5657",
     "dev:3000": "vite --port 3000",
     "start": "vite",
-    "build": "vite build",
+    "build": "vite build && npm run sanitize:dist-css",
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
-    "buildcss": "postcss src/styles/*.css --dir postcss/styles"
+    "sanitize:dist-css": "node scripts/sanitize-css.mjs dist/assets",
+    "sanitize:postcss-css": "node scripts/sanitize-css.mjs postcss/styles",
+    "check:css-compat": "node scripts/check-css-compat.mjs",
+    "verify": "npm run test && npm run typecheck && npm run build && npm run check:css-compat",
+    "buildcss": "postcss src/styles/*.css --dir postcss/styles && npm run sanitize:postcss-css"
   },
   "dependencies": {
     "bankcard": "^3.1.5",
