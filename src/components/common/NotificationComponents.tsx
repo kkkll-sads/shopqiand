@@ -9,6 +9,11 @@ interface TopToastProps {
 }
 
 export const TopToast: React.FC<TopToastProps> = ({ toast, onClose, index }) => {
+    const toastStyle = {
+        ['--gns-toast-delay' as string]: `${index * 45}ms`,
+        ['--gns-toast-offset' as string]: `${index * 2}px`,
+    } as React.CSSProperties;
+
     const getIcon = () => {
         switch (toast.type) {
             case 'success':
@@ -46,7 +51,13 @@ export const TopToast: React.FC<TopToastProps> = ({ toast, onClose, index }) => 
     };
 
     return (
-        <div className="gns-toast" onClick={(e) => e.stopPropagation()}>
+        <div
+            className={`gns-toast gns-toast-${toast.type}`}
+            style={toastStyle}
+            role="status"
+            aria-live="polite"
+            onClick={(e) => e.stopPropagation()}
+        >
             <div className="gns-toast-icon">
                 {getIcon()}
             </div>
@@ -54,12 +65,12 @@ export const TopToast: React.FC<TopToastProps> = ({ toast, onClose, index }) => 
                 <div className="gns-toast-title">{toast.title}</div>
                 {toast.description && <div className="gns-toast-desc">{toast.description}</div>}
             </div>
-            <div className="gns-toast-close" onClick={onClose}>
+            <button type="button" className="gns-toast-close" aria-label="关闭提示" onClick={onClose}>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M18 6 6 18" />
                     <path d="m6 6 12 12" />
                 </svg>
-            </div>
+            </button>
         </div>
     );
 };
@@ -72,10 +83,11 @@ interface SnackBarProps {
 
 export const SnackBar: React.FC<SnackBarProps> = ({ item, onClose }) => {
     return (
-        <div className="gns-snackbar" onClick={(e) => e.stopPropagation()}>
+        <div className="gns-snackbar" role="status" aria-live="polite" onClick={(e) => e.stopPropagation()}>
             <span className="gns-snackbar-text">{item.text}</span>
             {item.action && (
                 <button
+                    type="button"
                     className="gns-snackbar-action"
                     onClick={() => {
                         item.action?.onClick();
@@ -97,13 +109,21 @@ interface BlockingDialogProps {
 
 export const BlockingDialog: React.FC<BlockingDialogProps> = ({ item, onClose }) => {
     return (
-        <div className="gns-dialog-overlay" onClick={onClose}>
+        <div className="gns-dialog-overlay" onClick={onClose} role="presentation">
             {/* Prevent close on click inside */}
-            <div className="gns-dialog" onClick={(e) => e.stopPropagation()}>
-                <h3 className="gns-dialog-title">{item.title}</h3>
-                <p className="gns-dialog-desc">{item.description}</p>
+            <div
+                className="gns-dialog"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="gns-dialog-title"
+                aria-describedby="gns-dialog-desc"
+                onClick={(e) => e.stopPropagation()}
+            >
+                <h3 className="gns-dialog-title" id="gns-dialog-title">{item.title}</h3>
+                <p className="gns-dialog-desc" id="gns-dialog-desc">{item.description}</p>
                 <div className="gns-dialog-actions">
                     <button
+                        type="button"
                         className="gns-dialog-btn secondary"
                         onClick={() => {
                             item.onCancel?.();
@@ -113,6 +133,7 @@ export const BlockingDialog: React.FC<BlockingDialogProps> = ({ item, onClose })
                         {item.cancelText || '取消'}
                     </button>
                     <button
+                        type="button"
                         className="gns-dialog-btn primary"
                         onClick={() => {
                             item.onConfirm();
@@ -126,4 +147,3 @@ export const BlockingDialog: React.FC<BlockingDialogProps> = ({ item, onClose })
         </div>
     );
 };
-

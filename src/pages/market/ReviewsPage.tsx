@@ -89,7 +89,7 @@ const ReviewsPage: React.FC = () => {
           });
           loadMachine.send(LoadingEvent.ERROR);
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         errorLog('ReviewsPage', '加载评价失败', err);
         handleError(err, {
           persist: true,

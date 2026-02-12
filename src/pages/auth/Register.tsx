@@ -26,13 +26,20 @@ import { register, RegisterParams, fetchAnnouncements, AnnouncementItem } from '
 import { sendSmsCode } from '@/services/common';
 import { isValidPhone } from '@/utils/validation';
 import { useNotification } from '@/context/NotificationContext';
-import { isSuccess, extractError } from '@/utils/apiHelpers';
+import { isSuccess, extractError, extractErrorFromException } from '@/utils/apiHelpers';
 import PopupAnnouncementModal from '@/components/common/PopupAnnouncementModal';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/stores/authStore';
 import { useStateMachine } from '@/hooks/useStateMachine';
 import { FormEvent, FormState } from '@/types/states';
 import { debugLog, errorLog } from '@/utils/logger';
+
+type CorsErrorLike = {
+  isCorsError?: boolean;
+};
+
+const isCorsErrorLike = (error: unknown): error is CorsErrorLike =>
+  typeof error === 'object' && error !== null && 'isCorsError' in error;
 
 /**
  * Register 注册页面组件
@@ -161,8 +168,8 @@ const Register: React.FC = () => {
           return prev - 1;
         });
       }, 1000);
-    } catch (error: any) {
-      const msg = error.msg || error.message || '发送验证码失败';
+    } catch (error: unknown) {
+      const msg = extractErrorFromException(error, '发送验证码失败');
       showToast('error', '验证码发送失败', msg);
     }
   };
@@ -243,14 +250,13 @@ const Register: React.FC = () => {
         submitMachine.send(FormEvent.SUBMIT_ERROR);
         submitMachine.send(FormEvent.RESET);
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       errorLog('Register', '注册失败', error);
-      if (error.isCorsError) {
-        showToast('error', '网络错误', error.message);
-      } else if (error.message) {
-        showToast('error', '注册失败', error.message);
+      const errorMessage = extractErrorFromException(error, '请检查网络连接后重试');
+      if (isCorsErrorLike(error) && error.isCorsError === true) {
+        showToast('error', '网络错误', errorMessage);
       } else {
-        showToast('error', '注册失败', '请检查网络连接后重试');
+        showToast('error', '注册失败', errorMessage);
       }
       submitMachine.send(FormEvent.SUBMIT_ERROR);
       submitMachine.send(FormEvent.RESET);

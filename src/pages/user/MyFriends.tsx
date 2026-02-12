@@ -12,7 +12,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { UserPlus, Loader2 } from 'lucide-react';
 import PageContainer from '@/layouts/PageContainer';
 import { LoadingSpinner, EmptyState, ListItem } from '@/components/common';
-import { fetchTeamMembers, normalizeAssetUrl } from '@/services';
+import { fetchTeamMembers, fetchTeamOverview, normalizeAssetUrl, type TeamOverviewData } from '@/services';
 import { TeamMember } from '@/types';
 import { formatTime } from '@/utils/format';
 import { extractData, extractError } from '@/utils/apiHelpers';
@@ -23,12 +23,23 @@ import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
 
 const PAGE_SIZE = 10;
 
+const extractMobileLast4 = (mobile: string | null | undefined): string => {
+  if (!mobile) return '';
+  const digits = mobile.replace(/\D/g, '');
+  if (digits.length >= 4) {
+    return digits.slice(-4);
+  }
+  const matched = mobile.match(/(\d{4})$/);
+  return matched?.[1] || '';
+};
+
 /**
  * MyFriends 我的好友页面组件
  */
 const MyFriends: React.FC = () => {
   const navigate = useNavigate();
   const [friends, setFriends] = useState<TeamMember[]>([]);
+  const [overview, setOverview] = useState<TeamOverviewData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -83,6 +94,20 @@ const MyFriends: React.FC = () => {
 
   const bottomRef = useInfiniteScroll(handleLoadMore, hasMore, loading || loadingMore);
 
+  const loadOverview = useCallback(async () => {
+    try {
+      const response = await fetchTeamOverview();
+      const data = extractData(response) as TeamOverviewData | null;
+      if (data) {
+        setOverview(data);
+      } else {
+        setOverview(null);
+      }
+    } catch {
+      setOverview(null);
+    }
+  }, []);
+
   // 加载好友列表
   const loadTeamMembers = useCallback(async (pageNum: number, append: boolean = false) => {
     try {
@@ -134,6 +159,10 @@ const MyFriends: React.FC = () => {
       // 状态机已处理成功/失败
     }
   }, [activeTab]);
+
+  useEffect(() => {
+    void loadOverview();
+  }, [loadOverview]);
 
 
 
@@ -206,6 +235,27 @@ const MyFriends: React.FC = () => {
           onClick={() => navigate('/invite-friends')}
         />
 
+        {overview && (
+          <div className="grid grid-cols-4 gap-2 mt-4 mb-2">
+            <div className="bg-white rounded-lg p-2.5 border border-gray-100 text-center">
+              <div className="text-xs text-gray-400">团队总数</div>
+              <div className="text-base font-bold text-gray-900">{overview.team_total ?? 0}</div>
+            </div>
+            <div className="bg-white rounded-lg p-2.5 border border-gray-100 text-center">
+              <div className="text-xs text-gray-400">直推</div>
+              <div className="text-base font-bold text-gray-900">{overview.level1_count ?? 0}</div>
+            </div>
+            <div className="bg-white rounded-lg p-2.5 border border-gray-100 text-center">
+              <div className="text-xs text-gray-400">间推</div>
+              <div className="text-base font-bold text-gray-900">{overview.level2_count ?? 0}</div>
+            </div>
+            <div className="bg-white rounded-lg p-2.5 border border-gray-100 text-center">
+              <div className="text-xs text-gray-400">今日新增</div>
+              <div className="text-base font-bold text-gray-900">{overview.today_register ?? 0}</div>
+            </div>
+          </div>
+        )}
+
         {/* Tab 切换 */}
         <div className="flex items-center justify-center mt-4 mb-2">
           <div className="flex bg-gray-100 p-1 rounded-lg">
@@ -255,6 +305,7 @@ const MyFriends: React.FC = () => {
             {friends.map((friend, index) => {
               // 生成唯一的key
               const key = `${friend.id}-${index}-${activeTab}`;
+              const mobileLast4 = extractMobileLast4(friend.mobile);
               return (
                 <div
                   key={key}
@@ -276,6 +327,11 @@ const MyFriends: React.FC = () => {
                     <div className="text-sm font-medium text-gray-800">
                       {friend.username || friend.nickname || '用户'}
                     </div>
+                    {mobileLast4 && (
+                      <div className="text-xs text-gray-400">
+                        号码后四位: {mobileLast4}
+                      </div>
+                    )}
                     <div className="text-xs text-gray-400">
                       加入时间: {formatDate(friend)}
                     </div>
@@ -314,4 +370,3 @@ const MyFriends: React.FC = () => {
 };
 
 export default MyFriends;
-

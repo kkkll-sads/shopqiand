@@ -2,10 +2,17 @@
  * MyCollectionDetail - 藏品详情页面
  * 已迁移: 使用 React Router 导航
  */
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ChevronLeft, Share2, Copy, Shield, Fingerprint, Award, ExternalLink, ArrowRightLeft, Store, X, Cpu, FileText } from 'lucide-react';
-import { MyCollectionItem, fetchProfile, fetchRealNameStatus, fetchUserCollectionDetail, getConsignmentCheck, consignCollectionItem, computeConsignmentPrice, getMyCollection, normalizeAssetUrl, toMining } from '@/services';
+import { Shield } from 'lucide-react';
+import {
+  MyCollectionItem,
+  fetchProfile,
+  fetchRealNameStatus,
+  fetchUserCollectionDetail,
+  getConsignmentCheck,
+  toMining,
+} from '@/services';
 import { getStoredToken } from '@/services/client';
 import { UserInfo } from '@/types';
 import { useNotification } from '@/context/NotificationContext';
@@ -15,654 +22,280 @@ import { ConsignmentStatus } from '@/constants/statusEnums';
 import { useAppStore } from '@/stores/appStore';
 import { errorLog } from '@/utils/logger';
 import { copyToClipboard } from '@/utils/clipboard';
+import ConsignmentModal from './my-collection-detail/ConsignmentModal';
+import MyCollectionBottomActions from './my-collection-detail/components/MyCollectionBottomActions';
+import MyCollectionCertificateCard from './my-collection-detail/components/MyCollectionCertificateCard';
+import MyCollectionDetailHeader from './my-collection-detail/components/MyCollectionDetailHeader';
 
 interface MyCollectionDetailProps {
-    item?: MyCollectionItem | null;
-    onSetSelectedItem?: (item: MyCollectionItem) => void;
+  item?: MyCollectionItem | null;
+  onSetSelectedItem?: (item: MyCollectionItem) => void;
 }
 
-const MyCollectionDetail: React.FC<MyCollectionDetailProps> = ({ item: initialItem, onSetSelectedItem }) => {
-    const navigate = useNavigate();
-    const { id } = useParams<{ id: string }>();
-    const clearListCache = useAppStore((state) => state.clearListCache);
-    const { selectedCollectionItem, setSelectedCollectionItem } = useAppStore();
-    const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
-    // 优先使用传入的 item，其次使用 store 中的 selectedCollectionItem
-    const [item, setItem] = useState<any>(initialItem || selectedCollectionItem || null);
-    const { showToast, showDialog } = useNotification();
-    const [loading, setLoading] = useState(false);
-    const [actionLoading, setActionLoading] = useState(false);
+const MyCollectionDetail: React.FC<MyCollectionDetailProps> = ({ item: initialItem }) => {
+  const navigate = useNavigate();
+  const { id } = useParams<{ id: string }>();
+  const clearListCache = useAppStore((state) => state.clearListCache);
+  const selectedCollectionItem = useAppStore((state) => state.selectedCollectionItem);
 
-    // 可靠的复制函数
-    const handleCopy = async (text: string, successMsg: string = '复制成功') => {
-        const success = await copyToClipboard(text);
-        if (success) {
-            showToast('success', successMsg);
-        } else {
-            showToast('error', '复制失败，请长按手动复制');
+  const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
+  const [item, setItem] = useState<any>(initialItem || selectedCollectionItem || null);
+  const { showToast, showDialog } = useNotification();
+  const [loading, setLoading] = useState(false);
+  const [actionLoading, setActionLoading] = useState(false);
+
+  const [showConsignmentModal, setShowConsignmentModal] = useState(false);
+  const [consignmentCheckData, setConsignmentCheckData] = useState<any>(null);
+  const [consignmentTicketCount, setConsignmentTicketCount] = useState(0);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [hasConvertedToMining, setHasConvertedToMining] = useState(false);
+
+  const handleCopy = async (text: string, successMsg: string = '复制成功') => {
+    const success = await copyToClipboard(text);
+    if (success) {
+      showToast('success', successMsg);
+    } else {
+      showToast('error', '复制失败，请长按手动复制');
+    }
+  };
+
+  useEffect(() => {
+    const loadData = async () => {
+      const token = getStoredToken();
+      if (!token) {
+        return;
+      }
+
+      try {
+        setLoading(true);
+        const userCollectionId =
+          initialItem?.user_collection_id ||
+          initialItem?.id ||
+          (id ? Number(id) : undefined);
+
+        if (!userCollectionId) {
+          return;
         }
+
+        const detailRes = await fetchUserCollectionDetail(userCollectionId);
+        const detailData = extractData(detailRes);
+        if (detailData) {
+          setItem(detailData);
+        }
+
+        const profileRes = await fetchProfile(token);
+        const profileData = extractData(profileRes);
+        let currentInfo = profileData?.userInfo || null;
+
+        const realNameRes = await fetchRealNameStatus(token);
+        const realNameData = extractData(realNameRes);
+        if (realNameData) {
+          if (currentInfo) {
+            currentInfo = {
+              ...currentInfo,
+              real_name: realNameData.real_name || currentInfo.real_name,
+              real_name_status: realNameData.real_name_status,
+            };
+          } else {
+            currentInfo = {
+              real_name: realNameData.real_name,
+              real_name_status: realNameData.real_name_status,
+            } as any;
+          }
+        }
+
+        if (currentInfo) {
+          setUserInfo(currentInfo);
+          setConsignmentTicketCount(parseInt(String(currentInfo.consignment_coupon || 0)) || 0);
+        }
+      } catch (error) {
+        errorLog('MyCollectionDetail', '加载数据失败', error);
+      } finally {
+        setLoading(false);
+      }
     };
 
-    const [showConsignmentModal, setShowConsignmentModal] = useState(false);
-    const [consignmentCheckData, setConsignmentCheckData] = useState<any>(null);
-    const [consignmentTicketCount, setConsignmentTicketCount] = useState(0);
-    const [actionError, setActionError] = useState<string | null>(null);
-    const [hasConvertedToMining, setHasConvertedToMining] = useState(false);
+    void loadData();
+  }, [initialItem, id]);
 
-    useEffect(() => {
-        const loadData = async () => {
-            const token = getStoredToken();
-            if (!token) {
-                return;
-            }
+  useEffect(() => {
+    if (!showConsignmentModal) return;
 
-            try {
-                setLoading(true);
-                const userCollectionId = initialItem?.user_collection_id || initialItem?.id || (id ? Number(id) : undefined);
+    const loadCheck = async () => {
+      const token = getStoredToken();
+      if (!token) return;
 
-                if (!userCollectionId) {
-                    return;
-                }
+      try {
+        const collectionId =
+          item?.user_collection_id ||
+          item?.id ||
+          initialItem?.user_collection_id ||
+          initialItem?.id ||
+          (id ? Number(id) : undefined);
 
-                const detailRes = await fetchUserCollectionDetail(userCollectionId);
-                const detailData = extractData(detailRes);
-                if (detailData) {
-                    setItem(detailData);
-                }
+        if (!collectionId) {
+          setActionError('无法获取藏品ID');
+          return;
+        }
 
-                const profileRes = await fetchProfile(token);
-                const profileData = extractData(profileRes);
-                let currentInfo = profileData?.userInfo || null;
+        const res = await getConsignmentCheck({ user_collection_id: collectionId, token });
+        const checkData = extractData(res);
+        setConsignmentCheckData(checkData ?? null);
+      } catch (error) {
+        errorLog('MyCollectionDetail', '加载寄售检查失败', error);
+        setActionError('加载寄售检查失败');
+      }
+    };
 
-                const realNameRes = await fetchRealNameStatus(token);
-                const realNameData = extractData(realNameRes);
-                if (realNameData) {
-                    if (currentInfo) {
-                        currentInfo = {
-                            ...currentInfo,
-                            real_name: realNameData.real_name || currentInfo.real_name,
-                            real_name_status: realNameData.real_name_status
-                        };
-                    } else {
-                        currentInfo = {
-                            real_name: realNameData.real_name,
-                            real_name_status: realNameData.real_name_status
-                        } as any;
-                    }
-                }
+    void loadCheck();
+  }, [showConsignmentModal, item, initialItem, id]);
 
-                if (currentInfo) {
-                    setUserInfo(currentInfo);
-                    setConsignmentTicketCount(parseInt(String(currentInfo.consignment_coupon || 0)) || 0);
-                }
-            } catch (e) {
-                errorLog('MyCollectionDetail', '加载数据失败', e);
-            } finally {
-                setLoading(false);
-            }
-        };
-        loadData();
-    }, [initialItem, id]);
-
-    useEffect(() => {
-        if (!showConsignmentModal) return;
-
-        const loadCheck = async () => {
-            const token = getStoredToken();
-            if (!token) return;
-
-            try {
-                const collectionId = item?.user_collection_id || item?.id || initialItem?.user_collection_id || initialItem?.id || (id ? Number(id) : undefined);
-
-                if (!collectionId) {
-                    setActionError('无法获取藏品ID');
-                    return;
-                }
-
-                const res = await getConsignmentCheck({ user_collection_id: collectionId, token });
-                // 使用 extractData 提取数据，支持 code === 0 或 code === 1
-                const checkData = extractData(res);
-                setConsignmentCheckData(checkData ?? null);
-            } catch (e) {
-                errorLog('MyCollectionDetail', '加载寄售检查失败', e);
-                setActionError('加载寄售检查失败');
-            }
-        };
-
-        loadCheck();
-    }, [showConsignmentModal, item, initialItem, id]);
-
-    if (loading) {
-        return (
-            <div className="min-h-screen bg-[#FDFBF7] flex items-center justify-center">
-                <LoadingSpinner />
-            </div>
-        );
-    }
-
-    if (!item) {
-        return (
-            <div className="min-h-screen bg-[#FDFBF7] flex flex-col items-center justify-center text-gray-400 gap-4">
-                <Shield size={48} className="opacity-20" />
-                <div>无法加载藏品信息</div>
-                <button onClick={() => navigate(-1)} className="text-amber-600 font-bold">返回</button>
-            </div>
-        );
-    }
-
-    const title = item.name || item.item_title || item.title || '未命名藏品';
-    const buyPrice = parseFloat(item.buy_price || item.price || '0');
-    const marketPrice = parseFloat(item.market_price || '0');
-    const currentValuation = buyPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-
-    let yieldRateStr = '0.0';
-    if (buyPrice > 0) {
-        yieldRateStr = ((marketPrice - buyPrice) / buyPrice * 100).toFixed(1);
-    }
-    const yieldRateVal = parseFloat(yieldRateStr);
-    const isPositive = yieldRateVal >= 0;
-    const yieldText = (isPositive ? '+' : '') + yieldRateStr + '%';
-
+  if (loading) {
     return (
-        <div className="min-h-screen bg-[#FDFBF7] text-gray-900 font-serif pb-24 relative overflow-hidden" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 6rem)' }}>
-            <div className="absolute inset-0 opacity-[0.03] pointer-events-none bg-[url('https://www.transparenttextures.com/patterns/cream-paper.png')]"></div>
-
-            <header className="sticky top-0 z-40 bg-[#FDFBF7]/90 backdrop-blur-sm px-4 py-4 flex justify-between items-center border-b border-amber-900/5">
-                <button onClick={() => navigate(-1)} className="p-2 hover:bg-black/5 rounded-full transition-colors text-gray-800">
-                    <ChevronLeft size={24} />
-                </button>
-                <h1 className="text-lg font-bold text-gray-900">数字资产持有凭证</h1>
-                <div className="w-10"></div>
-            </header>
-
-            <div className="p-5">
-                <div className="bg-white relative shadow-2xl shadow-gray-200/50 rounded-sm overflow-hidden border-[6px] border-double border-amber-900/10 p-6 md:p-8">
-                    <div className="absolute inset-0 flex items-center justify-center opacity-[0.03] pointer-events-none">
-                        <Shield size={200} />
-                    </div>
-
-                    <div className="text-center mb-6">
-                        <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-amber-50 text-amber-900 mb-3 border border-amber-100">
-                            <Award size={24} />
-                        </div>
-                        <h2 className="text-2xl font-bold text-gray-900 tracking-wide mb-1">数字资产持有凭证</h2>
-                        <div className="text-[10px] text-gray-400 uppercase tracking-[0.2em]">Digital Asset Certificate</div>
-                    </div>
-
-                    <div className="space-y-6 relative z-10 font-sans">
-                        <div className="text-center py-6 mb-2 relative">
-                            <div className="absolute inset-0 opacity-[0.08] pointer-events-none rounded-lg border border-amber-900/5 overflow-hidden"
-                                style={{
-                                    backgroundImage: `repeating-linear-gradient(45deg, transparent, transparent 10px, #C5A572 10px, #C5A572 11px),
-                                    repeating-linear-gradient(-45deg, transparent, transparent 10px, #C5A572 10px, #C5A572 11px)`
-                                }}>
-                            </div>
-
-                            <div
-                                className="text-sm text-gray-600 font-[courier,monospace] font-bold tracking-widest mb-3 relative z-10 drop-shadow-sm cursor-pointer hover:text-amber-600 transition-colors flex items-center justify-center gap-2"
-                                onClick={() => {
-                                    const assetCode = item.asset_code || `37-DATA-****-${String(item.id || 8821).padStart(4, '0')}`;
-                                    handleCopy(assetCode, '确权编号已复制');
-                                }}
-                            >
-                                <span>确权编号：{item.asset_code || `37-DATA-****-${String(item.id || 8821).padStart(4, '0')}`}</span>
-                                <Copy size={12} className="text-gray-400" />
-                            </div>
-
-                            <h3 className="text-2xl font-extrabold text-gray-700 mb-3 font-serif tracking-tight leading-tight relative z-10 drop-shadow-sm px-2">
-                                【{title}】
-                            </h3>
-
-                            <div className="absolute -right-4 -bottom-6 w-32 h-32 opacity-[0.85] -rotate-12 mix-blend-multiply z-20 pointer-events-none filter contrast-125 brightness-90">
-                                <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
-                                    <defs>
-                                        <path id="textCircleTop" d="M 25,100 A 75,75 0 1,1 175,100" fill="none" />
-                                        <filter id="roughPaper">
-                                            <feTurbulence type="fractalNoise" baseFrequency="0.08" numOctaves="3" result="noise" />
-                                            <feDisplacementMap in="SourceGraphic" in2="noise" scale="3" />
-                                        </filter>
-                                    </defs>
-                                    <g filter="url(#roughPaper)" fill="#B22222" stroke="none">
-                                        <circle cx="100" cy="100" r="96" fill="none" stroke="#B22222" strokeWidth="3" />
-                                        <circle cx="100" cy="100" r="92" fill="none" stroke="#B22222" strokeWidth="1" />
-                                        <text fontSize="14" fontWeight="bold" fontFamily="SimSun, serif" fill="#B22222">
-                                            <textPath href="#textCircleTop" startOffset="50%" textAnchor="middle" spacing="auto">
-                                                树交所数字资产登记结算中心
-                                            </textPath>
-                                        </text>
-                                        <text x="100" y="100" fontSize="40" textAnchor="middle" dominantBaseline="middle" fill="#B22222">★</text>
-                                        <text x="100" y="135" fontSize="18" fontWeight="bold" fontFamily="SimHei, sans-serif" textAnchor="middle" fill="#B22222">
-                                            确权专用章
-                                        </text>
-                                        <text x="100" y="155" fontSize="10" fontFamily="Arial, sans-serif" fontWeight="bold" textAnchor="middle" fill="#B22222" letterSpacing="1">
-                                            37010299821
-                                        </text>
-                                    </g>
-                                </svg>
-                            </div>
-                        </div>
-
-                        <div className="bg-gray-50 p-4 rounded-lg border border-gray-100 mb-6">
-                            <div className="flex items-start gap-3 mb-3">
-                                <Shield size={16} className="text-amber-600 shrink-0 mt-0.5" />
-                                <div>
-                                    <label className="block text-xs font-bold text-gray-400 uppercase mb-0.5">Asset Anchor / 资产锚定</label>
-                                    <div className="text-sm font-medium text-gray-600">
-                                        涉及农户/合作社：{item.farmer_info || '暂无数据'}
-                                        <span className="inline-block ml-1 text-[10px] text-amber-600 border border-amber-200 px-1 rounded bg-white">隐私保护</span>
-                                    </div>
-                                    <div className="text-xs font-medium text-gray-600 mt-1">
-                                        核心企业：{item.core_enterprise || '暂无数据'}
-                                    </div>
-                                    <div className="text-[10px] text-gray-400 mt-1 leading-tight">
-                                        * 根据《数据安全法》及商业保密协议，底层隐私信息已做Hash脱敏处理，仅持有人可申请解密查看。
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* 交易场次与合约信息 */}
-                        <div className="bg-gray-50 p-4 rounded-lg border border-gray-100 mb-6">
-                            <div className="flex items-start gap-3 mb-3">
-                                <FileText size={16} className="text-amber-600 shrink-0 mt-0.5" />
-                                <div className="flex-1 min-w-0">
-                                    <label className="block text-xs font-bold text-gray-400 uppercase mb-2">Contract & Session / 合约与场次</label>
-
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-y-3 gap-x-4">
-                                        {item.contract_no && (
-                                            <div>
-                                                <div className="text-[10px] text-gray-400">合约编号</div>
-                                                <div className="text-sm font-medium text-gray-700 font-mono break-all">{item.contract_no}</div>
-                                            </div>
-                                        )}
-
-                                        {(item.session_title) && (
-                                            <div>
-                                                <div className="text-[10px] text-gray-400">所属场次</div>
-                                                <div className="text-sm font-medium text-gray-700">{item.session_title}</div>
-                                            </div>
-                                        )}
-
-                                        {(item.session_start_time || item.session_end_time) && (
-                                            <div>
-                                                <div className="text-[10px] text-gray-400">交易时段</div>
-                                                <div className="text-sm font-medium text-gray-700">
-                                                    {item.session_start_time} - {item.session_end_time}
-                                                    {item.is_trading_time !== undefined && (
-                                                        <span className={`ml-2 text-[10px] px-1.5 py-0.5 rounded ${item.is_trading_time ? 'bg-green-100 text-green-700' : 'bg-red-50 text-red-500'}`}>
-                                                            {item.is_trading_time ? '交易中' : '非交易时段'}
-                                                        </span>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        )}
-
-                                        {item.mining_status !== undefined && (
-                                            <div>
-                                                <div className="text-[10px] text-gray-400">产出状态</div>
-                                                <div className="flex items-center gap-2">
-                                                    <span className={`px-2 py-0.5 rounded text-xs font-medium ${item.mining_status === 1 ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
-                                                        {item.mining_status === 1 ? '正在运行' : '未激活'}
-                                                    </span>
-                                                    {item.mining_start_time && (
-                                                        <span className="text-[10px] text-gray-400">({item.mining_start_time} 开始)</span>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        )}
-
-                                        {item.last_dividend_time && (
-                                            <div>
-                                                <div className="text-[10px] text-gray-400">上次分红</div>
-                                                <div className="text-sm font-medium text-gray-700 font-mono">{item.last_dividend_time}</div>
-                                            </div>
-                                        )}
-
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div>
-                            <label className="block text-xs font-bold text-gray-400 uppercase mb-2 tracking-wider">Blockchain Fingerprint / 存证指纹</label>
-                            <div className="bg-gray-900 text-green-500 font-mono text-[10px] p-3 rounded-t break-all leading-relaxed relative group">
-                                <div className="flex items-center gap-2 mb-1 text-gray-500 font-sans font-bold">
-                                    <Fingerprint size={12} />
-                                    <span className="uppercase">TREE-CHAIN CONSORTIUM</span>
-                                </div>
-                                {item.hash || item.fingerprint || item.md5 || item.tx_hash || '0x7d9a8b1c4e2f3a6b9c8d7e6f5a4b3c2d1e0f9a8b7c6d5e4f3a2b1c0d9e8f7a6'}
-                            </div>
-                            <div className="bg-gray-800 rounded-b p-2 flex gap-2 border-t border-gray-700">
-                                <button
-                                    onClick={() => {
-                                        const hashValue = item.hash || item.fingerprint || item.md5 || item.tx_hash || '0x7d9a8b1c4e2f3a6b9c8d7e6f5a4b3c2d1e0f9a8b7c6d5e4f3a2b1c0d9e8f7a6';
-                                        handleCopy(hashValue, '已复制存证哈希');
-                                    }}
-                                    className="flex-1 bg-gray-700 hover:bg-gray-600 text-white text-[10px] py-1.5 rounded flex items-center justify-center gap-1 transition-colors"
-                                >
-                                    <Copy size={10} />
-                                    复制Hash
-                                </button>
-                                <button
-                                    onClick={() => {
-                                        const hashValue = item.hash || item.fingerprint || item.md5 || item.tx_hash || '';
-                                        if (!hashValue) {
-                                            showToast('error', '无法获取存证哈希');
-                                            return;
-                                        }
-                                        navigate(`/search?code=${hashValue}`);
-                                    }}
-                                    className="flex-1 bg-gray-700 hover:bg-gray-600 text-white text-[10px] py-1.5 rounded flex items-center justify-center gap-1 transition-colors"
-                                >
-                                    <ExternalLink size={10} />
-                                    去查证
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            {(() => {
-                const consignmentStatus = Number(item.consignment_status);
-                const statusText = item.status_text || '';
-                const consignmentStatusText = item.consignment_status_text || '';
-
-                const isSold = consignmentStatus === 2 ||
-                    consignmentStatus === ConsignmentStatus.SOLD ||
-                    consignmentStatusText === '已售出' ||
-                    consignmentStatusText.includes('已售出') ||
-                    statusText === '已售出' ||
-                    statusText.includes('已售出');
-
-                const isMining = item.mining_status === 1 || hasConvertedToMining;
-
-                return !isSold && !isMining;
-            })() && (
-                    <div className="fixed bottom-0 left-0 right-0 p-4 pb-safe bg-white/90 backdrop-blur-md border-t border-gray-100 z-[9999] pointer-events-auto">
-                        <div className="flex justify-between items-center mb-3 px-1">
-                            <span className="text-sm text-gray-500 font-medium">当前估值</span>
-                            <div className="text-right">
-                                <span className="text-lg font-bold text-gray-700 font-mono">¥{currentValuation}</span>
-                            </div>
-                        </div>
-
-                        <div className="flex items-center justify-between gap-3">
-                            <button
-                                onClick={() => {
-                                    showDialog({
-                                        title: '升级为共识验证节点',
-                                        description: '升级后每日获得Gas费分红，升级后将无法再进行寄售。确认升级吗？',
-                                        confirmText: '确认升级',
-                                        cancelText: '取消',
-                                        onConfirm: async () => {
-                                            const token = getStoredToken();
-                                            if (!token) {
-                                                showToast('warning', '请登录');
-                                                return;
-                                            }
-                                            const collectionId = item?.user_collection_id || item?.id || initialItem?.user_collection_id || initialItem?.id || (id ? Number(id) : undefined);
-                                            if (!collectionId) {
-                                                showToast('error', '无法获取藏品ID');
-                                                return;
-                                            }
-
-                                            setActionLoading(true);
-                                            try {
-                                                const res = await toMining({ user_collection_id: Number(collectionId), token });
-                                                if (isSuccess(res)) {
-                                                    showToast('success', '升级成功', '您的资产已升级为验证节点，参与全网数据确权，每日获得Gas费分红。');
-                                                    setHasConvertedToMining(true);
-                                                    clearListCache('myCollection'); // 清除我的藏品列表缓存
-                                                    setTimeout(() => navigate(-1), 1000);
-                                                } else {
-                                                    showToast('error', '转换失败', res.msg || '操作失败');
-                                                }
-                                            } catch (err: any) {
-                                                showToast('error', '转换失败', err.message || '系统错误');
-                                            } finally {
-                                                setActionLoading(false);
-                                            }
-                                        }
-                                    });
-                                }}
-                                className="flex-1 bg-gray-500 text-white hover:bg-gray-600 transition-colors py-3.5 rounded-lg font-bold flex items-center justify-center gap-2 shadow-lg shadow-gray-500/20 active:scale-[0.98] pointer-events-auto touch-manipulation">
-                                <Cpu size={18} />
-                                共识验证节点
-                            </button>
-                            <button
-                                onClick={() => {
-                                    setShowConsignmentModal(true);
-                                    setActionError(null);
-                                }}
-                                className="flex-1 bg-[#8B0000] text-amber-100 hover:bg-[#A00000] transition-colors py-3.5 rounded-lg font-bold flex items-center justify-center gap-2 shadow-lg shadow-red-900/20 active:scale-[0.98] pointer-events-auto touch-manipulation">
-                                <Store size={18} />
-                                立即上架寄售
-                            </button>
-                        </div>
-                    </div>
-                )}
-
-            {showConsignmentModal && (
-                <div
-                    className="fixed inset-0 z-[99999] bg-black/70 flex items-center justify-center p-4 backdrop-blur-sm"
-                    onClick={() => setShowConsignmentModal(false)}
-                >
-                    <div
-                        className="bg-[#F9F9F9] rounded-xl overflow-hidden max-w-sm w-full relative shadow-2xl animate-in zoom-in-95 duration-200"
-                        onClick={(e) => e.stopPropagation()}
-                    >
-                        <div className="bg-white px-5 py-4 flex justify-between items-center border-b border-gray-100">
-                            <div className="text-base font-bold text-gray-900">资产挂牌委托</div>
-                            <button
-                                type="button"
-                                className="p-1 text-gray-400 hover:text-gray-600 active:scale-95 transition-transform"
-                                onClick={() => setShowConsignmentModal(false)}
-                            >
-                                <X size={20} />
-                            </button>
-                        </div>
-
-                        <div className="p-5 space-y-4">
-                            <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-                                <div className="flex gap-3 mb-3">
-                                    <div className="w-14 h-14 bg-gray-50 rounded-lg overflow-hidden flex-shrink-0 border border-gray-100">
-                                        <img
-                                            src={normalizeAssetUrl(item.item_image || item.image || '')}
-                                            alt={item.item_title || item.title}
-                                            className="w-full h-full object-cover"
-                                            onError={(e) => {
-                                                (e.target as HTMLImageElement).style.visibility = 'hidden';
-                                            }}
-                                        />
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                        <div className="text-sm font-bold text-gray-900 mb-1 truncate">
-                                            {item.item_title || item.title}
-                                        </div>
-                                        <div className="text-xs text-gray-500 font-mono truncate bg-gray-50 inline-block px-1.5 py-0.5 rounded">
-                                            确权编号：{item.asset_code || item.order_no || 'Pending...'}
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {(() => {
-                                    const check = consignmentCheckData || {};
-                                    // 优先使用 userCollection/detail 接口返回的 appreciation_rate，其次使用 consignmentCheck 返回的
-                                    // buy_price 优先使用 consignmentCheck，其次使用 detail 接口返回的
-                                    const buyPrice = Number(check.buy_price ?? item.buy_price ?? item.price ?? 0);
-                                    const appreciationRate = Number(item.appreciation_rate ?? check.appreciation_rate ?? 0);
-                                    // 计算寄售价格：buy_price * (1 + appreciation_rate)
-                                    const consignmentPriceVal = buyPrice > 0 
-                                      ? buyPrice * (1 + appreciationRate) 
-                                      : 0;
-                                    // is_old_asset_package 优先使用 item（来自 userCollection/detail），其次使用 check
-                                    const isOldAsset = !!(item.is_old_asset_package ?? check.is_old_asset_package);
-
-                                    return (
-                                        <div className="pt-3 border-t border-dashed border-gray-100 space-y-2">
-                                            {isOldAsset && (
-                                                <div className="flex items-center gap-1.5 px-2 py-1 bg-amber-50 rounded-lg border border-amber-200 w-fit mb-2">
-                                                    <span className="text-xs font-medium text-amber-700">旧资产</span>
-                                                </div>
-                                            )}
-                                            <div className="grid grid-cols-3 gap-2">
-                                                <div className="flex flex-col">
-                                                    <span className="text-xs text-gray-400 mb-1">买入价</span>
-                                                    <span className="text-sm font-bold text-gray-900">¥{buyPrice.toFixed(2)}</span>
-                                                </div>
-                                                <div className="flex flex-col">
-                                                    <span className="text-xs text-gray-400 mb-1">增值比例</span>
-                                                    <span className={`text-sm font-bold ${appreciationRate >= 0 ? 'text-red-500' : 'text-green-600'}`}>
-                                                        {(appreciationRate >= 0 ? '+' : '') + (appreciationRate * 100).toFixed(1)}%
-                                                    </span>
-                                                </div>
-                                                <div className="flex flex-col">
-                                                    <span className="text-xs text-gray-400 mb-1">预期回款</span>
-                                                    <span className="text-sm font-bold text-gray-900">¥{consignmentPriceVal.toFixed(2)}</span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    );
-                                })()}
-                            </div>
-
-                            {consignmentCheckData && (() => {
-                                const isUnlocked = consignmentCheckData.can_consign === true ||
-                                    consignmentCheckData.unlocked === true ||
-                                    (consignmentCheckData.remaining_seconds && consignmentCheckData.remaining_seconds <= 0);
-
-                                if (!isUnlocked) {
-                                    return (
-                                        <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
-                                            <div className="text-sm text-orange-700 font-medium mb-1">⏰ T+1 解锁倒计时</div>
-                                            <div className="text-xs text-orange-600">
-                                                {consignmentCheckData.remaining_text || '计算中...'}
-                                            </div>
-                                        </div>
-                                    );
-                                }
-                                return (
-                                    <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-                                        <div className="text-sm text-green-700 font-medium">✓ 已解锁，可申请寄售</div>
-                                    </div>
-                                );
-                            })()}
-
-                            {(() => {
-                                const check = consignmentCheckData || {};
-                                const consignmentPriceVal = computeConsignmentPrice(check) || (() => {
-                                    const buy = Number(check.buy_price ?? item.buy_price ?? item.price ?? 0);
-                                    const rate = Number(check.appreciation_rate ?? 0);
-                                    return buy > 0 ? buy * (1 + rate) : 0;
-                                })();
-                                const serviceFee = consignmentPriceVal * 0.03;
-
-                                return (
-                                    <div className="bg-white rounded-lg p-4 border border-gray-100">
-                                        <div className="text-sm font-bold text-gray-700 mb-3">挂牌成本核算</div>
-
-                                        <div className="flex justify-between items-center mb-3">
-                                            <div>
-                                                <div className="text-sm font-medium text-gray-700">确权技术服务费 (3%)</div>
-                                                <div className="text-xs text-gray-400 mt-0.5">当前余额: ¥{userInfo?.service_fee_balance || '0'}</div>
-                                            </div>
-                                            <div className="text-sm font-bold text-gray-900">{serviceFee.toFixed(2)} 元</div>
-                                        </div>
-
-                                        <div className="w-full h-px bg-gray-50" />
-
-                                        <div className="flex justify-between items-center mt-3">
-                                            <div>
-                                                <div className="text-sm font-medium text-gray-700">资产流转券</div>
-                                                <div className="text-xs text-gray-400 mt-0.5">持有数量: {consignmentTicketCount}张</div>
-                                            </div>
-                                            <div className="text-sm font-bold text-gray-900">{consignmentTicketCount}张</div>
-                                        </div>
-                                    </div>
-                                );
-                            })()}
-
-                            {actionError && (
-                                <div className="text-xs text-red-600 text-center bg-red-50 py-2 rounded-lg">
-                                    {actionError}
-                                </div>
-                            )}
-
-                            <button
-                                onClick={async () => {
-                                    const token = getStoredToken();
-                                    if (!token) {
-                                        showToast('warning', '请登录');
-                                        return;
-                                    }
-
-                                    const isUnlocked = consignmentCheckData?.can_consign === true ||
-                                        consignmentCheckData?.unlocked === true ||
-                                        (consignmentCheckData?.remaining_seconds && consignmentCheckData.remaining_seconds <= 0);
-
-                                    if (!isUnlocked) {
-                                        showToast('warning', '时间未到', '寄售需要满足购买后48小时');
-                                        return;
-                                    }
-
-                                    setActionLoading(true);
-                                    setActionError(null);
-
-                                    try {
-                                        const collectionId = item?.user_collection_id || item?.id || initialItem?.user_collection_id || initialItem?.id || (id ? Number(id) : undefined);
-
-                                        if (!collectionId) {
-                                            setActionError('无法获取藏品ID，请返回重试');
-                                            setActionLoading(false);
-                                            return;
-                                        }
-
-                                        const priceValue = computeConsignmentPrice(consignmentCheckData) || (() => {
-                                            const c = consignmentCheckData || {};
-                                            const buy = Number(c.buy_price ?? item.buy_price ?? item.price ?? 0);
-                                            const rate = Number(c.appreciation_rate ?? 0);
-                                            return buy > 0 ? buy * (1 + rate) : 0;
-                                        })();
-
-                                        const res = await consignCollectionItem({
-                                            user_collection_id: collectionId,
-                                            price: priceValue,
-                                            token,
-                                        });
-
-                                        if (isSuccess(res)) {
-                                            showToast('success', '提交成功', res.msg || '寄售申请已提交');
-                                            setShowConsignmentModal(false);
-                                            clearListCache('myCollection'); // 清除我的藏品列表缓存
-                                            setTimeout(() => navigate(-1), 1000);
-                                        } else {
-                                            const errorMsg = res.msg || res.message || '寄售申请失败';
-                                            setActionError(errorMsg);
-                                            showToast('error', '操作失败', errorMsg);
-                                        }
-                                    } catch (err: any) {
-                                        const errorMsg = err?.msg || err?.message || '寄售申请失败';
-                                        setActionError(errorMsg);
-                                        showToast('error', '提交失败', errorMsg);
-                                    } finally {
-                                        setActionLoading(false);
-                                    }
-                                }}
-                                disabled={actionLoading}
-                                className={`w-full py-3.5 rounded-lg font-bold text-white transition-all ${actionLoading
-                                    ? 'bg-gray-400 cursor-not-allowed'
-                                    : 'bg-gradient-to-r from-[#8B0000] to-[#A00000] hover:shadow-lg active:scale-[0.98]'
-                                    }`}
-                            >
-                                {actionLoading ? '提交中...' : '确认挂牌'}
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
-        </div>
+      <div className="min-h-screen bg-[#FDFBF7] flex items-center justify-center">
+        <LoadingSpinner />
+      </div>
     );
+  }
+
+  if (!item) {
+    return (
+      <div className="min-h-screen bg-[#FDFBF7] flex flex-col items-center justify-center text-gray-400 gap-4">
+        <Shield size={48} className="opacity-20" />
+        <div>无法加载藏品信息</div>
+        <button onClick={() => navigate(-1)} className="text-amber-600 font-bold">
+          返回
+        </button>
+      </div>
+    );
+  }
+
+  const title = item.name || item.item_title || item.title || '未命名藏品';
+  const buyPrice = parseFloat(item.buy_price || item.price || '0');
+  const currentValuation = buyPrice.toLocaleString(undefined, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+
+  const handleConsignmentSuccess = () => {
+    setShowConsignmentModal(false);
+    clearListCache('myCollection');
+    setTimeout(() => navigate(-1), 1000);
+  };
+
+  const consignmentStatus = Number(item.consignment_status);
+  const statusText = item.status_text || '';
+  const consignmentStatusText = item.consignment_status_text || '';
+
+  const isSold =
+    consignmentStatus === 2 ||
+    consignmentStatus === ConsignmentStatus.SOLD ||
+    consignmentStatusText === '已售出' ||
+    consignmentStatusText.includes('已售出') ||
+    statusText === '已售出' ||
+    statusText.includes('已售出');
+
+  const isMining = item.mining_status === 1 || hasConvertedToMining;
+  const showBottomActions = !isSold && !isMining;
+
+  const handleSearchHash = (hash: string) => {
+    if (!hash) {
+      showToast('error', '无法获取存证哈希');
+      return;
+    }
+    navigate(`/search?code=${hash}`);
+  };
+
+  const handleUpgradeNode = () => {
+    showDialog({
+      title: '升级为共识验证节点',
+      description: '升级后每日获得Gas费分红，升级后将无法再进行寄售。确认升级吗？',
+      confirmText: '确认升级',
+      cancelText: '取消',
+      onConfirm: async () => {
+        const token = getStoredToken();
+        if (!token) {
+          showToast('warning', '请登录');
+          return;
+        }
+
+        const collectionId =
+          item?.user_collection_id ||
+          item?.id ||
+          initialItem?.user_collection_id ||
+          initialItem?.id ||
+          (id ? Number(id) : undefined);
+
+        if (!collectionId) {
+          showToast('error', '无法获取藏品ID');
+          return;
+        }
+
+        setActionLoading(true);
+        try {
+          const res = await toMining({ user_collection_id: Number(collectionId), token });
+          if (isSuccess(res)) {
+            showToast('success', '升级成功', '您的资产已升级为验证节点，参与全网数据确权，每日获得Gas费分红。');
+            setHasConvertedToMining(true);
+            clearListCache('myCollection');
+            setTimeout(() => navigate(-1), 1000);
+          } else {
+            showToast('error', '转换失败', res.msg || '操作失败');
+          }
+        } catch (error: any) {
+          showToast('error', '转换失败', error.message || '系统错误');
+        } finally {
+          setActionLoading(false);
+        }
+      },
+    });
+  };
+
+  return (
+    <div
+      className="min-h-screen bg-[#FDFBF7] text-gray-900 font-serif pb-24 relative overflow-hidden"
+      style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 6rem)' }}
+    >
+      <div className="absolute inset-0 opacity-[0.03] pointer-events-none bg-[url('https://www.transparenttextures.com/patterns/cream-paper.png')]" />
+
+      <MyCollectionDetailHeader onBack={() => navigate(-1)} />
+
+      <MyCollectionCertificateCard
+        item={item}
+        title={title}
+        onCopy={handleCopy}
+        onSearchHash={handleSearchHash}
+      />
+
+      {showBottomActions && (
+        <MyCollectionBottomActions
+          currentValuation={currentValuation}
+          onUpgradeNode={handleUpgradeNode}
+          onConsignment={() => {
+            setShowConsignmentModal(true);
+            setActionError(null);
+          }}
+        />
+      )}
+
+      <ConsignmentModal
+        visible={showConsignmentModal}
+        item={item}
+        initialItem={initialItem}
+        routeId={id}
+        userInfo={userInfo}
+        consignmentCheckData={consignmentCheckData}
+        consignmentTicketCount={consignmentTicketCount}
+        actionError={actionError}
+        actionLoading={actionLoading}
+        onClose={() => setShowConsignmentModal(false)}
+        onActionError={setActionError}
+        onActionLoadingChange={setActionLoading}
+        onConsignmentSuccess={handleConsignmentSuccess}
+        showToast={showToast}
+      />
+    </div>
+  );
 };
 
 export default MyCollectionDetail;

@@ -12,7 +12,7 @@ import { getStoredToken } from '@/services/client';
 import { useAuthStore } from '@/stores/authStore';
 import { UserInfo } from '@/types';
 import { useNotification } from '@/context/NotificationContext';
-import { isSuccess, extractData, extractError } from '@/utils/apiHelpers';
+import { extractData, extractError, extractErrorFromException } from '@/utils/apiHelpers';
 import { errorLog } from '@/utils/logger';
 
 const HashrateExchange: React.FC = () => {
@@ -84,8 +84,8 @@ const HashrateExchange: React.FC = () => {
             } else {
                 showToast('error', '兑换失败', extractError(res, '未知错误'));
             }
-        } catch (error: any) {
-            showToast('error', '兑换异常', error.message || '网络请求失败');
+        } catch (error: unknown) {
+            showToast('error', '兑换异常', extractErrorFromException(error, '网络请求失败'));
         } finally {
             setConfirming(false);
         }

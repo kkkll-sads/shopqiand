@@ -9,8 +9,7 @@ import {
   ShopProductDetailData,
   ReviewSummaryData,
 } from '@/services';
-import { useNotification } from '@/context/NotificationContext';
-import { isSuccess, extractData } from '@/utils/apiHelpers';
+import { extractData } from '@/utils/apiHelpers';
 import { useErrorHandler } from '@/hooks/useErrorHandler';
 import { errorLog } from '@/utils/logger';
 import { multiply, round as roundCurrency, subtract } from '@/utils/currency';
@@ -20,8 +19,28 @@ interface UseProductDetailParams {
   initialData?: ShopProductDetailData | null;
 }
 
+const toFiniteNumber = (value: unknown): number | null => {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value;
+  }
+  if (typeof value === 'string') {
+    const parsed = Number(value);
+    if (Number.isFinite(parsed)) {
+      return parsed;
+    }
+  }
+  return null;
+};
+
+const readLegacySpecValue = (spec: unknown): string | null => {
+  if (!spec || typeof spec !== 'object') {
+    return null;
+  }
+  const value = (spec as { value?: unknown }).value;
+  return typeof value === 'string' && value.length > 0 ? value : null;
+};
+
 export function useProductDetail({ product, initialData }: UseProductDetailParams) {
-  const { showToast } = useNotification();
   const { handleError, errorMessage, hasError, clearError } = useErrorHandler();
 
   const [detailData, setDetailData] = useState<ShopProductDetailData | null>(initialData);
@@ -141,7 +160,11 @@ export function useProductDetail({ product, initialData }: UseProductDetailParam
   }, [originalPrice, displayPrice]);
 
   const salesCount = useMemo(() => {
-    return (detailData as any)?.sales_count ?? (detailData as any)?.sales ?? 0;
+    const directSalesCount = toFiniteNumber(detailData?.['sales_count']);
+    if (directSalesCount !== null) {
+      return directSalesCount;
+    }
+    return toFiniteNumber(detailData?.sales) ?? 0;
   }, [detailData]);
   const reviewCount = useMemo(() => {
     return reviewSummary?.total ?? 0;
@@ -183,8 +206,16 @@ export function useProductDetail({ product, initialData }: UseProductDetailParam
       return rawSpecs.some(spec => spec.values && spec.values.length > 0);
     }
 
-    const uniqueNames = new Set(rawSpecs.map((s: any) => s?.name).filter(Boolean));
-    const uniqueValues = new Set(rawSpecs.map((s: any) => s?.value).filter(Boolean));
+    const uniqueNames = new Set(
+      rawSpecs
+        .map((spec) => spec?.name)
+        .filter((name): name is string => typeof name === 'string' && name.length > 0)
+    );
+    const uniqueValues = new Set(
+      rawSpecs
+        .map((spec) => readLegacySpecValue(spec))
+        .filter((value): value is string => Boolean(value))
+    );
     return uniqueNames.size > 1 || uniqueValues.size > 1;
   }, [detailData]);
 

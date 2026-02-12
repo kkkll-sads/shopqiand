@@ -9,7 +9,7 @@ import {
 } from '@/services';
 import { getStoredToken } from '@/services/client';
 import { useNotification } from '@/context/NotificationContext';
-import { isSuccess, extractError } from '@/utils/apiHelpers';
+import { isSuccess, extractError, extractErrorFromException } from '@/utils/apiHelpers';
 import { errorLog } from '@/utils/logger';
 
 type OrderCategory = 'product' | 'transaction' | 'delivery' | 'points';
@@ -34,9 +34,9 @@ export function useOrderActions({ category, activeTab, onReload }: UseOrderActio
       } else {
         showToast('error', '操作失败', extractError(response, '确认收货失败'));
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       errorLog('useOrderActions', '确认收货失败:', error);
-      showToast('error', '操作失败', error.message || '确认收货失败');
+      showToast('error', '操作失败', extractErrorFromException(error, '确认收货失败'));
     }
   }, [onReload, showToast]);
 
@@ -57,9 +57,9 @@ export function useOrderActions({ category, activeTab, onReload }: UseOrderActio
           } else {
             showToast('error', '支付失败', extractError(response, '支付失败'));
           }
-        } catch (error: any) {
+        } catch (error: unknown) {
           errorLog('useOrderActions', '支付订单失败:', error);
-          showToast('error', '支付失败', error.message || '支付失败');
+          showToast('error', '支付失败', extractErrorFromException(error, '支付失败'));
         }
       }
     });
@@ -83,9 +83,9 @@ export function useOrderActions({ category, activeTab, onReload }: UseOrderActio
           } else {
             showToast('error', '删除失败', extractError(response, '删除失败'));
           }
-        } catch (error: any) {
+        } catch (error: unknown) {
           errorLog('useOrderActions', '删除订单失败:', error);
-          showToast('error', '删除失败', error.message || '删除失败');
+          showToast('error', '删除失败', extractErrorFromException(error, '删除失败'));
         }
       }
     });

@@ -32,13 +32,13 @@ export * from './EmbeddedBrowser';
 export { default as MediaBrowser } from './MediaBrowser';
 
 // 支付跳转组件（用于第三方支付）
-export { default as PaymentRedirect } from './PaymentRedirect';
+export { default as PaymentRedirect } from './payment-redirect/PaymentRedirect';
 
 // 在线客服组件
 export { default as ChatWidget, openChatWidget, closeChatWidget, toggleChatWidget, isChatWidgetOpen } from './ChatWidget';
 
 // 可拖动客服悬浮按钮组件
-export { default as DraggableChatButton } from './DraggableChatButton';
+export { default as DraggableChatButton } from './draggable-chat-button/DraggableChatButton';
 
 // 卡片组件
 export { default as Card } from './Card';

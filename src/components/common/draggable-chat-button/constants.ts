@@ -1,0 +1,9 @@
+export const STORAGE_KEY = 'chat_button_position';
+export const HIDDEN_STORAGE_KEY = 'chat_button_hidden';
+export const BUTTON_SIZE = 56;
+export const EDGE_MARGIN = 8;
+export const BOTTOM_NAV_HEIGHT = 80;
+export const CLICK_THRESHOLD = 10;
+export const LONG_PRESS_DURATION = 800;
+export const HIDE_DELAY = 3000;
+export const HIDDEN_OFFSET = 28;

@@ -1,10 +1,13 @@
 import React from 'react';
-import { Package, ArrowRight } from 'lucide-react';
+import { Package, ArrowRight, Copy } from 'lucide-react';
+import { useNotification } from '@/context/NotificationContext';
 import { normalizeAssetUrl } from '@/services';
+import type { MyConsignmentItem } from '@/services';
+import { copyWithToast } from '@/utils/copyWithToast';
 import { formatAmount, formatTime } from '@/utils/format';
 
 interface TransactionOrderListProps {
-  orders: any[];
+  orders: MyConsignmentItem[];
   loading: boolean;
   activeTab: number;
   formatOrderDate: (date: number | string | undefined) => string;
@@ -20,6 +23,14 @@ const TransactionOrderList: React.FC<TransactionOrderListProps> = ({
   formatOrderPrice,
   onCancelConsignment,
 }) => {
+  const { showToast } = useNotification();
+
+  const handleCopyAssetCode = async (text: string) => {
+    await copyWithToast(text, showToast, {
+      successDescription: '确权编号已复制到剪贴板',
+    });
+  };
+
   if (!orders.length && !loading) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-gray-400">
@@ -30,7 +41,7 @@ const TransactionOrderList: React.FC<TransactionOrderListProps> = ({
   }
 
   // 获取状态文本
-  const getStatusText = (order: any): string => {
+  const getStatusText = (order: MyConsignmentItem): string => {
     return order.status_text || order.consignment_status_text || '持有中';
   };
 
@@ -49,13 +60,13 @@ const TransactionOrderList: React.FC<TransactionOrderListProps> = ({
   };
 
   // 获取订单 ID
-  const getOrderId = (order: any): number => {
+  const getOrderId = (order: MyConsignmentItem): number => {
     return order.id || order.consignment_id || order.user_collection_id || 0;
   };
 
   return (
     <>
-      {orders.map((item: any) => {
+      {orders.map((item) => {
         const title = item.item_title || item.title || '未命名藏品';
         const image = item.item_image || item.image || '';
         const statusText = getStatusText(item);
@@ -94,6 +105,17 @@ const TransactionOrderList: React.FC<TransactionOrderListProps> = ({
                         ? `${item.asset_code.substring(0, 8)}...${item.asset_code.substring(item.asset_code.length - 4)}`
                         : item.asset_code}
                     </span>
+                    <button
+                      type="button"
+                      className="p-1 rounded text-gray-400 active:bg-gray-100"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        void handleCopyAssetCode(item.asset_code);
+                      }}
+                      aria-label="复制确权编号"
+                    >
+                      <Copy size={11} />
+                    </button>
                   </div>
                 )}
 

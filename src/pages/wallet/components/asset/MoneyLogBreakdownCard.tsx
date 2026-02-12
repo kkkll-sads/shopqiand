@@ -1,5 +1,7 @@
 import React from 'react';
-import { TrendingDown } from 'lucide-react';
+import { Copy, TrendingDown } from 'lucide-react';
+import { useNotification } from '@/context/NotificationContext';
+import { copyWithToast } from '@/utils/copyWithToast';
 
 interface MoneyLogBreakdownCardProps {
   breakdown: Record<string, any>;
@@ -47,9 +49,26 @@ const fieldNameMap: Record<string, string> = {
 };
 
 const MoneyLogBreakdownCard: React.FC<MoneyLogBreakdownCardProps> = ({ breakdown }) => {
+  const { showToast } = useNotification();
+
   if (!breakdown || Object.keys(breakdown).length === 0) {
     return null;
   }
+
+  const isCopyableField = (key: string, value: unknown) => {
+    if (value === undefined || value === null) {
+      return false;
+    }
+    const normalizedKey = key.toLowerCase();
+    return (
+      typeof value !== 'object' &&
+      (normalizedKey.includes('_id') ||
+        normalizedKey.includes('_no') ||
+        normalizedKey.includes('_code') ||
+        normalizedKey.includes('hash') ||
+        normalizedKey.includes('tx'))
+    );
+  };
 
   return (
     <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
@@ -60,12 +79,31 @@ const MoneyLogBreakdownCard: React.FC<MoneyLogBreakdownCardProps> = ({ breakdown
       <div className="space-y-2">
         {Object.entries(breakdown).map(([key, value]) => {
           const displayKey = fieldNameMap[key] || key;
+          const displayValue = typeof value === 'object' ? JSON.stringify(value) : String(value);
+          const canCopy = isCopyableField(key, value);
+
           return (
             <div key={key} className="flex justify-between items-center py-1.5 text-sm">
               <span className="text-gray-600">{displayKey}</span>
-              <span className="text-gray-900 font-medium">
-                {typeof value === 'object' ? JSON.stringify(value) : String(value)}
-              </span>
+              <div className="flex items-center gap-1.5 max-w-[65%]">
+                <span className="text-gray-900 font-medium truncate" title={displayValue}>
+                  {displayValue}
+                </span>
+                {canCopy && (
+                  <button
+                    type="button"
+                    className="p-1 rounded text-gray-400 active:bg-gray-100"
+                    onClick={() => {
+                      void copyWithToast(displayValue, showToast, {
+                        successDescription: `${displayKey}已复制到剪贴板`,
+                      });
+                    }}
+                    aria-label={`复制${displayKey}`}
+                  >
+                    <Copy size={11} />
+                  </button>
+                )}
+              </div>
             </div>
           );
         })}

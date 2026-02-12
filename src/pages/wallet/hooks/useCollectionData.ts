@@ -44,6 +44,12 @@ export function useCollectionData(options: UseCollectionDataOptions) {
   const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
   const [batchConsignableData, setBatchConsignableData] = useState<BatchConsignableListData | null>(null);
 
+  const syncConsignmentCoupon = useCallback((coupon?: number) => {
+    if (typeof coupon === 'number') {
+      setConsignmentTicketCount(coupon);
+    }
+  }, []);
+
   // 加载用户信息
   const loadUserInfo = useCallback(async () => {
     const token = getStoredToken();
@@ -122,9 +128,7 @@ export function useCollectionData(options: UseCollectionDataOptions) {
             });
           }
           setHasMore(list.length >= 10 && res.data.has_more !== false);
-          if (typeof (res.data as any).consignment_coupon === 'number') {
-            setConsignmentTicketCount((res.data as any).consignment_coupon);
-          }
+          syncConsignmentCoupon(res.data.consignment_coupon);
         } else {
           setError(extractError(res, '获取我的藏品失败'));
           hasError = true;
@@ -139,9 +143,7 @@ export function useCollectionData(options: UseCollectionDataOptions) {
             setMyCollections((prev) => deduplicateCollections([...prev, ...list]));
           }
           setHasMore(list.length >= 10 && res.data.has_more !== false);
-          if (typeof (res.data as any).consignment_coupon === 'number') {
-            setConsignmentTicketCount((res.data as any).consignment_coupon);
-          }
+          syncConsignmentCoupon(res.data.consignment_coupon);
         } else {
           setError(extractError(res, '获取权益节点列表失败'));
           hasError = true;
@@ -178,9 +180,7 @@ export function useCollectionData(options: UseCollectionDataOptions) {
             setMyCollections((prev) => deduplicateCollections([...prev, ...filteredList]));
           }
           setHasMore(list.length >= 10 && res.data.has_more !== false);
-          if (typeof (res.data as any).consignment_coupon === 'number') {
-            setConsignmentTicketCount((res.data as any).consignment_coupon);
-          }
+          syncConsignmentCoupon(res.data.consignment_coupon);
         } else {
           setError(extractError(res, '获取寄售列表失败'));
           hasError = true;
@@ -192,11 +192,11 @@ export function useCollectionData(options: UseCollectionDataOptions) {
       } else {
         callbacksRef.current.onLoadSuccess();
       }
-    } catch (e: any) {
-      setError(e?.message || '加载数据失败');
+    } catch (error: unknown) {
+      setError(error instanceof Error ? error.message : '加载数据失败');
       callbacksRef.current.onLoadError();
     }
-  }, [activeTab, page]);
+  }, [activeTab, page, syncConsignmentCoupon]);
 
   // 重置列表
   const resetCollections = useCallback(() => {

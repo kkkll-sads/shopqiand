@@ -49,6 +49,23 @@ interface UseTradingZoneParams {
   initialSessionEndTime?: string;
 }
 
+interface TradingItemWithMeta extends CollectionItem {
+  consignment_count?: number;
+  consignment_list?: Array<{
+    consignment_id: number;
+    price: number;
+    seller_id: number;
+  }>;
+  official_stock?: number;
+  min_price?: number;
+  package_id?: number;
+  zone_id?: number | string;
+}
+
+interface SessionWithActiveFlag extends CollectionSessionItem {
+  is_active?: boolean | number;
+}
+
 export function useTradingZone({
   initialSessionId,
   initialSessionTitle,
@@ -93,7 +110,8 @@ export function useTradingZone({
       const response = await fetchCollectionItemsBySession(session.id, { page: 1, limit: 100 });
 
       if (isSuccess(response) && response.data?.list) {
-        const allItems = response.data.list.map((item: any) => {
+        const allItems = response.data.list.map((rawItem) => {
+          const item = rawItem as TradingItemWithMeta;
           const hasConsignment = item.consignment_count > 0 || (item.consignment_list && item.consignment_list.length > 0);
           const hasOfficial = item.official_stock > 0 || item.stock > 0;
 
@@ -120,7 +138,7 @@ export function useTradingZone({
             displayKey: `pkg-${item.zone_id || item.id}-${item.package_name || item.id}`,
             source,
             hasStockInfo: totalAvailable > 0
-          } as TradingDisplayItem;
+          };
         });
 
         if (allItems.length > 0) {
@@ -133,7 +151,7 @@ export function useTradingZone({
       }
 
       setSelectedSession(session);
-    } catch (err: any) {
+    } catch (err: unknown) {
       errorLog('useTradingZone', '加载专场商品失败:', err);
       setItemsErrorMessage('数据同步延迟，请重试');
       setSelectedSession(session);
@@ -155,15 +173,18 @@ export function useTradingZone({
       try {
         const response = await fetchCollectionSessions();
         if (isSuccess(response) && response.data?.list) {
-          const sessionList: TradingSession[] = response.data.list.map((item: CollectionSessionItem) => ({
-            id: String(item.id),
-            title: item.title,
-            image: item.image,
-            startTime: item.start_time,
-            endTime: item.end_time,
-            isActive: !!(item as any)?.is_active,
-            ...(item as any),
-          }));
+          const sessionList: TradingSession[] = response.data.list.map((rawItem: CollectionSessionItem) => {
+            const item = rawItem as SessionWithActiveFlag;
+            return {
+              ...item,
+              id: String(item.id),
+              title: item.title,
+              image: item.image,
+              startTime: item.start_time,
+              endTime: item.end_time,
+              isActive: Boolean(item.is_active),
+            };
+          });
           setSessions(sessionList);
 
           if (initialSessionId) {
@@ -184,7 +205,7 @@ export function useTradingZone({
         } else {
           setSessionErrorMessage('获取数据资产池失败');
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         errorLog('useTradingZone', '加载专场列表失败:', err);
         setSessionErrorMessage('网络连接异常');
       } finally {

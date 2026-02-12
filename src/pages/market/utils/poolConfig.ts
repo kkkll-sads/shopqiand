@@ -1,10 +1,39 @@
 /**
  * poolConfig - 资产池主题配置工具
  */
-import { Globe, Coins, Gem, Award } from 'lucide-react';
+import { Globe, Coins, Gem, Award, type LucideIcon } from 'lucide-react';
 import { TradingSession } from '../hooks/useTradingZone';
 
-export const POOL_THEME_PRESETS: Record<string, any> = {
+type PoolType = 'morning' | 'afternoon' | 'evening' | 'default';
+
+interface PoolThemePreset {
+  code: string;
+  name: string;
+  subName: string;
+  roi: string;
+  quota: string;
+  icon: LucideIcon;
+  themeColor: string;
+  gradient: string;
+  softBg: string;
+  dataBg: string;
+  buttonClass: string;
+}
+
+interface SessionPoolMeta {
+  roi?: string;
+  quota?: string;
+  code?: string;
+}
+
+const getTextOrFallback = (value: unknown, fallback: string): string => {
+  if (typeof value === 'string' && value.trim() !== '') {
+    return value;
+  }
+  return fallback;
+};
+
+export const POOL_THEME_PRESETS: Record<PoolType, PoolThemePreset> = {
   morning: {
     code: 'Pool-A',
     name: '数字鲁商资产池',
@@ -59,7 +88,7 @@ export const POOL_THEME_PRESETS: Record<string, any> = {
   }
 };
 
-export const getPoolType = (startTime: string) => {
+export const getPoolType = (startTime: string): PoolType => {
   const hour = parseInt(startTime.split(':')[0]);
   if (hour >= 9 && hour < 12) return 'morning';
   if (hour >= 13 && hour < 16) return 'afternoon';
@@ -67,16 +96,18 @@ export const getPoolType = (startTime: string) => {
   return 'default';
 };
 
-export const buildPoolConfig = (session?: TradingSession | null) => {
+export const buildPoolConfig = (session?: TradingSession | null): PoolThemePreset => {
   const poolType = session ? getPoolType(session.startTime) : 'default';
-  const preset = POOL_THEME_PRESETS[poolType] || POOL_THEME_PRESETS.default;
+  const preset = POOL_THEME_PRESETS[poolType];
+  const sessionMeta = session as (TradingSession & SessionPoolMeta) | null | undefined;
+
   return {
     ...preset,
     name: session?.title || preset.name,
     subName: session ? `${session.startTime} - ${session.endTime}` : preset.subName,
-    roi: (session as any)?.roi || preset.roi,
-    quota: (session as any)?.quota || preset.quota,
-    code: (session as any)?.code || preset.code,
+    roi: getTextOrFallback(sessionMeta?.roi, preset.roi),
+    quota: getTextOrFallback(sessionMeta?.quota, preset.quota),
+    code: getTextOrFallback(sessionMeta?.code, preset.code),
   };
 };
 

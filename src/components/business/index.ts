@@ -16,4 +16,4 @@
 export { default as StaticContentPage } from './StaticContentPage';
 
 // 密码表单组件
-export { default as PasswordForm } from './PasswordForm';
+export { default as PasswordForm } from './password-form/PasswordForm';

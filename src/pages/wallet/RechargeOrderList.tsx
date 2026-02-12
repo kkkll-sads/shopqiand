@@ -4,12 +4,14 @@
  */
 import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronLeft, FileText, Clock, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
+import { ChevronLeft, FileText, Clock, CheckCircle, XCircle, AlertCircle, Copy } from 'lucide-react';
+import { useNotification } from '@/context/NotificationContext';
 import { getMyRechargeOrders, RechargeOrderItem } from '@/services/wallet';
 import { isSuccess } from '@/utils/apiHelpers';
 import { useErrorHandler, useLoadingMachine, LoadingEvent, LoadingState } from '@/hooks';
 import { LoadingSpinner } from '@/components/common';
 import { getOrderListStatusColor } from '@/constants/statusEnums';
+import { copyWithToast } from '@/utils/copyWithToast';
 
 interface RechargeOrderListProps {
     onOrderSelect?: (orderId: string) => void;
@@ -17,6 +19,7 @@ interface RechargeOrderListProps {
 
 const RechargeOrderList: React.FC<RechargeOrderListProps> = ({ onOrderSelect }) => {
     const navigate = useNavigate();
+    const { showToast } = useNotification();
     const [orders, setOrders] = useState<RechargeOrderItem[]>([]);
     const [page, setPage] = useState(1);
     const [hasMore, setHasMore] = useState(true);
@@ -105,6 +108,12 @@ const RechargeOrderList: React.FC<RechargeOrderListProps> = ({ onOrderSelect }) 
         { label: '已拒绝', value: 2 },
     ];
 
+    const handleCopyOrderNo = async (text: string) => {
+        await copyWithToast(text, showToast, {
+            successDescription: '订单号已复制到剪贴板',
+        });
+    };
+
     return (
         <div className="min-h-screen bg-gray-50 flex flex-col">
             {/* Header */}
@@ -145,7 +154,20 @@ const RechargeOrderList: React.FC<RechargeOrderListProps> = ({ onOrderSelect }) 
                     >
                         <div className="flex justify-between items-start mb-3">
                             <div>
-                                <div className="text-xs text-gray-400 mb-1">订单号: {order.order_no}</div>
+                                <div className="text-xs text-gray-400 mb-1 flex items-center gap-1.5">
+                                    <span>订单号: {order.order_no}</span>
+                                    <button
+                                        type="button"
+                                        className="p-0.5 rounded text-gray-400 active:bg-gray-100"
+                                        onClick={(event) => {
+                                            event.stopPropagation();
+                                            void handleCopyOrderNo(order.order_no || String(order.id));
+                                        }}
+                                        aria-label="复制订单号"
+                                    >
+                                        <Copy size={11} />
+                                    </button>
+                                </div>
                                 <div className="text-sm font-medium text-gray-900 flex items-center gap-2">
                                     <span className="font-bold text-lg">¥{order.amount || order.money}</span>
                                     <span className="text-xs px-2 py-0.5 bg-gray-100 text-gray-500 rounded text-[10px]">{order.payment_type_text || order.payment_type}</span>

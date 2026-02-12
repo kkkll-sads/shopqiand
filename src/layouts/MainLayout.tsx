@@ -2,11 +2,11 @@
  * 主布局组件
  * 包含底部导航栏和认证守卫
  */
-import React, { useEffect } from 'react';
+import React, { useCallback, useEffect } from 'react';
 import { Outlet, useLocation, useNavigate, Navigate } from 'react-router-dom';
 import BottomNav from '@/layouts/BottomNav';
 import ScrollToTop from '@/components/common/ScrollToTop';
-import { ChatWidget, DraggableChatButton } from '@/components/common';
+import { ChatWidget, DraggableChatButton, PullToRefresh } from '@/components/common';
 import PopupAnnouncementModal from '@/components/common/PopupAnnouncementModal';
 import { useAuthStore } from '@/stores/authStore';
 import { useAppStore } from '@/stores/appStore';
@@ -155,6 +155,12 @@ const MainLayout: React.FC = () => {
     handlePopupClose();
   };
 
+  const isPopupVisible = showPopupAnnouncement && popupQueue.length > 0;
+
+  const handlePullRefresh = useCallback(async () => {
+    window.location.reload();
+  }, []);
+
   return (
     <div className="bg-gray-100 min-h-screen-dynamic font-sans antialiased text-gray-900 max-w-md mx-auto relative shadow-2xl">
       <ScrollToTop />
@@ -164,14 +170,16 @@ const MainLayout: React.FC = () => {
       <DraggableChatButton />
       {/* 全局弹窗公告 */}
       <PopupAnnouncementModal
-        visible={showPopupAnnouncement && popupQueue.length > 0}
+        visible={isPopupVisible}
         announcement={popupQueue[0] ?? null}
         onClose={handlePopupClose}
         onDontShowToday={handlePopupDontShowToday}
       />
-      <div className="min-h-screen-dynamic bg-gray-50 pb-safe">
-        <Outlet />
-      </div>
+      <PullToRefresh onRefresh={handlePullRefresh} disabled={isPopupVisible} className="min-h-screen-dynamic">
+        <div className="min-h-screen-dynamic bg-gray-50 pb-safe">
+          <Outlet />
+        </div>
+      </PullToRefresh>
       {showBottomNav && <BottomNav activeTab={activeTab} onTabChange={handleTabChange} />}
     </div>
   );

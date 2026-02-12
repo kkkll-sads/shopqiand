@@ -1,7 +1,7 @@
 /**
  * useOrderList - 订单列表逻辑 Hook
  */
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, type Dispatch, type SetStateAction } from 'react';
 import {
   fetchPendingPayOrders,
   fetchPendingShipOrders,
@@ -11,6 +11,8 @@ import {
   getMyConsignmentList,
   getMyCollection,
   getPurchaseRecords,
+  type DeliveryListData,
+  type MyConsignmentListData,
   ShopOrderItem,
   MyConsignmentItem,
   PurchaseRecordItem,
@@ -39,6 +41,17 @@ export function useOrderList({ category, activeTab, page, onPageChange }: UseOrd
   // 使用 ref 追踪加载状态，避免重复请求
   const loadingRef = useRef(false);
   const lastRequestRef = useRef({ category: '', activeTab: -1, page: -1 });
+
+  const mergeListByPage = useCallback(
+    <T>(targetSetter: Dispatch<SetStateAction<T[]>>, list: T[]) => {
+      if (page === 1) {
+        targetSetter(list);
+      } else {
+        targetSetter((prev) => [...prev, ...list]);
+      }
+    },
+    [page]
+  );
 
   // Load orders for points category (消费金订单)
   // 使用 shopOrder 接口，pay_type=score
@@ -78,14 +91,13 @@ export function useOrderList({ category, activeTab, page, onPageChange }: UseOrd
             response = await fetchPendingPayOrders(params);
         }
 
-        const data = extractData(response) as any;
+        const data = extractData<{
+          list: ShopOrderItem[];
+          total: number;
+        }>(response);
         if (data) {
           const newOrders = data.list || [];
-          if (page === 1) {
-            setOrders(newOrders);
-          } else {
-            setOrders(prev => [...prev, ...newOrders]);
-          }
+          mergeListByPage(setOrders, newOrders);
           setHasMore(newOrders.length >= 10);
         }
       } catch (error) {
@@ -100,7 +112,7 @@ export function useOrderList({ category, activeTab, page, onPageChange }: UseOrd
       setOrders([]);
     }
     loadOrders();
-  }, [category, activeTab, page]);
+  }, [category, activeTab, page, mergeListByPage]);
 
   // Load orders for delivery category (提货订单)
   useEffect(() => {
@@ -134,15 +146,11 @@ export function useOrderList({ category, activeTab, page, onPageChange }: UseOrd
             status = undefined;
         }
 
-        const response = await getDeliveryList({ page: page, limit: 10, status, token });
-        const data = extractData(response) as any;
+        const response = await getDeliveryList({ page, limit: 10, status, token });
+        const data = extractData<DeliveryListData>(response);
         if (data) {
           const newOrders = data.list || [];
-          if (page === 1) {
-            setOrders(newOrders);
-          } else {
-            setOrders(prev => [...prev, ...newOrders]);
-          }
+          mergeListByPage(setOrders, newOrders);
           setHasMore(newOrders.length >= 10);
         }
       } catch (error) {
@@ -157,7 +165,7 @@ export function useOrderList({ category, activeTab, page, onPageChange }: UseOrd
       setOrders([]);
     }
     loadOrders();
-  }, [category, activeTab, page]);
+  }, [category, activeTab, page, mergeListByPage]);
 
   // Load orders for transaction category
   useEffect(() => {
@@ -191,8 +199,13 @@ export function useOrderList({ category, activeTab, page, onPageChange }: UseOrd
             status = 'holding';
         }
 
-        const response = await getMyCollection({ page: page, limit: 10, status, token });
-        const data = extractData(response) as any;
+        const response = await getMyCollection({ page, limit: 10, status, token });
+        const data = extractData<{
+          list: MyCollectionItem[];
+          total: number;
+          has_more?: boolean;
+          consignment_coupon?: number;
+        }>(response);
         if (data) {
           let newOrders = data.list || [];
 
@@ -204,27 +217,17 @@ export function useOrderList({ category, activeTab, page, onPageChange }: UseOrd
           }
 
           // 转换 MyCollectionItem 为 MyConsignmentItem 兼容格式
-          const convertedOrders = newOrders.map((item: MyCollectionItem) => ({
+          const convertedOrders: MyConsignmentItem[] = newOrders.map((item: MyCollectionItem) => ({
+            ...item,
             id: item.id,
             item_id: item.id,
             item_title: item.title,
             item_image: item.image,
-            price: item.price,
-            market_price: item.market_price,
-            consignment_status: item.consignment_status,
-            consignment_status_text: item.consignment_status_text,
-            asset_code: item.asset_code,
-            sold_price: item.sold_price,
-            service_fee: item.service_fee,
-            fail_count: item.fail_count,
-            ...item,
+            consignment_price: Number(item.market_price ?? item.price ?? 0),
+            status_text: item.consignment_status_text || '持有中',
           }));
 
-          if (page === 1) {
-            setConsignmentOrders(convertedOrders as any);
-          } else {
-            setConsignmentOrders(prev => [...prev, ...convertedOrders] as any);
-          }
+          mergeListByPage(setConsignmentOrders, convertedOrders);
           setHasMore(data.has_more || false);
         }
       } catch (error) {
@@ -239,7 +242,7 @@ export function useOrderList({ category, activeTab, page, onPageChange }: UseOrd
       setConsignmentOrders([]);
     }
     loadConsignmentOrders();
-  }, [category, activeTab, page]);
+  }, [category, activeTab, page, mergeListByPage]);
 
   // Load orders for product category
   useEffect(() => {
@@ -260,28 +263,23 @@ export function useOrderList({ category, activeTab, page, onPageChange }: UseOrd
 
         if (activeTab === 0) {
           // 买入订单 - 使用购买记录接口
-          const response = await getPurchaseRecords({ page: page, limit: 10, token });
-          const data = extractData(response) as any;
+          const response = await getPurchaseRecords({ page, limit: 10, token });
+          const data = extractData<{
+            list: PurchaseRecordItem[];
+            has_more?: boolean;
+          }>(response);
           if (data) {
             const newRecords = data.list || [];
-            if (page === 1) {
-              setPurchaseRecords(newRecords);
-            } else {
-              setPurchaseRecords(prev => [...prev, ...newRecords]);
-            }
+            mergeListByPage(setPurchaseRecords, newRecords);
             setHasMore(data.has_more || false);
           }
         } else if (activeTab === 1) {
           // 卖出订单 - 使用我的寄售列表（状态为已售出）
-          const response = await getMyConsignmentList({ page: page, limit: 10, status: 2, token });
-          const data = extractData(response) as any;
+          const response = await getMyConsignmentList({ page, limit: 10, status: 2, token });
+          const data = extractData<MyConsignmentListData>(response);
           if (data) {
             const newConsignments = data.list || [];
-            if (page === 1) {
-              setConsignmentOrders(newConsignments);
-            } else {
-              setConsignmentOrders(prev => [...prev, ...newConsignments]);
-            }
+            mergeListByPage(setConsignmentOrders, newConsignments);
             setHasMore(data.has_more || false);
           } else {
             setConsignmentOrders([]);
@@ -301,7 +299,7 @@ export function useOrderList({ category, activeTab, page, onPageChange }: UseOrd
       setConsignmentOrders([]);
     }
     loadPurchaseRecords();
-  }, [category, activeTab, page]);
+  }, [category, activeTab, page, mergeListByPage]);
 
   const reload = useCallback(() => {
     // 重置追踪状态，允许重新加载

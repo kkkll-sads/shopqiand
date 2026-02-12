@@ -2,284 +2,42 @@
  * AssetHistory - 资产历史记录页面
  * 已迁移: 使用 React Router 导航
  */
-import React, { useState, useEffect, useRef } from 'react';
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Filter, FileText } from 'lucide-react';
 import { FilterBar } from '@/components/common/FilterBar';
 import { SearchInput } from '@/components/common';
-import {
-  getAllLog,
-  AllLogItem,
-} from '@/services';
-import { getStoredToken } from '@/services/client';
-import { extractData } from '@/utils/apiHelpers';
-import { BALANCE_TYPE_OPTIONS } from '@/constants/balanceTypes';
-import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
-import { errorLog, debugLog } from '@/utils/logger';
-import { useAppStore, MARKET_CACHE_TTL } from '@/stores/appStore';
+import type { AllLogItem } from '@/services';
 import AssetHistoryLogCard from './components/asset/AssetHistoryLogCard';
+import { useAssetHistoryData } from './hooks/useAssetHistoryData';
 
 const AssetHistory: React.FC = () => {
   const navigate = useNavigate();
-  const { listCaches, setListCache } = useAppStore();
-
-  // 缓存相关 refs
-  const restoredFromCacheRef = useRef(false);
-  const scrollTopRef = useRef(0);
-  // 用于保存最新状态值，解决 cleanup 闭包问题
-  const stateRef = useRef<{
-    allLogs: AllLogItem[];
-    page: number;
-    hasMore: boolean;
-    filters: { category: string; flow: string; time: string };
-    searchKeyword: string;
-  }>({
-    allLogs: [],
-    page: 1,
-    hasMore: false,
-    filters: { category: 'all', flow: 'all', time: 'all' },
-    searchKeyword: ''
-  });
-
-  // 筛选状态
-  const [filters, setFilters] = useState({
-    category: 'all',
-    flow: 'all',
-    time: 'all',
-  });
-  const [searchKeyword, setSearchKeyword] = useState<string>('');
-
-  const categoryOptions = [...BALANCE_TYPE_OPTIONS];
-
-  const setCategory = (v: string) => setFilters(prev => ({ ...prev, category: v }));
-  const setFlow = (v: string) => setFilters(prev => ({ ...prev, flow: v }));
-  const setRange = (v: string) => setFilters(prev => ({ ...prev, time: v }));
-
-  // 数据状态
-  const [error, setError] = useState<string | null>(null);
-  const [allLogs, setAllLogs] = useState<AllLogItem[]>([]);
-  const [page, setPage] = useState<number>(1);
-  const [hasMore, setHasMore] = useState<boolean>(false);
-  const [loading, setLoading] = useState(false);
-  const [expandedRows, setExpandedRows] = useState<Record<number, boolean>>({});
-
-  // ========================================
-  // 缓存恢复逻辑：组件挂载时检查并恢复缓存
-  // ========================================
-  useEffect(() => {
-    const cache = listCaches.assetHistory;
-    if (cache && Date.now() - cache.timestamp < MARKET_CACHE_TTL) {
-      debugLog('AssetHistory', '从缓存恢复状态', {
-        dataCount: cache.data.length,
-        page: cache.page,
-        scrollTop: cache.scrollTop
-      });
-
-      // 恢复状态
-      setAllLogs(cache.data as AllLogItem[]);
-      setPage(cache.page);
-      setHasMore(cache.hasMore);
-      if (cache.filters) {
-        setFilters({
-          category: cache.filters.category || 'all',
-          flow: cache.filters.flow || 'all',
-          time: cache.filters.time || 'all'
-        });
-        if (cache.filters.searchKeyword) setSearchKeyword(cache.filters.searchKeyword);
-      }
-
-      // 标记已从缓存恢复
-      restoredFromCacheRef.current = true;
-      // 保存滚动位置到 ref，等待数据渲染完成后再恢复
-      scrollTopRef.current = cache.scrollTop;
-    }
-  }, []); // 仅在组件挂载时执行一次
-
-  // ========================================
-  // 滚动位置恢复：在数据渲染完成后恢复
-  // ========================================
-  useEffect(() => {
-    // 只有在从缓存恢复且数据已渲染时才恢复滚动位置
-    if (restoredFromCacheRef.current && allLogs.length > 0 && scrollTopRef.current > 0) {
-      const restoreScroll = () => {
-        if (scrollTopRef.current > 0) {
-          const targetScroll = scrollTopRef.current;
-          window.scrollTo({ top: targetScroll, behavior: 'instant' });
-          // 验证是否恢复成功
-          if (Math.abs(window.scrollY - targetScroll) > 10) {
-            // 如果恢复失败，重试
-            setTimeout(() => {
-              window.scrollTo({ top: targetScroll, behavior: 'instant' });
-            }, 100);
-          }
-        }
-      };
-
-      // 使用多次 rAF + setTimeout 确保 DOM 完全渲染后再恢复
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          restoreScroll();
-          // 延迟恢复，确保列表项完全渲染
-          setTimeout(restoreScroll, 100);
-          setTimeout(restoreScroll, 300);
-        });
-      });
-
-      // 恢复完成后，重置标志
-      restoredFromCacheRef.current = false;
-    }
-  }, [allLogs.length]); // 监听数据长度变化
-
-  // ========================================
-  // 同步状态到 ref，确保 cleanup 能获取最新值
-  // ========================================
-  useEffect(() => {
-    stateRef.current = {
-      allLogs,
-      page,
-      hasMore,
-      filters,
-      searchKeyword
-    };
-  }, [allLogs, page, hasMore, filters, searchKeyword]);
-
-  // ========================================
-  // 缓存保存逻辑：组件卸载时保存状态
-  // ========================================
-  useEffect(() => {
-    // 更新滚动位置 ref
-    const handleScrollForCache = () => {
-      scrollTopRef.current = window.scrollY;
-    };
-
-    window.addEventListener('scroll', handleScrollForCache);
-
-    return () => {
-      window.removeEventListener('scroll', handleScrollForCache);
-
-      // 组件卸载时保存缓存（使用 stateRef 获取最新值）
-      const state = stateRef.current;
-      if (state.allLogs.length > 0) {
-        debugLog('AssetHistory', '保存缓存状态', {
-          dataCount: state.allLogs.length,
-          page: state.page,
-          scrollTop: scrollTopRef.current
-        });
-
-        setListCache('assetHistory', {
-          data: state.allLogs,
-          page: state.page,
-          hasMore: state.hasMore,
-          scrollTop: scrollTopRef.current,
-          filters: { ...state.filters, searchKeyword: state.searchKeyword },
-          timestamp: Date.now()
-        });
-      }
-    };
-  }, [setListCache]); // 只依赖 setListCache，其他值通过 stateRef 获取
-
-  // 重置并加载数据
-  useEffect(() => {
-    // 如果是从缓存恢复的，跳过首次加载
-    if (restoredFromCacheRef.current) {
-      restoredFromCacheRef.current = false;
-      debugLog('AssetHistory', '跳过首次加载（从缓存恢复）');
-      return;
-    }
-    setPage(1);
-    setAllLogs([]);
-    setHasMore(false);
-    loadData(1, true);
-  }, [filters, searchKeyword]);
-
-  // 加载更多
-  const handleLoadMore = () => {
-    if (!loading && hasMore) {
-      setPage(prev => prev + 1);
-      loadData(page + 1);
-    }
-  };
-
-  const bottomRef = useInfiniteScroll(handleLoadMore, hasMore, loading);
-
-  const loadData = async (pageNum: number, isRefresh = false) => {
-    const token = getStoredToken();
-    if (!token) {
-      setError('请先登录');
-      return;
-    }
-
-    setLoading(true);
-    if (isRefresh) setError(null);
-
-    try {
-      // 构建时间参数
-      let startTime: number | undefined;
-      let endTime: number | undefined;
-      const now = Math.floor(Date.now() / 1000);
-
-      switch (filters.time) {
-        case 'today':
-          const today = new Date();
-          today.setHours(0, 0, 0, 0);
-          startTime = Math.floor(today.getTime() / 1000);
-          endTime = now;
-          break;
-        case '7days':
-          startTime = now - 7 * 24 * 3600;
-          endTime = now;
-          break;
-        case '30days':
-          startTime = now - 30 * 24 * 3600;
-          endTime = now;
-          break;
-      }
-
-      const res = await getAllLog({
-        page: pageNum,
-        limit: 10,
-        type: filters.category === 'all' ? undefined : filters.category,
-        flow_direction: filters.flow as 'in' | 'out' | 'all',
-        start_time: startTime,
-        end_time: endTime,
-        keyword: searchKeyword.trim() || undefined,
-        token
-      });
-
-      const data = extractData(res);
-      if (data) {
-        if (pageNum === 1) {
-          setAllLogs(data.list || []);
-        } else {
-          setAllLogs(prev => [...prev, ...(data.list || [])]);
-        }
-        setHasMore((data.list?.length || 0) >= 10 && (data.current_page || 1) * 10 < (data.total || 0));
-      } else {
-        if (isRefresh) setError(res.msg || '获取明细失败');
-      }
-    } catch (e: any) {
-      errorLog('AssetHistory', '加载失败', e);
-      if (isRefresh) setError(e?.message || '加载数据失败');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const {
+    filters,
+    searchKeyword,
+    categoryOptions,
+    error,
+    allLogs,
+    page,
+    hasMore,
+    loading,
+    expandedRows,
+    setSearchKeyword,
+    setCategory,
+    setFlow,
+    setRange,
+    toggleExpandedRow,
+    bottomRef,
+  } = useAssetHistoryData();
 
   const handleItemClick = (item: AllLogItem) => {
     const flowNoQuery = item.flow_no ? `?flowNo=${encodeURIComponent(item.flow_no)}` : '';
     navigate(`/money-log/${item.id}${flowNoQuery}`);
   };
 
-  const toggleExpandedRow = (logId: number) => {
-    setExpandedRows(prev => ({
-      ...prev,
-      [logId]: !prev[logId]
-    }));
-  };
-
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
-      {/* Header */}
       <header className="bg-white sticky top-0 z-30">
         <div className="px-4 py-3 flex items-center relative border-b border-gray-100">
           <button onClick={() => navigate(-1)} className="absolute left-4 p-1 z-10 text-gray-600">
@@ -288,7 +46,6 @@ const AssetHistory: React.FC = () => {
           <h1 className="text-lg font-bold text-gray-800 w-full text-center">历史记录</h1>
         </div>
 
-        {/* 搜索框 */}
         <div className="px-4 py-2 border-b border-gray-100 bg-gray-50/50">
           <SearchInput
             value={searchKeyword}
@@ -309,11 +66,12 @@ const AssetHistory: React.FC = () => {
         />
       </header>
 
-      {/* Content List */}
       <div className="flex-1 p-3">
         {loading && page === 1 ? (
           <div className="flex flex-col items-center justify-center py-20 text-gray-400">
-            <div className="animate-spin mb-2"><Filter size={24} className="opacity-20" /></div>
+            <div className="animate-spin mb-2">
+              <Filter size={24} className="opacity-20" />
+            </div>
             <span className="text-xs">加载中...</span>
           </div>
         ) : error ? (
@@ -339,19 +97,12 @@ const AssetHistory: React.FC = () => {
               />
             ))}
 
-            {/* sentinel for infinite scroll */}
             <div ref={bottomRef} className="h-4" />
 
-            {loading && hasMore && (
-              <div className="text-center py-4 text-xs text-gray-400">
-                加载中...
-              </div>
-            )}
+            {loading && hasMore && <div className="text-center py-4 text-xs text-gray-400">加载中...</div>}
 
             {!hasMore && allLogs.length > 5 && (
-              <div className="text-center py-4 text-xs text-gray-300">
-                - 到底了 -
-              </div>
+              <div className="text-center py-4 text-xs text-gray-300">- 到底了 -</div>
             )}
           </div>
         )}

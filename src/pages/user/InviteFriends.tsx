@@ -38,7 +38,8 @@ const InviteFriends: React.FC = () => {
    */
   const buildInviteLink = (code: string) => {
     if (!code) return '';
-    const origin = 'http://172.20.10.2:5657';
+    const origin = typeof window !== 'undefined' ? window.location.origin : '';
+    if (!origin) return `/register?invite_code=${encodeURIComponent(code)}`;
     return `${origin}/register?invite_code=${encodeURIComponent(code)}`;
   };
 

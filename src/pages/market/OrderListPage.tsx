@@ -213,7 +213,7 @@ const OrderListPage: React.FC = () => {
       <OrderTabs tabs={config.tabs} activeTab={activeTab} onChange={setActiveTab} />
 
       {/* Order List */}
-      <div className="p-4 space-y-4">
+      <div className={`${category === 'product' ? 'p-3 space-y-3' : 'p-4 space-y-4'}`}>
         {category === 'transaction' ? (
           <TransactionOrderList
             orders={consignmentOrders}

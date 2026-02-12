@@ -2,6 +2,29 @@
  * URL 处理工具函数
  */
 
+const rawEnv = (import.meta as any).env ?? {};
+
+const resolveBackendUrl = (): string => {
+    const candidates = [rawEnv?.VITE_API_BASE_URL, rawEnv?.VITE_API_TARGET];
+
+    for (const candidate of candidates) {
+        if (!candidate || !candidate.startsWith('http')) continue;
+        try {
+            return new URL(candidate).origin;
+        } catch {
+            // ignore invalid url and try next candidate
+        }
+    }
+
+    if (typeof window !== 'undefined') {
+        return window.location.origin;
+    }
+
+    return '';
+};
+
+const BACKEND_URL = resolveBackendUrl();
+
 /**
  * 规范化 URL
  * 将以 // 开头的协议相对 URL 转换为 https:// 开头的完整 URL
@@ -20,9 +43,10 @@ export const normalizeUrl = (url: string | undefined | null): string | undefined
     }
 
     // 如果是本地存储地址 (通常以 /storage 或 //domain/storage 开头)
-    // 后端返回的可能是 //domain/path，我们需要替换域名为真实的后端地址
-    // 或者如果是相对路径 /storage/xxx，也需要加上后端地址
-    const BACKEND_URL = 'http://47.76.239.170:8080';
+    // 统一替换成当前环境的后端地址（优先环境变量，其次当前域名）
+    if (!BACKEND_URL) {
+        return url;
+    }
 
     if (url.startsWith('//')) {
         // 移除 //domain 部分，保留 path

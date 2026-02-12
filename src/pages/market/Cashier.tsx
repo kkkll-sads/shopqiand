@@ -11,13 +11,16 @@
 import React from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { LoadingSpinner } from '@/components/common';
-import { Coins, CreditCard, ChevronLeft, ShieldCheck, Wallet, Sparkles } from 'lucide-react';
+import { Coins, CreditCard, ChevronLeft, Copy, ShieldCheck, Wallet, Sparkles } from 'lucide-react';
+import { useNotification } from '@/context/NotificationContext';
 import { useCashier } from '@/hooks/useCashier';
 import { sum, toNumber } from '@/utils/currency';
+import { copyWithToast } from '@/utils/copyWithToast';
 
 const Cashier: React.FC = () => {
   const navigate = useNavigate();
   const { orderId = '' } = useParams<{ orderId?: string }>();
+  const { showToast } = useNotification();
 
   const {
     state,
@@ -106,6 +109,12 @@ const Cashier: React.FC = () => {
       ? 'text-red-600'
       : 'text-blue-600';
 
+  const handleCopyOrderNo = async () => {
+    await copyWithToast(order.order_no || String(order.id), showToast, {
+      successDescription: '订单号已复制到剪贴板',
+    });
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 pb-safe">
       {/* Header - 简约白底 */}
@@ -148,7 +157,19 @@ const Cashier: React.FC = () => {
               )
             )}
           </div>
-          <p className="text-gray-400 text-xs mt-3 font-mono">订单号：{order.order_no}</p>
+          <div className="mt-3 flex items-center justify-center gap-1.5 text-gray-400 text-xs font-mono">
+            <span>订单号：{order.order_no}</span>
+            <button
+              type="button"
+              className="p-0.5 rounded text-gray-400 active:bg-gray-100"
+              onClick={() => {
+                void handleCopyOrderNo();
+              }}
+              aria-label="复制订单号"
+            >
+              <Copy size={12} />
+            </button>
+          </div>
         </div>
 
         {/* 支付方式卡片 */}

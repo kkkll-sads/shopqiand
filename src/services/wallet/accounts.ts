@@ -2,10 +2,38 @@ import type { ApiResponse } from '../networking';
 import { API_ENDPOINTS } from '../config';
 import { authedFetch } from '../client';
 
+export const PAYMENT_ACCOUNT_TYPES = ['bank_card', 'alipay'] as const;
+export type PaymentAccountType = (typeof PAYMENT_ACCOUNT_TYPES)[number];
+
+export const isPaymentAccountType = (value: string): value is PaymentAccountType =>
+  PAYMENT_ACCOUNT_TYPES.includes(value as PaymentAccountType);
+
+const PAYMENT_ACCOUNT_TYPE_LABELS: Record<PaymentAccountType, string> = {
+  bank_card: '银行卡',
+  alipay: '支付宝',
+};
+
+export const normalizePaymentAccountType = (
+  value: string | null | undefined
+): PaymentAccountType => {
+  if (!value) return 'bank_card';
+  return isPaymentAccountType(value) ? value : 'bank_card';
+};
+
+export const getPaymentAccountTypeLabel = (
+  value: string | null | undefined,
+  typeText?: string | null
+): string => {
+  if (typeText && typeText.trim()) {
+    return typeText.trim();
+  }
+  return PAYMENT_ACCOUNT_TYPE_LABELS[normalizePaymentAccountType(value)];
+};
+
 export interface PaymentAccountItem {
   id: number;
   user_id: number;
-  type: string;
+  type: PaymentAccountType | string;
   type_text?: string;
   account: string;
   account_number?: string;
@@ -33,7 +61,7 @@ export async function fetchPaymentAccountList(
 }
 
 export interface AddPaymentAccountParams {
-  type: string;
+  type: PaymentAccountType;
   account_type: 'personal' | 'company';
   bank_name: string;
   account_name: string;

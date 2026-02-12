@@ -122,7 +122,7 @@ const FriendDetail: React.FC<FriendDetailProps> = ({ friend: propFriend, id: pro
                 </div>
                 <span className="text-xs text-gray-500">可提现收益</span>
               </div>
-              <p className="text-xl font-black text-orange-600">
+              <p className="text-lg sm:text-xl font-black text-orange-600 leading-tight break-all">
                 ¥{formatAmount(consignment_income.withdrawable_income)}
               </p>
             </div>
@@ -135,7 +135,7 @@ const FriendDetail: React.FC<FriendDetailProps> = ({ friend: propFriend, id: pro
                 </div>
                 <span className="text-xs text-gray-500">消费金收益</span>
               </div>
-              <p className="text-xl font-black text-amber-600">
+              <p className="text-lg sm:text-xl font-black text-amber-600 leading-tight break-all">
                 {formatAmount(consignment_income.score_income, { decimals: 0 })}
               </p>
             </div>

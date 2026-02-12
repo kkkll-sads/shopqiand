@@ -1,6 +1,8 @@
 import React from 'react';
-import { Calendar, CreditCard, FileText, MapPin, Phone, User, X } from 'lucide-react';
+import { Calendar, Copy, CreditCard, FileText, MapPin, Phone, User, X } from 'lucide-react';
+import { useNotification } from '@/context/NotificationContext';
 import { ConsignmentDetailData } from '@/services';
+import { copyWithToast } from '@/utils/copyWithToast';
 import { formatAmount, formatTime } from '@/utils/format';
 
 interface ConsignmentDetailModalProps {
@@ -16,6 +18,14 @@ const ConsignmentDetailModal: React.FC<ConsignmentDetailModalProps> = ({
   onClose,
   formatOrderPrice,
 }) => {
+  const { showToast } = useNotification();
+
+  const handleCopy = async (value: string, description: string) => {
+    await copyWithToast(value, showToast, {
+      successDescription: description,
+    });
+  };
+
   if (!visible || !detail) return null;
 
   return (
@@ -78,7 +88,19 @@ const ConsignmentDetailModal: React.FC<ConsignmentDetailModalProps> = ({
                 </h4>
                 <div className="space-y-2 text-xs text-gray-700">
                   {detail.buyer_id && (
-                    <div>买家ID：{detail.buyer_id}</div>
+                    <div className="flex items-center gap-1.5">
+                      <span>买家ID：{detail.buyer_id}</span>
+                      <button
+                        type="button"
+                        className="p-0.5 rounded text-gray-400 active:bg-gray-100"
+                        onClick={() => {
+                          void handleCopy(String(detail.buyer_id), '买家ID已复制到剪贴板');
+                        }}
+                        aria-label="复制买家ID"
+                      >
+                        <Copy size={11} />
+                      </button>
+                    </div>
                   )}
                   {detail.buyer_username && (
                     <div>用户名：{detail.buyer_username}</div>
@@ -130,8 +152,18 @@ const ConsignmentDetailModal: React.FC<ConsignmentDetailModalProps> = ({
                 </div>
               )}
               {detail.delivery_info?.tracking_no && (
-                <div className="text-xs text-gray-600">
-                  物流单号：{detail.delivery_info.tracking_no}
+                <div className="text-xs text-gray-600 flex items-center gap-1.5">
+                  <span>物流单号：{detail.delivery_info.tracking_no}</span>
+                  <button
+                    type="button"
+                    className="p-0.5 rounded text-gray-400 active:bg-gray-100"
+                    onClick={() => {
+                      void handleCopy(detail.delivery_info!.tracking_no!, '物流单号已复制到剪贴板');
+                    }}
+                    aria-label="复制物流单号"
+                  >
+                    <Copy size={11} />
+                  </button>
                 </div>
               )}
               {detail.delivery_info?.status_text && (
@@ -153,4 +185,3 @@ const ConsignmentDetailModal: React.FC<ConsignmentDetailModalProps> = ({
 };
 
 export default ConsignmentDetailModal;
-

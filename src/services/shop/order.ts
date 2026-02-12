@@ -5,46 +5,27 @@ import { fetchDefaultAddress } from '../user/address';
 import { fetchShopProductDetail } from './product';
 import { bizLog, debugLog, warnLog, errorLog } from '@/utils/logger';
 import { extractData } from '@/utils/apiHelpers';
-
-export interface ShopOrderItemDetail {
-  id: number;
-  shop_order_id: number;
-  product_id: number;
-  product_name: string;
-  product_image: string;
-  product_thumbnail?: string;
-  price: number;
-  score_price?: number;
-  subtotal: number;
-  subtotal_score?: number;
-  quantity: number;
-  [key: string]: any;
-}
-
-export interface ShopOrderItem {
-  id: number;
-  order_no: string;
-  total_amount: number | string;
-  total_score: number | string;
-  status: number;
-  status_text: string;
-  pay_type: string;
-  createtime: number;
-  items: ShopOrderItemDetail[];
-  product_image?: string;
-  product_name?: string;
-  thumbnail?: string;
-  quantity?: number;
-  is_commented?: number;
-  [key: string]: any;
-}
-
-export interface FetchShopOrderParams {
-  page?: number;
-  limit?: number;
-  pay_type?: string;
-  token?: string;
-}
+import type {
+  BuyShopOrderParams,
+  CreateOrderItem,
+  CreateOrderParams,
+  FetchShopOrderParams,
+  OrderActionParams,
+  ShopOrderItem,
+  ShopOrderListData,
+  ShopOrderStatistics,
+} from '../contracts/shop-order';
+export type {
+  BuyShopOrderParams,
+  CreateOrderItem,
+  CreateOrderParams,
+  FetchShopOrderParams,
+  OrderActionParams,
+  ShopOrderItem,
+  ShopOrderItemDetail,
+  ShopOrderListData,
+  ShopOrderStatistics,
+} from '../contracts/shop-order';
 
 const buildOrderSearch = (params: FetchShopOrderParams = {}) => {
   const search = new URLSearchParams();
@@ -57,40 +38,40 @@ const buildOrderSearch = (params: FetchShopOrderParams = {}) => {
 const fetchOrderListByPath = async (
   endpoint: string,
   params: FetchShopOrderParams = {}
-): Promise<ApiResponse<{ list: ShopOrderItem[]; total: number }>> => {
+): Promise<ApiResponse<ShopOrderListData>> => {
   const token = params.token ?? getStoredToken();
   const path = `${endpoint}?${buildOrderSearch(params)}`;
-  return authedFetch<{ list: ShopOrderItem[]; total: number }>(path, { method: 'GET', token });
+  return authedFetch<ShopOrderListData>(path, { method: 'GET', token });
 };
 
 export async function fetchPendingPayOrders(
   params: FetchShopOrderParams = {}
-): Promise<ApiResponse<{ list: ShopOrderItem[]; total: number }>> {
+): Promise<ApiResponse<ShopOrderListData>> {
   return fetchOrderListByPath(API_ENDPOINTS.shopOrder.pendingPay, params);
 }
 
 export async function fetchPendingShipOrders(
   params: FetchShopOrderParams = {}
-): Promise<ApiResponse<{ list: ShopOrderItem[]; total: number }>> {
+): Promise<ApiResponse<ShopOrderListData>> {
   return fetchOrderListByPath(API_ENDPOINTS.shopOrder.pendingShip, params);
 }
 
 export async function fetchPendingConfirmOrders(
   params: FetchShopOrderParams = {}
-): Promise<ApiResponse<{ list: ShopOrderItem[]; total: number }>> {
+): Promise<ApiResponse<ShopOrderListData>> {
   return fetchOrderListByPath(API_ENDPOINTS.shopOrder.pendingConfirm, params);
 }
 
 export async function fetchCompletedOrders(
   params: FetchShopOrderParams = {}
-): Promise<ApiResponse<{ list: ShopOrderItem[]; total: number }>> {
+): Promise<ApiResponse<ShopOrderListData>> {
   return fetchOrderListByPath(API_ENDPOINTS.shopOrder.completed, params);
 }
 
 const submitOrderAction = async (
   endpoint: string,
   fieldName: 'id' | 'order_id',
-  params: { id: number | string; token?: string }
+  params: OrderActionParams
 ): Promise<ApiResponse> => {
   const token = params.token ?? getStoredToken();
   const payload = new FormData();
@@ -103,42 +84,20 @@ const submitOrderAction = async (
   });
 };
 
-export async function confirmOrder(params: {
-  id: number | string;
-  token?: string;
-}): Promise<ApiResponse> {
+export async function confirmOrder(params: OrderActionParams): Promise<ApiResponse> {
   return submitOrderAction(API_ENDPOINTS.shopOrder.confirm, 'id', params);
 }
 
-export async function payOrder(params: {
-  id: number | string;
-  token?: string;
-}): Promise<ApiResponse> {
+export async function payOrder(params: OrderActionParams): Promise<ApiResponse> {
   return submitOrderAction(API_ENDPOINTS.shopOrder.pay, 'order_id', params);
 }
 
-export async function deleteOrder(params: {
-  id: number | string;
-  token?: string;
-}): Promise<ApiResponse> {
+export async function deleteOrder(params: OrderActionParams): Promise<ApiResponse> {
   return submitOrderAction(API_ENDPOINTS.shopOrder.delete, 'order_id', params);
 }
 
-export async function cancelOrder(params: {
-  id: number | string;
-  token?: string;
-}): Promise<ApiResponse> {
+export async function cancelOrder(params: OrderActionParams): Promise<ApiResponse> {
   return submitOrderAction(API_ENDPOINTS.shopOrder.cancel, 'order_id', params);
-}
-
-export interface ShopOrderStatistics {
-  all_count: number;
-  pending_count: number;
-  paid_count: number;
-  shipped_count: number;
-  completed_count: number;
-  cancelled_count: number;
-  refunded_count: number;
 }
 
 export async function fetchShopOrderStatistics(
@@ -158,21 +117,6 @@ export async function getOrderDetail(params: {
   const token = params.token ?? getStoredToken();
   const path = `${API_ENDPOINTS.shopOrder.detail}?id=${params.id}`;
   return authedFetch<ShopOrderItem>(path, { method: 'GET', token });
-}
-
-export interface CreateOrderItem {
-  product_id: number;
-  quantity: number;
-  sku_id?: number;
-}
-
-export interface CreateOrderParams {
-  items: CreateOrderItem[];
-  pay_type: 'money' | 'score';
-  address_id?: number | null;
-  remark?: string;
-  token?: string;
-  is_physical?: boolean;
 }
 
 const normalizeOrderItems = (items: CreateOrderItem[]) => {
@@ -255,19 +199,10 @@ export async function createOrder(params: CreateOrderParams): Promise<ApiRespons
     });
 
     return data;
-  } catch (error: any) {
+  } catch (error: unknown) {
     errorLog('api.shop.createOrder', '创建订单失败', error);
     throw error;
   }
-}
-
-export interface BuyShopOrderParams {
-  items: CreateOrderItem[];
-  pay_type: 'money' | 'score';
-  address_id?: number | null;
-  remark?: string;
-  token?: string;
-  is_physical?: boolean;
 }
 
 export async function buyShopOrder(params: BuyShopOrderParams): Promise<ApiResponse> {
@@ -347,7 +282,7 @@ export async function buyShopOrder(params: BuyShopOrderParams): Promise<ApiRespo
     });
 
     return data;
-  } catch (error: any) {
+  } catch (error: unknown) {
     errorLog('api.shop.buy', '购买商品失败', error);
     throw error;
   }

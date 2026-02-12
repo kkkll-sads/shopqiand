@@ -183,14 +183,15 @@ const AssetActionModal: React.FC<AssetActionModalProps> = ({
                           {String(actionModal.context.countdown.minutes).padStart(2, '0')}:
                           {String(actionModal.context.countdown.seconds).padStart(2, '0')}
                         </div>
-                      ) : (
+                      ) : typeof actionModal.consignmentCheckResult.remainingSeconds === 'number' &&
+                        actionModal.consignmentCheckResult.remainingSeconds > 0 ? (
                         <div className="text-sm font-bold text-red-700 text-center">
-                          {Math.floor((actionModal.consignmentCheckResult.remainingSeconds || 0) / 3600)}h{' '}
-                          {Math.floor(
-                            ((actionModal.consignmentCheckResult.remainingSeconds || 0) % 3600) / 60
-                          )}
-                          m {(actionModal.consignmentCheckResult.remainingSeconds || 0) % 60}s
+                          {Math.floor(actionModal.consignmentCheckResult.remainingSeconds / 3600)}h{' '}
+                          {Math.floor((actionModal.consignmentCheckResult.remainingSeconds % 3600) / 60)}m{' '}
+                          {actionModal.consignmentCheckResult.remainingSeconds % 60}s
                         </div>
+                      ) : (
+                        <div className="text-sm font-bold text-red-700 text-center">寄售需要满足购买后48小时，请稍后重试</div>
                       )}
                     </div>
                   ))}

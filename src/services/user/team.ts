@@ -3,6 +3,32 @@ import { API_ENDPOINTS } from '../config';
 import { authedFetch, getStoredToken } from '../client';
 import type { PromotionCardData, TeamMembersListData } from '@/types';
 
+export interface TeamOverviewData {
+  balance: number;
+  total_money: number;
+  usdt: number;
+  static_income: number;
+  dynamic_income: number;
+  invite_code: string;
+  invite_link: string;
+  qrcode_url: string;
+  team_total: number;
+  today_register: number;
+  big_area_performance: number;
+  small_area_performance: number;
+  level1_count: number;
+  level2_count: number;
+  level3_count: number;
+}
+
+export async function fetchTeamOverview(token?: string): Promise<ApiResponse<TeamOverviewData>> {
+  const authToken = token ?? getStoredToken();
+  return authedFetch<TeamOverviewData>(API_ENDPOINTS.team.overview, {
+    method: 'GET',
+    token: authToken,
+  });
+}
+
 // 推广相关
 export async function fetchPromotionCard(token: string): Promise<ApiResponse<PromotionCardData>> {
   return authedFetch<PromotionCardData>(API_ENDPOINTS.team.promotionCard, {

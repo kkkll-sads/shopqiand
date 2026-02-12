@@ -10,7 +10,7 @@ import { useNotification } from '@/context/NotificationContext';
 import { LoadingSpinner } from '@/components/common';
 import ProductDetail from './ProductDetail';
 import { Product } from '@/types';
-import { isSuccess, extractError } from '@/utils/apiHelpers';
+import { isSuccess, extractError, extractErrorFromException } from '@/utils/apiHelpers';
 import { errorLog } from '@/utils/logger';
 
 const SEARCH_HISTORY_KEY = 'search_history';
@@ -96,9 +96,9 @@ const SearchPage: React.FC = () => {
             } else {
                 showToast('error', '查询失败', extractError(response, '未找到匹配的藏品'));
             }
-        } catch (error: any) {
+        } catch (error: unknown) {
             errorLog('SearchPage', '搜索失败', error);
-            showToast('error', '查询失败', error.message || '网络错误，请稍后重试');
+            showToast('error', '查询失败', extractErrorFromException(error, '网络错误，请稍后重试'));
         } finally {
             setSearching(false);
         }
@@ -227,4 +227,3 @@ const SearchPage: React.FC = () => {
 };
 
 export default SearchPage;
-

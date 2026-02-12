@@ -1,22 +1,26 @@
 import { apiFetch, ApiResponse } from './networking';
 import { API_ENDPOINTS } from './config';
 import { bizLog, debugLog, errorLog } from '@/utils/logger';
+import type { LoginParams, RegisterParams, RetrievePasswordParams } from './contracts/auth';
+export type { LoginParams, RegisterParams, RetrievePasswordParams } from './contracts/auth';
 
-// 注册接口参数类型
-export interface RegisterParams {
-    mobile: string;
-    password: string;
-    pay_password: string;
-    invite_code: string;
-    captcha: string;
+interface CorsTaggedError extends Error {
+    isCorsError: true;
 }
 
-export interface LoginParams {
-    mobile: string;
-    password?: string;
-    captcha?: string;
-    keep?: boolean | number; // 是否保持登录状态
-}
+const isFailedToFetchError = (error: unknown): error is { name: string; message: string } => {
+    if (typeof error !== 'object' || error === null) return false;
+    const err = error as { name?: unknown; message?: unknown };
+    return err.name === 'TypeError' && err.message === 'Failed to fetch';
+};
+
+const createCorsError = (): CorsTaggedError => {
+    const corsError = new Error(
+        '网络请求失败，可能是跨域问题或服务器不可达。请检查：\n1. API 服务器是否正常运行\n2. 是否配置了 CORS 允许跨域\n3. 网络连接是否正常',
+    ) as CorsTaggedError;
+    corsError.isCorsError = true;
+    return corsError;
+};
 
 /**
  * 注册接口
@@ -40,15 +44,11 @@ export async function register(params: RegisterParams): Promise<ApiResponse> {
         debugLog('api.auth.register.raw', data);
         bizLog('auth.register', { code: data.code });
         return data;
-    } catch (error: any) {
+    } catch (error: unknown) {
         errorLog('api.auth.register', '注册接口调用失败', error);
 
-        // 提供更详细的错误信息
-        if (error.name === 'TypeError' && error.message === 'Failed to fetch') {
-            // 这通常是 CORS 或网络问题
-            const corsError = new Error('网络请求失败，可能是跨域问题或服务器不可达。请检查：\n1. API 服务器是否正常运行\n2. 是否配置了 CORS 允许跨域\n3. 网络连接是否正常');
-            (corsError as any).isCorsError = true;
-            throw corsError;
+        if (isFailedToFetchError(error)) {
+            throw createCorsError();
         }
 
         throw error;
@@ -91,29 +91,13 @@ export async function login(params: LoginParams): Promise<ApiResponse> {
         debugLog('api.auth.login.raw', data);
         bizLog('auth.login.request', { code: data.code });
         return data;
-    } catch (error: any) {
+    } catch (error: unknown) {
         errorLog('api.auth.login', '登录接口调用失败', error);
-        if (error.name === 'TypeError' && error.message === 'Failed to fetch') {
-            const corsError = new Error('网络请求失败，可能是跨域问题或服务器不可达。请检查：\n1. API 服务器是否正常运行\n2. 是否配置了 CORS 允许跨域\n3. 网络连接是否正常');
-            (corsError as any).isCorsError = true;
-            throw corsError;
+        if (isFailedToFetchError(error)) {
+            throw createCorsError();
         }
         throw error;
     }
-}
-
-/**
- * 找回密码参数接口
- */
-export interface RetrievePasswordParams {
-    /** 账户类型：mobile/email，默认 mobile */
-    type?: 'mobile' | 'email' | string;
-    /** 账户：手机号或邮箱 */
-    account: string;
-    /** 短信/邮箱验证码 */
-    captcha: string;
-    /** 新密码（6-32位，不能包含特殊字符） */
-    password: string;
 }
 
 /**
@@ -136,7 +120,7 @@ export async function retrievePassword(params: RetrievePasswordParams): Promise<
         });
         debugLog('api.auth.retrievePassword.raw', data);
         return data;
-    } catch (error: any) {
+    } catch (error: unknown) {
         errorLog('api.auth.retrievePassword', '找回密码失败', error);
         throw error;
     }

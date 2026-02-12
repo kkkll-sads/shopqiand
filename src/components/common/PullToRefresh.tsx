@@ -12,6 +12,7 @@ interface PullToRefreshProps {
   className?: string;
   threshold?: number; // 触发刷新的下拉距离
   disabled?: boolean;
+  useWindowScroll?: boolean;
 }
 
 const PullToRefresh: React.FC<PullToRefreshProps> = ({
@@ -20,6 +21,7 @@ const PullToRefresh: React.FC<PullToRefreshProps> = ({
   className = '',
   threshold = 60,
   disabled = false,
+  useWindowScroll = true,
 }) => {
   const [pullDistance, setPullDistance] = useState(0);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -27,56 +29,172 @@ const PullToRefresh: React.FC<PullToRefreshProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const startY = useRef(0);
   const currentY = useRef(0);
+  const canStartPullRef = useRef(false);
+  const activeScrollableAncestorRef = useRef<Element | null>(null);
+  const pullDistanceRef = useRef(0);
+  const isPullingRef = useRef(false);
+  const rafIdRef = useRef<number | null>(null);
+  const pendingPullDistanceRef = useRef(0);
+
+  const isScrollableNode = (node: Element) => {
+    const style = window.getComputedStyle(node);
+    const overflowY = style.overflowY;
+    const canScrollY = overflowY === 'auto' || overflowY === 'scroll' || overflowY === 'overlay';
+    return canScrollY && node.scrollHeight > node.clientHeight;
+  };
+
+  const getScrollableAncestor = (target: EventTarget | null): Element | null => {
+    if (!(target instanceof Element)) return null;
+
+    let node: Element | null = target;
+    while (node && node !== document.body) {
+      if (isScrollableNode(node)) {
+        return node;
+      }
+      node = node.parentElement;
+    }
+    return null;
+  };
+
+  const isInteractiveTarget = (target: EventTarget | null) => {
+    if (!(target instanceof Element)) return false;
+    return Boolean(target.closest('input, textarea, select, [contenteditable=\"true\"]'));
+  };
+
+  const getWindowScrollTop = () =>
+    window.scrollY ||
+    window.pageYOffset ||
+    document.documentElement?.scrollTop ||
+    document.body?.scrollTop ||
+    0;
+
+  const isAtTop = (target: EventTarget | null) => {
+    if (useWindowScroll && getWindowScrollTop() > 0) {
+      return false;
+    }
+
+    const container = containerRef.current;
+    if (container && container.scrollTop > 0) {
+      return false;
+    }
+
+    const scrollableAncestor = getScrollableAncestor(target);
+    if (scrollableAncestor && scrollableAncestor.scrollTop > 0) {
+      return false;
+    }
+
+    return true;
+  };
+
+  const isAtTopWithAncestor = (ancestor: Element | null) => {
+    if (useWindowScroll && getWindowScrollTop() > 0) {
+      return false;
+    }
+
+    const container = containerRef.current;
+    if (container && container.scrollTop > 0) {
+      return false;
+    }
+
+    if (ancestor && ancestor.scrollTop > 0) {
+      return false;
+    }
+
+    return true;
+  };
+
+  const setPullDistanceRaf = useCallback((nextDistance: number) => {
+    const clamped = Math.max(0, nextDistance);
+    pullDistanceRef.current = clamped;
+    pendingPullDistanceRef.current = clamped;
+
+    if (rafIdRef.current !== null) return;
+
+    rafIdRef.current = requestAnimationFrame(() => {
+      rafIdRef.current = null;
+      setPullDistance((prev) => {
+        const next = pendingPullDistanceRef.current;
+        return prev === next ? prev : next;
+      });
+    });
+  }, []);
+
+  const setPullingState = useCallback((next: boolean) => {
+    if (isPullingRef.current === next) return;
+    isPullingRef.current = next;
+    setIsPulling(next);
+  }, []);
 
   const handleTouchStart = useCallback((e: TouchEvent) => {
-    if (disabled || isRefreshing) return;
-    
-    const container = containerRef.current;
-    if (!container || container.scrollTop > 0) return;
-    
+    canStartPullRef.current = false;
+    activeScrollableAncestorRef.current = null;
+    if (disabled || isRefreshing || e.touches.length !== 1) return;
+    if (isInteractiveTarget(e.target)) return;
+    if (!isAtTop(e.target)) return;
+
+    activeScrollableAncestorRef.current = getScrollableAncestor(e.target);
     startY.current = e.touches[0].clientY;
-    setIsPulling(true);
-  }, [disabled, isRefreshing]);
+    currentY.current = startY.current;
+    canStartPullRef.current = true;
+    setPullingState(false);
+  }, [disabled, isRefreshing, useWindowScroll]);
 
   const handleTouchMove = useCallback((e: TouchEvent) => {
-    if (!isPulling || disabled || isRefreshing) return;
-    
-    const container = containerRef.current;
-    if (!container || container.scrollTop > 0) {
-      setPullDistance(0);
+    if (disabled || isRefreshing || e.touches.length !== 1) return;
+    if (!canStartPullRef.current) return;
+    if (!isAtTopWithAncestor(activeScrollableAncestorRef.current)) {
+      setPullingState(false);
+      setPullDistanceRaf(0);
       return;
     }
 
     currentY.current = e.touches[0].clientY;
-    const distance = Math.max(0, (currentY.current - startY.current) * 0.5);
-    
+    const deltaY = currentY.current - startY.current;
+    const distance = Math.max(0, deltaY * 0.5);
+
     if (distance > 0) {
+      setPullingState(true);
       e.preventDefault();
-      setPullDistance(Math.min(distance, threshold * 1.5));
+      setPullDistanceRaf(Math.min(distance, threshold * 1.5));
+      return;
     }
-  }, [isPulling, disabled, isRefreshing, threshold]);
+
+    setPullingState(false);
+    setPullDistanceRaf(0);
+  }, [disabled, isRefreshing, threshold, setPullDistanceRaf, setPullingState, useWindowScroll]);
 
   const handleTouchEnd = useCallback(async () => {
-    if (!isPulling || disabled) return;
-    
-    setIsPulling(false);
+    const canStartPull = canStartPullRef.current;
+    canStartPullRef.current = false;
+    activeScrollableAncestorRef.current = null;
 
-    if (pullDistance >= threshold && !isRefreshing) {
+    if (!canStartPull || disabled) return;
+
+    setPullingState(false);
+
+    if (pullDistanceRef.current >= threshold && !isRefreshing) {
       setIsRefreshing(true);
-      setPullDistance(threshold);
-      
+      setPullDistanceRaf(threshold);
+
       try {
         await onRefresh();
       } catch (error) {
         errorLog('PullToRefresh', '刷新失败', error);
       } finally {
         setIsRefreshing(false);
-        setPullDistance(0);
+        setPullDistanceRaf(0);
       }
     } else {
-      setPullDistance(0);
+      setPullDistanceRaf(0);
     }
-  }, [isPulling, disabled, pullDistance, threshold, isRefreshing, onRefresh]);
+  }, [disabled, threshold, isRefreshing, onRefresh, setPullDistanceRaf, setPullingState]);
+
+  const handleTouchCancel = useCallback(() => {
+    canStartPullRef.current = false;
+    activeScrollableAncestorRef.current = null;
+    setPullingState(false);
+    setPullDistanceRaf(0);
+  }, [setPullDistanceRaf, setPullingState]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -85,25 +203,36 @@ const PullToRefresh: React.FC<PullToRefreshProps> = ({
     container.addEventListener('touchstart', handleTouchStart, { passive: true });
     container.addEventListener('touchmove', handleTouchMove, { passive: false });
     container.addEventListener('touchend', handleTouchEnd);
+    container.addEventListener('touchcancel', handleTouchCancel);
 
     return () => {
       container.removeEventListener('touchstart', handleTouchStart);
       container.removeEventListener('touchmove', handleTouchMove);
       container.removeEventListener('touchend', handleTouchEnd);
+      container.removeEventListener('touchcancel', handleTouchCancel);
     };
-  }, [handleTouchStart, handleTouchMove, handleTouchEnd]);
+  }, [handleTouchStart, handleTouchMove, handleTouchEnd, handleTouchCancel]);
+
+  useEffect(() => {
+    return () => {
+      if (rafIdRef.current !== null) {
+        cancelAnimationFrame(rafIdRef.current);
+      }
+    };
+  }, []);
 
   const progress = Math.min(pullDistance / threshold, 1);
   const shouldTrigger = pullDistance >= threshold;
 
   return (
-    <div ref={containerRef} className={`relative overflow-auto ${className}`}>
+    <div ref={containerRef} className={`relative ${className}`}>
       {/* 下拉指示器 */}
       <div 
-        className="absolute left-0 right-0 flex items-center justify-center transition-all duration-200 overflow-hidden z-10"
+        className="absolute left-0 right-0 flex items-center justify-center overflow-hidden z-10"
         style={{ 
           height: pullDistance,
           top: 0,
+          transition: isPulling && !isRefreshing ? 'none' : 'height 200ms ease',
         }}
       >
         <div 
@@ -133,9 +262,11 @@ const PullToRefresh: React.FC<PullToRefreshProps> = ({
       
       {/* 内容区域 */}
       <div 
-        className="transition-transform duration-200"
+        className="will-change-transform"
         style={{ 
           transform: `translateY(${pullDistance}px)`,
+          transition: isPulling && !isRefreshing ? 'none' : 'transform 200ms ease',
+          touchAction: 'pan-x pan-y',
         }}
       >
         {children}

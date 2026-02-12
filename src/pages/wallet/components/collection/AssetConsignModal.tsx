@@ -2,10 +2,11 @@
  * 资产挂牌弹窗组件
  */
 import React from 'react';
-import { X, CheckCircle } from 'lucide-react';
+import { X, CheckCircle, Copy } from 'lucide-react';
 import { MyCollectionItem, normalizeAssetUrl, computeConsignmentPrice } from '@/services';
 import { toString, toNumber, multiply } from '@/utils/currency';
 import { useNotification } from '@/context/NotificationContext';
+import { copyWithToast } from '@/utils/copyWithToast';
 import { UserInfo } from '@/types';
 import {
   check48Hours,
@@ -45,6 +46,12 @@ export const AssetConsignModal: React.FC<AssetConsignModalProps> = ({
 }) => {
   const { showToast } = useNotification();
 
+  const handleCopyAssetCode = async () => {
+    await copyWithToast(item.asset_code || item.order_no || '', showToast, {
+      successDescription: '确权编号已复制到剪贴板',
+    });
+  };
+
   if (!visible || !item) return null;
 
   // 计算核心数据
@@ -59,18 +66,38 @@ export const AssetConsignModal: React.FC<AssetConsignModalProps> = ({
   // 计算锁定状态
   let isLocked = false;
   let remainingSecs = 0;
+  const parsedRemainingSeconds = (() => {
+    if (typeof check.remaining_seconds === 'number') {
+      return Number(check.remaining_seconds);
+    }
+    if (typeof check.remaining_text === 'string') {
+      const match = check.remaining_text.match(/(\d{1,}):(\d{2}):(\d{2})/);
+      if (match) {
+        const hours = Number(match[1]) || 0;
+        const minutes = Number(match[2]) || 0;
+        const seconds = Number(match[3]) || 0;
+        return hours * 3600 + minutes * 60 + seconds;
+      }
+    }
+    return null;
+  })();
 
   if (typeof check.unlocked === 'boolean' && !check.unlocked) {
     isLocked = true;
-    remainingSecs = Number(check.remaining_seconds || 0);
-  } else if (typeof check.remaining_seconds === 'number' && Number(check.remaining_seconds) > 0) {
+    if (typeof parsedRemainingSeconds === 'number' && parsedRemainingSeconds > 0) {
+      remainingSecs = parsedRemainingSeconds;
+    } else {
+      const timeCheck = check48Hours(item.pay_time || item.buy_time || 0);
+      remainingSecs = (timeCheck.hasValidBuyTime ? Math.max(1, timeCheck.hoursLeft) : 48) * 3600;
+    }
+  } else if (typeof parsedRemainingSeconds === 'number' && parsedRemainingSeconds > 0) {
     isLocked = true;
-    remainingSecs = Number(check.remaining_seconds);
+    remainingSecs = parsedRemainingSeconds;
   } else {
     const timeCheck = check48Hours(item.pay_time || item.buy_time || 0);
     if (!timeCheck.passed) {
       isLocked = true;
-      remainingSecs = timeCheck.hoursLeft * 3600;
+      remainingSecs = (timeCheck.hasValidBuyTime ? Math.max(1, timeCheck.hoursLeft) : 48) * 3600;
     }
   }
 
@@ -134,8 +161,20 @@ export const AssetConsignModal: React.FC<AssetConsignModalProps> = ({
                 <div className="text-sm font-bold text-gray-900 mb-1 truncate leading-tight">
                   {item.item_title || item.title}
                 </div>
-                <div className="text-xs text-gray-500 font-mono truncate bg-gray-50 inline-block px-1.5 py-0.5 rounded">
-                  确权编号：{item.asset_code || item.order_no || 'Pending...'}
+                <div className="text-xs text-gray-500 font-mono truncate bg-gray-50 inline-flex items-center gap-1.5 px-1.5 py-0.5 rounded">
+                  <span>确权编号：{item.asset_code || item.order_no || 'Pending...'}</span>
+                  {(item.asset_code || item.order_no) && (
+                    <button
+                      type="button"
+                      className="p-0.5 rounded text-gray-400 active:bg-gray-100"
+                      onClick={() => {
+                        void handleCopyAssetCode();
+                      }}
+                      aria-label="复制确权编号"
+                    >
+                      <Copy size={11} />
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
