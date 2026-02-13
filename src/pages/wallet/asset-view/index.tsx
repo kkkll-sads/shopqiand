@@ -10,7 +10,7 @@ import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
 import type { MyCollectionItem } from '@/services';
 import type { Product } from '@/types';
 import { useAssetActionModal } from '@/hooks/useAssetActionModal';
-import { useAppStore } from '@/stores/appStore';
+import { useAppStore, type ListCacheKey, type ListPageCache } from '@/stores/appStore';
 import AssetHeaderCard from '../components/asset/AssetHeaderCard';
 import AssetActionsGrid from '../components/asset/AssetActionsGrid';
 import AssetTransactionContent from '../components/asset/AssetTransactionContent';
@@ -40,6 +40,11 @@ const AssetView: React.FC<AssetViewProps> = ({ initialTab = 0 }) => {
 
   const filters = useAssetViewFilters();
 
+  const stableSetListCache = useCallback(
+    (key: ListCacheKey, cache: ListPageCache) => setListCache(key, cache),
+    [setListCache]
+  );
+
   const tabs = useAssetViewTabs({
     initialTab,
     filterCategory: filters.filterCategory,
@@ -50,7 +55,7 @@ const AssetView: React.FC<AssetViewProps> = ({ initialTab = 0 }) => {
   useAssetViewCache({
     pathname,
     cache: listCaches.assetView,
-    setListCache: (key, cache) => setListCache(key, cache),
+    setListCache: stableSetListCache,
     tabsData: tabs.data,
     activeTab: tabs.activeTab,
     hasMore: tabs.hasMore,
