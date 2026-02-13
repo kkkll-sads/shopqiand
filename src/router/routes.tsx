@@ -40,6 +40,7 @@ const userRoutes: RouteObject[] = [
   lazyRoute('/activity-center', pages.ActivityCenter),
   lazyRoute('/reset-login-password', pages.ResetLoginPassword),
   lazyRoute('/reset-pay-password', pages.ResetPayPassword),
+  lazyRoute('/activity/team-leaderboard', pages.TeamLeaderboard),
 ];
 
 const cmsRoutes: RouteObject[] = [

@@ -27,6 +27,7 @@ export const AccountDeletion = lazy(() => import('@/pages/user/AccountDeletion')
 export const NotificationSettings = lazy(() => import('@/pages/user/NotificationSettings'));
 export const UserSurvey = lazy(() => import('@/pages/user/UserSurvey'));
 export const ActivityCenter = lazy(() => import('@/pages/user/ActivityCenter'));
+export const TeamLeaderboard = lazy(() => import('@/pages/activity/team-leaderboard/TeamLeaderboardPage'));
 
 // CMS/内容页面
 export const News = lazy(() => import('@/pages/cms/News'));
