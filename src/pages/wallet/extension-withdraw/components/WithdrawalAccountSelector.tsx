@@ -11,9 +11,11 @@ const WithdrawalAccountSelector: React.FC<WithdrawalAccountSelectorProps> = ({
   selectedAccount,
   onOpen,
 }) => (
-  <div
-    className="bg-white rounded-xl p-3 shadow-sm flex justify-between items-center cursor-pointer active:bg-gray-50"
+  <button
+    type="button"
     onClick={onOpen}
+    aria-label="选择收款账户"
+    className="w-full bg-white rounded-xl p-3 shadow-sm flex justify-between items-center cursor-pointer active:bg-gray-50 text-left"
   >
     <span className="text-base text-gray-800">
       {selectedAccount
@@ -23,7 +25,7 @@ const WithdrawalAccountSelector: React.FC<WithdrawalAccountSelectorProps> = ({
         : '选择收款账户'}
     </span>
     <ChevronRight size={20} className="text-gray-400" />
-  </div>
+  </button>
 );
 
 export default WithdrawalAccountSelector;
