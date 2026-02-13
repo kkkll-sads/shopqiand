@@ -124,7 +124,7 @@ const ShopProductDetail: React.FC<ShopProductDetailProps> = ({
   }
 
   return (
-    <div className="min-h-screen bg-[#f5f5f5] pb-[56px]">
+    <div className="bg-[#f5f5f5]" style={{ paddingBottom: 'calc(56px + env(safe-area-inset-bottom, 0px))' }}>
       <ShopProductHeader
         headerStyle={headerStyle}
         activeTab={activeTab}
@@ -192,6 +192,7 @@ const ShopProductDetail: React.FC<ShopProductDetailProps> = ({
 
       <BottomSheet visible={showAddressSheet} title="选择地址" onClose={() => setShowAddressSheet(false)}>
         <AddressSheet
+          visible={showAddressSheet}
           onSelectAddress={(address) => {
             debugLog('ShopProductDetail', '选择地址', address)
             setShowAddressSheet(false)

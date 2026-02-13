@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { X } from 'lucide-react';
 
 interface WithdrawalPasswordModalProps {
@@ -12,7 +12,7 @@ interface WithdrawalPasswordModalProps {
   onClose: () => void;
   onPayPasswordChange: (value: string) => void;
   onRemarkChange: (value: string) => void;
-  onConfirm: () => void;
+  onConfirm: () => void | Promise<void>;
 }
 
 const WithdrawalPasswordModal: React.FC<WithdrawalPasswordModalProps> = ({
@@ -28,14 +28,49 @@ const WithdrawalPasswordModal: React.FC<WithdrawalPasswordModalProps> = ({
   onRemarkChange,
   onConfirm,
 }) => {
+  const [confirmLocked, setConfirmLocked] = useState(false);
+  const submittingRef = useRef(submitting);
+  const busy = submitting || confirmLocked;
+
+  useEffect(() => {
+    submittingRef.current = submitting;
+  }, [submitting]);
+
+  useEffect(() => {
+    if (!open || !submitting) {
+      setConfirmLocked(false);
+    }
+  }, [open, submitting]);
+
+  const handleConfirmClick = () => {
+    if (busy) return;
+
+    setConfirmLocked(true);
+    try {
+      const result = onConfirm();
+      void Promise.resolve(result).finally(() => {
+        if (!submittingRef.current) {
+          setConfirmLocked(false);
+        }
+      });
+    } catch {
+      setConfirmLocked(false);
+    }
+  };
+
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-20 bg-black/70 flex items-center justify-center p-4" onClick={onClose}>
+    <div
+      className="fixed inset-0 z-20 bg-black/70 flex items-center justify-center p-4"
+      onClick={() => {
+        if (!busy) onClose();
+      }}
+    >
       <div className="bg-white rounded-xl p-6 w-full max-w-sm" onClick={(event) => event.stopPropagation()}>
         <div className="flex items-center justify-between mb-6">
           <span className="font-bold text-lg text-gray-900">输入支付密码</span>
-          <button onClick={onClose}>
+          <button onClick={onClose} disabled={busy}>
             <X size={20} className="text-gray-400" />
           </button>
         </div>
@@ -52,6 +87,7 @@ const WithdrawalPasswordModal: React.FC<WithdrawalPasswordModalProps> = ({
             placeholder="请输入备注信息"
             value={remark}
             onChange={(event) => onRemarkChange(event.target.value)}
+            disabled={busy}
             className="w-full border rounded-lg px-3 py-2 bg-gray-50 text-base outline-none focus:border-red-500"
           />
         </div>
@@ -62,6 +98,7 @@ const WithdrawalPasswordModal: React.FC<WithdrawalPasswordModalProps> = ({
           className="w-full border border-gray-200 rounded-lg px-4 py-3 text-base outline-none focus:border-red-500 mb-4"
           value={payPassword}
           onChange={(event) => onPayPasswordChange(event.target.value)}
+          disabled={busy}
           autoFocus
         />
 
@@ -71,14 +108,14 @@ const WithdrawalPasswordModal: React.FC<WithdrawalPasswordModalProps> = ({
 
         <button
           className={`w-full rounded-lg py-3 text-base font-medium ${
-            submitting
+            busy
               ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
               : 'bg-red-600 text-white active:bg-red-700'
           }`}
-          onClick={onConfirm}
-          disabled={submitting}
+          onClick={handleConfirmClick}
+          disabled={busy}
         >
-          {submitting ? '提交中...' : '确认提现'}
+          {busy ? '提交中...' : '确认提现'}
         </button>
       </div>
     </div>

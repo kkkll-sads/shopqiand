@@ -31,19 +31,19 @@ const OrderDetail: React.FC = () => {
   const { handleError: handleOperationError } = useErrorHandler({ showToast: true, persist: false });
 
   const [order, setOrder] = useState<ShopOrderItem | null>(null);
-  const loadMachine = useLoadingMachine();
-  const loading = loadMachine.state === LoadingState.LOADING;
+  const { state: loadState, send: sendLoadEvent } = useLoadingMachine();
+  const loading = loadState === LoadingState.LOADING;
 
   const loadOrder = useCallback(async () => {
     try {
-      loadMachine.send(LoadingEvent.LOAD);
+      sendLoadEvent(LoadingEvent.LOAD);
       const token = getStoredToken();
       if (!token) return;
 
       const response = await getOrderDetail({ id: orderId, token });
       if (isSuccess(response) && response.data) {
         setOrder(response.data);
-        loadMachine.send(LoadingEvent.SUCCESS);
+        sendLoadEvent(LoadingEvent.SUCCESS);
       } else {
         const errorMsg = extractError(response, '获取订单详情失败');
         if (errorMsg.includes('订单不存在')) {
@@ -51,7 +51,7 @@ const OrderDetail: React.FC = () => {
           setTimeout(() => {
             navigate('/orders/points/0', { replace: true });
           }, 1500);
-          loadMachine.send(LoadingEvent.ERROR);
+          sendLoadEvent(LoadingEvent.ERROR);
           return;
         }
 
@@ -61,7 +61,7 @@ const OrderDetail: React.FC = () => {
           customMessage: errorMsg,
           context: { orderId },
         });
-        loadMachine.send(LoadingEvent.ERROR);
+        sendLoadEvent(LoadingEvent.ERROR);
       }
     } catch (err) {
       handleError(err, {
@@ -70,9 +70,9 @@ const OrderDetail: React.FC = () => {
         customMessage: '网络请求失败',
         context: { orderId },
       });
-      loadMachine.send(LoadingEvent.ERROR);
+      sendLoadEvent(LoadingEvent.ERROR);
     }
-  }, [loadMachine, orderId, showToast, navigate, handleError]);
+  }, [sendLoadEvent, orderId, showToast, navigate, handleError]);
 
   useEffect(() => {
     loadOrder();

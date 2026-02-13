@@ -61,6 +61,18 @@ const BuySpecSheet: React.FC<BuySpecSheetProps> = ({
     prevVisibleRef.current = visible;
   }, [visible, preSelectedValueIds]);
 
+  // 阻止滚动穿透
+  useEffect(() => {
+    if (visible) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [visible]);
+
   // 标准化 SKU 数据格式（兼容数组和字符串）
   const normalizedSkus = useMemo(() => skus.map(normalizeSpecValueIds), [skus]);
 
@@ -243,134 +255,135 @@ const BuySpecSheet: React.FC<BuySpecSheetProps> = ({
     return Object.values(selectedSpecs).join(' / ');
   }, [useSkuMode, matchedSku, skuSpecs, selectedValueIds, selectedSpecs]);
 
-  if (!visible) return null;
-
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center">
-      <div className="absolute inset-0 bg-black/50 transition-opacity" onClick={onClose} />
-
-      <div className="relative w-full max-w-[480px] bg-white rounded-t-2xl animate-slide-up overflow-hidden">
-        <button
-          onClick={onClose}
-          className="absolute top-3 right-3 w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 transition-colors z-10"
-        >
-          <X size={18} className="text-gray-500" />
-        </button>
-
-        <div className="flex gap-3 p-4 pb-3">
-          <div className="w-24 h-24 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
-            <LazyImage src={displayImage} alt={productName} className="w-full h-full object-cover" />
-          </div>
-
-          <div className="flex-1 flex flex-col justify-end pt-6">
-            <div className="flex items-baseline flex-wrap">
-              <PriceDisplay
-                displayPrice={displayPrice}
-                useSkuMode={useSkuMode}
-                priceRange={priceRange}
-                greenPowerAmount={greenPowerAmount}
-                balanceAvailableAmount={balanceAvailableAmount}
-                displayScorePrice={displayScorePrice}
-              />
-            </div>
-            <div className="text-gray-400 text-xs mt-1.5">
-              库存 {displayStock} 件 {maxPurchase && maxPurchase < displayStock && `· 限购${maxPurchase}件`}
-            </div>
-            {selectedSpecsText && <div className="text-gray-600 text-xs mt-1">已选：{selectedSpecsText}</div>}
-          </div>
-        </div>
-
-        {useSkuMode && (
-          <SkuSpecSelector
-            skuSpecs={skuSpecs}
-            normalizedSkus={normalizedSkus}
-            selectedValueIds={selectedValueIds}
-            onSelectSkuValue={handleSelectSkuValue}
-            isValueSelectable={isValueSelectable}
-          />
-        )}
-
-        {!useSkuMode && specs.length > 0 && (
-          <LegacySpecSelector
-            specs={specs}
-            selectedSpecs={selectedSpecs}
-            onSelectSpec={handleSelectSpec}
-          />
-        )}
-
-        <div className="px-4 py-3 border-t border-gray-100">
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-gray-700">购买数量</span>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={handleDecrease}
-                disabled={quantity <= 1}
-                className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${
-                  quantity <= 1
-                    ? 'bg-gray-100 text-gray-300 cursor-not-allowed'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200 active:scale-95'
-                }`}
-              >
-                <Minus size={16} />
-              </button>
-              <input
-                type="text"
-                value={quantity}
-                onChange={(e) => handleQuantityChange(e.target.value)}
-                className="w-12 h-8 text-center border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-red-500"
-              />
-              <button
-                onClick={handleIncrease}
-                disabled={quantity >= actualMax}
-                className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${
-                  quantity >= actualMax
-                    ? 'bg-gray-100 text-gray-300 cursor-not-allowed'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200 active:scale-95'
-                }`}
-              >
-                <Plus size={16} />
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <div className="p-4 pb-safe border-t border-gray-100">
+    <div
+      className={`fixed inset-0 z-[100] flex items-end justify-center transition-all duration-300 ${
+        visible ? 'bg-black/50 pointer-events-auto' : 'bg-transparent pointer-events-none'
+      }`}
+      onClick={onClose}
+      style={{ visibility: visible ? 'visible' : 'hidden' }}
+    >
+      <div
+        className={`relative w-full max-w-[480px] bg-white rounded-t-2xl overflow-hidden transition-transform duration-300 ease-out flex flex-col ${
+          visible ? 'translate-y-0' : 'translate-y-full'
+        }`}
+        style={{ maxHeight: '80vh' }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* 固定头部：商品信息 */}
+        <div className="flex-shrink-0">
           <button
-            onClick={handleConfirm}
-            disabled={!canBuy}
-            className={`w-full py-3 rounded-xl text-white font-semibold text-base transition-all ${
-              canBuy
-                ? 'bg-gradient-to-r from-red-600 to-red-500 active:opacity-90'
-                : 'bg-gray-300 cursor-not-allowed'
-            }`}
+            onClick={onClose}
+            className="absolute top-3 right-3 w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 transition-colors z-10"
           >
-            {displayStock === 0
-              ? '暂时缺货'
-              : !allSpecsSelected
-                ? '请选择规格'
-                : useSkuMode && !matchedSku
-                  ? '该规格暂无库存'
-                  : '确认'}
+            <X size={18} className="text-gray-500" />
           </button>
+
+          <div className="flex gap-3 p-4 pb-3">
+            <div className="w-24 h-24 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
+              <LazyImage src={displayImage} alt={productName} className="w-full h-full object-cover" />
+            </div>
+
+            <div className="flex-1 flex flex-col justify-end pt-6">
+              <div className="flex items-baseline flex-wrap">
+                <PriceDisplay
+                  displayPrice={displayPrice}
+                  useSkuMode={useSkuMode}
+                  priceRange={priceRange}
+                  greenPowerAmount={greenPowerAmount}
+                  balanceAvailableAmount={balanceAvailableAmount}
+                  displayScorePrice={displayScorePrice}
+                />
+              </div>
+              <div className="text-gray-400 text-xs mt-1.5">
+                库存 {displayStock} 件 {maxPurchase && maxPurchase < displayStock && `· 限购${maxPurchase}件`}
+              </div>
+              {selectedSpecsText && <div className="text-gray-600 text-xs mt-1">已选：{selectedSpecsText}</div>}
+            </div>
+          </div>
+        </div>
+
+        {/* 中间可滚动区域：规格选择 */}
+        <div className="flex-1 overflow-y-auto overscroll-contain min-h-0">
+          {useSkuMode && (
+            <SkuSpecSelector
+              skuSpecs={skuSpecs}
+              normalizedSkus={normalizedSkus}
+              selectedValueIds={selectedValueIds}
+              onSelectSkuValue={handleSelectSkuValue}
+              isValueSelectable={isValueSelectable}
+            />
+          )}
+
+          {!useSkuMode && specs.length > 0 && (
+            <LegacySpecSelector
+              specs={specs}
+              selectedSpecs={selectedSpecs}
+              onSelectSpec={handleSelectSpec}
+            />
+          )}
+        </div>
+
+        {/* 固定底部：数量 + 确认按钮 */}
+        <div className="flex-shrink-0 border-t border-gray-100">
+          <div className="px-4 py-3">
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-gray-700">购买数量</span>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleDecrease}
+                  disabled={quantity <= 1}
+                  className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${
+                    quantity <= 1
+                      ? 'bg-gray-100 text-gray-300 cursor-not-allowed'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200 active:scale-95'
+                  }`}
+                >
+                  <Minus size={16} />
+                </button>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  value={quantity}
+                  onChange={(e) => handleQuantityChange(e.target.value)}
+                  className="w-12 h-8 text-center border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-red-500"
+                />
+                <button
+                  onClick={handleIncrease}
+                  disabled={quantity >= actualMax}
+                  className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${
+                    quantity >= actualMax
+                      ? 'bg-gray-100 text-gray-300 cursor-not-allowed'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200 active:scale-95'
+                  }`}
+                >
+                  <Plus size={16} />
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div className="p-4 pt-0" style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}>
+            <button
+              onClick={handleConfirm}
+              disabled={!canBuy}
+              className={`w-full py-3 rounded-xl text-white font-semibold text-base transition-all ${
+                canBuy
+                  ? 'bg-gradient-to-r from-red-600 to-red-500 active:opacity-90'
+                  : 'bg-gray-300 cursor-not-allowed'
+              }`}
+            >
+              {displayStock === 0
+                ? '暂时缺货'
+                : !allSpecsSelected
+                  ? '请选择规格'
+                  : useSkuMode && !matchedSku
+                    ? '该规格暂无库存'
+                    : '确认'}
+            </button>
+          </div>
         </div>
       </div>
-
-      <style>{`
-        @keyframes slide-up {
-          from {
-            transform: translateY(100%);
-          }
-          to {
-            transform: translateY(0);
-          }
-        }
-        .animate-slide-up {
-          animation: slide-up 0.3s ease-out;
-        }
-        .pb-safe {
-          padding-bottom: max(1rem, env(safe-area-inset-bottom));
-        }
-      `}</style>
     </div>
   );
 };

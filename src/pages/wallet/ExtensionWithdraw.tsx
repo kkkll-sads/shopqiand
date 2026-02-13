@@ -2,7 +2,7 @@
  * ExtensionWithdraw - 拓展提现页面
  * 已迁移: 使用 React Router 导航
  */
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import PageContainer from '@/layouts/PageContainer';
 import {
@@ -48,6 +48,7 @@ const ExtensionWithdraw: React.FC = () => {
   const [amount, setAmount] = useState<string>('');
   const [payPassword, setPayPassword] = useState<string>('');
   const [remark, setRemark] = useState<string>('');
+  const submitLockRef = useRef(false);
 
   const accountsMachine = useStateMachine<LoadingState, LoadingEvent>({
     initial: LoadingState.IDLE,
@@ -202,11 +203,14 @@ const ExtensionWithdraw: React.FC = () => {
   };
 
   const handleClosePasswordModal = () => {
+    if (submitting || submitLockRef.current) return;
     setShowPasswordModal(false);
     setPayPassword('');
   };
 
   const handleConfirmWithdraw = async () => {
+    if (submitting || submitLockRef.current) return;
+
     if (!payPassword) {
       return handleSubmitError('请输入支付密码', { persist: true, showToast: false });
     }
@@ -214,17 +218,18 @@ const ExtensionWithdraw: React.FC = () => {
       return handleSubmitError('支付密码必须为6位数字', { persist: true, showToast: false });
     }
 
-    submitMachine.send(FormEvent.SUBMIT);
-    clearSubmitError();
-
-    const token = getStoredToken();
-    if (!token) {
-      handleSubmitError('未找到用户登录信息，请先登录', { persist: true, showToast: false });
-      submitMachine.send(FormEvent.SUBMIT_ERROR);
-      return;
-    }
-
+    submitLockRef.current = true;
     try {
+      submitMachine.send(FormEvent.SUBMIT);
+      clearSubmitError();
+
+      const token = getStoredToken();
+      if (!token) {
+        handleSubmitError('未找到用户登录信息，请先登录', { persist: true, showToast: false });
+        submitMachine.send(FormEvent.SUBMIT_ERROR);
+        return;
+      }
+
       const response = await submitStaticIncomeWithdraw({
         amount: Number(amount),
         payment_account_id: Number(selectedAccount!.id),
@@ -263,6 +268,8 @@ const ExtensionWithdraw: React.FC = () => {
         context: { amount, accountId: selectedAccount?.id },
       });
       submitMachine.send(FormEvent.SUBMIT_ERROR);
+    } finally {
+      submitLockRef.current = false;
     }
   };
 

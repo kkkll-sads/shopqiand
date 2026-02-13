@@ -1,7 +1,10 @@
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { ChevronDown, ChevronRight, ChevronUp } from 'lucide-react';
 import { getBalanceTypeLabel } from '@/constants/balanceTypes';
-import type { AllLogItem } from '@/services';
+import { getAllLogMergedItems, type AllLogItem } from '@/services';
+import { getStoredToken } from '@/services/client';
+import { extractData } from '@/utils/apiHelpers';
+import { errorLog } from '@/utils/logger';
 
 interface AssetHistoryLogCardProps {
   item: AllLogItem;
@@ -74,8 +77,24 @@ const AssetHistoryLogCard: React.FC<AssetHistoryLogCardProps> = ({
   const isSignRecord = item.sign_record_id !== undefined || item.activity_name !== undefined;
   const isMatchingSellerIncome = item.biz_type === 'matching_seller_income';
   const breakdown = item.breakdown && typeof item.breakdown === 'object' ? item.breakdown : null;
-  const canExpandBreakdown = Boolean(isMatchingSellerIncome && breakdown);
+  const mergeRowCount = toSafeNumber((breakdown as any)?.merge_row_count);
+  const canExpandMergedFlows = mergeRowCount > 1;
+  const hasSellerBreakdown =
+    isMatchingSellerIncome &&
+    breakdown &&
+    [
+      (breakdown as any)?.dispatchable_income,
+      (breakdown as any)?.score_income,
+      (breakdown as any)?.principal_income,
+      (breakdown as any)?.sold_price,
+    ].some((value) => value !== undefined && value !== null && value !== '');
+  const canExpandBreakdown = Boolean(hasSellerBreakdown);
+  const canExpand = canExpandBreakdown || canExpandMergedFlows;
   const amountVal = Number(item.amount);
+  const [mergedFlowItems, setMergedFlowItems] = useState<AllLogItem[]>([]);
+  const [mergedFlowLoading, setMergedFlowLoading] = useState(false);
+  const [mergedFlowLoaded, setMergedFlowLoaded] = useState(false);
+  const mergedFlowInFlightRef = useRef(false);
 
   let isPositive = amountVal > 0;
   if (item.before_value !== undefined && item.after_value !== undefined) {
@@ -92,13 +111,103 @@ const AssetHistoryLogCard: React.FC<AssetHistoryLogCardProps> = ({
   const scoreIncome = toSafeNumber(breakdown?.score_income);
   const principalIncome = toSafeNumber(breakdown?.principal_income);
   const soldPrice = toSafeNumber(breakdown?.sold_price);
+  const beforeBalanceValue = toSafeNumber(item.before_value ?? item.before_balance);
+  const afterBalanceValue = toSafeNumber(item.after_value ?? item.after_balance);
+
+  const balanceChangeNode = (
+    <span className="text-xs text-gray-400 flex items-center font-mono">
+      {beforeBalanceValue.toFixed(2)}
+      <span className="mx-1.5 text-gray-300">→</span>
+      <span className={isPositive ? (isGreenPower ? 'text-emerald-500' : 'text-red-500') : 'text-gray-600'}>
+        {afterBalanceValue.toFixed(2)}
+      </span>
+    </span>
+  );
 
   const onCardClick = () => {
-    if (canExpandBreakdown) {
+    if (canExpand) {
       onToggleExpand(item.id);
       return;
     }
     onOpenDetail(item);
+  };
+
+  useEffect(() => {
+    if (!expanded || !canExpandMergedFlows || mergedFlowLoaded || mergedFlowInFlightRef.current) {
+      return;
+    }
+
+    const token = getStoredToken();
+    if (!token) {
+      setMergedFlowLoaded(true);
+      setMergedFlowItems([]);
+      return;
+    }
+
+    let cancelled = false;
+    mergedFlowInFlightRef.current = true;
+    setMergedFlowLoading(true);
+
+    const loadMergedFlows = async () => {
+      let timeoutId: ReturnType<typeof setTimeout> | null = null;
+      try {
+        const timeoutMs = 15000;
+        const timeoutPromise = new Promise<never>((_, reject) => {
+          timeoutId = setTimeout(() => reject(new Error('加载合并流水超时')), timeoutMs);
+        });
+
+        const responsePromise = getAllLogMergedItems({
+          id: item.id,
+          flow_no: item.flow_no,
+          account_type: (item as any).account_type || item.field_type || item.type,
+          token,
+        });
+
+        const response = await Promise.race<Awaited<typeof responsePromise>>([
+          responsePromise,
+          timeoutPromise,
+        ]);
+
+        const data = extractData(response);
+        if (cancelled) return;
+        setMergedFlowItems(Array.isArray(data?.list) ? data.list : []);
+      } catch (error) {
+        if (!cancelled) {
+          setMergedFlowItems([]);
+          errorLog('AssetHistoryLogCard', '加载合并流水子明细失败', error);
+        }
+      } finally {
+        if (timeoutId) {
+          clearTimeout(timeoutId);
+        }
+        mergedFlowInFlightRef.current = false;
+        if (!cancelled) {
+          setMergedFlowLoading(false);
+          setMergedFlowLoaded(true);
+        }
+      }
+    };
+
+    void loadMergedFlows();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    expanded,
+    canExpandMergedFlows,
+    mergedFlowLoaded,
+    item.id,
+    item.flow_no,
+    item.field_type,
+    item.type,
+  ]);
+
+  const formatFlowAmount = (row: AllLogItem): string => {
+    const rowAmount = toSafeNumber(row.amount);
+    const rowAccountType = String((row as any).account_type || row.field_type || row.type || '');
+    const noUnit = rowAccountType === 'score' || rowAccountType === 'green_power';
+    return formatSignedValue(rowAmount, noUnit ? '' : '元');
   };
 
   return (
@@ -143,7 +252,7 @@ const AssetHistoryLogCard: React.FC<AssetHistoryLogCardProps> = ({
               </span>
             </div>
           </div>
-          {canExpandBreakdown ? (
+          {canExpand ? (
             expanded ? (
               <ChevronUp size={16} className="text-gray-400" />
             ) : (
@@ -155,19 +264,14 @@ const AssetHistoryLogCard: React.FC<AssetHistoryLogCardProps> = ({
         </div>
       </div>
 
-      <div className="mt-2 pt-2 border-t border-gray-50 flex justify-end">
-        <span className="text-xs text-gray-400 flex items-center font-mono">
-          {Number(item.before_value).toFixed(2)}
-          <span className="mx-1.5 text-gray-300">→</span>
-          <span className={isPositive ? (isGreenPower ? 'text-emerald-500' : 'text-red-500') : 'text-gray-600'}>
-            {Number(item.after_value || item.after_balance).toFixed(2)}
-          </span>
-        </span>
-      </div>
+      {!canExpandBreakdown && <div className="mt-2 pt-2 border-t border-gray-50 flex justify-end">{balanceChangeNode}</div>}
 
       {canExpandBreakdown && expanded && (
         <div className="mt-3 pt-3 border-t border-gray-100 space-y-2">
-          <div className="text-xs text-gray-500">展开更多</div>
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-gray-500">余额变动</span>
+            {balanceChangeNode}
+          </div>
           <div className="space-y-1.5 text-xs">
             <div className="flex justify-between items-center">
               <span className="text-gray-500">寄售价</span>
@@ -196,6 +300,53 @@ const AssetHistoryLogCard: React.FC<AssetHistoryLogCardProps> = ({
           >
             查看完整明细
           </button>
+        </div>
+      )}
+
+      {canExpandMergedFlows && expanded && (
+        <div className="mt-3 pt-3 border-t border-gray-100 space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-gray-500">流水明细</span>
+            <span className="text-xs text-gray-400">{mergeRowCount} 笔</span>
+          </div>
+          {mergedFlowLoading ? (
+            <div className="text-xs text-gray-400 py-2">加载中...</div>
+          ) : mergedFlowItems.length === 0 ? (
+            <div className="text-xs text-gray-400 py-2">暂无子流水</div>
+          ) : (
+            <div className="max-h-72 overflow-y-auto space-y-2">
+              {mergedFlowItems.map((row, idx) => {
+                const rowBefore = toSafeNumber((row as any).before_value ?? (row as any).before_balance);
+                const rowAfter = toSafeNumber((row as any).after_value ?? (row as any).after_balance);
+                const rowType = String((row as any).account_type || row.field_type || row.type || '');
+                return (
+                  <div
+                    key={`merged-${item.id}-${row.id}-${row.flow_no || idx}`}
+                    className="rounded-lg bg-gray-50 border border-gray-100 p-2.5"
+                  >
+                    <div className="flex items-center justify-between gap-2 mb-1">
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${getTypeTagStyle(rowType, row.field_type)}`}>
+                        {getTypeLabel(rowType, row.field_type)}
+                      </span>
+                      <span className="text-xs font-semibold text-gray-900">{formatFlowAmount(row)}</span>
+                    </div>
+                    <div className="text-[11px] text-gray-500 break-all">
+                      流水号：{row.flow_no || '-'}
+                    </div>
+                    <div className="text-[11px] text-gray-500 mt-0.5">
+                      {formatTime((row as any).create_time || (row as any).createtime)}
+                    </div>
+                    <div className="text-[11px] text-gray-500 mt-0.5 line-clamp-2">
+                      {(row.memo || row.remark || '-') as string}
+                    </div>
+                    <div className="text-[11px] text-gray-400 mt-1 font-mono">
+                      {rowBefore.toFixed(2)} → {rowAfter.toFixed(2)}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
     </div>

@@ -69,11 +69,9 @@ export function useAssetViewCache({
       if (isAssetFlowFilter(filters.filterFlow)) {
         setFilterFlow(filters.filterFlow);
       }
-      // 资产总权益页当前未提供时间筛选 UI，统一回落到默认值，
-      // 避免历史缓存中的固定时间窗口导致旧流水无法加载。
-      if (filters.filterTime === DEFAULT_TIME_FILTER) {
+      if (isAssetTimeFilter(filters.filterTime)) {
         setFilterTime(filters.filterTime);
-      } else if (isAssetTimeFilter(filters.filterTime)) {
+      } else if (filters.filterTime !== undefined) {
         setFilterTime(DEFAULT_TIME_FILTER);
       }
 

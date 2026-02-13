@@ -42,6 +42,7 @@ const AssetHeaderCard: React.FC<AssetHeaderCardProps> = ({ userInfo }) => {
   });
 
   const handleHelpClick = async (balanceType: keyof typeof BALANCE_HELP_TITLES) => {
+    if (helpModal.loading) return; // 防止重复点击
     const title = BALANCE_HELP_TITLES[balanceType];
     setHelpModal({ visible: true, title, content: '', loading: true });
 

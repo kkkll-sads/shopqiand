@@ -130,8 +130,11 @@ export async function fetchCollectionItemsBySession(
 ): Promise<ApiResponse<CollectionItemListData>> {
   const search = new URLSearchParams()
   search.set('session_id', String(sessionId))
-  if (params.page) search.set('page', String(params.page))
-  if (params.limit) search.set('limit', String(params.limit))
+  const page = typeof params.page === 'number' && params.page > 0 ? Math.floor(params.page) : 1
+  const requestedLimit = typeof params.limit === 'number' ? Math.floor(params.limit) : 10
+  const limit = Math.min(Math.max(requestedLimit, 1), 10)
+  search.set('page', String(page))
+  search.set('limit', String(limit))
 
   const path = `${API_ENDPOINTS.collectionItem.bySession}?${search.toString()}`
   return authedFetch<CollectionItemListData>(path, { method: 'GET' })

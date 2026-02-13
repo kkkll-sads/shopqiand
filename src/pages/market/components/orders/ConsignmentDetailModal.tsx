@@ -1,9 +1,9 @@
 import React from 'react';
-import { Calendar, Copy, CreditCard, FileText, MapPin, Phone, User, X } from 'lucide-react';
+import { Calendar, Copy, CreditCard, FileText, MapPin, Phone, ReceiptText, User, X } from 'lucide-react';
 import { useNotification } from '@/context/NotificationContext';
 import { ConsignmentDetailData } from '@/services';
 import { copyWithToast } from '@/utils/copyWithToast';
-import { formatAmount, formatTime } from '@/utils/format';
+import { formatTime } from '@/utils/format';
 
 interface ConsignmentDetailModalProps {
   visible: boolean;
@@ -24,6 +24,12 @@ const ConsignmentDetailModal: React.FC<ConsignmentDetailModalProps> = ({
     await copyWithToast(value, showToast, {
       successDescription: description,
     });
+  };
+
+  const getTimeText = (text?: string, rawTime?: number | string) => {
+    if (text) return text;
+    if (!rawTime) return '-';
+    return formatTime(rawTime);
   };
 
   if (!visible || !detail) return null;
@@ -55,7 +61,9 @@ const ConsignmentDetailModal: React.FC<ConsignmentDetailModalProps> = ({
                 <FileText size={16} className="text-blue-600" />
                 <span className="text-xs text-gray-600">藏品名称</span>
               </div>
-              <span className="text-xs font-medium text-gray-800">{detail.title}</span>
+              <span className="text-xs font-medium text-gray-800">
+                {detail.title || '-'}
+              </span>
             </div>
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
@@ -66,7 +74,37 @@ const ConsignmentDetailModal: React.FC<ConsignmentDetailModalProps> = ({
                 {detail.consignment_status_text || '已售出'}
               </span>
             </div>
-            <div className="flex items-center justify-between">
+            {detail.asset_code && (
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <ReceiptText size={16} className="text-blue-600" />
+                  <span className="text-xs text-gray-600">确权编号</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs text-gray-800">{detail.asset_code}</span>
+                  <button
+                    type="button"
+                    className="p-0.5 rounded text-gray-400 active:bg-gray-100"
+                    onClick={() => {
+                      void handleCopy(detail.asset_code!, '确权编号已复制到剪贴板');
+                    }}
+                    aria-label="复制确权编号"
+                  >
+                    <Copy size={11} />
+                  </button>
+                </div>
+              </div>
+            )}
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <CreditCard size={16} className="text-blue-600" />
+                <span className="text-xs text-gray-600">买入价</span>
+              </div>
+              <span className="text-xs text-gray-800">
+                ¥ {formatOrderPrice(detail.buy_price ?? detail.original_price)}
+              </span>
+            </div>
+            <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
                 <CreditCard size={16} className="text-blue-600" />
                 <span className="text-xs text-gray-600">寄售价</span>
@@ -75,48 +113,119 @@ const ConsignmentDetailModal: React.FC<ConsignmentDetailModalProps> = ({
                 ¥ {formatOrderPrice(detail.consignment_price)}
               </span>
             </div>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <CreditCard size={16} className="text-blue-600" />
+                <span className="text-xs text-gray-600">成交价</span>
+              </div>
+              <span className="text-xs text-gray-800">
+                ¥ {formatOrderPrice(detail.sold_price ?? detail.consignment_price)}
+              </span>
+            </div>
+            <div className="flex items-center justify-between mt-3">
+              <div className="flex items-center gap-2">
+                <CreditCard size={16} className="text-blue-600" />
+                <span className="text-xs text-gray-600">服务费</span>
+              </div>
+              <span className="text-xs text-gray-800">
+                ¥ {formatOrderPrice(detail.service_fee)}
+              </span>
+            </div>
           </div>
 
-          {(detail.buyer_id ||
-            detail.buyer_username ||
-            detail.buyer_nickname ||
-            detail.buyer_mobile) && (
-              <div className="bg-gray-50 rounded-lg p-4 border border-gray-100">
-                <h4 className="text-sm font-semibold text-gray-800 mb-3 flex items-center gap-2">
-                  <User size={16} className="text-blue-600" />
-                  买家信息
-                </h4>
-                <div className="space-y-2 text-xs text-gray-700">
-                  {detail.buyer_id && (
-                    <div className="flex items-center gap-1.5">
-                      <span>买家ID：{detail.buyer_id}</span>
-                      <button
-                        type="button"
-                        className="p-0.5 rounded text-gray-400 active:bg-gray-100"
-                        onClick={() => {
-                          void handleCopy(String(detail.buyer_id), '买家ID已复制到剪贴板');
-                        }}
-                        aria-label="复制买家ID"
-                      >
-                        <Copy size={11} />
-                      </button>
-                    </div>
-                  )}
-                  {detail.buyer_username && (
-                    <div>用户名：{detail.buyer_username}</div>
-                  )}
-                  {detail.buyer_nickname && (
-                    <div>昵称：{detail.buyer_nickname}</div>
-                  )}
-                  {detail.buyer_mobile && (
-                    <div className="flex items-center gap-1">
-                      <Phone size={14} className="text-gray-400" />
-                      <span>{detail.buyer_mobile}</span>
-                    </div>
+          <div className="bg-gray-50 rounded-lg p-4 border border-gray-100">
+            <h4 className="text-sm font-semibold text-gray-800 mb-3 flex items-center gap-2">
+              <ReceiptText size={16} className="text-blue-600" />
+              交易信息
+            </h4>
+            <div className="space-y-2 text-xs text-gray-700">
+              <div className="flex items-start justify-between gap-2">
+                <span className="text-gray-500">订单号</span>
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <span className="break-all text-right">{detail.order_no || '-'}</span>
+                  {detail.order_no && (
+                    <button
+                      type="button"
+                      className="p-0.5 rounded text-gray-400 active:bg-gray-100 flex-shrink-0"
+                      onClick={() => {
+                        void handleCopy(detail.order_no!, '订单号已复制到剪贴板');
+                      }}
+                      aria-label="复制订单号"
+                    >
+                      <Copy size={11} />
+                    </button>
                   )}
                 </div>
               </div>
-            )}
+              <div className="flex items-start justify-between gap-2">
+                <span className="text-gray-500">流水号</span>
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <span className="break-all text-right">{detail.flow_no || '-'}</span>
+                  {detail.flow_no && (
+                    <button
+                      type="button"
+                      className="p-0.5 rounded text-gray-400 active:bg-gray-100 flex-shrink-0"
+                      onClick={() => {
+                        void handleCopy(detail.flow_no!, '流水号已复制到剪贴板');
+                      }}
+                      aria-label="复制流水号"
+                    >
+                      <Copy size={11} />
+                    </button>
+                  )}
+                </div>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-gray-500">寄售时间</span>
+                <span>{getTimeText(detail.create_time_text, detail.create_time)}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-gray-500">成交时间</span>
+                <span>{getTimeText(detail.sold_time_text, detail.sold_time)}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-gray-500">流水时间</span>
+                <span>{getTimeText(detail.money_log_time_text, detail.money_log_time)}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-gray-500">更新时间</span>
+                <span>{getTimeText(detail.update_time_text, detail.update_time)}</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-gray-50 rounded-lg p-4 border border-gray-100">
+            <h4 className="text-sm font-semibold text-gray-800 mb-3 flex items-center gap-2">
+              <CreditCard size={16} className="text-blue-600" />
+              结算信息
+            </h4>
+            <div className="space-y-2 text-xs text-gray-700">
+              <div className="flex items-center justify-between">
+                <span className="text-gray-500">结算状态</span>
+                <span>{detail.settle_status_text || '-'}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-gray-500">结算规则</span>
+                <span>{detail.settle_rule || '-'}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-gray-500">本金</span>
+                <span>¥ {formatOrderPrice(detail.principal_amount)}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-gray-500">收益</span>
+                <span>¥ {formatOrderPrice(detail.profit_amount)}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-gray-500">到账可提余额</span>
+                <span>¥ {formatOrderPrice(detail.payout_total_withdrawable)}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-gray-500">到账消费金</span>
+                <span>{formatOrderPrice(detail.payout_total_consume)}</span>
+              </div>
+            </div>
+          </div>
 
           {detail.description && (
             <div className="bg-gray-50 rounded-lg p-4 border border-gray-100">

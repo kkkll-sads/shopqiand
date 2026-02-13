@@ -63,13 +63,13 @@ export const buildConvenientServices = ({
       iconBgClass: 'bg-yellow-50',
       action: () => navigate('/market'),
     },
-    // {
-    //   label: '新春活跃榜',
-    //   icon: Gift,
-    //   iconColorClass: 'text-red-500',
-    //   iconBgClass: 'bg-red-50',
-    //   action: () => navigate('/activity/team-leaderboard'),
-    // },
+    {
+      label: '新春荣耀榜',
+      icon: Gift,
+      iconColorClass: 'text-red-500',
+      iconBgClass: 'bg-red-50',
+      action: () => navigate('/activity/team-leaderboard'),
+    },
   ];
 };
 

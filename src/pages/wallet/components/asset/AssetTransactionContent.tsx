@@ -1,8 +1,8 @@
-import React from 'react';
+import React, { useCallback, useState } from 'react';
 import { ArrowRight, FileText, ShoppingBag } from 'lucide-react';
 import { SkeletonTransactionCard } from '@/components/common';
-import { getBalanceTypeLabel } from '@/constants/balanceTypes';
 import { normalizeAssetUrl, type AllLogItem, type MyCollectionItem } from '@/services';
+import AssetHistoryLogCard from './AssetHistoryLogCard';
 
 interface AssetTabsView {
   data: any[];
@@ -19,26 +19,6 @@ interface AssetTransactionContentProps {
   onMoneyLogClick: (id: string | number) => void;
   onCollectionClick: (item: MyCollectionItem) => void;
 }
-
-const getTypeColor = (type: string) => {
-  if (type === 'balance' || type === '余额') return 'bg-blue-50 text-blue-600';
-  if (type === 'green_power' || type === '绿色能量' || type === '算力') return 'bg-emerald-50 text-emerald-600';
-  if (type === 'service_fee' || type === '服务费') return 'bg-amber-50 text-amber-600';
-  if (type === 'score' || type === '积分' || type === '消费金') return 'bg-purple-50 text-purple-600';
-  return 'bg-gray-100 text-gray-500';
-};
-
-const formatTime = (timestamp: number | string | null): string => {
-  if (!timestamp) return '';
-  const date = new Date(typeof timestamp === 'string' ? parseInt(timestamp, 10) * 1000 : timestamp * 1000);
-  return date.toLocaleString('zh-CN', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-};
 
 const getCollectionStatusConfig = (item: MyCollectionItem) => {
   if (item.consignment_status === 2) {
@@ -65,50 +45,6 @@ const getCollectionStatusConfig = (item: MyCollectionItem) => {
     border: 'border-gray-200',
     textColor: 'text-gray-600',
   };
-};
-
-const renderAllLogItem = (
-  item: AllLogItem,
-  index: number,
-  onMoneyLogClick: (id: string | number) => void
-) => {
-  const amountVal = Number(item.amount);
-  const isPositive = amountVal > 0;
-  const typeText = getBalanceTypeLabel(item.type);
-
-  return (
-    <div
-      key={item.id}
-      className="bg-white rounded-2xl p-4 mb-3 shadow-sm border border-gray-100 cursor-pointer active:scale-[0.99] transition-all"
-      onClick={() => {
-        if (item.id) {
-          onMoneyLogClick(item.id);
-        }
-      }}
-      style={{ animation: index < 10 ? `slideUp 0.3s ease-out ${index * 0.03}s both` : undefined }}
-    >
-      <div className="flex justify-between items-start mb-3">
-        <div className="flex-1">
-          <div className="text-sm font-semibold text-gray-800 mb-1.5">{item.memo || item.remark || '资金变动'}</div>
-          <div className="text-xs text-gray-400">{formatTime(item.createtime || item.create_time)}</div>
-        </div>
-        <div className={`text-xl font-black font-mono ${isPositive ? 'text-emerald-500' : 'text-rose-500'}`}>
-          {isPositive ? '+' : ''}
-          {Number(amountVal).toFixed(2)}
-        </div>
-      </div>
-      <div className="flex justify-between items-center text-xs pt-3 border-t border-gray-100">
-        <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${getTypeColor(item.type)}`}>{typeText}</span>
-        <span className="flex items-center gap-1 font-mono text-gray-400">
-          <span>{Number(item.before_value).toFixed(2)}</span>
-          <span className="text-gray-300">→</span>
-          <span className={isPositive ? 'text-emerald-500' : 'text-rose-500'}>
-            {Number(item.after_value || item.after_balance).toFixed(2)}
-          </span>
-        </span>
-      </div>
-    </div>
-  );
 };
 
 const renderCollectionItem = (
@@ -176,6 +112,24 @@ const AssetTransactionContent: React.FC<AssetTransactionContentProps> = ({
   onMoneyLogClick,
   onCollectionClick,
 }) => {
+  const [expandedRows, setExpandedRows] = useState<Record<number, boolean>>({});
+
+  const toggleExpandedRow = useCallback((logId: number) => {
+    setExpandedRows((prev) => ({
+      ...prev,
+      [logId]: !prev[logId],
+    }));
+  }, []);
+
+  const handleOpenLogDetail = useCallback(
+    (item: AllLogItem) => {
+      if (item.id) {
+        onMoneyLogClick(item.id);
+      }
+    },
+    [onMoneyLogClick]
+  );
+
   if (tabs.isLoading && tabs.data.length === 0) {
     return (
       <div className="space-y-3">
@@ -221,7 +175,24 @@ const AssetTransactionContent: React.FC<AssetTransactionContentProps> = ({
         }
       `}</style>
       {tabs.activeTab === 0 &&
-        tabs.data.map((item, index) => renderAllLogItem(item as AllLogItem, index, onMoneyLogClick))}
+        tabs.data.map((item, index) => {
+          const logItem = item as AllLogItem;
+          const logId = Number(logItem.id);
+
+          return (
+            <div
+              key={`money-log-${logItem.id ?? index}`}
+              style={{ animation: index < 10 ? `slideUp 0.3s ease-out ${index * 0.03}s both` : undefined }}
+            >
+              <AssetHistoryLogCard
+                item={logItem}
+                expanded={Number.isFinite(logId) ? Boolean(expandedRows[logId]) : false}
+                onToggleExpand={toggleExpandedRow}
+                onOpenDetail={handleOpenLogDetail}
+              />
+            </div>
+          );
+        })}
       {tabs.activeTab === 1 &&
         tabs.data.map((item, index) =>
           renderCollectionItem(item as MyCollectionItem, index, onCollectionClick)

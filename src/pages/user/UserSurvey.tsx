@@ -101,6 +101,12 @@ const UserSurvey: React.FC = () => {
     });
   }, []);
 
+  const revokePreviewUrl = useCallback((preview?: string) => {
+    if (preview) {
+      URL.revokeObjectURL(preview);
+    }
+  }, []);
+
   useEffect(() => {
     uploadStatesRef.current = uploadStates;
   }, [uploadStates]);
@@ -183,7 +189,16 @@ const UserSurvey: React.FC = () => {
             setUploadStates((prev) =>
               prev.map((item) =>
                 item.file === state.file
-                  ? { ...item, uploading: false, uploaded: true, url: data.url }
+                  ? (() => {
+                      revokePreviewUrl(item.preview);
+                      return {
+                        ...item,
+                        preview: '',
+                        uploading: false,
+                        uploaded: true,
+                        url: data.url,
+                      };
+                    })()
                   : item
               )
             );
@@ -212,7 +227,7 @@ const UserSurvey: React.FC = () => {
   const handleRemoveImage = (index: number) => {
     setUploadStates((prev) => {
       const target = prev[index];
-      if (target.preview) URL.revokeObjectURL(target.preview);
+      revokePreviewUrl(target.preview);
       return prev.filter((_, i) => i !== index);
     });
   };

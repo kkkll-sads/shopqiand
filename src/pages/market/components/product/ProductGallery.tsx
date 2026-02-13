@@ -1,7 +1,7 @@
 /**
  * ProductGallery - 商品图片轮播组件
  */
-import React, { useRef } from 'react';
+import React, { useRef, useCallback } from 'react';
 import { LazyImage } from '@/components/common';
 
 interface ProductGalleryProps {
@@ -16,16 +16,22 @@ const ProductGallery: React.FC<ProductGalleryProps> = ({
   onIndexChange,
 }) => {
   const imageContainerRef = useRef<HTMLDivElement>(null);
+  const scrollRafRef = useRef<number | null>(null);
 
-  const handleImageScroll = () => {
-    if (!imageContainerRef.current) return;
-    const scrollLeft = imageContainerRef.current.scrollLeft;
-    const width = imageContainerRef.current.offsetWidth;
-    const newIndex = Math.round(scrollLeft / width);
-    if (newIndex !== currentIndex) {
-      onIndexChange(newIndex);
-    }
-  };
+  // 使用 rAF 节流滚动事件，避免高频触发导致卡顿
+  const handleImageScroll = useCallback(() => {
+    if (scrollRafRef.current) return;
+    scrollRafRef.current = requestAnimationFrame(() => {
+      scrollRafRef.current = null;
+      if (!imageContainerRef.current) return;
+      const scrollLeft = imageContainerRef.current.scrollLeft;
+      const width = imageContainerRef.current.offsetWidth;
+      const newIndex = Math.round(scrollLeft / width);
+      if (newIndex >= 0 && newIndex < images.length) {
+        onIndexChange(newIndex);
+      }
+    });
+  }, [images.length, onIndexChange]);
 
   const handleThumbnailClick = (idx: number) => {
     onIndexChange(idx);

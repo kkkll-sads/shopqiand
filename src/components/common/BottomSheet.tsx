@@ -59,20 +59,23 @@ const BottomSheet: React.FC<BottomSheetProps> = ({
     };
   }, [visible]);
 
-  if (!visible) return null;
-
   return (
     <div
-      className="fixed inset-0 z-[100] bg-black/50 flex items-end justify-center"
+      className={`fixed inset-0 z-[100] flex items-end justify-center transition-all duration-300 ${
+        visible ? 'bg-black/50 pointer-events-auto' : 'bg-transparent pointer-events-none'
+      }`}
       onClick={handleBackdropClick}
+      style={{ visibility: visible ? 'visible' : 'hidden' }}
     >
       <div
         ref={sheetRef}
-        className="w-full bg-white rounded-t-2xl animate-slide-up overflow-hidden"
+        className={`w-full bg-white rounded-t-2xl overflow-hidden transition-transform duration-300 ease-out flex flex-col ${
+          visible ? 'translate-y-0' : 'translate-y-full'
+        }`}
         style={{ maxHeight }}
       >
-        {/* 头部 */}
-        <div className="sticky top-0 bg-white border-b border-gray-100 px-4 py-3 flex items-center justify-between z-10">
+        {/* 固定头部 */}
+        <div className="flex-shrink-0 bg-white border-b border-gray-100 px-4 py-3 flex items-center justify-between z-10">
           <div className="w-8" />
           <h3 className="text-base font-medium text-gray-800 flex items-center gap-1">
             {title}
@@ -85,25 +88,11 @@ const BottomSheet: React.FC<BottomSheetProps> = ({
           </button>
         </div>
 
-        {/* 内容区域 */}
-        <div className="overflow-y-auto" style={{ maxHeight: `calc(${maxHeight} - 56px)` }}>
+        {/* 内容区域 - flex-1 让子组件控制自身滚动 */}
+        <div className="flex-1 overflow-y-auto overscroll-contain min-h-0">
           {children}
         </div>
       </div>
-
-      <style>{`
-        @keyframes slide-up {
-          from {
-            transform: translateY(100%);
-          }
-          to {
-            transform: translateY(0);
-          }
-        }
-        .animate-slide-up {
-          animation: slide-up 0.3s ease-out;
-        }
-      `}</style>
     </div>
   );
 };

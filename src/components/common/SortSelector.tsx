@@ -32,7 +32,7 @@ export const SortSelector: React.FC<SortSelectorProps> = ({
   const [isOpen, setIsOpen] = useState(false);
   const [position, setPosition] = useState({ top: 0, left: 0, width: 0 });
   const containerRef = useRef<HTMLDivElement>(null);
-  const buttonRef = useRef<HTMLButtonElement>(null);
+  const buttonRef = useRef<HTMLDivElement>(null);
 
   const selectedOption = options.find(opt => opt.value === sortField);
 
@@ -85,30 +85,35 @@ export const SortSelector: React.FC<SortSelectorProps> = ({
 
   return (
     <div ref={containerRef} className={`relative ${className}`}>
-      {/* 触发按钮 */}
-      <button
+      {/* 触发区（避免 button 嵌套） */}
+      <div
         ref={buttonRef}
-        type="button"
-        onClick={() => setIsOpen(!isOpen)}
         className={`
-          flex items-center gap-1.5 px-3 py-2 rounded-full text-sm font-medium
+          inline-flex items-center gap-1 px-2.5 py-1.5 rounded-full text-sm font-medium
           border transition-all whitespace-nowrap
-          ${isOpen 
-            ? 'bg-red-50 border-red-200 text-red-600' 
+          ${isOpen
+            ? 'bg-red-50 border-red-200 text-red-600'
             : 'bg-white border-gray-200 text-gray-700 hover:border-gray-300'
           }
         `}
       >
-        <ArrowUpDown size={14} className="text-gray-400" />
-        <span className="max-w-[80px] truncate">{selectedOption?.label || '排序'}</span>
+        <button
+          type="button"
+          onClick={() => setIsOpen(!isOpen)}
+          className="flex items-center gap-1.5 min-w-0"
+        >
+          <ArrowUpDown size={14} className="text-gray-400" />
+          <span className="max-w-[80px] truncate">{selectedOption?.label || '排序'}</span>
+        </button>
         <button
           type="button"
           onClick={toggleOrder}
           className="p-0.5 rounded hover:bg-gray-100 transition-colors"
+          aria-label={sortOrder === 'desc' ? '切换为升序' : '切换为降序'}
         >
           <OrderIcon size={12} className={sortOrder === 'desc' ? 'text-red-500' : 'text-blue-500'} />
         </button>
-      </button>
+      </div>
 
       {/* 下拉面板 */}
       {isOpen && (

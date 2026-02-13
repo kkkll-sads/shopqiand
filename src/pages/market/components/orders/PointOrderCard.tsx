@@ -76,9 +76,9 @@ const PointOrderCard: React.FC<PointOrderCardProps> = ({
       }}
     >
       {/* 订单头部 */}
-      <div className={`relative bg-gradient-to-r ${statusConfig.bg} p-4`}>
+      <div className={`relative bg-gradient-to-r ${statusConfig.bg} px-3 py-2.5`}>
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-2">
             <div className={`w-8 h-8 rounded-xl bg-white/80 backdrop-blur-sm flex items-center justify-center shadow-sm ${statusConfig.border} border`}>
               <StatusIcon size={16} className={statusConfig.color} />
             </div>
@@ -91,9 +91,9 @@ const PointOrderCard: React.FC<PointOrderCardProps> = ({
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-1.5 bg-white/60 backdrop-blur-sm px-3 py-1.5 rounded-full border border-white/50 shadow-sm">
+          <div className="flex items-center gap-1 bg-white/60 backdrop-blur-sm px-2 py-1 rounded-full border border-white/50 shadow-sm">
             <Sparkles size={12} className="text-red-500" />
-            <span className="text-xs font-medium text-gray-700">消费金兑换</span>
+            <span className="text-[11px] font-medium text-gray-700 whitespace-nowrap">消费金兑换</span>
           </div>
         </div>
       </div>
@@ -104,13 +104,13 @@ const PointOrderCard: React.FC<PointOrderCardProps> = ({
           {items.map((item, idx) => (
             <div
               key={item.id}
-              className={`px-4 py-4 ${idx > 0 ? 'border-t border-gray-100' : ''}`}
+              className={`px-3 py-3 ${idx > 0 ? 'border-t border-gray-100' : ''}`}
               onClick={() => onViewDetail?.(order.id)}
             >
-              <div className="flex gap-4">
+              <div className="flex gap-3">
                 {/* 商品图片 */}
-                {(item.product_thumbnail || item.product_image) && (
-                  <div className="relative w-24 h-24 flex-shrink-0 group">
+                {(item.product_thumbnail || item.product_image) ? (
+                  <div className="relative w-20 h-20 flex-shrink-0 group">
                     <div className="w-full h-full rounded-xl overflow-hidden shadow-lg border border-gray-100 bg-gradient-to-br from-gray-50 to-slate-50">
                       <img
                         src={item.product_thumbnail
@@ -131,7 +131,7 @@ const PointOrderCard: React.FC<PointOrderCardProps> = ({
                       </div>
                     )}
                   </div>
-                )}
+                ) : null}
 
                 {/* 商品详情 */}
                 <div className="flex-1 min-w-0 flex flex-col justify-between">
@@ -142,7 +142,7 @@ const PointOrderCard: React.FC<PointOrderCardProps> = ({
                   </div>
 
                   {/* 价格和操作 */}
-                  <div className="flex items-end justify-between mt-3">
+                  <div className="flex items-end justify-between mt-2">
                     <div>
                       {item.price > 0 ? (
                         <div className="flex items-baseline gap-1">
@@ -166,10 +166,10 @@ const PointOrderCard: React.FC<PointOrderCardProps> = ({
                         e.stopPropagation();
                         onViewDetail?.(order.id);
                       }}
-                      className="flex items-center gap-1 px-4 py-2 rounded-full bg-gradient-to-r from-gray-100 to-gray-50 hover:from-gray-200 hover:to-gray-100 text-gray-700 text-xs font-medium transition-all active:scale-95 border border-gray-200"
+                      className="flex items-center gap-0.5 px-2.5 py-1.5 rounded-full bg-gradient-to-r from-gray-100 to-gray-50 hover:from-gray-200 hover:to-gray-100 text-gray-700 text-[11px] font-medium transition-all active:scale-95 border border-gray-200 whitespace-nowrap"
                     >
                       详情
-                      <ChevronRight size={14} />
+                      <ChevronRight size={12} />
                     </button>
                   </div>
                 </div>
@@ -179,10 +179,10 @@ const PointOrderCard: React.FC<PointOrderCardProps> = ({
         </div>
       ) : (
         // 备用显示
-        <div className="px-4 py-4">
-          <div className="flex gap-4">
+        <div className="px-3 py-3">
+          <div className="flex gap-3">
             {(order.product_image || order.thumbnail) && (
-              <div className="relative w-24 h-24 flex-shrink-0">
+              <div className="relative w-20 h-20 flex-shrink-0">
                 <div className="w-full h-full rounded-xl overflow-hidden shadow-lg border border-gray-100">
                   <img
                     src={normalizeAssetUrl(order.product_image || order.thumbnail || '')}
@@ -228,7 +228,7 @@ const PointOrderCard: React.FC<PointOrderCardProps> = ({
 
       {/* 底部操作按钮 */}
       {(order.status === ShopOrderPayStatus.PAID || order.status === 1) && order.pay_type === 'score' && activeTab === 1 && onUrgeShip && (
-        <div className="px-4 pb-4 pt-2 border-t border-gray-100">
+        <div className="px-3 pb-3 pt-2 border-t border-gray-100">
           <button
             onClick={(e) => {
               e.stopPropagation();

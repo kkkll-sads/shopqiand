@@ -92,18 +92,24 @@ const endPress = (ctx: InteractionContext) => {
 
 export const createTouchHandlers = (ctx: InteractionContext) => ({
   handleTouchStart: (event: TouchEvent) => {
-    event.preventDefault();
+    if (event.cancelable) {
+      event.preventDefault();
+    }
     const touch = event.touches[0];
     beginPress(touch.clientX, touch.clientY, ctx);
   },
   handleTouchMove: (event: TouchEvent) => {
     if (!ctx.state.isPressed) return;
-    event.preventDefault();
+    if (event.cancelable) {
+      event.preventDefault();
+    }
     const touch = event.touches[0];
     movePress(touch.clientX, touch.clientY, ctx);
   },
   handleTouchEnd: (event: TouchEvent) => {
-    event.preventDefault();
+    if (event.cancelable) {
+      event.preventDefault();
+    }
     endPress(ctx);
   },
 });

@@ -10,7 +10,7 @@
  * @version 1.0.0
  */
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { X } from 'lucide-react';
 
 /**
@@ -60,6 +60,18 @@ const BaseModal: React.FC<BaseModalProps> = ({
   contentClassName = '',
   maxWidth = 'max-w-sm',
 }) => {
+  // 阻止滚动穿透
+  useEffect(() => {
+    if (visible) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [visible]);
+
   if (!visible) return null;
 
   const handleMaskClick = () => {

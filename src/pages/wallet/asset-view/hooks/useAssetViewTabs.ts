@@ -1,5 +1,6 @@
 import { useEffect, useMemo } from 'react';
 import { getAllLog } from '@/services';
+import { resolveAllLogCategoryQuery } from '@/constants/balanceTypes';
 import { useAssetTabs, type TabConfig } from '@/hooks/useAssetTabs';
 import { extractData } from '@/utils/apiHelpers';
 import type { AssetFlowFilter, AssetTimeFilter } from '../types';
@@ -25,10 +26,12 @@ export function useAssetViewTabs({
         name: '资金明细',
         fetchData: async ({ page, limit, token }) => {
           const { startTime, endTime } = resolveTimeRange(filterTime);
+          const categoryQuery = resolveAllLogCategoryQuery(filterCategory);
           return getAllLog({
             page,
             limit,
-            type: filterCategory,
+            type: categoryQuery.type,
+            biz_type: categoryQuery.biz_type,
             flow_direction: filterFlow,
             start_time: startTime,
             end_time: endTime,

@@ -24,6 +24,7 @@ export { useClaimForm } from './useClaimForm';
 export { useClaimSubmit } from './useClaimSubmit';
 export { useClaimUnlock } from './useClaimUnlock';
 export { useClaimUpload } from './useClaimUpload';
+export { useGrowthRights } from './useGrowthRights';
 export { useImageUploads } from './useImageUploads';
 
 // 类型导出

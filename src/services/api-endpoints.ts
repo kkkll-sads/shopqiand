@@ -13,6 +13,8 @@ export const API_ENDPOINTS = {
         rechargeServiceFee: '/Account/rechargeServiceFee',
         /** 全部明细（统一入口；替代废弃的 balance / serviceFeeLog / integral / assetLog） */
         allLog: '/Account/allLog',
+        /** 合并流水子明细 */
+        allLogMergedItems: '/Account/allLogMergedItems',
         /** 资金明细详情 */
         moneyLogDetail: '/Account/moneyLogDetail',
         /** 消费金兑换绿色算力 */
@@ -21,6 +23,10 @@ export const API_ENDPOINTS = {
         checkOldAssetsUnlockStatus: '/Account/checkOldAssetsUnlockStatus',
         /** 解锁旧资产 */
         unlockOldAssets: '/Account/unlockOldAssets',
+        /** 成长权益信息 */
+        growthRightsInfo: '/Account/growthRightsInfo',
+        /** 成长权益解锁藏品 */
+        unlockGrowthRightsAsset: '/Account/unlockGrowthRightsAsset',
         /** 账户一览（余额、历史收益、藏品统计） */
         accountOverview: '/Account/accountOverview',
         /** 获取算力兑换配置 */
@@ -80,6 +86,16 @@ export const API_ENDPOINTS = {
         list: '/Announcement/index',
         /** 标记公告已读 */
         markRead: '/Announcement/markRead',
+    },
+    activeRank: {
+        /** 团队贡献榜总览（活动信息 + top + 我的团队 + 更新时间） */
+        overview: '/ActiveRank/overview',
+        /** 团队贡献榜 Top N */
+        top: '/ActiveRank/top',
+        /** 我的团队排名 */
+        my: '/ActiveRank/my',
+        /** 团队贡献榜规则（公开） */
+        rules: '/ActiveRank/rules',
     },
     banner: {
         /** 轮播图列表 */

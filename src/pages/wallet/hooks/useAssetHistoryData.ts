@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { BALANCE_TYPE_OPTIONS } from '@/constants/balanceTypes';
+import { BALANCE_TYPE_OPTIONS, resolveAllLogCategoryQuery } from '@/constants/balanceTypes';
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
 import { getAllLog, type AllLogItem } from '@/services';
 import { getStoredToken } from '@/services/client';
@@ -107,11 +107,13 @@ export function useAssetHistoryData(): UseAssetHistoryDataResult {
 
       try {
         const { startTime, endTime } = buildTimeRange(filters.time);
+        const categoryQuery = resolveAllLogCategoryQuery(filters.category);
 
         const response = await getAllLog({
           page: pageNum,
           limit: PAGE_SIZE,
-          type: filters.category === 'all' ? undefined : filters.category,
+          type: categoryQuery.type,
+          biz_type: categoryQuery.biz_type,
           flow_direction: filters.flow as 'in' | 'out' | 'all',
           start_time: startTime,
           end_time: endTime,

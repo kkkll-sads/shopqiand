@@ -350,14 +350,14 @@ const Register: React.FC = () => {
             placeholder="请输入验证码"
             value={verifyCode}
             onChange={(e) => setVerifyCode(e.target.value)}
-            className="flex-1 text-base outline-none placeholder-gray-400 bg-transparent text-gray-800"
+            className="flex-1 min-w-0 text-base outline-none placeholder-gray-400 bg-transparent text-gray-800"
           />
           <button
             onClick={handleSendCode}
             disabled={countdown > 0}
-            className={`text-sm font-medium whitespace-nowrap pl-3 border-l border-gray-200 ${countdown > 0 ? 'text-gray-400' : 'text-red-600'}`}
+            className={`ml-2 flex-none w-[104px] h-8 inline-flex items-center justify-center leading-none text-[13px] font-medium whitespace-nowrap pl-3 border-l border-gray-200 ${countdown > 0 ? 'text-gray-400' : 'text-red-600'}`}
           >
-            {countdown > 0 ? `${countdown}s 后重试` : '获取验证码'}
+            {countdown > 0 ? `${countdown}s后重试` : '获取验证码'}
           </button>
         </div>
       </div>

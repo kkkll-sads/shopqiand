@@ -40,6 +40,7 @@ export interface AllLogItem {
   createtime: number;
   create_time?: number;
   type: 'balance_available' | 'withdrawable_money' | 'service_fee_balance' | 'score' | string;
+  account_type?: string;
   field_type?: string;
   biz_type?: string;
   flow_no?: string;
@@ -79,6 +80,35 @@ export async function getAllLog(params: GetAllLogParams = {}): Promise<ApiRespon
 
   const path = `${API_ENDPOINTS.account.allLog}?${search.toString()}`;
   return authedFetch<AllLogListData>(path, {
+    method: 'GET',
+    token: params.token,
+  });
+}
+
+export interface AllLogMergedItemsData {
+  list: AllLogItem[];
+  total: number;
+  merge_scene?: string;
+  merge_row_count?: number;
+}
+
+export interface GetAllLogMergedItemsParams {
+  id: number | string;
+  flow_no?: string;
+  account_type?: string;
+  token?: string;
+}
+
+export async function getAllLogMergedItems(
+  params: GetAllLogMergedItemsParams
+): Promise<ApiResponse<AllLogMergedItemsData>> {
+  const search = new URLSearchParams();
+  search.set('id', String(params.id));
+  if (params.flow_no) search.set('flow_no', params.flow_no);
+  if (params.account_type) search.set('account_type', params.account_type);
+
+  const path = `${API_ENDPOINTS.account.allLogMergedItems}?${search.toString()}`;
+  return authedFetch<AllLogMergedItemsData>(path, {
     method: 'GET',
     token: params.token,
   });

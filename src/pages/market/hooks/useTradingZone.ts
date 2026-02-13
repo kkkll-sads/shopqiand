@@ -107,7 +107,7 @@ export function useTradingZone({
       setItemsLoading(true);
       setItemsErrorMessage(null);
 
-      const response = await fetchCollectionItemsBySession(session.id, { page: 1, limit: 100 });
+      const response = await fetchCollectionItemsBySession(session.id, { page: 1, limit: 10 });
 
       if (isSuccess(response) && response.data?.list) {
         const allItems = response.data.list.map((rawItem) => {

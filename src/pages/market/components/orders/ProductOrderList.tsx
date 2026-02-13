@@ -127,6 +127,12 @@ const ProductOrderList: React.FC<ProductOrderListProps> = ({
     <>
       {consignmentOrders.map((order) => (
         <div key={order.consignment_id} className="bg-white rounded-xl p-3 shadow-sm border border-gray-50">
+          {(() => {
+            const consignmentPrice = Number(order.consignment_price ?? 0);
+            const soldPrice = Number(order.sold_price ?? 0);
+            const displaySellPrice = consignmentPrice > 0 ? consignmentPrice : soldPrice;
+            return (
+              <>
           <div className="flex justify-between items-center mb-2 pb-2 border-b border-gray-50">
             <span className="text-xs text-gray-500">
               {order.update_time_text || order.create_time_text || formatOrderDate(order.update_time || order.create_time)}
@@ -154,11 +160,11 @@ const ProductOrderList: React.FC<ProductOrderListProps> = ({
                 {order.title}
               </h3>
               <div className="text-xs text-gray-400 mb-1.5">
-                原价: ¥{formatOrderPrice(order.original_price)} | 寄售价: ¥{formatOrderPrice(order.consignment_price)}
+                原价: ¥{formatOrderPrice(order.buy_price ?? order.original_price)} | 寄售价: ¥{formatOrderPrice(displaySellPrice)}
               </div>
               <div className="flex justify-between items-end">
                 <div className="text-sm font-bold text-gray-900">
-                  ¥ {formatOrderPrice(order.consignment_price)}
+                  ¥ {formatOrderPrice(displaySellPrice)}
                 </div>
                 <div className="flex gap-2">
                   <button
@@ -169,8 +175,26 @@ const ProductOrderList: React.FC<ProductOrderListProps> = ({
                   </button>
                 </div>
               </div>
+              {order.order_no && (
+                <div className="text-xs text-gray-400 mt-0.5 flex items-center justify-between gap-2 min-w-0">
+                  <span className="truncate flex-1 min-w-0">订单号: {order.order_no}</span>
+                  <button
+                    type="button"
+                    className="p-1 rounded text-gray-400 active:bg-gray-100 flex-shrink-0"
+                    onClick={() => {
+                      void handleCopyOrderNo(order.order_no!);
+                    }}
+                    aria-label="复制订单号"
+                  >
+                    <Copy size={12} />
+                  </button>
+                </div>
+              )}
             </div>
           </div>
+              </>
+            );
+          })()}
         </div>
       ))}
       {loading && (

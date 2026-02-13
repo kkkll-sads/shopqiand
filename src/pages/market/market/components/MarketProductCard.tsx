@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef, useCallback } from 'react';
 import { LazyImage } from '@/components/common';
 import type { Product } from '@/types';
 
@@ -15,10 +15,20 @@ const MarketProductCard: React.FC<MarketProductCardProps> = ({
   activeFilter,
   onSelect,
 }) => {
+  const clickingRef = useRef(false);
+
+  const handleClick = useCallback(() => {
+    if (clickingRef.current) return;
+    clickingRef.current = true;
+    onSelect(product);
+    // 500ms 内忽略重复点击
+    setTimeout(() => { clickingRef.current = false; }, 500);
+  }, [onSelect, product]);
+
   return (
     <div
       className="bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-md active:scale-[0.98] transition-all duration-200 flex flex-col border border-transparent hover:border-red-100"
-      onClick={() => onSelect(product)}
+      onClick={handleClick}
     >
       <div className="aspect-square bg-gray-100 relative overflow-hidden">
         <LazyImage src={product.image} alt={product.title} className="w-full h-full object-cover" />

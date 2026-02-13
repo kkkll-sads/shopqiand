@@ -140,10 +140,34 @@ export async function getTradeList(params: FetchTradeListParams = {}): Promise<A
  * 我的寄售列表项接口
  */
 export interface MyConsignmentItem {
-  id: number;
+  id?: number;
+  consignment_id?: number;
+  user_id?: number;
+  user_collection_id?: number;
+  item_id?: number;
+  title?: string;
+  image?: string;
   consignment_price: number | string;
+  buy_price?: number | string;
+  original_price?: number | string;
+  sold_price?: number | string;
   service_fee?: number | string;
   total_cost?: number | string;
+  consignment_status?: number;
+  consignment_status_text?: string;
+  user_collection_status?: number;
+  order_id?: number;
+  order_no?: string;
+  create_time?: number | string;
+  update_time?: number | string;
+  sold_time?: number | string;
+  create_time_text?: string;
+  update_time_text?: string;
+  sold_time_text?: string;
+  session_id?: number | string;
+  days_passed?: number;
+  can_force_delivery?: boolean;
+  remaining_days?: number;
   status_text: string;
   item_title: string;
   [key: string]: any;
@@ -188,15 +212,64 @@ export async function getMyConsignmentList(params: FetchMyConsignmentListParams 
 }
 
 export interface ConsignmentDetailData {
-  id: number;
-  title: string;
-  image: string;
+  id?: number;
+  consignment_id: number;
+  user_id?: number;
+  user_collection_id?: number;
+  item_id?: number;
+  title?: string;
+  image?: string;
   images?: string[];
   description?: string;
-  price: number;
-  consignment_price: number;
-  status: number;
-  status_text: string;
+  artist?: string;
+  asset_code?: string;
+  price?: number;
+  consignment_price?: number | string;
+  buy_price?: number | string;
+  original_price?: number | string;
+  sold_price?: number | string;
+  service_fee?: number | string;
+  status?: number;
+  status_text?: string;
+  consignment_status?: number;
+  consignment_status_text?: string;
+  user_collection_status?: number;
+  order_id?: number;
+  order_no?: string;
+  flow_no?: string;
+  money_log_id?: number;
+  money_log_time?: number;
+  money_log_time_text?: string;
+  create_time?: number;
+  update_time?: number;
+  sold_time?: number;
+  create_time_text?: string;
+  update_time_text?: string;
+  sold_time_text?: string;
+  settle_status?: number;
+  settle_status_text?: string;
+  settle_rule?: string;
+  principal_amount?: number | string;
+  profit_amount?: number | string;
+  payout_principal_withdrawable?: number | string;
+  payout_principal_consume?: number | string;
+  payout_profit_withdrawable?: number | string;
+  payout_profit_consume?: number | string;
+  payout_total_withdrawable?: number | string;
+  payout_total_consume?: number | string;
+  days_passed?: number;
+  can_force_delivery?: boolean;
+  remaining_days?: number;
+  delivery_info?: {
+    address?: string;
+    receiver?: string;
+    phone?: string;
+    logistics_company?: string;
+    tracking_no?: string;
+    status_text?: string;
+    update_time?: number;
+    [key: string]: any;
+  };
   [key: string]: any;
 }
 

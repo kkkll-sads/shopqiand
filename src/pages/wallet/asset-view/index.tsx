@@ -140,10 +140,13 @@ const AssetView: React.FC<AssetViewProps> = ({ initialTab = 0 }) => {
         onClose={() => filters.setShowFilterSheet(false)}
         categoryOptions={filters.categoryOptions}
         flowOptions={filters.flowOptions}
+        timeOptions={filters.timeOptions}
         tempFilterCategory={filters.tempFilterCategory}
         tempFilterFlow={filters.tempFilterFlow}
+        tempFilterTime={filters.tempFilterTime}
         onTempFilterCategoryChange={filters.setTempFilterCategory}
         onTempFilterFlowChange={filters.setTempFilterFlow}
+        onTempFilterTimeChange={filters.setTempFilterTime}
         onConfirm={filters.handleConfirmFilter}
       />
     </PageContainer>

@@ -14,3 +14,9 @@ export const FLOW_OPTIONS: FilterOption[] = [
   { label: '支出', value: 'out' },
   { label: '收入', value: 'in' },
 ];
+export const TIME_OPTIONS: Array<FilterOption & { value: AssetTimeFilter }> = [
+  { label: '全部时间', value: 'all' },
+  { label: '今天', value: 'today' },
+  { label: '近7天', value: '7days' },
+  { label: '近30天', value: '30days' },
+];

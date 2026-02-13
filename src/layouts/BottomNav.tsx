@@ -86,7 +86,7 @@ const BottomNav: React.FC<BottomNavProps> = ({ activeTab, onTabChange }) => {
   };
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white border-t border-gray-100 pb-safe z-[999]">
+    <div className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white border-t border-gray-100 pb-safe z-40">
       <div className="flex justify-around items-center py-2">
         {navItems.map((item) => {
           const isActive = activeTab === item.id;

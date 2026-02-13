@@ -209,11 +209,11 @@ const OrderListPage: React.FC = () => {
   };
 
   return (
-    <PageContainer title={config.title} onBack={() => navigate(-1)}>
+    <PageContainer title={config.title} onBack={() => navigate(-1)} padding={false}>
       <OrderTabs tabs={config.tabs} activeTab={activeTab} onChange={setActiveTab} />
 
       {/* Order List */}
-      <div className={`${category === 'product' ? 'p-3 space-y-3' : 'p-4 space-y-4'}`}>
+      <div className={`${category === 'product' ? 'px-3 py-2.5 space-y-3' : 'px-2.5 py-2.5 space-y-2.5'}`}>
         {category === 'transaction' ? (
           <TransactionOrderList
             orders={consignmentOrders}
