@@ -48,7 +48,8 @@ const publicRoutes = [
 ];
 
 // 需要登录但不需要实名的路由
-const authOnlyRoutes = ['/real-name-auth', '/settings', '/profile', '/live', '/rights'];
+// 包含首页，确保新注册用户可先进入首页浏览
+const authOnlyRoutes = ['/', '/home', '/real-name-auth', '/settings', '/profile', '/live', '/rights'];
 
 const POPUP_DISMISSED_KEY_PREFIX = 'popup_dismissed_';
 
@@ -111,6 +112,10 @@ const MainLayout: React.FC = () => {
     (route) => currentPath === route || currentPath.startsWith(route + '/')
   );
 
+  const handlePullRefresh = useCallback(async () => {
+    window.location.reload();
+  }, []);
+
   // 需要登录但未登录
   if (!isPublicRoute && !isLoggedIn) {
     return <Navigate to="/login" state={{ from: location }} replace />;
@@ -156,10 +161,9 @@ const MainLayout: React.FC = () => {
   };
 
   const isPopupVisible = showPopupAnnouncement && popupQueue.length > 0;
-
-  const handlePullRefresh = useCallback(async () => {
-    window.location.reload();
-  }, []);
+  const isPageLevelPullRefreshRoute =
+    currentPath.startsWith('/activity/team-leaderboard') ||
+    currentPath.startsWith('/product/');
 
   return (
     <div className="bg-gray-100 min-h-screen-dynamic font-sans antialiased text-gray-900 max-w-md mx-auto relative shadow-2xl">
@@ -175,7 +179,11 @@ const MainLayout: React.FC = () => {
         onClose={handlePopupClose}
         onDontShowToday={handlePopupDontShowToday}
       />
-      <PullToRefresh onRefresh={handlePullRefresh} disabled={isPopupVisible} className="min-h-screen-dynamic">
+      <PullToRefresh
+        onRefresh={handlePullRefresh}
+        disabled={isPopupVisible || isPageLevelPullRefreshRoute}
+        className="min-h-screen-dynamic"
+      >
         <div className="min-h-screen-dynamic bg-gray-50 pb-safe">
           <Outlet />
         </div>

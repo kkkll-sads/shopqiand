@@ -153,6 +153,10 @@ const PullToRefresh: React.FC<PullToRefreshProps> = ({
     const distance = Math.max(0, deltaY * 0.5);
 
     if (distance > 0) {
+      // 浏览器已进入滚动过程时，touchmove 可能不可取消，避免触发 Intervention 警告
+      if (!e.cancelable) {
+        return;
+      }
       setPullingState(true);
       e.preventDefault();
       setPullDistanceRaf(Math.min(distance, threshold * 1.5));
@@ -223,6 +227,7 @@ const PullToRefresh: React.FC<PullToRefreshProps> = ({
 
   const progress = Math.min(pullDistance / threshold, 1);
   const shouldTrigger = pullDistance >= threshold;
+  const shouldOffsetContent = pullDistance > 0 || isPulling || isRefreshing;
 
   return (
     <div ref={containerRef} className={`relative ${className}`}>
@@ -262,9 +267,9 @@ const PullToRefresh: React.FC<PullToRefreshProps> = ({
       
       {/* 内容区域 */}
       <div 
-        className="will-change-transform"
+        className={shouldOffsetContent ? 'will-change-transform' : ''}
         style={{ 
-          transform: `translateY(${pullDistance}px)`,
+          transform: shouldOffsetContent ? `translateY(${pullDistance}px)` : undefined,
           transition: isPulling && !isRefreshing ? 'none' : 'transform 200ms ease',
           touchAction: 'pan-x pan-y',
         }}
