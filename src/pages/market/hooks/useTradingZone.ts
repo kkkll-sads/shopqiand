@@ -82,6 +82,8 @@ export function useTradingZone({
   // Loading states
   const [loading, setLoading] = useState(false);
   const [itemsLoading, setItemsLoading] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(false);
 
   // Error states
   const [sessionErrorMessage, setSessionErrorMessage] = useState<string | null>(null);
@@ -94,8 +96,44 @@ export function useTradingZone({
   const loadingSessionRef = useRef<string | null>(null);
   const sessionsLoadedRef = useRef(false);
   const sessionStatusesRef = useRef<Map<string, { status: 'active' | 'waiting' | 'ended'; target: Date | null }>>(new Map());
+  const currentPageRef = useRef(1);
+  const currentSessionIdRef = useRef<string | null>(null);
 
-  // Load session items
+  const PAGE_LIMIT = 10;
+
+  // Map raw API item to display item
+  const mapToDisplayItem = useCallback((rawItem: CollectionItem): TradingDisplayItem => {
+    const item = rawItem as TradingItemWithMeta;
+    const hasConsignment = item.consignment_count > 0 || (item.consignment_list && item.consignment_list.length > 0);
+    const hasOfficial = item.official_stock > 0 || item.stock > 0;
+
+    let source: 'collection' | 'consignment' | 'mixed' = 'collection';
+    if (hasConsignment && hasOfficial) {
+      source = 'mixed';
+    } else if (hasConsignment) {
+      source = 'consignment';
+    }
+
+    const displayPrice = Number(item.price || item.min_price || 0);
+    const totalAvailable = item.total_available ?? ((item.official_stock || 0) + (item.consignment_count || 0));
+
+    return {
+      ...item,
+      price: displayPrice,
+      stock: totalAvailable,
+      official_stock: item.official_stock || item.stock || 0,
+      consignment_count: item.consignment_count || 0,
+      total_available: totalAvailable,
+      package_name: item.package_name || item.title,
+      title: item.package_name || item.title || `${item.price_zone}元区`,
+      package_id: item.package_id,
+      displayKey: `pkg-${item.zone_id || item.id}-${item.package_name || item.id}`,
+      source,
+      hasStockInfo: totalAvailable > 0
+    };
+  }, []);
+
+  // Load session items (first page)
   const loadSessionItems = useCallback(async (session: TradingSession) => {
     if (loadingSessionRef.current === session.id) {
       debugLog('useTradingZone', 'Session already loading, skipping', session.id);
@@ -106,47 +144,26 @@ export function useTradingZone({
       loadingSessionRef.current = session.id;
       setItemsLoading(true);
       setItemsErrorMessage(null);
+      currentPageRef.current = 1;
+      currentSessionIdRef.current = session.id;
 
-      const response = await fetchCollectionItemsBySession(session.id, { page: 1, limit: 10 });
+      const response = await fetchCollectionItemsBySession(session.id, { page: 1, limit: PAGE_LIMIT });
 
       if (isSuccess(response) && response.data?.list) {
-        const allItems = response.data.list.map((rawItem) => {
-          const item = rawItem as TradingItemWithMeta;
-          const hasConsignment = item.consignment_count > 0 || (item.consignment_list && item.consignment_list.length > 0);
-          const hasOfficial = item.official_stock > 0 || item.stock > 0;
-
-          let source: 'collection' | 'consignment' | 'mixed' = 'collection';
-          if (hasConsignment && hasOfficial) {
-            source = 'mixed';
-          } else if (hasConsignment) {
-            source = 'consignment';
-          }
-
-          const displayPrice = Number(item.price || item.min_price || 0);
-          const totalAvailable = item.total_available ?? ((item.official_stock || 0) + (item.consignment_count || 0));
-
-          return {
-            ...item,
-            price: displayPrice,
-            stock: totalAvailable,
-            official_stock: item.official_stock || item.stock || 0,
-            consignment_count: item.consignment_count || 0,
-            total_available: totalAvailable,
-            package_name: item.package_name || item.title,
-            title: item.package_name || item.title || `${item.price_zone}元区`,
-            package_id: item.package_id,
-            displayKey: `pkg-${item.zone_id || item.id}-${item.package_name || item.id}`,
-            source,
-            hasStockInfo: totalAvailable > 0
-          };
-        });
+        const allItems = response.data.list.map(mapToDisplayItem);
+        const total = response.data.total || 0;
 
         if (allItems.length > 0) {
           setTradingItems(allItems);
+          setHasMore(allItems.length < total);
         } else {
+          setTradingItems([]);
+          setHasMore(false);
           setItemsErrorMessage('暂无上链资产');
         }
       } else {
+        setTradingItems([]);
+        setHasMore(false);
         setItemsErrorMessage('暂无上链资产');
       }
 
@@ -154,12 +171,50 @@ export function useTradingZone({
     } catch (err: unknown) {
       errorLog('useTradingZone', '加载专场商品失败:', err);
       setItemsErrorMessage('数据同步延迟，请重试');
+      setHasMore(false);
       setSelectedSession(session);
     } finally {
       setItemsLoading(false);
       loadingSessionRef.current = null;
     }
-  }, []);
+  }, [mapToDisplayItem]);
+
+  // Load more items (next page)
+  const loadMoreItems = useCallback(async () => {
+    if (loadingMore || !hasMore || !currentSessionIdRef.current) return;
+
+    try {
+      setLoadingMore(true);
+      const nextPage = currentPageRef.current + 1;
+
+      const response = await fetchCollectionItemsBySession(currentSessionIdRef.current, {
+        page: nextPage,
+        limit: PAGE_LIMIT,
+      });
+
+      if (isSuccess(response) && response.data?.list) {
+        const newItems = response.data.list.map(mapToDisplayItem);
+        const total = response.data.total || 0;
+
+        if (newItems.length > 0) {
+          currentPageRef.current = nextPage;
+          setTradingItems(prev => {
+            const updated = [...prev, ...newItems];
+            setHasMore(updated.length < total);
+            return updated;
+          });
+        } else {
+          setHasMore(false);
+        }
+      } else {
+        setHasMore(false);
+      }
+    } catch (err: unknown) {
+      errorLog('useTradingZone', '加载更多商品失败:', err);
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [loadingMore, hasMore, mapToDisplayItem]);
 
   // Load sessions - only run once
   useEffect(() => {
@@ -273,6 +328,8 @@ export function useTradingZone({
     activePriceZone,
     loading,
     itemsLoading,
+    loadingMore,
+    hasMore,
     hasSessionError,
     sessionErrorMessage,
     hasItemsError,
@@ -284,6 +341,7 @@ export function useTradingZone({
     setActivePriceZone,
     setNavigating,
     loadSessionItems,
+    loadMoreItems,
     getSessionStatus,
   };
 }

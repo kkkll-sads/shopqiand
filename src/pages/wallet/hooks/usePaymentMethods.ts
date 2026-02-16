@@ -13,6 +13,14 @@ export interface PaymentMethod {
   icon: string;
 }
 
+// 默认支付方式图标映射
+const DEFAULT_PAY_ICONS: Record<string, string> = {
+  wechat: '/images/pay/weixinzhifu.svg',
+  alipay: '/images/pay/zhifubao.svg',
+  bank_card: '/images/pay/yinlian.svg',
+  cloud_pay: '/images/pay/yunshanfu.svg',
+};
+
 export function usePaymentMethods() {
   const { showToast } = useNotification();
 
@@ -44,7 +52,7 @@ export function usePaymentMethods() {
               methodsMap.set(acc.type, {
                 id: acc.type,
                 name: acc.type_text || acc.type,
-                icon: acc.icon
+                icon: DEFAULT_PAY_ICONS[acc.type] || acc.icon || ''
               });
             }
           });
@@ -79,7 +87,7 @@ export function usePaymentMethods() {
             methodsMap.set(acc.type, {
               id: acc.type,
               name: acc.type_text || acc.type,
-              icon: acc.icon
+              icon: DEFAULT_PAY_ICONS[acc.type] || acc.icon || ''
             });
           }
         });

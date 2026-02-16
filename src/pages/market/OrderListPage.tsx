@@ -24,22 +24,23 @@ import {
 } from './components/orders';
 import { useOrderList } from './hooks/useOrderList';
 import { useOrderActions } from './hooks/useOrderActions';
+import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
 
 type OrderCategory = 'product' | 'transaction' | 'delivery' | 'points';
 
 const OrderListPage: React.FC = () => {
   const navigate = useNavigate();
   const { category: categoryParam, status } = useParams<{ category?: string; status?: string }>();
-  
+
   const category = useMemo<OrderCategory>(() => {
     const value = categoryParam as OrderCategory;
     return value && ['product', 'transaction', 'delivery', 'points'].includes(value) ? value : 'product';
   }, [categoryParam]);
-  
+
   const initialTab = useMemo(() => (status ? parseInt(status, 10) || 0 : 0), [status]);
   const [activeTab, setActiveTab] = useState(initialTab);
   const [page, setPage] = useState(1);
-  
+
   const [showConsignmentDetailModal, setShowConsignmentDetailModal] = useState(false);
   const [selectedConsignmentDetail, setSelectedConsignmentDetail] = useState<ConsignmentDetailData | null>(null);
   const [loadingConsignmentDetail, setLoadingConsignmentDetail] = useState(false);
@@ -208,6 +209,8 @@ const OrderListPage: React.FC = () => {
     }
   };
 
+  const sentinelRef = useInfiniteScroll(loadMore, hasMore, loading);
+
   return (
     <PageContainer title={config.title} onBack={() => navigate(-1)} padding={false}>
       <OrderTabs tabs={config.tabs} activeTab={activeTab} onChange={setActiveTab} />
@@ -246,6 +249,13 @@ const OrderListPage: React.FC = () => {
           <div className="flex flex-col items-center justify-center py-20 text-gray-400">
             <p className="text-xs">暂无数据</p>
           </div>
+        )}
+
+        {/* Sentinel for infinite scroll */}
+        <div ref={sentinelRef} className="h-1" />
+
+        {!hasMore && !loading && (orders.length > 0 || consignmentOrders.length > 0 || purchaseRecords.length > 0) && (
+          <div className="py-4 text-center text-gray-300 text-xs">没有更多了</div>
         )}
       </div>
 

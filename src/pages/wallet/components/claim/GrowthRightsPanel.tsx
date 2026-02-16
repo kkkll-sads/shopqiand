@@ -79,7 +79,7 @@ type GrowthStatus = 'inactive' | 'activated' | 'unlockable';
 
 const STAGE_ROWS = [
   { icon: '🌱', label: '初级阶段', min: 1, max: 37, statusText: '未激活' },
-  { icon: '🌿', label: '成长期', min: 38, max: 44, statusText: '可激活转向金' },
+  { icon: '🌿', label: '成长期', min: 38, max: 44, statusText: '可解锁藏品' },
   { icon: '🌳', label: '成熟期', min: 45, max: 59, statusText: '可解锁资产包' },
   { icon: '🌟', label: '进阶期', min: 60, max: 89, statusText: '配资比例提升' },
   { icon: '💎', label: '高级阶段', min: 90, max: Number.POSITIVE_INFINITY, statusText: '优化配资比例' },
@@ -282,11 +282,10 @@ const GrowthRightsPanel: React.FC<GrowthRightsPanelProps> = ({
               <span className="mx-1">/</span>
               <span className="text-white/70">{progressTargetDays} 天</span>
             </span>
-            <span className={`text-xs font-bold px-3 py-1 rounded-full ${
-              status === 'unlockable' ? 'bg-amber-400/30 text-amber-100' :
+            <span className={`text-xs font-bold px-3 py-1 rounded-full ${status === 'unlockable' ? 'bg-amber-400/30 text-amber-100' :
               status === 'activated' ? 'bg-emerald-400/30 text-emerald-100' :
-              'bg-white/20 text-white/80'
-            }`}>
+                'bg-white/20 text-white/80'
+              }`}>
               {currentStatus.label}
             </span>
           </div>
@@ -456,9 +455,8 @@ const GrowthRightsPanel: React.FC<GrowthRightsPanelProps> = ({
               <div key={log.date} className="px-3 py-2.5">
                 <div className="flex items-center justify-between gap-2 mb-1">
                   <span className="text-xs font-semibold text-gray-800">{log.date}</span>
-                  <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
-                    log.counted ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-500'
-                  }`}>
+                  <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${log.counted ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-500'
+                    }`}>
                     {log.counted ? '已计入' : '未计入'}
                   </span>
                 </div>
@@ -596,7 +594,7 @@ const GrowthRightsPanel: React.FC<GrowthRightsPanelProps> = ({
       <div className="pb-4">
         {status === 'inactive' && (
           <button
-            onClick={() => navigate('/market')}
+            onClick={() => navigate('/trading-zone')}
             className="w-full py-4 rounded-full text-base font-bold text-white shadow-xl bg-gradient-to-r from-[#4F46E5] via-[#6366F1] to-[#818CF8] shadow-indigo-300/40 active:scale-[0.98] transition-all relative overflow-hidden group"
           >
             <div className="absolute top-0 left-0 w-full h-full bg-white/20 -translate-x-full group-hover:animate-[shimmer_1s_infinite] pointer-events-none" />
@@ -609,7 +607,7 @@ const GrowthRightsPanel: React.FC<GrowthRightsPanelProps> = ({
 
         {status === 'activated' && (
           <button
-            onClick={() => navigate('/market')}
+            onClick={() => navigate('/trading-zone')}
             className="w-full py-4 rounded-full text-base font-bold text-white shadow-xl bg-gradient-to-r from-[#059669] via-[#10B981] to-[#34D399] shadow-emerald-300/40 active:scale-[0.98] transition-all relative overflow-hidden group"
           >
             <div className="absolute top-0 left-0 w-full h-full bg-white/20 -translate-x-full group-hover:animate-[shimmer_1s_infinite] pointer-events-none" />
@@ -624,21 +622,20 @@ const GrowthRightsPanel: React.FC<GrowthRightsPanelProps> = ({
           <button
             onClick={canUnlockGrowthCollectible && onUnlockGrowth ? onUnlockGrowth : openUnlockTab}
             disabled={unlocking}
-            className={`w-full py-4 rounded-full text-base font-bold text-white shadow-xl active:scale-[0.98] transition-all relative overflow-hidden group ${
-              unlocking
-                ? 'bg-gray-300 text-white shadow-none cursor-not-allowed'
-                : 'bg-gradient-to-r from-[#FF6B00] via-[#FF5E62] to-[#FF4500] shadow-orange-300/40'
-            }`}
+            className={`w-full py-4 rounded-full text-base font-bold text-white shadow-xl active:scale-[0.98] transition-all relative overflow-hidden group ${unlocking
+              ? 'bg-gray-300 text-white shadow-none cursor-not-allowed'
+              : 'bg-gradient-to-r from-[#FF6B00] via-[#FF5E62] to-[#FF4500] shadow-orange-300/40'
+              }`}
           >
             <div className="absolute top-0 left-0 w-full h-full bg-white/20 -translate-x-full group-hover:animate-[shimmer_1s_infinite] pointer-events-none" />
             <span className="flex items-center justify-center gap-2">
               {unlocking
                 ? '正在解锁...'
                 : canUnlockGrowthCollectible
-                ? '立即解锁一个藏品'
-                : canUnlockDirect
-                ? '立即解锁资产包'
-                : '查看解锁条件'}
+                  ? '立即解锁一个藏品'
+                  : canUnlockDirect
+                    ? '立即解锁资产包'
+                    : '查看解锁条件'}
               <ArrowRight size={18} />
             </span>
           </button>

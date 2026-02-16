@@ -13,6 +13,7 @@ import { isSuccess } from '@/utils/apiHelpers';
 import { errorLog } from '@/utils/logger';
 import { ZoneFilters, ProductGrid, SessionCard } from './components/trading';
 import { useTradingZone } from './hooks/useTradingZone';
+import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
 import { buildPoolConfig, formatDuration } from './utils/poolConfig';
 
 interface TradingZoneProps {
@@ -48,11 +49,14 @@ const TradingZone: React.FC<TradingZoneProps> = ({
     itemsErrorMessage,
     navigating,
     priceZones,
+    loadingMore,
+    hasMore,
     setSelectedSession,
     setTradingItems,
     setActivePriceZone,
     setNavigating,
     loadSessionItems,
+    loadMoreItems,
     getSessionStatus,
   } = useTradingZone({
     initialSessionId,
@@ -97,6 +101,8 @@ const TradingZone: React.FC<TradingZoneProps> = ({
 
     loadTradeNotice();
   }, []);
+
+  const sentinelRef = useInfiniteScroll(loadMoreItems, hasMore, itemsLoading || loadingMore);
 
   const handleBack = () => {
     if (selectedSession) {
@@ -217,6 +223,17 @@ const TradingZone: React.FC<TradingZoneProps> = ({
             loading={itemsLoading}
             error={hasItemsError ? itemsErrorMessage : null}
           />
+
+          {/* 加载更多 */}
+          {loadingMore && (
+            <div className="py-4 flex justify-center">
+              <div className="text-gray-400 text-sm">加载中...</div>
+            </div>
+          )}
+          {!hasMore && tradingItems.length > 0 && !itemsLoading && (
+            <div className="py-4 text-center text-gray-300 text-xs">没有更多了</div>
+          )}
+          <div ref={sentinelRef} className="h-1" />
         </div>
       </div>
     );
