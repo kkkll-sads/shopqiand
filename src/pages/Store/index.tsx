@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Award,
   CheckCircle2,
@@ -9,12 +9,13 @@ import {
   Grid,
   MapPin,
   MessageSquare,
+  RefreshCcw,
   Search,
   ShoppingCart,
   Ticket,
   Zap,
 } from 'lucide-react';
-import { shopProductApi } from '../../api';
+import { shopProductApi, type ShopProductItem } from '../../api';
 import { OfflineBanner } from '../../components/layout/OfflineBanner';
 import { Card } from '../../components/ui/Card';
 import { EmptyState } from '../../components/ui/EmptyState';
@@ -28,6 +29,7 @@ import {
   getShopProductPrimaryPrice,
   resolveShopProductImageUrl,
 } from '../../features/shop-product/utils';
+import { useInfiniteScroll } from '../../hooks/useInfiniteScroll';
 import { useNetworkStatus } from '../../hooks/useNetworkStatus';
 import { useRequest } from '../../hooks/useRequest';
 import { useAppNavigate } from '../../lib/navigation';
@@ -43,12 +45,33 @@ const KING_KONG_ITEMS = [
   { icon: MapPin, label: '地址/客服', target: 'help_center' },
 ];
 
-const PRODUCT_LIST_INITIAL_DATA = {
+const SALES_LIST_INITIAL_DATA = {
   limit: 6,
-  list: [],
+  list: [] as ShopProductItem[],
   page: 1,
   total: 0,
 };
+
+const LATEST_LIST_INITIAL_DATA = {
+  limit: 10,
+  list: [] as ShopProductItem[],
+  page: 1,
+  total: 0,
+};
+
+function mergeProducts(previous: ShopProductItem[], next: ShopProductItem[]) {
+  const productMap = new Map<number, ShopProductItem>();
+
+  for (const item of previous) {
+    productMap.set(item.id, item);
+  }
+
+  for (const item of next) {
+    productMap.set(item.id, item);
+  }
+
+  return Array.from(productMap.values());
+}
 
 function HorizontalProductSkeleton() {
   return (
@@ -88,22 +111,87 @@ export const StorePage = () => {
   const { goTo } = useAppNavigate();
   const { isOffline, refreshStatus } = useNetworkStatus();
 
+  const [latestProducts, setLatestProducts] = useState<ShopProductItem[]>([]);
+  const [hasMoreLatest, setHasMoreLatest] = useState(false);
+  const [loadingMoreLatest, setLoadingMoreLatest] = useState(false);
+  const [loadMoreLatestError, setLoadMoreLatestError] = useState<Error | null>(null);
+
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
+  const latestLoadMoreTriggerRef = useRef<HTMLDivElement | null>(null);
+  const latestPageRef = useRef(1);
+  const latestProductsRef = useRef<ShopProductItem[]>([]);
+  const latestLoadingMoreRef = useRef(false);
+
   const salesRequest = useRequest(
     (signal) => shopProductApi.sales({ limit: 6, page: 1 }, signal),
     {
-      initialData: PRODUCT_LIST_INITIAL_DATA,
+      initialData: SALES_LIST_INITIAL_DATA,
     },
   );
 
   const latestRequest = useRequest(
-    (signal) => shopProductApi.latest({ limit: 6, page: 1 }, signal),
+    (signal) => shopProductApi.latest({ limit: 10, page: 1 }, signal),
     {
-      initialData: PRODUCT_LIST_INITIAL_DATA,
+      initialData: LATEST_LIST_INITIAL_DATA,
     },
   );
 
+  useEffect(() => {
+    const nextProducts = latestRequest.data?.list ?? [];
+    latestProductsRef.current = nextProducts;
+    latestPageRef.current = 1;
+    latestLoadingMoreRef.current = false;
+    setLatestProducts(nextProducts);
+    setHasMoreLatest(nextProducts.length < (latestRequest.data?.total ?? 0));
+    setLoadingMoreLatest(false);
+    setLoadMoreLatestError(null);
+  }, [latestRequest.data]);
+
+  const loadMoreLatest = useCallback(async () => {
+    if (latestLoadingMoreRef.current || !hasMoreLatest) {
+      return;
+    }
+
+    const nextPage = latestPageRef.current + 1;
+
+    latestLoadingMoreRef.current = true;
+    setLoadingMoreLatest(true);
+    setLoadMoreLatestError(null);
+
+    try {
+      const response = await shopProductApi.latest({
+        limit: latestRequest.data?.limit ?? LATEST_LIST_INITIAL_DATA.limit,
+        page: nextPage,
+      });
+
+      const mergedProducts = mergeProducts(latestProductsRef.current, response.list);
+      latestProductsRef.current = mergedProducts;
+      latestPageRef.current = nextPage;
+      setLatestProducts(mergedProducts);
+      setHasMoreLatest(mergedProducts.length < response.total);
+    } catch (error) {
+      setLoadMoreLatestError(
+        error instanceof Error ? error : new Error('精选商品加载更多失败'),
+      );
+    } finally {
+      latestLoadingMoreRef.current = false;
+      setLoadingMoreLatest(false);
+    }
+  }, [hasMoreLatest, latestRequest.data?.limit]);
+
+  useInfiniteScroll({
+    disabled:
+      latestRequest.loading ||
+      latestProducts.length === 0 ||
+      Boolean(loadMoreLatestError),
+    hasMore: hasMoreLatest,
+    loading: loadingMoreLatest,
+    onLoadMore: loadMoreLatest,
+    rootRef: scrollContainerRef,
+    targetRef: latestLoadMoreTriggerRef,
+  });
+
   const hotProducts = salesRequest.data?.list ?? [];
-  const latestProducts = latestRequest.data?.list ?? [];
   const isLoading = salesRequest.loading || latestRequest.loading;
   const hasBlockingError =
     !isLoading &&
@@ -117,6 +205,13 @@ export const StorePage = () => {
     latestProducts.length === 0;
 
   const reloadAll = () => {
+    latestProductsRef.current = [];
+    latestPageRef.current = 1;
+    latestLoadingMoreRef.current = false;
+    setLatestProducts([]);
+    setHasMoreLatest(false);
+    setLoadingMoreLatest(false);
+    setLoadMoreLatestError(null);
     void Promise.allSettled([salesRequest.reload(), latestRequest.reload()]);
   };
 
@@ -124,6 +219,35 @@ export const StorePage = () => {
     () => ['自营保障', '极速发货', '售后无忧'],
     [],
   );
+
+  const renderLatestFooter = () => {
+    if (latestProducts.length === 0) {
+      return null;
+    }
+
+    return (
+      <div ref={latestLoadMoreTriggerRef} className="py-6 text-center text-sm text-text-sub">
+        {loadingMoreLatest ? (
+          <span className="inline-flex items-center">
+            <RefreshCcw size={14} className="mr-2 animate-spin" />
+            加载中...
+          </span>
+        ) : loadMoreLatestError ? (
+          <button
+            type="button"
+            className="rounded-full border border-border-light px-4 py-2 text-text-main"
+            onClick={() => void loadMoreLatest()}
+          >
+            加载失败，点击重试
+          </button>
+        ) : hasMoreLatest ? (
+          <span>继续下拉加载更多商品</span>
+        ) : (
+          <span>没有更多商品了</span>
+        )}
+      </div>
+    );
+  };
 
   return (
     <div className="relative flex flex-1 flex-col overflow-hidden bg-bg-base">
@@ -164,7 +288,7 @@ export const StorePage = () => {
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto pb-4">
+      <div ref={scrollContainerRef} className="flex-1 overflow-y-auto pb-4">
         <div className="grid grid-cols-4 gap-y-4 px-4 pb-1 pt-4">
           {KING_KONG_ITEMS.map((item) => {
             const Icon = item.icon;
@@ -317,8 +441,15 @@ export const StorePage = () => {
                 <span className="ml-2 h-px w-4 bg-border-light" />
               </h3>
 
-              {latestRequest.loading ? (
+              {latestRequest.loading && latestProducts.length === 0 ? (
                 <GridProductSkeleton />
+              ) : latestRequest.error && latestProducts.length === 0 ? (
+                <Card className="rounded-xl border border-border-light p-6">
+                  <ErrorState
+                    message="精选商品加载失败"
+                    onRetry={() => void latestRequest.reload().catch(() => undefined)}
+                  />
+                </Card>
               ) : latestProducts.length === 0 ? (
                 <Card className="rounded-xl border border-border-light p-6">
                   <EmptyState
@@ -328,62 +459,66 @@ export const StorePage = () => {
                   />
                 </Card>
               ) : (
-                <div className="grid grid-cols-2 gap-3">
-                  {latestProducts.map((item) => (
-                    <button
-                      key={item.id}
-                      type="button"
-                      className="flex flex-col overflow-hidden rounded-2xl border border-border-light bg-bg-card text-left shadow-soft active:opacity-70"
-                      onClick={() => goTo(buildShopProductPath(item.id))}
-                    >
-                      <img
-                        src={resolveShopProductImageUrl(item.thumbnail)}
-                        alt={item.name}
-                        className="aspect-square w-full object-cover"
-                        referrerPolicy="no-referrer"
-                      />
-                      <div className="flex flex-1 flex-col p-3">
-                        <div className="mb-2 line-clamp-2 text-base leading-tight text-text-main">
-                          <span className="mr-1 inline-block rounded bg-primary-start px-1 py-0.5 text-xs font-medium text-white">
-                            自营
-                          </span>
-                          {item.name}
-                        </div>
-                        <div className="mb-auto flex flex-wrap gap-1 pb-2">
-                          {getShopProductBadges(item).map((badge) => (
-                            <span
-                              key={`${item.id}-${badge}`}
-                              className="rounded border border-primary-start/30 px-1 py-0.5 text-xs text-primary-start"
-                            >
-                              {badge}
+                <>
+                  <div className="grid grid-cols-2 gap-3">
+                    {latestProducts.map((item) => (
+                      <button
+                        key={item.id}
+                        type="button"
+                        className="flex flex-col overflow-hidden rounded-2xl border border-border-light bg-bg-card text-left shadow-soft active:opacity-70"
+                        onClick={() => goTo(buildShopProductPath(item.id))}
+                      >
+                        <img
+                          src={resolveShopProductImageUrl(item.thumbnail)}
+                          alt={item.name}
+                          className="aspect-square w-full object-cover"
+                          referrerPolicy="no-referrer"
+                        />
+                        <div className="flex flex-1 flex-col p-3">
+                          <div className="mb-2 line-clamp-2 text-base leading-tight text-text-main">
+                            <span className="mr-1 inline-block rounded bg-primary-start px-1 py-0.5 text-xs font-medium text-white">
+                              自营
                             </span>
-                          ))}
-                        </div>
-                        <div className="mt-1 flex items-end justify-between">
-                          <div className="flex flex-col">
-                            <div className="mb-1 text-xl font-bold leading-none text-primary-start">
-                              {getShopProductPrimaryPrice(item)}
-                            </div>
-                            <div className="line-clamp-1 text-xs text-text-aux">
-                              {getShopProductPriceCaption(item) || `已售${formatShopProductSales(item.sales)}`}
-                            </div>
+                            {item.name}
                           </div>
-                          <button
-                            type="button"
-                            aria-label={`查看 ${item.name} 购物车入口`}
-                            className="flex h-7 w-7 items-center justify-center rounded-full border border-border-light bg-bg-base text-text-main active:bg-border-light"
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              goTo('cart');
-                            }}
-                          >
-                            <ShoppingCart size={14} />
-                          </button>
+                          <div className="mb-auto flex flex-wrap gap-1 pb-2">
+                            {getShopProductBadges(item).map((badge) => (
+                              <span
+                                key={`${item.id}-${badge}`}
+                                className="rounded border border-primary-start/30 px-1 py-0.5 text-xs text-primary-start"
+                              >
+                                {badge}
+                              </span>
+                            ))}
+                          </div>
+                          <div className="mt-1 flex items-end justify-between">
+                            <div className="flex flex-col">
+                              <div className="mb-1 text-xl font-bold leading-none text-primary-start">
+                                {getShopProductPrimaryPrice(item)}
+                              </div>
+                              <div className="line-clamp-1 text-xs text-text-aux">
+                                {getShopProductPriceCaption(item) ||
+                                  `已售${formatShopProductSales(item.sales)}`}
+                              </div>
+                            </div>
+                            <button
+                              type="button"
+                              aria-label={`查看 ${item.name} 购物车入口`}
+                              className="flex h-7 w-7 items-center justify-center rounded-full border border-border-light bg-bg-base text-text-main active:bg-border-light"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                goTo('cart');
+                              }}
+                            >
+                              <ShoppingCart size={14} />
+                            </button>
+                          </div>
                         </div>
-                      </div>
-                    </button>
-                  ))}
-                </div>
+                      </button>
+                    ))}
+                  </div>
+                  {renderLatestFooter()}
+                </>
               )}
             </div>
           </>
