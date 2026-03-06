@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { ChevronLeft, FileText, Filter } from 'lucide-react';
 import { Card } from '../../components/ui/Card';
+import { useAppNavigate } from '../../lib/navigation';
+import { PageHeader } from '../../components/layout/PageHeader';
 
 const MOCK_HISTORY = [
   { id: '1', type: 'screenshot', amount: 5000, status: 'pending', time: '2026-03-01 10:00:00', remark: '这是备注信息' },
@@ -23,6 +25,7 @@ const STATUS_MAP = {
 };
 
 export function RightsHistoryPage() {
+  const { goBack } = useAppNavigate();
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -33,7 +36,7 @@ export function RightsHistoryPage() {
   }, []);
 
   const handleGoBack = () => {
-    window.dispatchEvent(new CustomEvent('go-back'));
+    goBack();
   };
 
   if (isLoading) {
@@ -58,7 +61,7 @@ export function RightsHistoryPage() {
         <button onClick={handleGoBack} className="p-2 -ml-2 text-text-main active:scale-95 transition-transform">
           <ChevronLeft size={24} />
         </button>
-        <h1 className="text-[17px] font-semibold text-text-main">确权记录</h1>
+        <h1 className="text-2xl font-semibold text-text-main">确权记录</h1>
         <button className="p-2 -mr-2 text-text-main active:scale-95 transition-transform">
           <Filter size={20} />
         </button>
@@ -73,21 +76,21 @@ export function RightsHistoryPage() {
                 <div className="flex justify-between items-start mb-2">
                   <div>
                     <div className="flex items-center gap-2 mb-1">
-                      <span className="text-[15px] font-bold text-text-main">
+                      <span className="text-lg font-bold text-text-main">
                         {VOUCHER_TYPES[record.type as keyof typeof VOUCHER_TYPES]}
                       </span>
-                      <span className={`text-[10px] px-1.5 py-0.5 rounded ${statusInfo.bg} ${statusInfo.color}`}>
+                      <span className={`text-xs px-1.5 py-0.5 rounded ${statusInfo.bg} ${statusInfo.color}`}>
                         {statusInfo.text}
                       </span>
                     </div>
-                    <div className="text-[12px] text-text-sub">{record.time}</div>
+                    <div className="text-sm text-text-sub">{record.time}</div>
                   </div>
-                  <div className={`text-[18px] font-bold ${record.status === 'rejected' || record.status === 'cancelled' ? 'text-text-main' : 'text-red-500'}`}>
+                  <div className={`text-3xl font-bold ${record.status === 'rejected' || record.status === 'cancelled' ? 'text-text-main' : 'text-red-500'}`}>
                     ¥{record.amount.toLocaleString()}
                   </div>
                 </div>
                 {record.remark && (
-                  <div className="mt-3 pt-3 border-t border-border-light text-[13px] text-text-sub bg-gray-50 dark:bg-gray-800/50 p-2 rounded-lg">
+                  <div className="mt-3 pt-3 border-t border-border-light text-base text-text-sub bg-gray-50 dark:bg-gray-800/50 p-2 rounded-lg">
                     {record.remark}
                   </div>
                 )}
@@ -97,7 +100,7 @@ export function RightsHistoryPage() {
         ) : (
           <div className="py-20 flex flex-col items-center justify-center text-gray-400 dark:text-gray-500">
             <FileText size={48} className="mb-4 opacity-50" />
-            <p className="text-[14px]">暂无确权记录</p>
+            <p className="text-md">暂无确权记录</p>
           </div>
         )}
       </div>

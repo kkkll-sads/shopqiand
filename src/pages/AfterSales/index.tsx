@@ -1,5 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { ChevronLeft, WifiOff, AlertCircle, Package, ChevronRight, Camera, CheckCircle2, Clock, HeadphonesIcon, FileText, RefreshCcw, Store } from 'lucide-react';
+import { useAppNavigate } from '../../lib/navigation';
+import { PageHeader } from '../../components/layout/PageHeader';
+import { ErrorState } from '../../components/ui/ErrorState';
+import { EmptyState } from '../../components/ui/EmptyState';
 
 interface AfterSalesItem {
   id: string;
@@ -53,6 +57,8 @@ const MOCK_TIMELINE = [
 ];
 
 export const AfterSalesPage = () => {
+  const { goTo, goBack } = useAppNavigate();
+
   const [view, setView] = useState<'list' | 'entry' | 'apply' | 'detail'>('list');
   const [activeTab, setActiveTab] = useState<'processing' | 'completed' | 'closed'>('processing');
   const [loading, setLoading] = useState(true);
@@ -82,15 +88,14 @@ export const AfterSalesPage = () => {
     } else if (view === 'entry' || view === 'detail') {
       setView('list');
     } else {
-      const event = new CustomEvent('go-back');
-      window.dispatchEvent(event);
+      goBack();
     }
   };
 
   const renderHeader = (title: string) => (
     <div className="bg-white dark:bg-gray-900 z-40 relative shrink-0 border-b border-border-light">
       {offline && (
-        <div className="bg-red-50 text-primary-start px-4 py-2 flex items-center justify-between text-[12px]">
+        <div className="bg-red-50 text-primary-start px-4 py-2 flex items-center justify-between text-sm">
           <div className="flex items-center">
             <WifiOff size={14} className="mr-2" />
             <span>网络不稳定，请检查网络设置</span>
@@ -104,7 +109,7 @@ export const AfterSalesPage = () => {
             <ChevronLeft size={24} />
           </button>
         </div>
-        <h1 className="text-[17px] font-bold text-text-main text-center w-1/3">{title}</h1>
+        <h1 className="text-2xl font-bold text-text-main text-center w-1/3">{title}</h1>
         <div className="w-1/3"></div>
       </div>
     </div>
@@ -113,13 +118,13 @@ export const AfterSalesPage = () => {
   const renderSkeleton = () => (
     <div className="p-4 space-y-3">
       {[1, 2, 3].map((i) => (
-        <div key={i} className="bg-white dark:bg-gray-900 rounded-[12px] p-4 shadow-sm animate-pulse">
+        <div key={i} className="bg-white dark:bg-gray-900 rounded-xl p-4 shadow-sm animate-pulse">
           <div className="flex justify-between mb-3">
             <div className="w-32 h-4 bg-gray-100 dark:bg-gray-800 rounded"></div>
             <div className="w-16 h-4 bg-gray-100 dark:bg-gray-800 rounded"></div>
           </div>
           <div className="flex mb-3">
-            <div className="w-[72px] h-[72px] bg-gray-100 dark:bg-gray-800 rounded-[8px] mr-3 shrink-0"></div>
+            <div className="w-[72px] h-[72px] bg-gray-100 dark:bg-gray-800 rounded-lg mr-3 shrink-0"></div>
             <div className="flex-1 space-y-2">
               <div className="w-full h-4 bg-gray-100 dark:bg-gray-800 rounded"></div>
               <div className="w-2/3 h-4 bg-gray-100 dark:bg-gray-800 rounded"></div>
@@ -135,27 +140,11 @@ export const AfterSalesPage = () => {
   );
 
   const renderError = () => (
-    <div className="flex flex-col items-center justify-center pt-32 px-4">
-      <div className="w-24 h-24 bg-red-50 rounded-full flex items-center justify-center mb-4 text-primary-start">
-        <AlertCircle size={48} />
-      </div>
-      <p className="text-[15px] text-text-sub mb-6">加载失败，请重试</p>
-      <button 
-        onClick={fetchData}
-        className="px-6 py-2 rounded-full bg-primary-start text-white text-[14px] font-medium active:opacity-80 shadow-sm"
-      >
-        重新加载
-      </button>
-    </div>
+    <ErrorState onRetry={fetchData} />
   );
 
   const renderEmpty = () => (
-    <div className="flex flex-col items-center justify-center pt-32 px-4">
-      <div className="w-24 h-24 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mb-4 text-gray-300 dark:text-gray-600">
-        <FileText size={48} />
-      </div>
-      <p className="text-[15px] text-text-sub mb-6">暂无售后记录</p>
-    </div>
+    <EmptyState message="暂无售后记录" />
   );
 
   const renderList = () => {
@@ -179,7 +168,7 @@ export const AfterSalesPage = () => {
           ].map((tab) => (
             <button
               key={tab.id}
-              className={`flex-1 flex justify-center items-center text-[14px] font-medium transition-colors relative ${
+              className={`flex-1 flex justify-center items-center text-md font-medium transition-colors relative ${
                 activeTab === tab.id ? 'text-primary-start' : 'text-text-sub'
               }`}
               onClick={() => setActiveTab(tab.id as any)}
@@ -196,36 +185,36 @@ export const AfterSalesPage = () => {
           {loading ? renderSkeleton() : error ? renderError() : filteredList.length === 0 ? renderEmpty() : (
             <div className="p-3 space-y-3">
               {filteredList.map(item => (
-                <div key={item.id} className="bg-white dark:bg-gray-900 rounded-[12px] p-4 shadow-sm">
+                <div key={item.id} className="bg-white dark:bg-gray-900 rounded-xl p-4 shadow-sm">
                   <div className="flex justify-between items-center mb-3 pb-3 border-b border-border-light/50">
-                    <div className="flex items-center text-[12px] text-text-sub">
+                    <div className="flex items-center text-sm text-text-sub">
                       <Store size={14} className="mr-1" />
                       <span>树交所自营</span>
                       <ChevronRight size={12} className="ml-0.5" />
                     </div>
-                    <span className={`text-[13px] font-medium ${item.status === '处理中' ? 'text-primary-start' : 'text-text-sub'}`}>
+                    <span className={`text-base font-medium ${item.status === '处理中' ? 'text-primary-start' : 'text-text-sub'}`}>
                       {item.subStatus}
                     </span>
                   </div>
                   
                   <div className="flex mb-3">
-                    <img src={item.product.image} alt={item.product.title} className="w-[72px] h-[72px] rounded-[8px] mr-3 border border-border-light/50" referrerPolicy="no-referrer" />
+                    <img src={item.product.image} alt={item.product.title} className="w-[72px] h-[72px] rounded-lg mr-3 border border-border-light/50" referrerPolicy="no-referrer" />
                     <div className="flex-1 min-w-0">
-                      <h3 className="text-[13px] text-text-main line-clamp-2 leading-snug mb-1">{item.product.title}</h3>
-                      <div className="text-[11px] text-text-sub">{item.product.sku}</div>
+                      <h3 className="text-base text-text-main line-clamp-2 leading-snug mb-1">{item.product.title}</h3>
+                      <div className="text-s text-text-sub">{item.product.sku}</div>
                     </div>
                   </div>
                   
                   <div className="flex justify-between items-center pt-1">
-                    <div className="text-[12px] text-text-main flex items-center">
-                      <span className="bg-gray-100 dark:bg-gray-800 text-text-sub px-1.5 py-0.5 rounded-[4px] text-[10px] mr-2">{item.type}</span>
+                    <div className="text-sm text-text-main flex items-center">
+                      <span className="bg-gray-100 dark:bg-gray-800 text-text-sub px-1.5 py-0.5 rounded text-xs mr-2">{item.type}</span>
                       {item.type !== '换货' && (
                         <>退款: <span className="font-bold ml-1">¥{item.amount.toFixed(2)}</span></>
                       )}
                     </div>
                     <button 
                       onClick={() => setView('detail')}
-                      className="px-4 py-1.5 rounded-full border border-border-main text-[12px] text-text-main active:bg-gray-50 dark:bg-gray-800 transition-colors"
+                      className="px-4 py-1.5 rounded-full border border-border-main text-sm text-text-main active:bg-gray-50 dark:bg-gray-800 transition-colors"
                     >
                       查看详情
                     </button>
@@ -246,19 +235,19 @@ export const AfterSalesPage = () => {
         {renderHeader('选择售后类型')}
         <div className="flex-1 overflow-y-auto no-scrollbar p-3">
           {/* Product Info */}
-          <div className="bg-white dark:bg-gray-900 rounded-[12px] p-4 mb-3 shadow-sm flex items-center">
-            <img src={product.image} alt={product.title} className="w-[60px] h-[60px] rounded-[8px] mr-3 border border-border-light/50" referrerPolicy="no-referrer" />
+          <div className="bg-white dark:bg-gray-900 rounded-xl p-4 mb-3 shadow-sm flex items-center">
+            <img src={product.image} alt={product.title} className="w-[60px] h-[60px] rounded-lg mr-3 border border-border-light/50" referrerPolicy="no-referrer" />
             <div className="flex-1 min-w-0">
-              <h3 className="text-[13px] text-text-main line-clamp-2 leading-snug mb-1">{product.title}</h3>
-              <div className="text-[11px] text-text-sub">{product.sku}</div>
+              <h3 className="text-base text-text-main line-clamp-2 leading-snug mb-1">{product.title}</h3>
+              <div className="text-s text-text-sub">{product.sku}</div>
             </div>
           </div>
           
-          <h3 className="text-[14px] font-bold text-text-main mb-3 px-1 mt-4">选择服务类型</h3>
+          <h3 className="text-md font-bold text-text-main mb-3 px-1 mt-4">选择服务类型</h3>
           
           <div className="space-y-3">
             <div 
-              className="bg-white dark:bg-gray-900 rounded-[12px] p-4 shadow-sm flex items-center justify-between active:bg-gray-50 dark:bg-gray-800 transition-colors cursor-pointer"
+              className="bg-white dark:bg-gray-900 rounded-xl p-4 shadow-sm flex items-center justify-between active:bg-gray-50 dark:bg-gray-800 transition-colors cursor-pointer"
               onClick={() => { setSelectedService('退货退款'); setView('apply'); }}
             >
               <div className="flex items-center">
@@ -266,31 +255,31 @@ export const AfterSalesPage = () => {
                   <Package size={20} />
                 </div>
                 <div>
-                  <div className="text-[15px] font-bold text-text-main mb-1">退货退款</div>
-                  <div className="text-[12px] text-text-sub">已收到货，需要退换已收到的货物</div>
+                  <div className="text-lg font-bold text-text-main mb-1">退货退款</div>
+                  <div className="text-sm text-text-sub">已收到货，需要退换已收到的货物</div>
                 </div>
               </div>
               <ChevronRight size={16} className="text-text-aux shrink-0" />
             </div>
 
             <div 
-              className="bg-white dark:bg-gray-900 rounded-[12px] p-4 shadow-sm flex items-center justify-between active:bg-gray-50 dark:bg-gray-800 transition-colors cursor-pointer"
+              className="bg-white dark:bg-gray-900 rounded-xl p-4 shadow-sm flex items-center justify-between active:bg-gray-50 dark:bg-gray-800 transition-colors cursor-pointer"
               onClick={() => { setSelectedService('仅退款'); setView('apply'); }}
             >
               <div className="flex items-center">
                 <div className="w-10 h-10 rounded-full bg-orange-50 flex items-center justify-center mr-3 text-orange-500 shrink-0">
-                  <span className="text-[18px] font-bold">¥</span>
+                  <span className="text-3xl font-bold">¥</span>
                 </div>
                 <div>
-                  <div className="text-[15px] font-bold text-text-main mb-1">仅退款</div>
-                  <div className="text-[12px] text-text-sub">未收到货，或与卖家协商同意前提下</div>
+                  <div className="text-lg font-bold text-text-main mb-1">仅退款</div>
+                  <div className="text-sm text-text-sub">未收到货，或与卖家协商同意前提下</div>
                 </div>
               </div>
               <ChevronRight size={16} className="text-text-aux shrink-0" />
             </div>
 
             <div 
-              className="bg-white dark:bg-gray-900 rounded-[12px] p-4 shadow-sm flex items-center justify-between active:bg-gray-50 dark:bg-gray-800 transition-colors cursor-pointer"
+              className="bg-white dark:bg-gray-900 rounded-xl p-4 shadow-sm flex items-center justify-between active:bg-gray-50 dark:bg-gray-800 transition-colors cursor-pointer"
               onClick={() => { setSelectedService('换货'); setView('apply'); }}
             >
               <div className="flex items-center">
@@ -298,8 +287,8 @@ export const AfterSalesPage = () => {
                   <RefreshCcw size={20} />
                 </div>
                 <div>
-                  <div className="text-[15px] font-bold text-text-main mb-1">换货</div>
-                  <div className="text-[12px] text-text-sub">商品存在质量问题，联系卖家换货</div>
+                  <div className="text-lg font-bold text-text-main mb-1">换货</div>
+                  <div className="text-sm text-text-sub">商品存在质量问题，联系卖家换货</div>
                 </div>
               </div>
               <ChevronRight size={16} className="text-text-aux shrink-0" />
@@ -317,18 +306,18 @@ export const AfterSalesPage = () => {
         {renderHeader('申请售后')}
         <div className="flex-1 overflow-y-auto no-scrollbar p-3 pb-24">
           {/* Product Info */}
-          <div className="bg-white dark:bg-gray-900 rounded-[12px] p-4 mb-3 shadow-sm flex items-center">
-            <img src={product.image} alt={product.title} className="w-[60px] h-[60px] rounded-[8px] mr-3 border border-border-light/50" referrerPolicy="no-referrer" />
+          <div className="bg-white dark:bg-gray-900 rounded-xl p-4 mb-3 shadow-sm flex items-center">
+            <img src={product.image} alt={product.title} className="w-[60px] h-[60px] rounded-lg mr-3 border border-border-light/50" referrerPolicy="no-referrer" />
             <div className="flex-1 min-w-0">
-              <h3 className="text-[13px] text-text-main line-clamp-2 leading-snug mb-1">{product.title}</h3>
-              <div className="text-[11px] text-text-sub">{product.sku}</div>
+              <h3 className="text-base text-text-main line-clamp-2 leading-snug mb-1">{product.title}</h3>
+              <div className="text-s text-text-sub">{product.sku}</div>
             </div>
           </div>
 
           {/* Reason Selection */}
-          <div className="bg-white dark:bg-gray-900 rounded-[12px] p-4 mb-3 shadow-sm flex justify-between items-center active:bg-gray-50 dark:bg-gray-800 cursor-pointer">
-            <span className="text-[14px] text-text-main font-medium">申请原因</span>
-            <div className="flex items-center text-[13px] text-text-sub">
+          <div className="bg-white dark:bg-gray-900 rounded-xl p-4 mb-3 shadow-sm flex justify-between items-center active:bg-gray-50 dark:bg-gray-800 cursor-pointer">
+            <span className="text-md text-text-main font-medium">申请原因</span>
+            <div className="flex items-center text-base text-text-sub">
               <span>请选择申请原因</span>
               <ChevronRight size={16} className="ml-1" />
             </div>
@@ -336,31 +325,31 @@ export const AfterSalesPage = () => {
 
           {/* Amount */}
           {selectedService !== '换货' && (
-            <div className="bg-white dark:bg-gray-900 rounded-[12px] p-4 mb-3 shadow-sm">
+            <div className="bg-white dark:bg-gray-900 rounded-xl p-4 mb-3 shadow-sm">
               <div className="flex justify-between items-center mb-3">
-                <span className="text-[14px] text-text-main font-medium">退款金额</span>
-                <span className="text-[16px] text-primary-start font-bold">¥7999.00</span>
+                <span className="text-md text-text-main font-medium">退款金额</span>
+                <span className="text-xl text-primary-start font-bold">¥7999.00</span>
               </div>
-              <div className="text-[11px] text-text-sub bg-gray-50 dark:bg-gray-800 p-2.5 rounded-[8px]">
+              <div className="text-s text-text-sub bg-gray-50 dark:bg-gray-800 p-2.5 rounded-lg">
                 不可修改，最多¥7999.00，含发货邮费¥0.00
               </div>
             </div>
           )}
 
           {/* Description & Upload */}
-          <div className="bg-white dark:bg-gray-900 rounded-[12px] p-4 mb-3 shadow-sm">
-            <span className="text-[14px] text-text-main font-medium mb-3 block">补充描述和凭证</span>
+          <div className="bg-white dark:bg-gray-900 rounded-xl p-4 mb-3 shadow-sm">
+            <span className="text-md text-text-main font-medium mb-3 block">补充描述和凭证</span>
             <textarea 
-              className="w-full h-24 bg-gray-50 dark:bg-gray-800 rounded-[8px] p-3 text-[13px] text-text-main placeholder:text-text-aux outline-none resize-none mb-3" 
+              className="w-full h-24 bg-gray-50 dark:bg-gray-800 rounded-lg p-3 text-base text-text-main placeholder:text-text-aux outline-none resize-none mb-3" 
               placeholder="补充描述，有助于商家更好的处理售后问题"
             ></textarea>
             <div className="flex flex-wrap gap-2">
-              <div className="w-[72px] h-[72px] bg-gray-50 dark:bg-gray-800 border border-dashed border-border-light rounded-[8px] flex flex-col items-center justify-center text-text-aux active:bg-gray-100 dark:bg-gray-800 cursor-pointer">
+              <div className="w-[72px] h-[72px] bg-gray-50 dark:bg-gray-800 border border-dashed border-border-light rounded-lg flex flex-col items-center justify-center text-text-aux active:bg-gray-100 dark:bg-gray-800 cursor-pointer">
                 <Camera size={24} className="mb-1" />
-                <span className="text-[10px]">上传凭证</span>
+                <span className="text-xs">上传凭证</span>
               </div>
             </div>
-            <div className="text-[11px] text-text-sub mt-3">最多上传3张，支持JPG、PNG格式</div>
+            <div className="text-s text-text-sub mt-3">最多上传3张，支持JPG、PNG格式</div>
           </div>
         </div>
 
@@ -374,7 +363,7 @@ export const AfterSalesPage = () => {
                 setView('list');
               }, 800);
             }}
-            className="w-full h-11 rounded-full bg-gradient-to-r from-primary-start to-primary-end text-white text-[15px] font-medium shadow-sm active:opacity-80"
+            className="w-full h-11 rounded-full bg-gradient-to-r from-primary-start to-primary-end text-white text-lg font-medium shadow-sm active:opacity-80"
           >
             提交申请
           </button>
@@ -389,17 +378,17 @@ export const AfterSalesPage = () => {
         {renderHeader('售后详情')}
         <div className="flex-1 overflow-y-auto no-scrollbar p-3 pb-24">
           {/* Status Header */}
-          <div className="bg-gradient-to-r from-primary-start to-primary-end rounded-[12px] p-5 mb-3 text-white shadow-sm">
+          <div className="bg-gradient-to-r from-primary-start to-primary-end rounded-xl p-5 mb-3 text-white shadow-sm">
             <div className="flex items-center mb-2">
               <Clock size={20} className="mr-2" />
-              <span className="text-[18px] font-bold">商家审核中</span>
+              <span className="text-3xl font-bold">商家审核中</span>
             </div>
-            <div className="text-[12px] opacity-90">商家将在 23小时59分 内处理</div>
+            <div className="text-sm opacity-90">商家将在 23小时59分 内处理</div>
           </div>
 
           {/* Timeline */}
-          <div className="bg-white dark:bg-gray-900 rounded-[12px] p-4 mb-3 shadow-sm">
-            <div className="text-[14px] font-bold text-text-main mb-4">进度追踪</div>
+          <div className="bg-white dark:bg-gray-900 rounded-xl p-4 mb-3 shadow-sm">
+            <div className="text-md font-bold text-text-main mb-4">进度追踪</div>
             <div className="relative pl-4">
               {MOCK_TIMELINE.map((item, idx) => (
                 <div key={idx} className="mb-6 last:mb-0 relative">
@@ -410,38 +399,38 @@ export const AfterSalesPage = () => {
                   {/* Dot */}
                   <div className={`absolute left-[-14px] top-[4px] w-[7px] h-[7px] rounded-full ${item.active ? 'bg-primary-start ring-4 ring-red-50' : 'bg-gray-300 dark:bg-gray-700'}`}></div>
                   
-                  <div className={`text-[14px] font-medium mb-1 ${item.active ? 'text-text-main' : 'text-text-sub'}`}>{item.title}</div>
-                  <div className={`text-[12px] mb-1.5 ${item.active ? 'text-text-main' : 'text-text-sub'}`}>{item.desc}</div>
-                  <div className="text-[11px] text-text-aux">{item.time}</div>
+                  <div className={`text-md font-medium mb-1 ${item.active ? 'text-text-main' : 'text-text-sub'}`}>{item.title}</div>
+                  <div className={`text-sm mb-1.5 ${item.active ? 'text-text-main' : 'text-text-sub'}`}>{item.desc}</div>
+                  <div className="text-s text-text-aux">{item.time}</div>
                 </div>
               ))}
             </div>
           </div>
 
           {/* Info */}
-          <div className="bg-white dark:bg-gray-900 rounded-[12px] p-4 mb-3 shadow-sm">
-            <div className="text-[14px] font-bold text-text-main mb-3">售后信息</div>
+          <div className="bg-white dark:bg-gray-900 rounded-xl p-4 mb-3 shadow-sm">
+            <div className="text-md font-bold text-text-main mb-3">售后信息</div>
             <div className="space-y-3">
-              <div className="flex justify-between text-[13px]">
+              <div className="flex justify-between text-base">
                 <span className="text-text-sub">服务单号</span>
                 <span className="text-text-main flex items-center">
                   AS123456789
-                  <span className="ml-2 text-primary-start text-[11px] px-1.5 py-0.5 bg-red-50 rounded">复制</span>
+                  <span className="ml-2 text-primary-start text-s px-1.5 py-0.5 bg-red-50 rounded">复制</span>
                 </span>
               </div>
-              <div className="flex justify-between text-[13px]">
+              <div className="flex justify-between text-base">
                 <span className="text-text-sub">申请时间</span>
                 <span className="text-text-main">2026-02-28 10:00:00</span>
               </div>
-              <div className="flex justify-between text-[13px]">
+              <div className="flex justify-between text-base">
                 <span className="text-text-sub">售后类型</span>
                 <span className="text-text-main">退货退款</span>
               </div>
-              <div className="flex justify-between text-[13px]">
+              <div className="flex justify-between text-base">
                 <span className="text-text-sub">申请原因</span>
                 <span className="text-text-main">商品降价</span>
               </div>
-              <div className="flex justify-between text-[13px]">
+              <div className="flex justify-between text-base">
                 <span className="text-text-sub">退款金额</span>
                 <span className="text-primary-start font-medium">¥7999.00</span>
               </div>
@@ -451,10 +440,10 @@ export const AfterSalesPage = () => {
 
         {/* Bottom Actions */}
         <div className="absolute bottom-0 left-0 right-0 p-4 bg-white dark:bg-gray-900 border-t border-border-light pb-safe flex space-x-3">
-          <button className="flex-1 h-10 rounded-full border border-border-main text-text-main text-[14px] font-medium flex items-center justify-center active:bg-gray-50 dark:bg-gray-800 transition-colors">
+          <button className="flex-1 h-10 rounded-full border border-border-main text-text-main text-md font-medium flex items-center justify-center active:bg-gray-50 dark:bg-gray-800 transition-colors">
             <HeadphonesIcon size={16} className="mr-1.5" /> 联系客服
           </button>
-          <button className="flex-1 h-10 rounded-full border border-border-main text-text-main text-[14px] font-medium active:bg-gray-50 dark:bg-gray-800 transition-colors">
+          <button className="flex-1 h-10 rounded-full border border-border-main text-text-main text-md font-medium active:bg-gray-50 dark:bg-gray-800 transition-colors">
             取消申请
           </button>
         </div>

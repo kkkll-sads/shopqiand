@@ -1,7 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { ChevronLeft, WifiOff, AlertCircle, Filter, Copy, ChevronRight, FileText } from 'lucide-react';
+import { useAppNavigate } from '../../lib/navigation';
+import { PageHeader } from '../../components/layout/PageHeader';
+import { ErrorState } from '../../components/ui/ErrorState';
+import { EmptyState } from '../../components/ui/EmptyState';
 
 export const BillingPage = () => {
+  const { goTo, goBack } = useAppNavigate();
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [offline, setOffline] = useState(false);
@@ -45,8 +51,7 @@ export const BillingPage = () => {
     if (selectedBill) {
       setSelectedBill(null);
     } else {
-      const event = new CustomEvent('go-back');
-      window.dispatchEvent(event);
+      goBack();
     }
   };
 
@@ -57,7 +62,7 @@ export const BillingPage = () => {
   const renderHeader = () => (
     <div className="bg-white dark:bg-gray-900 z-40 relative shrink-0 border-b border-gray-100 dark:border-gray-800">
       {offline && (
-        <div className="bg-red-50 dark:bg-red-900/30 text-[#FF4142] dark:text-red-400 px-4 py-2 flex items-center justify-between text-[12px]">
+        <div className="bg-red-50 dark:bg-red-900/30 text-brand-start dark:text-red-400 px-4 py-2 flex items-center justify-between text-sm">
           <div className="flex items-center">
             <WifiOff size={14} className="mr-2" />
             <span>网络不稳定，请检查网络设置</span>
@@ -71,12 +76,12 @@ export const BillingPage = () => {
             <ChevronLeft size={24} />
           </button>
         </div>
-        <h1 className="text-[17px] font-bold text-gray-900 dark:text-gray-100 text-center w-1/3">
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 text-center w-1/3">
           {selectedBill ? '账单详情' : '账单明细'}
         </h1>
         <div className="w-1/3 flex justify-end">
           {!selectedBill && (
-            <button className="text-[14px] text-gray-600 dark:text-gray-400 px-2 py-1 active:opacity-70 flex items-center">
+            <button className="text-md text-gray-600 dark:text-gray-400 px-2 py-1 active:opacity-70 flex items-center">
               <Filter size={14} className="mr-1" /> 筛选
             </button>
           )}
@@ -97,11 +102,11 @@ export const BillingPage = () => {
         ].map(tab => (
           <button 
             key={tab.id}
-            className={`flex-1 py-3 text-[13px] font-medium relative transition-colors ${filter === tab.id ? 'text-[#FF4142]' : 'text-gray-600 dark:text-gray-400'}`}
+            className={`flex-1 py-3 text-base font-medium relative transition-colors ${filter === tab.id ? 'text-brand-start' : 'text-gray-600 dark:text-gray-400'}`}
             onClick={() => setFilter(tab.id as any)}
           >
             {tab.label}
-            {filter === tab.id && <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-6 h-[3px] bg-[#FF4142] rounded-t-full"></div>}
+            {filter === tab.id && <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-6 h-[3px] bg-brand-start rounded-t-full"></div>}
           </button>
         ))}
       </div>
@@ -113,7 +118,7 @@ export const BillingPage = () => {
       {[1, 2].map((group) => (
         <div key={group} className="space-y-3">
           <div className="w-20 h-5 bg-gray-200 dark:bg-gray-800 rounded mb-2"></div>
-          <div className="bg-white dark:bg-gray-900 rounded-[16px] p-4 shadow-sm space-y-4">
+          <div className="bg-white dark:bg-gray-900 rounded-2xl p-4 shadow-sm space-y-4">
             {[1, 2].map((item) => (
               <div key={item} className="flex justify-between items-center animate-pulse">
                 <div className="space-y-2">
@@ -133,27 +138,11 @@ export const BillingPage = () => {
   );
 
   const renderError = () => (
-    <div className="flex flex-col items-center justify-center pt-32 px-4">
-      <div className="w-24 h-24 bg-red-50 dark:bg-red-900/20 rounded-full flex items-center justify-center mb-4 text-[#FF4142]">
-        <AlertCircle size={48} />
-      </div>
-      <p className="text-[15px] text-gray-500 dark:text-gray-400 mb-6">加载失败，请重试</p>
-      <button 
-        onClick={fetchData}
-        className="px-6 py-2 rounded-full bg-gradient-to-r from-[#FF4142] to-[#FF4B2B] text-white text-[14px] font-medium active:opacity-80 shadow-sm"
-      >
-        重新加载
-      </button>
-    </div>
+    <ErrorState onRetry={fetchData} />
   );
 
   const renderEmpty = () => (
-    <div className="flex flex-col items-center justify-center pt-32 px-4">
-      <div className="w-24 h-24 bg-gray-50 dark:bg-gray-800 rounded-full flex items-center justify-center mb-4 text-gray-300 dark:text-gray-600 dark:text-gray-400">
-        <FileText size={48} strokeWidth={1.5} />
-      </div>
-      <p className="text-[14px] text-gray-500 dark:text-gray-400 mb-5">暂无账单记录</p>
-    </div>
+    <EmptyState message="暂无账单记录" />
   );
 
   const renderList = () => {
@@ -165,8 +154,8 @@ export const BillingPage = () => {
       <div className="p-4 space-y-6 pb-safe">
         {mockData.map((group, gIdx) => (
           <div key={gIdx}>
-            <h3 className="text-[14px] font-bold text-gray-900 dark:text-gray-100 mb-3 ml-1">{group.month}</h3>
-            <div className="bg-white dark:bg-gray-900 rounded-[16px] shadow-sm dark:shadow-none border border-transparent dark:border-gray-800 overflow-hidden">
+            <h3 className="text-md font-bold text-gray-900 dark:text-gray-100 mb-3 ml-1">{group.month}</h3>
+            <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm dark:shadow-none border border-transparent dark:border-gray-800 overflow-hidden">
               {group.items.map((item, iIdx) => (
                 <div 
                   key={item.id} 
@@ -174,14 +163,14 @@ export const BillingPage = () => {
                   onClick={() => setSelectedBill(item)}
                 >
                   <div className="flex flex-col">
-                    <span className="text-[15px] font-medium text-gray-900 dark:text-gray-100 mb-1">{item.type}</span>
-                    <span className="text-[12px] text-gray-400 dark:text-gray-500">{item.time} | {item.desc}</span>
+                    <span className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-1">{item.type}</span>
+                    <span className="text-sm text-gray-400 dark:text-gray-500">{item.time} | {item.desc}</span>
                   </div>
                   <div className="flex flex-col items-end">
-                    <span className={`text-[16px] font-bold mb-1 ${item.isIncome ? 'text-[#07C160]' : 'text-gray-900 dark:text-gray-100'}`}>
+                    <span className={`text-xl font-bold mb-1 ${item.isIncome ? 'text-success' : 'text-gray-900 dark:text-gray-100'}`}>
                       {item.amount}
                     </span>
-                    <span className="text-[11px] text-gray-500 dark:text-gray-400">{item.status}</span>
+                    <span className="text-s text-gray-500 dark:text-gray-400">{item.status}</span>
                   </div>
                 </div>
               ))}
@@ -196,39 +185,39 @@ export const BillingPage = () => {
     if (!selectedBill) return null;
     return (
       <div className="flex-1 flex flex-col bg-[#FFF8F8] dark:bg-gray-950 p-4">
-        <div className="bg-white dark:bg-gray-900 rounded-[16px] p-6 shadow-sm dark:shadow-none border border-transparent dark:border-gray-800 flex flex-col items-center mb-4">
-          <span className="text-[14px] text-gray-500 dark:text-gray-400 mb-2">{selectedBill.type}</span>
-          <span className={`text-[32px] font-bold mb-6 ${selectedBill.isIncome ? 'text-[#07C160]' : 'text-gray-900 dark:text-gray-100'}`}>
+        <div className="bg-white dark:bg-gray-900 rounded-2xl p-6 shadow-sm dark:shadow-none border border-transparent dark:border-gray-800 flex flex-col items-center mb-4">
+          <span className="text-md text-gray-500 dark:text-gray-400 mb-2">{selectedBill.type}</span>
+          <span className={`text-7xl font-bold mb-6 ${selectedBill.isIncome ? 'text-success' : 'text-gray-900 dark:text-gray-100'}`}>
             {selectedBill.amount}
           </span>
           
           <div className="w-full space-y-4">
             <div className="flex justify-between items-center">
-              <span className="text-[13px] text-gray-500 dark:text-gray-400">当前状态</span>
-              <span className="text-[13px] text-gray-900 dark:text-gray-100 font-medium">{selectedBill.status}</span>
+              <span className="text-base text-gray-500 dark:text-gray-400">当前状态</span>
+              <span className="text-base text-gray-900 dark:text-gray-100 font-medium">{selectedBill.status}</span>
             </div>
             <div className="flex justify-between items-center">
-              <span className="text-[13px] text-gray-500 dark:text-gray-400">交易时间</span>
-              <span className="text-[13px] text-gray-900 dark:text-gray-100">{selectedBill.time}</span>
+              <span className="text-base text-gray-500 dark:text-gray-400">交易时间</span>
+              <span className="text-base text-gray-900 dark:text-gray-100">{selectedBill.time}</span>
             </div>
             <div className="flex justify-between items-center">
-              <span className="text-[13px] text-gray-500 dark:text-gray-400">交易说明</span>
-              <span className="text-[13px] text-gray-900 dark:text-gray-100">{selectedBill.desc}</span>
+              <span className="text-base text-gray-500 dark:text-gray-400">交易说明</span>
+              <span className="text-base text-gray-900 dark:text-gray-100">{selectedBill.desc}</span>
             </div>
             <div className="w-full h-px bg-gray-100 dark:bg-gray-800 my-2"></div>
             <div className="flex justify-between items-center">
-              <span className="text-[13px] text-gray-500 dark:text-gray-400">流水单号</span>
+              <span className="text-base text-gray-500 dark:text-gray-400">流水单号</span>
               <div className="flex items-center">
-                <span className="text-[13px] text-gray-900 dark:text-gray-100 mr-2">2023102514300001</span>
+                <span className="text-base text-gray-900 dark:text-gray-100 mr-2">2023102514300001</span>
                 <button onClick={() => handleCopy('2023102514300001')} className="text-gray-400 dark:text-gray-500 active:text-gray-600 dark:text-gray-400">
                   <Copy size={14} />
                 </button>
               </div>
             </div>
             <div className="flex justify-between items-center">
-              <span className="text-[13px] text-gray-500 dark:text-gray-400">关联订单</span>
+              <span className="text-base text-gray-500 dark:text-gray-400">关联订单</span>
               <div className="flex items-center">
-                <span className="text-[13px] text-gray-900 dark:text-gray-100 mr-2">1234567890</span>
+                <span className="text-base text-gray-900 dark:text-gray-100 mr-2">1234567890</span>
                 <button onClick={() => handleCopy('1234567890')} className="text-gray-400 dark:text-gray-500 active:text-gray-600 dark:text-gray-400">
                   <Copy size={14} />
                 </button>
@@ -237,11 +226,11 @@ export const BillingPage = () => {
           </div>
         </div>
 
-        <div className="bg-white dark:bg-gray-900 rounded-[16px] p-4 shadow-sm dark:shadow-none border border-transparent dark:border-gray-800">
+        <div className="bg-white dark:bg-gray-900 rounded-2xl p-4 shadow-sm dark:shadow-none border border-transparent dark:border-gray-800">
           <div className="flex items-center justify-between cursor-pointer active:opacity-70">
-            <span className="text-[14px] text-gray-900 dark:text-gray-100">对此订单有疑问？</span>
+            <span className="text-md text-gray-900 dark:text-gray-100">对此订单有疑问？</span>
             <div className="flex items-center text-gray-400 dark:text-gray-500">
-              <span className="text-[12px] mr-1">联系客服</span>
+              <span className="text-sm mr-1">联系客服</span>
               <ChevronRight size={16} />
             </div>
           </div>
@@ -254,12 +243,12 @@ export const BillingPage = () => {
     <div className="flex-1 flex flex-col bg-[#FFF8F8] dark:bg-gray-950 relative h-full overflow-hidden">
       {/* Demo Controls */}
       {!selectedBill && (
-        <div className="px-4 py-2 flex space-x-2 overflow-x-auto no-scrollbar bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800 text-[10px] absolute top-12 left-0 right-0 z-50 opacity-50 hover:opacity-100 transition-opacity">
+        <div className="px-4 py-2 flex space-x-2 overflow-x-auto no-scrollbar bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800 text-xs absolute top-12 left-0 right-0 z-50 opacity-50 hover:opacity-100 transition-opacity">
           <span className="text-gray-500 dark:text-gray-400 flex items-center shrink-0">Demo:</span>
-          <button onClick={() => setLoading(!loading)} className={`px-2 py-1 rounded border ${loading ? 'bg-[#FF4142] text-white border-[#FF4142]' : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400'}`}>Loading</button>
-          <button onClick={() => setOffline(!offline)} className={`px-2 py-1 rounded border ${offline ? 'bg-[#FF4142] text-white border-[#FF4142]' : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400'}`}>Offline</button>
-          <button onClick={() => setError(!error)} className={`px-2 py-1 rounded border ${error ? 'bg-[#FF4142] text-white border-[#FF4142]' : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400'}`}>Error</button>
-          <button onClick={() => setEmpty(!empty)} className={`px-2 py-1 rounded border ${empty ? 'bg-[#FF4142] text-white border-[#FF4142]' : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400'}`}>Empty</button>
+          <button onClick={() => setLoading(!loading)} className={`px-2 py-1 rounded border ${loading ? 'bg-brand-start text-white border-[#FF4142]' : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400'}`}>Loading</button>
+          <button onClick={() => setOffline(!offline)} className={`px-2 py-1 rounded border ${offline ? 'bg-brand-start text-white border-[#FF4142]' : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400'}`}>Offline</button>
+          <button onClick={() => setError(!error)} className={`px-2 py-1 rounded border ${error ? 'bg-brand-start text-white border-[#FF4142]' : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400'}`}>Error</button>
+          <button onClick={() => setEmpty(!empty)} className={`px-2 py-1 rounded border ${empty ? 'bg-brand-start text-white border-[#FF4142]' : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400'}`}>Empty</button>
         </div>
       )}
 

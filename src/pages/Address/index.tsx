@@ -1,5 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { ChevronLeft, WifiOff, AlertCircle, Edit, MapPin, Check } from 'lucide-react';
+import { useAppNavigate } from '../../lib/navigation';
+import { PageHeader } from '../../components/layout/PageHeader';
+import { ErrorState } from '../../components/ui/ErrorState';
+import { EmptyState } from '../../components/ui/EmptyState';
 
 interface Address {
   id: string;
@@ -30,6 +34,8 @@ const MOCK_ADDRESSES: Address[] = [
 ];
 
 export const AddressPage = () => {
+  const { goTo, goBack } = useAppNavigate();
+
   const [view, setView] = useState<'list' | 'edit'>('list');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -69,8 +75,7 @@ export const AddressPage = () => {
       setFormData({});
       setFormErrors({});
     } else {
-      const event = new CustomEvent('go-back');
-      window.dispatchEvent(event);
+      goBack();
     }
   };
 
@@ -118,7 +123,7 @@ export const AddressPage = () => {
   const renderHeader = (title: string) => (
     <div className="bg-white dark:bg-gray-900 z-40 relative shrink-0 border-b border-border-light">
       {offline && (
-        <div className="bg-red-50 text-primary-start px-4 py-2 flex items-center justify-between text-[12px]">
+        <div className="bg-red-50 text-primary-start px-4 py-2 flex items-center justify-between text-sm">
           <div className="flex items-center">
             <WifiOff size={14} className="mr-2" />
             <span>网络不稳定，请检查网络设置</span>
@@ -132,7 +137,7 @@ export const AddressPage = () => {
             <ChevronLeft size={24} />
           </button>
         </div>
-        <h1 className="text-[17px] font-bold text-text-main text-center w-1/3">{title}</h1>
+        <h1 className="text-2xl font-bold text-text-main text-center w-1/3">{title}</h1>
         <div className="w-1/3"></div>
       </div>
     </div>
@@ -141,7 +146,7 @@ export const AddressPage = () => {
   const renderSkeleton = () => (
     <div className="p-4 space-y-3">
       {[1, 2, 3].map((i) => (
-        <div key={i} className="bg-white dark:bg-gray-900 rounded-[12px] p-4 flex items-center shadow-sm animate-pulse">
+        <div key={i} className="bg-white dark:bg-gray-900 rounded-xl p-4 flex items-center shadow-sm animate-pulse">
           <div className="flex-1 space-y-3">
             <div className="flex items-center space-x-2">
               <div className="h-5 bg-gray-100 dark:bg-gray-800 rounded w-16"></div>
@@ -158,27 +163,11 @@ export const AddressPage = () => {
   );
 
   const renderEmpty = () => (
-    <div className="flex flex-col items-center justify-center pt-32 px-4">
-      <div className="w-24 h-24 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mb-4 text-gray-300 dark:text-gray-600">
-        <MapPin size={48} />
-      </div>
-      <p className="text-[15px] text-text-sub mb-6">暂无收货地址</p>
-    </div>
+    <EmptyState message="暂无收货地址" />
   );
 
   const renderError = () => (
-    <div className="flex flex-col items-center justify-center pt-32 px-4">
-      <div className="w-24 h-24 bg-red-50 rounded-full flex items-center justify-center mb-4 text-primary-start">
-        <AlertCircle size={48} />
-      </div>
-      <p className="text-[15px] text-text-sub mb-6">加载失败，请重试</p>
-      <button 
-        onClick={fetchData}
-        className="px-6 py-2 rounded-full bg-primary-start text-white text-[14px] font-medium active:opacity-80 shadow-sm"
-      >
-        重新加载
-      </button>
-    </div>
+    <ErrorState onRetry={fetchData} />
   );
 
   const renderList = () => {
@@ -190,18 +179,18 @@ export const AddressPage = () => {
         <div className="flex-1 overflow-y-auto no-scrollbar p-4 space-y-3 pb-24">
           {addresses.length === 0 ? renderEmpty() : (
             addresses.map((addr) => (
-              <div key={addr.id} className="bg-white dark:bg-gray-900 rounded-[12px] p-4 flex items-center shadow-sm active:bg-gray-50 dark:bg-gray-800 transition-colors">
+              <div key={addr.id} className="bg-white dark:bg-gray-900 rounded-xl p-4 flex items-center shadow-sm active:bg-gray-50 dark:bg-gray-800 transition-colors">
                 <div className="flex-1 min-w-0 pr-4">
                   <div className="flex items-center mb-2">
-                    <span className="text-[16px] font-bold text-text-main mr-2 truncate max-w-[100px]">{addr.name}</span>
-                    <span className="text-[14px] text-text-sub font-medium">{addr.phone}</span>
+                    <span className="text-xl font-bold text-text-main mr-2 truncate max-w-[100px]">{addr.name}</span>
+                    <span className="text-md text-text-sub font-medium">{addr.phone}</span>
                     {addr.isDefault && (
-                      <span className="ml-2 px-1.5 py-0.5 rounded text-[10px] font-medium bg-red-50 text-primary-start shrink-0">
+                      <span className="ml-2 px-1.5 py-0.5 rounded text-xs font-medium bg-red-50 text-primary-start shrink-0">
                         默认
                       </span>
                     )}
                   </div>
-                  <div className="text-[13px] text-text-main leading-relaxed line-clamp-2">
+                  <div className="text-base text-text-main leading-relaxed line-clamp-2">
                     {addr.region} {addr.detail}
                   </div>
                 </div>
@@ -221,7 +210,7 @@ export const AddressPage = () => {
         <div className="absolute bottom-0 left-0 right-0 p-4 bg-white dark:bg-gray-900 border-t border-border-light pb-safe">
           <button 
             onClick={handleAdd}
-            className="w-full h-11 rounded-full bg-gradient-to-r from-primary-start to-primary-end text-white text-[15px] font-medium shadow-sm active:opacity-80"
+            className="w-full h-11 rounded-full bg-gradient-to-r from-primary-start to-primary-end text-white text-lg font-medium shadow-sm active:opacity-80"
           >
             新增收货地址
           </button>
@@ -239,12 +228,12 @@ export const AddressPage = () => {
           <div className="bg-white dark:bg-gray-900 mt-2 px-4">
             {/* Name */}
             <div className="flex items-center py-4 border-b border-border-light">
-              <div className="w-20 text-[15px] text-text-main shrink-0">收货人</div>
+              <div className="w-20 text-lg text-text-main shrink-0">收货人</div>
               <div className="flex-1 flex flex-col">
                 <input 
                   type="text" 
                   placeholder="名字" 
-                  className="text-[15px] text-text-main placeholder:text-text-aux outline-none w-full bg-transparent"
+                  className="text-lg text-text-main placeholder:text-text-aux outline-none w-full bg-transparent"
                   value={formData.name || ''}
                   onChange={(e) => {
                     setFormData({...formData, name: e.target.value});
@@ -253,16 +242,16 @@ export const AddressPage = () => {
                 />
               </div>
             </div>
-            {formErrors.name && <div className="text-[11px] text-primary-start pt-1 pb-2">{formErrors.name}</div>}
+            {formErrors.name && <div className="text-s text-primary-start pt-1 pb-2">{formErrors.name}</div>}
 
             {/* Phone */}
             <div className="flex items-center py-4 border-b border-border-light">
-              <div className="w-20 text-[15px] text-text-main shrink-0">手机号码</div>
+              <div className="w-20 text-lg text-text-main shrink-0">手机号码</div>
               <div className="flex-1 flex flex-col">
                 <input 
                   type="tel" 
                   placeholder="手机号" 
-                  className="text-[15px] text-text-main placeholder:text-text-aux outline-none w-full bg-transparent"
+                  className="text-lg text-text-main placeholder:text-text-aux outline-none w-full bg-transparent"
                   value={formData.phone || ''}
                   onChange={(e) => {
                     setFormData({...formData, phone: e.target.value});
@@ -271,17 +260,17 @@ export const AddressPage = () => {
                 />
               </div>
             </div>
-            {formErrors.phone && <div className="text-[11px] text-primary-start pt-1 pb-2">{formErrors.phone}</div>}
+            {formErrors.phone && <div className="text-s text-primary-start pt-1 pb-2">{formErrors.phone}</div>}
 
             {/* Region */}
             <div className="flex items-center py-4 border-b border-border-light">
-              <div className="w-20 text-[15px] text-text-main shrink-0">所在地区</div>
+              <div className="w-20 text-lg text-text-main shrink-0">所在地区</div>
               <div className="flex-1 flex flex-col">
                 {/* Simulated Picker Input */}
                 <input 
                   type="text" 
                   placeholder="省市区县、乡镇等" 
-                  className="text-[15px] text-text-main placeholder:text-text-aux outline-none w-full bg-transparent"
+                  className="text-lg text-text-main placeholder:text-text-aux outline-none w-full bg-transparent"
                   value={formData.region || ''}
                   onChange={(e) => {
                     setFormData({...formData, region: e.target.value});
@@ -290,15 +279,15 @@ export const AddressPage = () => {
                 />
               </div>
             </div>
-            {formErrors.region && <div className="text-[11px] text-primary-start pt-1 pb-2">{formErrors.region}</div>}
+            {formErrors.region && <div className="text-s text-primary-start pt-1 pb-2">{formErrors.region}</div>}
 
             {/* Detail */}
             <div className="flex items-start py-4 border-b border-border-light">
-              <div className="w-20 text-[15px] text-text-main shrink-0 pt-0.5">详细地址</div>
+              <div className="w-20 text-lg text-text-main shrink-0 pt-0.5">详细地址</div>
               <div className="flex-1 flex flex-col">
                 <textarea 
                   placeholder="小区楼栋/乡村名称" 
-                  className="text-[15px] text-text-main placeholder:text-text-aux outline-none w-full bg-transparent resize-none h-16"
+                  className="text-lg text-text-main placeholder:text-text-aux outline-none w-full bg-transparent resize-none h-16"
                   value={formData.detail || ''}
                   onChange={(e) => {
                     setFormData({...formData, detail: e.target.value});
@@ -307,11 +296,11 @@ export const AddressPage = () => {
                 />
               </div>
             </div>
-            {formErrors.detail && <div className="text-[11px] text-primary-start pt-1 pb-2">{formErrors.detail}</div>}
+            {formErrors.detail && <div className="text-s text-primary-start pt-1 pb-2">{formErrors.detail}</div>}
 
             {/* Default Switch */}
             <div className="flex items-center justify-between py-4">
-              <div className="text-[15px] text-text-main">设为默认收货地址</div>
+              <div className="text-lg text-text-main">设为默认收货地址</div>
               <button 
                 className={`w-12 h-6 rounded-full transition-colors relative ${formData.isDefault ? 'bg-primary-start' : 'bg-gray-200 dark:bg-gray-800'}`}
                 onClick={() => setFormData({...formData, isDefault: !formData.isDefault})}
@@ -327,7 +316,7 @@ export const AddressPage = () => {
           <button 
             onClick={handleSave}
             disabled={!isFormValid || loading}
-            className={`w-full h-11 rounded-full text-[15px] font-medium shadow-sm transition-all ${
+            className={`w-full h-11 rounded-full text-lg font-medium shadow-sm transition-all ${
               isFormValid && !loading
                 ? 'bg-gradient-to-r from-primary-start to-primary-end text-white active:opacity-80' 
                 : 'bg-gray-200 dark:bg-gray-800 text-gray-400 dark:text-gray-500 cursor-not-allowed'
@@ -344,7 +333,7 @@ export const AddressPage = () => {
     <div className="flex-1 flex flex-col bg-bg-base relative h-full overflow-hidden">
       {/* Demo Controls */}
       {view === 'list' && (
-        <div className="px-4 py-2 flex space-x-2 overflow-x-auto no-scrollbar bg-bg-card border-b border-border-light text-[10px] absolute top-12 left-0 right-0 z-50 opacity-50 hover:opacity-100 transition-opacity">
+        <div className="px-4 py-2 flex space-x-2 overflow-x-auto no-scrollbar bg-bg-card border-b border-border-light text-xs absolute top-12 left-0 right-0 z-50 opacity-50 hover:opacity-100 transition-opacity">
           <span className="text-text-aux flex items-center shrink-0">Demo:</span>
           <button onClick={() => setOffline(!offline)} className={`px-2 py-1 rounded border ${offline ? 'bg-primary-start text-white border-primary-start' : 'border-border-light'}`}>Offline</button>
           <button onClick={() => setError(!error)} className={`px-2 py-1 rounded border ${error ? 'bg-primary-start text-white border-primary-start' : 'border-border-light'}`}>Error</button>

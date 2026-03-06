@@ -3,47 +3,129 @@
 /* 深色模式由 .dark 类控制，不跟随系统；主题由 ThemeContext + 首屏脚本统一设置 */
 @custom-variant dark (&:where(.dark, .dark *));
 
+/* 全局字体：系统字体栈，优先使用苹方/思源 */
+@layer base {
+  html {
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB",
+      "Microsoft YaHei", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
 @theme {
+  /* 品牌主色（用于按钮、渐变等） */
   --color-primary-start: var(--primary-start);
   --color-primary-end: var(--primary-end);
+  --color-brand-start: var(--brand-start);
+  --color-brand-end: var(--brand-end);
+
+  /* 功能色 */
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-info: var(--info);
+
+  /* 背景层级 */
   --color-bg-base: var(--bg-base);
   --color-bg-card: var(--bg-card);
   --color-bg-box: var(--bg-box);
+  --color-bg-hover: var(--bg-hover);
+  --color-bg-skeleton: var(--bg-skeleton);
+
+  /* 文字层级 */
   --color-text-main: var(--text-main);
   --color-text-sub: var(--text-sub);
   --color-text-aux: var(--text-aux);
+  --color-text-price: var(--text-price);
+
+  /* 边框层级 */
   --color-border-light: var(--border-light);
   --color-border-main: var(--border-main);
+  --color-border-card: var(--border-card);
+
+  /* 字体大小层级（语义化 Token） */
+  --text-2xs: 9px;    /* 极小标签 */
+  --text-xs: 10px;    /* 辅助标签 */
+  --text-s: 11px;     /* 次要信息 */
+  --text-sm: 12px;    /* 常规辅助文字 */
+  --text-base: 13px;  /* 正文基准 */
+  --text-md: 14px;    /* 正文稍大 */
+  --text-lg: 15px;    /* 副标题 */
+  --text-xl: 16px;    /* 标题 */
+  --text-2xl: 17px;   /* 页面标题 */
+  --text-3xl: 18px;   /* 大标题 */
+  --text-4xl: 20px;   /* 特大标题 */
+  --text-5xl: 24px;   /* 数据强调 */
+  --text-6xl: 28px;   /* 价格/数字 */
+  --text-7xl: 32px;   /* 超大数字 */
 
   --shadow-soft: var(--shadow-soft);
 }
 
 @layer base {
   :root {
+    /* 品牌色 */
     --primary-start: #E93B3B;
     --primary-end: #FF5C5C;
+    --brand-start: #FF4142;
+    --brand-end: #FF4B2B;
+
+    /* 功能色 */
+    --success: #07C160;
+    --warning: #FF9900;
+    --info: #1677FF;
+
+    /* 背景 */
     --bg-base: #FFF7F8;
     --bg-card: #FFFFFF;
     --bg-box: #FFFFFF;
+    --bg-hover: #F7F8FA;
+    --bg-skeleton: #F0F0F0;
+
+    /* 文字 */
     --text-main: #1A1A1A;
     --text-sub: #666666;
     --text-aux: #999999;
+    --text-price: #f2270c;
+
+    /* 边框 */
     --border-light: #F2F2F2;
     --border-main: #E0E0E0;
+    --border-card: #E5E5E5;
+
     --shadow-soft: 0 4px 16px rgba(0, 0, 0, 0.04);
   }
 
   .dark {
+    /* 品牌色（深色模式适当降低饱和度） */
     --primary-start: #D32F2F;
     --primary-end: #E53935;
+    --brand-start: #D32F2F;
+    --brand-end: #E53935;
+
+    /* 功能色 */
+    --success: #00C853;
+    --warning: #FFB300;
+    --info: #448AFF;
+
+    /* 背景 */
     --bg-base: #121212;
     --bg-card: #1C1C1E;
     --bg-box: #1C1C1E;
+    --bg-hover: #2A2A2A;
+    --bg-skeleton: #2C2C2E;
+
+    /* 文字 */
     --text-main: #F5F5F5;
     --text-sub: #A0A0A0;
     --text-aux: #707070;
+    --text-price: #FF6B6B;
+
+    /* 边框 */
     --border-light: #2C2C2E;
     --border-main: #3A3A3C;
+    --border-card: #3A3A3C;
+
     --shadow-soft: 0 4px 16px rgba(0, 0, 0, 0.2);
   }
 }

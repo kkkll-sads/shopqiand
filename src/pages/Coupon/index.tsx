@@ -1,5 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { ChevronLeft, WifiOff, AlertCircle, Info, X, Ticket } from 'lucide-react';
+import { useAppNavigate } from '../../lib/navigation';
+import { PageHeader } from '../../components/layout/PageHeader';
+import { ErrorState } from '../../components/ui/ErrorState';
+import { EmptyState } from '../../components/ui/EmptyState';
 
 interface Coupon {
   id: string;
@@ -62,6 +66,8 @@ const MOCK_COUPONS: Coupon[] = [
 ];
 
 export const CouponPage = () => {
+  const { goTo, goBack } = useAppNavigate();
+
   const [activeTab, setActiveTab] = useState<'available' | 'received' | 'expired'>('available');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -89,14 +95,13 @@ export const CouponPage = () => {
   };
 
   const handleBack = () => {
-    const event = new CustomEvent('go-back');
-    window.dispatchEvent(event);
+    goBack();
   };
 
   const renderHeader = () => (
     <div className="bg-white dark:bg-gray-900 z-40 relative shrink-0">
       {offline && (
-        <div className="bg-red-50 text-primary-start px-4 py-2 flex items-center justify-between text-[12px]">
+        <div className="bg-red-50 text-primary-start px-4 py-2 flex items-center justify-between text-sm">
           <div className="flex items-center">
             <WifiOff size={14} className="mr-2" />
             <span>网络不稳定，请检查网络设置</span>
@@ -110,7 +115,7 @@ export const CouponPage = () => {
             <ChevronLeft size={24} />
           </button>
         </div>
-        <h1 className="text-[17px] font-bold text-text-main text-center w-1/3">优惠券</h1>
+        <h1 className="text-2xl font-bold text-text-main text-center w-1/3">优惠券</h1>
         <div className="w-1/3"></div>
       </div>
       
@@ -123,7 +128,7 @@ export const CouponPage = () => {
         ].map((tab) => (
           <button
             key={tab.id}
-            className={`flex-1 flex justify-center items-center text-[14px] font-medium transition-colors relative ${
+            className={`flex-1 flex justify-center items-center text-md font-medium transition-colors relative ${
               activeTab === tab.id ? 'text-primary-start' : 'text-text-sub'
             }`}
             onClick={() => setActiveTab(tab.id as any)}
@@ -141,7 +146,7 @@ export const CouponPage = () => {
   const renderSkeleton = () => (
     <div className="p-4 space-y-3">
       {[1, 2, 3, 4].map((i) => (
-        <div key={i} className="bg-white dark:bg-gray-900 rounded-[12px] h-[100px] flex overflow-hidden shadow-sm animate-pulse">
+        <div key={i} className="bg-white dark:bg-gray-900 rounded-xl h-[100px] flex overflow-hidden shadow-sm animate-pulse">
           <div className="w-[104px] bg-gray-100 dark:bg-gray-800"></div>
           <div className="w-0 border-l border-dashed border-border-light relative">
             <div className="absolute top-[-6px] left-[-6px] w-3 h-3 rounded-full bg-bg-base"></div>
@@ -163,36 +168,13 @@ export const CouponPage = () => {
   );
 
   const renderEmpty = () => (
-    <div className="flex flex-col items-center justify-center pt-32 px-4">
-      <div className="w-24 h-24 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mb-4 text-gray-300 dark:text-gray-600">
-        <Ticket size={48} />
-      </div>
-      <p className="text-[15px] text-text-sub mb-6">暂无相关优惠券</p>
-      <button 
-        onClick={() => {
-          const event = new CustomEvent('change-view', { detail: 'home' });
-          window.dispatchEvent(event);
-        }}
-        className="px-6 py-2 rounded-full border border-border-main text-text-main text-[14px] font-medium active:bg-gray-50 dark:bg-gray-800"
-      >
-        去商城逛逛
-      </button>
-    </div>
+    <EmptyState message="暂无相关优惠券"
+      actionText="去商城逛逛"
+      onAction={() => goTo('home')} />
   );
 
   const renderError = () => (
-    <div className="flex flex-col items-center justify-center pt-32 px-4">
-      <div className="w-24 h-24 bg-red-50 rounded-full flex items-center justify-center mb-4 text-primary-start">
-        <AlertCircle size={48} />
-      </div>
-      <p className="text-[15px] text-text-sub mb-6">加载失败，请重试</p>
-      <button 
-        onClick={fetchData}
-        className="px-6 py-2 rounded-full bg-primary-start text-white text-[14px] font-medium active:opacity-80 shadow-sm"
-      >
-        重新加载
-      </button>
-    </div>
+    <ErrorState onRetry={fetchData} />
   );
 
   const renderContent = () => {
@@ -203,7 +185,7 @@ export const CouponPage = () => {
     return (
       <div className="p-4 space-y-3 pb-safe">
         {coupons.map((coupon) => (
-          <div key={coupon.id} className="bg-white dark:bg-gray-900 rounded-[12px] flex relative overflow-hidden shadow-sm">
+          <div key={coupon.id} className="bg-white dark:bg-gray-900 rounded-xl flex relative overflow-hidden shadow-sm">
             {/* Left: Amount */}
             <div className={`w-[104px] flex flex-col items-center justify-center p-3 shrink-0 ${
               coupon.status === 'expired' ? 'bg-gray-50 dark:bg-gray-800 text-gray-400 dark:text-gray-500' : 'bg-red-50 text-primary-start'
@@ -211,17 +193,17 @@ export const CouponPage = () => {
               <div className="flex items-baseline">
                 {coupon.type === 'discount' ? (
                   <>
-                    <span className="text-[32px] font-bold leading-none tracking-tighter">{coupon.value}</span>
-                    <span className="text-[14px] font-bold ml-0.5">折</span>
+                    <span className="text-7xl font-bold leading-none tracking-tighter">{coupon.value}</span>
+                    <span className="text-md font-bold ml-0.5">折</span>
                   </>
                 ) : (
                   <>
-                    <span className="text-[14px] font-bold mr-0.5">¥</span>
-                    <span className="text-[32px] font-bold leading-none tracking-tighter">{coupon.value}</span>
+                    <span className="text-md font-bold mr-0.5">¥</span>
+                    <span className="text-7xl font-bold leading-none tracking-tighter">{coupon.value}</span>
                   </>
                 )}
               </div>
-              <div className="text-[11px] mt-1 font-medium">满{coupon.threshold}可用</div>
+              <div className="text-s mt-1 font-medium">满{coupon.threshold}可用</div>
             </div>
             
             {/* Dashed separator */}
@@ -234,23 +216,23 @@ export const CouponPage = () => {
             <div className="flex-1 p-3 flex flex-col justify-between bg-white dark:bg-gray-900 min-w-0">
               <div>
                 <div className="flex items-start mb-1">
-                  <span className={`text-[10px] px-1 rounded mr-1.5 mt-0.5 shrink-0 ${
+                  <span className={`text-xs px-1 rounded mr-1.5 mt-0.5 shrink-0 ${
                     coupon.status === 'expired' ? 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400' : 'bg-primary-start text-white'
                   }`}>
                     {coupon.type === 'discount' ? '折扣' : '满减'}
                   </span>
-                  <span className={`text-[14px] font-bold leading-tight line-clamp-2 ${
+                  <span className={`text-md font-bold leading-tight line-clamp-2 ${
                     coupon.status === 'expired' ? 'text-text-aux' : 'text-text-main'
                   }`}>
                     {coupon.title}
                   </span>
                 </div>
-                <div className="text-[11px] text-text-sub mt-1 truncate">{coupon.scope}</div>
+                <div className="text-s text-text-sub mt-1 truncate">{coupon.scope}</div>
               </div>
               
               <div className="flex items-end justify-between mt-2">
                 <div 
-                  className="flex items-center text-[10px] text-text-aux active:opacity-70 py-1 pr-2"
+                  className="flex items-center text-xs text-text-aux active:opacity-70 py-1 pr-2"
                   onClick={() => setSelectedCoupon(coupon)}
                 >
                   <span>{coupon.validUntil}</span>
@@ -258,23 +240,20 @@ export const CouponPage = () => {
                 </div>
                 
                 {coupon.status === 'available' && (
-                  <button className="w-[64px] h-[26px] shrink-0 rounded-full bg-gradient-to-r from-primary-start to-primary-end text-white text-[12px] font-medium shadow-sm active:opacity-80">
+                  <button className="w-[64px] h-[26px] shrink-0 rounded-full bg-gradient-to-r from-primary-start to-primary-end text-white text-sm font-medium shadow-sm active:opacity-80">
                     领取
                   </button>
                 )}
                 {coupon.status === 'received' && (
                   <button 
-                    onClick={() => {
-                      const event = new CustomEvent('change-view', { detail: 'store' });
-                      window.dispatchEvent(event);
-                    }}
-                    className="w-[64px] h-[26px] shrink-0 rounded-full border border-primary-start text-primary-start text-[12px] font-medium active:bg-red-50"
+                    onClick={() => goTo('store')}
+                    className="w-[64px] h-[26px] shrink-0 rounded-full border border-primary-start text-primary-start text-sm font-medium active:bg-red-50"
                   >
                     去使用
                   </button>
                 )}
                 {coupon.status === 'expired' && (
-                  <div className="w-[64px] h-[26px] shrink-0 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500 text-[12px] font-medium flex items-center justify-center">
+                  <div className="w-[64px] h-[26px] shrink-0 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500 text-sm font-medium flex items-center justify-center">
                     已过期
                   </div>
                 )}
@@ -295,9 +274,9 @@ export const CouponPage = () => {
           className="absolute inset-0 bg-black/50 backdrop-blur-sm transition-opacity"
           onClick={() => setSelectedCoupon(null)}
         ></div>
-        <div className="bg-white dark:bg-gray-900 w-full sm:w-[350px] rounded-t-[20px] sm:rounded-[20px] relative z-10 flex flex-col max-h-[80vh] animate-slide-up sm:animate-fade-in">
+        <div className="bg-white dark:bg-gray-900 w-full sm:w-[350px] rounded-t-[20px] sm:rounded-2xl relative z-10 flex flex-col max-h-[80vh] animate-slide-up sm:animate-fade-in">
           <div className="flex items-center justify-between p-4 border-b border-border-light shrink-0">
-            <h3 className="text-[16px] font-bold text-text-main">优惠券详情</h3>
+            <h3 className="text-xl font-bold text-text-main">优惠券详情</h3>
             <button onClick={() => setSelectedCoupon(null)} className="p-1 text-text-aux active:text-text-main">
               <X size={20} />
             </button>
@@ -305,10 +284,10 @@ export const CouponPage = () => {
           
           <div className="p-4 overflow-y-auto no-scrollbar">
             <div className="mb-6">
-              <div className="text-[14px] font-bold text-text-main mb-2">使用规则</div>
+              <div className="text-md font-bold text-text-main mb-2">使用规则</div>
               <div className="space-y-1.5">
                 {selectedCoupon.rules.map((rule, idx) => (
-                  <div key={idx} className="text-[13px] text-text-sub leading-relaxed">
+                  <div key={idx} className="text-base text-text-sub leading-relaxed">
                     {rule}
                   </div>
                 ))}
@@ -317,16 +296,16 @@ export const CouponPage = () => {
             
             {selectedCoupon.unusableReason && (
               <div className="mb-6">
-                <div className="text-[14px] font-bold text-text-main mb-2">不可用原因</div>
-                <div className="text-[13px] text-primary-start leading-relaxed bg-red-50 p-3 rounded-[8px]">
+                <div className="text-md font-bold text-text-main mb-2">不可用原因</div>
+                <div className="text-base text-primary-start leading-relaxed bg-red-50 p-3 rounded-lg">
                   {selectedCoupon.unusableReason}
                 </div>
               </div>
             )}
             
             <div>
-              <div className="text-[14px] font-bold text-text-main mb-2">有效期</div>
-              <div className="text-[13px] text-text-sub">
+              <div className="text-md font-bold text-text-main mb-2">有效期</div>
+              <div className="text-base text-text-sub">
                 {selectedCoupon.validUntil}
               </div>
             </div>
@@ -335,7 +314,7 @@ export const CouponPage = () => {
           <div className="p-4 border-t border-border-light shrink-0 pb-safe">
             <button 
               onClick={() => setSelectedCoupon(null)}
-              className="w-full h-11 rounded-full bg-bg-card border border-border-main text-text-main text-[15px] font-medium active:bg-gray-50 dark:bg-gray-800"
+              className="w-full h-11 rounded-full bg-bg-card border border-border-main text-text-main text-lg font-medium active:bg-gray-50 dark:bg-gray-800"
             >
               我知道了
             </button>

@@ -2,8 +2,12 @@ import React, { useState, useEffect, useRef } from 'react';
 import { ChevronLeft, HelpCircle, WifiOff, Clock, Award, Image as ImageIcon, Check, ChevronRight, X, AlertCircle } from 'lucide-react';
 import { Card } from '../../components/ui/Card';
 import { Skeleton } from '../../components/ui/Skeleton';
+import { useAppNavigate } from '../../lib/navigation';
+import { PageHeader } from '../../components/layout/PageHeader';
 
 export const PreOrderPage = () => {
+  const { goTo, goBack } = useAppNavigate();
+
   // Demo States
   const [loading, setLoading] = useState(true);
   const [offline, setOffline] = useState(false);
@@ -40,7 +44,7 @@ export const PreOrderPage = () => {
   }, []);
 
   const handleBack = () => {
-    window.dispatchEvent(new CustomEvent('go-back'));
+    goBack();
   };
 
   // Validation
@@ -75,24 +79,24 @@ export const PreOrderPage = () => {
             <Skeleton className="w-16 h-5 rounded-full mb-2" />
             <Skeleton className="w-32 h-6" />
           </div>
-          <Skeleton className="w-12 h-12 rounded-[8px]" />
+          <Skeleton className="w-12 h-12 rounded-lg" />
         </div>
-        <Skeleton className="w-full h-16 rounded-[12px]" />
+        <Skeleton className="w-full h-16 rounded-xl" />
       </Card>
       
       <Card className="p-4 space-y-4">
         <Skeleton className="w-24 h-5" />
-        <Skeleton className="w-full h-12 rounded-[8px]" />
+        <Skeleton className="w-full h-12 rounded-lg" />
       </Card>
 
       <Card className="p-4 space-y-4">
         <Skeleton className="w-24 h-5" />
-        <Skeleton className="w-full h-12 rounded-[8px]" />
+        <Skeleton className="w-full h-12 rounded-lg" />
       </Card>
 
       <Card className="p-4 space-y-4">
         <Skeleton className="w-24 h-5" />
-        <Skeleton className="w-full h-12 rounded-[8px]" />
+        <Skeleton className="w-full h-12 rounded-lg" />
       </Card>
     </div>
   );
@@ -121,7 +125,7 @@ export const PreOrderPage = () => {
     };
 
     return (
-      <div className="flex items-center border border-border-light rounded-[8px] overflow-hidden h-9">
+      <div className="flex items-center border border-border-light rounded-lg overflow-hidden h-9">
         <button 
           onClick={handleMinus}
           disabled={disableMinus || numVal <= min}
@@ -135,7 +139,7 @@ export const PreOrderPage = () => {
           value={value}
           onChange={handleInput}
           onBlur={handleBlur}
-          className="w-14 h-full text-center text-[14px] font-medium text-text-main bg-white dark:bg-gray-900 outline-none"
+          className="w-14 h-full text-center text-md font-medium text-text-main bg-white dark:bg-gray-900 outline-none"
         />
         <div className="w-px h-full bg-border-light"></div>
         <button 
@@ -153,7 +157,7 @@ export const PreOrderPage = () => {
     <div className="flex-1 flex flex-col bg-bg-base relative overflow-hidden">
       {/* Offline Banner */}
       {offline && (
-        <div className="bg-red-50 text-primary-start px-4 py-2 flex items-center justify-between text-[12px] z-50 absolute top-0 left-0 right-0">
+        <div className="bg-red-50 text-primary-start px-4 py-2 flex items-center justify-between text-sm z-50 absolute top-0 left-0 right-0">
           <div className="flex items-center">
             <WifiOff size={14} className="mr-2" />
             <span>网络不稳定，请检查网络设置</span>
@@ -169,7 +173,7 @@ export const PreOrderPage = () => {
         <button onClick={handleBack} className="w-8 h-8 rounded-full bg-white dark:bg-gray-900/80 flex items-center justify-center shadow-sm active:opacity-70 transition-opacity">
           <ChevronLeft size={20} className="text-text-main" />
         </button>
-        <h1 className="text-[17px] font-bold text-text-main">预约申购</h1>
+        <h1 className="text-2xl font-bold text-text-main">预约申购</h1>
         <button className="w-8 h-8 flex items-center justify-center active:opacity-70 transition-opacity">
           <HelpCircle size={20} className="text-text-main" />
         </button>
@@ -183,11 +187,11 @@ export const PreOrderPage = () => {
             <div className="w-20 h-20 bg-bg-card rounded-full flex items-center justify-center mb-4 border border-border-light shadow-sm">
               <Clock size={32} className="text-text-aux opacity-50" />
             </div>
-            <p className="text-[16px] font-medium text-text-main mb-2">本场已结束</p>
-            <p className="text-[13px] text-text-sub mb-6">当前资产包不可预约申购</p>
+            <p className="text-xl font-medium text-text-main mb-2">本场已结束</p>
+            <p className="text-base text-text-sub mb-6">当前资产包不可预约申购</p>
             <button 
               onClick={handleBack} 
-              className="px-8 py-2.5 border border-primary-start text-primary-start rounded-full text-[14px] font-medium active:bg-red-50 transition-colors"
+              className="px-8 py-2.5 border border-primary-start text-primary-start rounded-full text-md font-medium active:bg-red-50 transition-colors"
             >
               返回交易场次
             </button>
@@ -196,7 +200,7 @@ export const PreOrderPage = () => {
           <div className="px-4 space-y-4">
             {/* Status Banner for Not Started */}
             {poolStatus === 'not_started' && (
-              <div className="bg-orange-50 border border-orange-100 rounded-[12px] p-3 flex items-center text-orange-600 text-[13px]">
+              <div className="bg-orange-50 border border-orange-100 rounded-xl p-3 flex items-center text-orange-600 text-base">
                 <Clock size={16} className="mr-2" />
                 <span>距开始还有 03:24:00，您可以先填写预约信息</span>
               </div>
@@ -207,13 +211,13 @@ export const PreOrderPage = () => {
               <div className="absolute top-0 right-0 w-32 h-32 bg-primary-start/5 rounded-bl-full -z-10"></div>
               <div className="flex justify-between items-start mb-4">
                 <div className="flex-1 pr-4">
-                  <span className="inline-block px-2 py-0.5 bg-primary-start/10 text-primary-start text-[10px] font-bold rounded-tl-[8px] rounded-br-[8px] mb-2">Pool-C</span>
-                  <h2 className="text-[18px] font-bold text-text-main leading-tight mb-1">共识验证节点 - 高级算力包</h2>
-                  <div className="flex items-center text-[12px] text-text-sub">
+                  <span className="inline-block px-2 py-0.5 bg-primary-start/10 text-primary-start text-xs font-bold rounded-tl-[8px] rounded-br-[8px] mb-2">Pool-C</span>
+                  <h2 className="text-3xl font-bold text-text-main leading-tight mb-1">共识验证节点 - 高级算力包</h2>
+                  <div className="flex items-center text-sm text-text-sub">
                     <Clock size={12} className="mr-1" /> 00:00 - 21:00
                   </div>
                 </div>
-                <div className="w-14 h-14 rounded-[8px] bg-bg-base overflow-hidden border border-border-light shrink-0">
+                <div className="w-14 h-14 rounded-lg bg-bg-base overflow-hidden border border-border-light shrink-0">
                   {imageError ? (
                     <div className="w-full h-full flex items-center justify-center text-text-aux">
                       <ImageIcon size={20} className="opacity-50" />
@@ -229,15 +233,15 @@ export const PreOrderPage = () => {
                   )}
                 </div>
               </div>
-              <div className="flex bg-bg-base rounded-[12px] p-3 border border-border-light/50">
+              <div className="flex bg-bg-base rounded-xl p-3 border border-border-light/50">
                 <div className="flex-1 flex flex-col">
-                  <span className="text-[11px] text-text-sub mb-1">预期收益率</span>
-                  <span className="text-[16px] font-bold text-primary-start">5.5%</span>
+                  <span className="text-s text-text-sub mb-1">预期收益率</span>
+                  <span className="text-xl font-bold text-primary-start">5.5%</span>
                 </div>
                 <div className="w-px bg-border-light mx-3"></div>
                 <div className="flex-1 flex flex-col">
-                  <span className="text-[11px] text-text-sub mb-1">本期额度</span>
-                  <span className="text-[16px] font-bold text-text-main">200万</span>
+                  <span className="text-s text-text-sub mb-1">本期额度</span>
+                  <span className="text-xl font-bold text-text-main">200万</span>
                 </div>
               </div>
             </Card>
@@ -245,19 +249,19 @@ export const PreOrderPage = () => {
             {/* Hashrate Card */}
             <Card className="p-4 border border-white/50 shadow-sm">
               <div className="flex justify-between items-center mb-3">
-                <h3 className="text-[15px] font-bold text-text-main">算力</h3>
+                <h3 className="text-lg font-bold text-text-main">算力</h3>
                 <Stepper value={hashrate} onChange={setHashrate} min={5} max={999} disableMinus={true} />
               </div>
-              <div className="flex justify-between items-center text-[12px]">
+              <div className="flex justify-between items-center text-sm">
                 <span className="text-text-sub">每份消耗算力: {HASHRATE_PER_SHARE}</span>
                 <span className="text-text-sub">当前可用: <span className="text-text-main font-medium">{AVAILABLE_HASHRATE}</span></span>
               </div>
               {hashrateError && (
                 <div className="mt-3 pt-3 border-t border-border-light flex justify-between items-center">
-                  <span className="text-[12px] text-primary-start flex items-center">
+                  <span className="text-sm text-primary-start flex items-center">
                     <AlertCircle size={12} className="mr-1" /> 算力不足
                   </span>
-                  <button className="text-[12px] text-blue-500 font-medium">去补充算力 &gt;</button>
+                  <button className="text-sm text-blue-500 font-medium">去补充算力 &gt;</button>
                 </div>
               )}
             </Card>
@@ -265,15 +269,15 @@ export const PreOrderPage = () => {
             {/* Quantity Card */}
             <Card className="p-4 border border-white/50 shadow-sm">
               <div className="flex justify-between items-center mb-3">
-                <h3 className="text-[15px] font-bold text-text-main">份数</h3>
+                <h3 className="text-lg font-bold text-text-main">份数</h3>
                 <Stepper value={quantity} onChange={setQuantity} min={1} max={MAX_QUANTITY} />
               </div>
-              <div className="flex justify-between items-center text-[12px]">
+              <div className="flex justify-between items-center text-sm">
                 <span className="text-text-sub">最小1份</span>
                 <span className="text-text-sub">剩余可申购: <span className="text-text-main font-medium">{MAX_QUANTITY}</span> 份</span>
               </div>
               {quantityError && (
-                <div className="mt-2 text-[12px] text-primary-start flex items-center">
+                <div className="mt-2 text-sm text-primary-start flex items-center">
                   <AlertCircle size={12} className="mr-1" /> 份数超出限制
                 </div>
               )}
@@ -282,8 +286,8 @@ export const PreOrderPage = () => {
             {/* Amount Card */}
             <Card className="p-4 border border-white/50 shadow-sm">
               <div className="flex justify-between items-center mb-4">
-                <h3 className="text-[15px] font-bold text-text-main">金额 <span className="text-[11px] font-normal text-text-sub ml-1">(每档100递增)</span></h3>
-                <div className="text-[18px] font-bold text-primary-start">
+                <h3 className="text-lg font-bold text-text-main">金额 <span className="text-s font-normal text-text-sub ml-1">(每档100递增)</span></h3>
+                <div className="text-3xl font-bold text-primary-start">
                   ¥{numAmount.toLocaleString()}
                 </div>
               </div>
@@ -296,24 +300,24 @@ export const PreOrderPage = () => {
                     value={amount}
                     onChange={(e) => setAmount(e.target.value)}
                     onBlur={handleAmountBlur}
-                    className="w-full h-11 bg-bg-base border border-border-light rounded-[8px] pl-7 pr-3 text-[15px] font-medium text-text-main outline-none focus:border-primary-start transition-colors"
+                    className="w-full h-11 bg-bg-base border border-border-light rounded-lg pl-7 pr-3 text-lg font-medium text-text-main outline-none focus:border-primary-start transition-colors"
                     placeholder="输入金额"
                   />
                 </div>
                 <button 
                   onClick={() => setShowPicker(true)}
-                  className="h-11 px-4 bg-red-50 text-primary-start rounded-[8px] text-[13px] font-medium flex items-center active:bg-red-100 transition-colors"
+                  className="h-11 px-4 bg-red-50 text-primary-start rounded-lg text-base font-medium flex items-center active:bg-red-100 transition-colors"
                 >
                   选择金额 <ChevronRight size={14} className="ml-1" />
                 </button>
               </div>
               
-              <div className="text-[12px] text-text-sub">
+              <div className="text-sm text-text-sub">
                 可选范围 ¥{MIN_AMOUNT.toLocaleString()} ~ ¥{MAX_AMOUNT.toLocaleString()}，步进{AMOUNT_STEP}
               </div>
               
               {amountError && (
-                <div className="mt-2 text-[12px] text-primary-start flex items-center">
+                <div className="mt-2 text-sm text-primary-start flex items-center">
                   <AlertCircle size={12} className="mr-1" /> 
                   {numAmount < MIN_AMOUNT || numAmount > MAX_AMOUNT 
                     ? '金额超出可选范围' 
@@ -325,20 +329,20 @@ export const PreOrderPage = () => {
             {/* Summary Card */}
             <Card className="p-4 border border-white/50 shadow-sm">
               <div className="space-y-3">
-                <div className="flex justify-between text-[13px]">
+                <div className="flex justify-between text-base">
                   <span className="text-text-sub">小计 ({numQuantity}份)</span>
                   <span className="text-text-main font-medium">¥{subtotal.toLocaleString()}</span>
                 </div>
-                <div className="flex justify-between text-[13px]">
+                <div className="flex justify-between text-base">
                   <span className="text-text-sub">消耗算力</span>
                   <span className="text-text-main font-medium">{totalHashrate}</span>
                 </div>
                 <div className="w-full h-px bg-border-light my-1"></div>
                 <div className="flex justify-between items-center">
-                  <span className="text-[14px] font-bold text-text-main">应付金额</span>
-                  <span className="text-[18px] font-bold text-primary-start">¥{totalPayable.toLocaleString()}</span>
+                  <span className="text-md font-bold text-text-main">应付金额</span>
+                  <span className="text-3xl font-bold text-primary-start">¥{totalPayable.toLocaleString()}</span>
                 </div>
-                <div className="text-[11px] text-text-sub text-right">
+                <div className="text-s text-text-sub text-right">
                   提交后将冻结对应金额
                 </div>
               </div>
@@ -348,7 +352,7 @@ export const PreOrderPage = () => {
             <div className="flex items-start px-2 mt-6 mb-4">
               <button 
                 onClick={() => setAgreed(!agreed)}
-                className="mt-0.5 mr-2 shrink-0 w-4 h-4 rounded-[4px] border flex items-center justify-center transition-colors"
+                className="mt-0.5 mr-2 shrink-0 w-4 h-4 rounded border flex items-center justify-center transition-colors"
                 style={{
                   borderColor: agreed ? '#F2271C' : '#D1D5DB',
                   backgroundColor: agreed ? '#F2271C' : 'transparent'
@@ -356,7 +360,7 @@ export const PreOrderPage = () => {
               >
                 {agreed && <Check size={12} className="text-white" />}
               </button>
-              <div className="text-[12px] text-text-sub leading-snug">
+              <div className="text-sm text-text-sub leading-snug">
                 我已阅读并同意 <span className="text-blue-500">《预约申购规则》</span> <span className="text-blue-500">《风险提示书》</span>
               </div>
             </div>
@@ -368,15 +372,15 @@ export const PreOrderPage = () => {
       {!loading && poolStatus !== 'ended' && (
         <div className="absolute bottom-0 left-0 right-0 bg-white dark:bg-gray-900 border-t border-border-light px-4 py-3 pb-safe flex items-center justify-between z-40 shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
           <div className="flex flex-col">
-            <span className="text-[11px] text-text-sub mb-0.5">冻结总额</span>
+            <span className="text-s text-text-sub mb-0.5">冻结总额</span>
             <div className="flex items-baseline text-primary-start">
-              <span className="text-[14px] font-bold mr-0.5">¥</span>
-              <span className="text-[20px] font-bold leading-none">{totalPayable.toLocaleString()}</span>
+              <span className="text-md font-bold mr-0.5">¥</span>
+              <span className="text-4xl font-bold leading-none">{totalPayable.toLocaleString()}</span>
             </div>
           </div>
           <button 
             disabled={!canSubmit}
-            className={`h-[48px] px-8 rounded-full text-[15px] font-bold text-white shadow-sm transition-all ${canSubmit ? 'bg-gradient-to-r from-primary-start to-primary-end active:opacity-80' : 'bg-border-light text-text-aux cursor-not-allowed'}`}
+            className={`h-[48px] px-8 rounded-full text-lg font-bold text-white shadow-sm transition-all ${canSubmit ? 'bg-gradient-to-r from-primary-start to-primary-end active:opacity-80' : 'bg-border-light text-text-aux cursor-not-allowed'}`}
           >
             确认预约
           </button>
@@ -392,11 +396,11 @@ export const PreOrderPage = () => {
           ></div>
           <div className="absolute bottom-0 left-0 right-0 bg-white dark:bg-gray-900 rounded-t-[20px] z-50 flex flex-col animate-slide-up">
             <div className="flex items-center justify-between px-4 py-3 border-b border-border-light">
-              <button onClick={() => setShowPicker(false)} className="text-[14px] text-text-sub px-2 py-1">取消</button>
-              <h3 className="text-[16px] font-bold text-text-main">选择金额</h3>
+              <button onClick={() => setShowPicker(false)} className="text-md text-text-sub px-2 py-1">取消</button>
+              <h3 className="text-xl font-bold text-text-main">选择金额</h3>
               <button 
                 onClick={() => setShowPicker(false)} 
-                className="text-[14px] text-primary-start font-medium px-2 py-1"
+                className="text-md text-primary-start font-medium px-2 py-1"
               >
                 确定
               </button>
@@ -413,7 +417,7 @@ export const PreOrderPage = () => {
                   <div 
                     key={opt}
                     onClick={() => setAmount(opt)}
-                    className={`h-10 flex items-center justify-center text-[16px] transition-colors cursor-pointer ${numAmount === opt ? 'text-primary-start font-bold' : 'text-text-main'}`}
+                    className={`h-10 flex items-center justify-center text-xl transition-colors cursor-pointer ${numAmount === opt ? 'text-primary-start font-bold' : 'text-text-main'}`}
                   >
                     ¥ {opt.toLocaleString()}
                   </div>

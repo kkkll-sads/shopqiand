@@ -6,8 +6,12 @@ import {
 } from 'lucide-react';
 import { Card } from '../../components/ui/Card';
 import { Skeleton } from '../../components/ui/Skeleton';
+import { useAppNavigate } from '../../lib/navigation';
+import { PageHeader } from '../../components/layout/PageHeader';
 
 export const FriendsPage = () => {
+  const { goTo, goBack } = useAppNavigate();
+
   const [loading, setLoading] = useState(true);
   const [offline, setOffline] = useState(false);
   const [moduleError, setModuleError] = useState(false);
@@ -39,8 +43,7 @@ export const FriendsPage = () => {
   }, []);
 
   const handleGoBack = () => {
-    const event = new CustomEvent('go-back');
-    window.dispatchEvent(event);
+    goBack();
   };
 
   const handleCopy = (text: string) => {
@@ -68,9 +71,9 @@ export const FriendsPage = () => {
         <button onClick={handleGoBack} className="p-1 -ml-1 active:opacity-70 text-text-main">
           <ChevronLeft size={24} />
         </button>
-        <h1 className="text-[17px] font-medium text-text-main">我的好友</h1>
+        <h1 className="text-2xl font-medium text-text-main">我的好友</h1>
         <button 
-          className="bg-gradient-to-r from-primary-start to-primary-end text-white text-[12px] font-medium px-3 py-1.5 rounded-full shadow-sm active:opacity-80 flex items-center"
+          className="bg-gradient-to-r from-primary-start to-primary-end text-white text-sm font-medium px-3 py-1.5 rounded-full shadow-sm active:opacity-80 flex items-center"
           onClick={() => alert('邀请好友')}
         >
           <UserPlus size={14} className="mr-1" /> 邀请
@@ -85,15 +88,15 @@ export const FriendsPage = () => {
         {renderHeader()}
         <div className="flex-1 flex flex-col items-center justify-center p-6">
           <RefreshCcw size={48} className="text-text-aux mb-4" />
-          <p className="text-[15px] text-text-main mb-2">页面加载失败</p>
-          <p className="text-[13px] text-text-sub mb-6 text-center">请检查网络连接后重试</p>
+          <p className="text-lg text-text-main mb-2">页面加载失败</p>
+          <p className="text-base text-text-sub mb-6 text-center">请检查网络连接后重试</p>
           <button 
             onClick={() => {
               setLoading(true);
               setModuleError(false);
               setTimeout(() => setLoading(false), 1000);
             }}
-            className="px-6 py-2 bg-gradient-to-r from-primary-start to-primary-end text-white rounded-full text-[14px] font-medium shadow-sm active:opacity-80"
+            className="px-6 py-2 bg-gradient-to-r from-primary-start to-primary-end text-white rounded-full text-md font-medium shadow-sm active:opacity-80"
           >
             重新加载
           </button>
@@ -105,7 +108,7 @@ export const FriendsPage = () => {
   return (
     <div className="flex-1 flex flex-col bg-red-50/30 relative h-full">
       {offline && (
-        <div className="bg-red-50 text-primary-start px-4 py-2 flex items-center justify-between text-[12px] z-50 absolute top-12 left-0 right-0">
+        <div className="bg-red-50 text-primary-start px-4 py-2 flex items-center justify-between text-sm z-50 absolute top-12 left-0 right-0">
           <div className="flex items-center">
             <WifiOff size={14} className="mr-2" />
             <span>网络不稳定，请检查网络设置</span>
@@ -129,30 +132,30 @@ export const FriendsPage = () => {
                   <Skeleton className="w-16 h-10" />
                   <Skeleton className="w-16 h-10" />
                 </div>
-                <Skeleton className="w-full h-14 rounded-[12px]" />
+                <Skeleton className="w-full h-14 rounded-xl" />
               </div>
             ) : (
               <>
                 <div className="flex justify-between items-center mb-4 px-2">
                   <div className="flex flex-col items-center">
-                    <span className="text-[12px] text-text-sub mb-1">好友总数</span>
-                    <span className="text-[22px] font-bold text-text-main">128</span>
+                    <span className="text-sm text-text-sub mb-1">好友总数</span>
+                    <span className="text-4xl font-bold text-text-main">128</span>
                   </div>
                   <div className="w-px h-8 bg-border-light"></div>
                   <div className="flex flex-col items-center">
-                    <span className="text-[12px] text-text-sub mb-1">今日新增</span>
-                    <span className="text-[20px] font-bold text-primary-start">+3</span>
+                    <span className="text-sm text-text-sub mb-1">今日新增</span>
+                    <span className="text-4xl font-bold text-primary-start">+3</span>
                   </div>
                   <div className="w-px h-8 bg-border-light"></div>
                   <div className="flex flex-col items-center">
-                    <span className="text-[12px] text-text-sub mb-1">有效好友</span>
-                    <span className="text-[20px] font-bold text-text-main">86</span>
+                    <span className="text-sm text-text-sub mb-1">有效好友</span>
+                    <span className="text-4xl font-bold text-text-main">86</span>
                   </div>
                 </div>
-                <div className="bg-bg-base/80 rounded-[12px] p-3 flex items-center justify-between border border-border-light/50">
+                <div className="bg-bg-base/80 rounded-xl p-3 flex items-center justify-between border border-border-light/50">
                   <div>
-                    <div className="text-[11px] text-text-sub mb-0.5">我的专属邀请码</div>
-                    <div className="text-[16px] font-bold text-text-main tracking-wider">A8B2C9</div>
+                    <div className="text-s text-text-sub mb-0.5">我的专属邀请码</div>
+                    <div className="text-xl font-bold text-text-main tracking-wider">A8B2C9</div>
                   </div>
                   <div className="flex items-center">
                     <button 
@@ -162,7 +165,7 @@ export const FriendsPage = () => {
                       <QrCode size={14} />
                     </button>
                     <button 
-                      className="flex items-center justify-center px-3 h-8 rounded-full bg-white dark:bg-gray-900 shadow-sm text-[12px] font-medium text-text-main active:opacity-70 border border-border-light/50"
+                      className="flex items-center justify-center px-3 h-8 rounded-full bg-white dark:bg-gray-900 shadow-sm text-sm font-medium text-text-main active:opacity-70 border border-border-light/50"
                       onClick={() => handleCopy('A8B2C9')}
                     >
                       <Copy size={12} className="mr-1" /> 复制
@@ -182,7 +185,7 @@ export const FriendsPage = () => {
                 placeholder="搜索手机号/昵称/UID" 
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="flex-1 bg-transparent text-[14px] outline-none text-text-main placeholder:text-text-aux min-w-0"
+                className="flex-1 bg-transparent text-md outline-none text-text-main placeholder:text-text-aux min-w-0"
               />
               {searchQuery && (
                 <button onClick={() => setSearchQuery('')} className="p-1 text-text-aux active:text-text-sub shrink-0">
@@ -195,7 +198,7 @@ export const FriendsPage = () => {
                 <button 
                   key={f.id}
                   onClick={() => setActiveFilter(f.id)}
-                  className={`whitespace-nowrap px-4 py-1.5 rounded-full text-[13px] mr-2 transition-colors shrink-0 ${
+                  className={`whitespace-nowrap px-4 py-1.5 rounded-full text-base mr-2 transition-colors shrink-0 ${
                     activeFilter === f.id 
                       ? 'bg-red-50 text-primary-start font-medium border border-primary-start/30' 
                       : 'bg-white dark:bg-gray-900 text-text-sub border border-border-light shadow-sm'
@@ -223,10 +226,10 @@ export const FriendsPage = () => {
             ) : filteredFriends.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12">
                 <Users size={48} className="text-text-aux mb-4 opacity-30" strokeWidth={1.5} />
-                <p className="text-[14px] text-text-main mb-2">暂无符合条件的好友</p>
-                <p className="text-[12px] text-text-sub mb-6">快去邀请更多好友加入吧</p>
+                <p className="text-md text-text-main mb-2">暂无符合条件的好友</p>
+                <p className="text-sm text-text-sub mb-6">快去邀请更多好友加入吧</p>
                 <button 
-                  className="px-6 py-2 bg-gradient-to-r from-primary-start to-primary-end text-white rounded-full text-[14px] font-medium shadow-sm active:opacity-80"
+                  className="px-6 py-2 bg-gradient-to-r from-primary-start to-primary-end text-white rounded-full text-md font-medium shadow-sm active:opacity-80"
                   onClick={() => alert('邀请好友')}
                 >
                   立即邀请好友
@@ -255,29 +258,29 @@ export const FriendsPage = () => {
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center mb-1">
-                      <span className="text-[15px] font-medium text-text-main truncate mr-2 max-w-[120px]">{friend.nickname}</span>
+                      <span className="text-lg font-medium text-text-main truncate mr-2 max-w-[120px]">{friend.nickname}</span>
                       {friend.status === 'verified' && (
-                        <span className="bg-green-100 text-green-700 text-[10px] px-1.5 py-0.5 rounded flex items-center shrink-0">
+                        <span className="bg-green-100 text-green-700 text-xs px-1.5 py-0.5 rounded flex items-center shrink-0">
                           <ShieldCheck size={10} className="mr-0.5"/> 已实名
                         </span>
                       )}
                       {friend.status === 'unverified' && (
-                        <span className="bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 text-[10px] px-1.5 py-0.5 rounded flex items-center shrink-0">
+                        <span className="bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 text-xs px-1.5 py-0.5 rounded flex items-center shrink-0">
                           未实名
                         </span>
                       )}
                       {friend.status === 'frozen' && (
-                        <span className="bg-red-100 text-red-600 text-[10px] px-1.5 py-0.5 rounded flex items-center shrink-0">
+                        <span className="bg-red-100 text-red-600 text-xs px-1.5 py-0.5 rounded flex items-center shrink-0">
                           <ShieldAlert size={10} className="mr-0.5"/> 已冻结
                         </span>
                       )}
                     </div>
-                    <div className="text-[12px] text-text-sub mb-1.5 flex items-center">
+                    <div className="text-sm text-text-sub mb-1.5 flex items-center">
                       <span className="font-mono">{friend.phone}</span>
                       <span className="mx-1.5 text-border-light">|</span>
                       <span>UID: {friend.uid}</span>
                     </div>
-                    <div className="text-[11px] text-text-aux flex items-center justify-between">
+                    <div className="text-s text-text-aux flex items-center justify-between">
                       <span>注册: {friend.regTime}</span>
                       <span>活跃: {friend.activeTime}</span>
                     </div>
@@ -294,7 +297,7 @@ export const FriendsPage = () => {
           {!loading && filteredFriends.length > 0 && (
             <div className="mt-6 mb-4 flex justify-center">
               <button 
-                className="text-[12px] text-text-aux flex items-center active:text-text-main transition-colors"
+                className="text-sm text-text-aux flex items-center active:text-text-main transition-colors"
                 onClick={() => setShowRulesModal(true)}
               >
                 好友规则与有效口径说明 <Info size={12} className="ml-1" />
@@ -310,12 +313,12 @@ export const FriendsPage = () => {
           <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setShowRulesModal(false)}></div>
           <Card className="w-full max-w-[320px] relative z-10 p-6 flex flex-col animate-in fade-in zoom-in duration-200">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-[16px] font-bold text-text-main">好友规则说明</h3>
+              <h3 className="text-xl font-bold text-text-main">好友规则说明</h3>
               <button onClick={() => setShowRulesModal(false)} className="text-text-aux active:text-text-main">
                 <XCircle size={20} />
               </button>
             </div>
-            <div className="space-y-4 text-[13px] text-text-sub max-h-[60vh] overflow-y-auto no-scrollbar">
+            <div className="space-y-4 text-base text-text-sub max-h-[60vh] overflow-y-auto no-scrollbar">
               <div>
                 <h4 className="font-medium text-text-main mb-1">1. 有效好友定义</h4>
                 <p>有效好友指通过您的专属邀请码/链接注册，且完成实名认证并有至少一次活跃行为（如登录、浏览）的用户。</p>
@@ -332,7 +335,7 @@ export const FriendsPage = () => {
               </div>
             </div>
             <button 
-              className="w-full mt-6 py-2.5 bg-bg-base text-text-main rounded-full text-[14px] font-medium active:bg-border-light transition-colors"
+              className="w-full mt-6 py-2.5 bg-bg-base text-text-main rounded-full text-md font-medium active:bg-border-light transition-colors"
               onClick={() => setShowRulesModal(false)}
             >
               我知道了

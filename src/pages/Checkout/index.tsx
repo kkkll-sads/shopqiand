@@ -1,8 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { ChevronLeft, MapPin, ChevronRight, Store, Plus, WifiOff, RefreshCcw, CheckCircle2, Circle } from 'lucide-react';
 import { Skeleton } from '../../components/ui/Skeleton';
+import { useAppNavigate } from '../../lib/navigation';
+import { PageHeader } from '../../components/layout/PageHeader';
 
 export const CheckoutPage = () => {
+  const { goTo, goBack } = useAppNavigate();
+
   const [loading, setLoading] = useState(true);
   const [offline, setOffline] = useState(false);
   const [moduleError, setModuleError] = useState(false);
@@ -41,14 +45,13 @@ export const CheckoutPage = () => {
   }, []);
 
   const handleBack = () => {
-    const event = new CustomEvent('go-back');
-    window.dispatchEvent(event);
+    goBack();
   };
 
   const renderHeader = () => (
     <div className="bg-white dark:bg-gray-900 z-40 relative shrink-0 border-b border-border-light">
       {offline && (
-        <div className="bg-red-50 text-primary-start px-4 py-2 flex items-center justify-between text-[12px]">
+        <div className="bg-red-50 text-primary-start px-4 py-2 flex items-center justify-between text-sm">
           <div className="flex items-center">
             <WifiOff size={14} className="mr-2" />
             <span>网络不稳定，请检查网络设置</span>
@@ -62,7 +65,7 @@ export const CheckoutPage = () => {
             <ChevronLeft size={24} />
           </button>
         </div>
-        <h1 className="text-[16px] font-bold text-text-main text-center w-1/3">确认订单</h1>
+        <h1 className="text-xl font-bold text-text-main text-center w-1/3">确认订单</h1>
         <div className="w-1/3"></div>
       </div>
     </div>
@@ -71,7 +74,7 @@ export const CheckoutPage = () => {
   const renderSkeleton = () => (
     <div className="p-3">
       {/* Address Skeleton */}
-      <div className="bg-white dark:bg-gray-900 rounded-[16px] p-4 mb-3 shadow-sm">
+      <div className="bg-white dark:bg-gray-900 rounded-2xl p-4 mb-3 shadow-sm">
         <div className="flex items-center mb-2">
           <Skeleton className="w-16 h-5 mr-2" />
           <Skeleton className="w-24 h-5" />
@@ -81,13 +84,13 @@ export const CheckoutPage = () => {
       </div>
       
       {/* Product Skeleton */}
-      <div className="bg-white dark:bg-gray-900 rounded-[16px] p-4 mb-3 shadow-sm">
+      <div className="bg-white dark:bg-gray-900 rounded-2xl p-4 mb-3 shadow-sm">
         <div className="flex items-center mb-4">
           <Skeleton className="w-5 h-5 rounded-full mr-2" />
           <Skeleton className="w-24 h-5 rounded" />
         </div>
         <div className="flex">
-          <Skeleton className="w-[80px] h-[80px] rounded-[8px] mr-3 shrink-0" />
+          <Skeleton className="w-[80px] h-[80px] rounded-lg mr-3 shrink-0" />
           <div className="flex-1">
             <Skeleton className="w-full h-4 mb-1" />
             <Skeleton className="w-3/4 h-4 mb-2" />
@@ -106,10 +109,10 @@ export const CheckoutPage = () => {
       return (
         <div className="flex-1 flex flex-col items-center justify-center p-4">
           <RefreshCcw size={32} className="text-text-aux mb-3" />
-          <p className="text-[14px] text-text-sub mb-4">加载失败，请检查网络</p>
+          <p className="text-md text-text-sub mb-4">加载失败，请检查网络</p>
           <button 
             onClick={() => { setLoading(true); setModuleError(false); }} 
-            className="px-6 py-2 border border-border-light rounded-full text-[13px] text-text-main bg-white dark:bg-gray-900 shadow-sm active:bg-bg-base"
+            className="px-6 py-2 border border-border-light rounded-full text-base text-text-main bg-white dark:bg-gray-900 shadow-sm active:bg-bg-base"
           >
             重试
           </button>
@@ -125,11 +128,8 @@ export const CheckoutPage = () => {
       <div className="p-3 pb-24">
         {/* Address Card */}
         <div 
-          className="bg-white dark:bg-gray-900 rounded-[16px] p-4 mb-3 shadow-sm active:bg-bg-base transition-colors relative overflow-hidden cursor-pointer"
-          onClick={() => {
-            const event = new CustomEvent('change-view', { detail: 'address' });
-            window.dispatchEvent(event);
-          }}
+          className="bg-white dark:bg-gray-900 rounded-2xl p-4 mb-3 shadow-sm active:bg-bg-base transition-colors relative overflow-hidden cursor-pointer"
+          onClick={() => goTo('address')}
         >
           {/* Decorative border bottom */}
           <div className="absolute bottom-0 left-0 right-0 h-1 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MCIgaGVpZ2h0PSI0Ij48cGF0aCBkPSJNMCAwaDIwbDIwIDRIMHoiIGZpbGw9IiNGRjRkNGQiIG9wYWNpdHk9IjAuOCIvPjxwYXRoIGQ9Ik0yMCAwaDIwbDIwIDRIMjB6IiBmaWxsPSIjNGQ4OGZmIiBvcGFjaXR5PSIwLjgiLz48L3N2Zz4=')] bg-repeat-x opacity-50"></div>
@@ -140,20 +140,20 @@ export const CheckoutPage = () => {
                 <div className="w-8 h-8 rounded-full bg-primary-start/10 flex items-center justify-center mr-3">
                   <Plus size={16} className="text-primary-start" />
                 </div>
-                <span className="text-[15px] font-medium text-text-main">新增收货地址</span>
+                <span className="text-lg font-medium text-text-main">新增收货地址</span>
               </div>
             ) : (
               <div className="flex-1 pr-4">
                 <div className="flex items-center mb-1.5">
-                  <span className="text-[16px] font-bold text-text-main mr-2">{mockAddress.name}</span>
-                  <span className="text-[14px] text-text-main font-medium">{mockAddress.phone}</span>
+                  <span className="text-xl font-bold text-text-main mr-2">{mockAddress.name}</span>
+                  <span className="text-md text-text-main font-medium">{mockAddress.phone}</span>
                   {mockAddress.isDefault && (
-                    <span className="ml-2 px-1.5 py-0.5 bg-primary-start text-white text-[10px] rounded-[4px] leading-none">默认</span>
+                    <span className="ml-2 px-1.5 py-0.5 bg-primary-start text-white text-xs rounded leading-none">默认</span>
                   )}
                 </div>
                 <div className="flex items-start">
                   <MapPin size={14} className="text-primary-start mt-0.5 mr-1 shrink-0" />
-                  <span className="text-[13px] text-text-sub leading-snug line-clamp-2">{mockAddress.address}</span>
+                  <span className="text-base text-text-sub leading-snug line-clamp-2">{mockAddress.address}</span>
                 </div>
               </div>
             )}
@@ -162,30 +162,30 @@ export const CheckoutPage = () => {
         </div>
 
         {/* Product List Card */}
-        <div className="bg-white dark:bg-gray-900 rounded-[16px] shadow-sm mb-3 overflow-hidden">
+        <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm mb-3 overflow-hidden">
           <div className="flex items-center px-4 py-3 border-b border-border-light/50">
             <Store size={16} className="text-text-main mr-1.5" />
-            <span className="text-[14px] font-bold text-text-main">树交所自营</span>
+            <span className="text-md font-bold text-text-main">树交所自营</span>
           </div>
           
           <div className="p-4">
             {mockProducts.map(item => (
               <div key={item.id} className="flex mb-4 last:mb-0">
-                <img src={item.image} alt={item.title} className="w-[80px] h-[80px] rounded-[8px] object-cover shrink-0 mr-3 border border-border-light/50" referrerPolicy="no-referrer" />
+                <img src={item.image} alt={item.title} className="w-[80px] h-[80px] rounded-lg object-cover shrink-0 mr-3 border border-border-light/50" referrerPolicy="no-referrer" />
                 <div className="flex-1 flex flex-col min-w-0">
-                  <h3 className="text-[13px] text-text-main font-medium line-clamp-2 leading-snug mb-1">
+                  <h3 className="text-base text-text-main font-medium line-clamp-2 leading-snug mb-1">
                     {item.title}
                   </h3>
-                  <div className="text-[11px] text-text-sub bg-bg-base px-1.5 py-0.5 rounded-[4px] self-start mb-2 truncate max-w-full">
+                  <div className="text-s text-text-sub bg-bg-base px-1.5 py-0.5 rounded self-start mb-2 truncate max-w-full">
                     {item.sku}
                   </div>
                   <div className="flex items-center justify-between mt-auto">
                     <div className="text-primary-start font-bold leading-none">
-                      <span className="text-[11px]">¥</span>
-                      <span className="text-[16px]">{item.price.toFixed(2).split('.')[0]}</span>
-                      <span className="text-[11px]">.{item.price.toFixed(2).split('.')[1]}</span>
+                      <span className="text-s">¥</span>
+                      <span className="text-xl">{item.price.toFixed(2).split('.')[0]}</span>
+                      <span className="text-s">.{item.price.toFixed(2).split('.')[1]}</span>
                     </div>
-                    <span className="text-[12px] text-text-main font-medium">x{item.quantity}</span>
+                    <span className="text-sm text-text-main font-medium">x{item.quantity}</span>
                   </div>
                 </div>
               </div>
@@ -195,32 +195,32 @@ export const CheckoutPage = () => {
           {/* Delivery & Service */}
           <div className="px-4 py-3 bg-bg-base/50 border-t border-border-light/50">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-[13px] text-text-main font-medium">配送服务</span>
-              <div className="flex items-center text-[13px] text-text-main">
+              <span className="text-base text-text-main font-medium">配送服务</span>
+              <div className="flex items-center text-base text-text-main">
                 <span>树交所快递</span>
                 <ChevronRight size={14} className="text-text-aux ml-1" />
               </div>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-[12px] text-text-sub">预计明天(03月01日)送达</span>
-              <span className="text-[12px] text-text-sub">免运费</span>
+              <span className="text-sm text-text-sub">预计明天(03月01日)送达</span>
+              <span className="text-sm text-text-sub">免运费</span>
             </div>
           </div>
         </div>
 
         {/* Discount Card */}
-        <div className="bg-white dark:bg-gray-900 rounded-[16px] shadow-sm mb-3 px-4 py-1">
+        <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm mb-3 px-4 py-1">
           <div className="flex items-center justify-between py-3 border-b border-border-light/50">
-            <span className="text-[14px] text-text-main">优惠券</span>
+            <span className="text-md text-text-main">优惠券</span>
             <div className="flex items-center">
-              <span className="text-[13px] text-primary-start font-medium">-¥50.00</span>
+              <span className="text-base text-primary-start font-medium">-¥50.00</span>
               <ChevronRight size={14} className="text-text-aux ml-1" />
             </div>
           </div>
           <div className="flex items-center justify-between py-3">
             <div className="flex flex-col">
-              <span className="text-[14px] text-text-main">京豆/余额</span>
-              <span className="text-[11px] text-text-sub mt-0.5">可用1000京豆抵扣¥10.00</span>
+              <span className="text-md text-text-main">京豆/余额</span>
+              <span className="text-s text-text-sub mt-0.5">可用1000京豆抵扣¥10.00</span>
             </div>
             <button 
               onClick={() => setUsePoints(!usePoints)}
@@ -232,50 +232,50 @@ export const CheckoutPage = () => {
         </div>
 
         {/* Invoice & Message Card */}
-        <div className="bg-white dark:bg-gray-900 rounded-[16px] shadow-sm mb-3 px-4 py-1">
+        <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm mb-3 px-4 py-1">
           <div className="flex items-center justify-between py-3 border-b border-border-light/50">
-            <span className="text-[14px] text-text-main">发票</span>
+            <span className="text-md text-text-main">发票</span>
             <div className="flex items-center">
-              <span className="text-[13px] text-text-sub">电子普通发票-个人</span>
+              <span className="text-base text-text-sub">电子普通发票-个人</span>
               <ChevronRight size={14} className="text-text-aux ml-1" />
             </div>
           </div>
           <div className="flex items-center justify-between py-3">
-            <span className="text-[14px] text-text-main shrink-0 mr-4">订单备注</span>
+            <span className="text-md text-text-main shrink-0 mr-4">订单备注</span>
             <input 
               type="text" 
               placeholder="选填，建议留言前先与商家沟通确认" 
-              className="flex-1 text-right text-[13px] text-text-main outline-none placeholder:text-text-aux"
+              className="flex-1 text-right text-base text-text-main outline-none placeholder:text-text-aux"
             />
           </div>
         </div>
 
         {/* Amount Summary Card */}
-        <div className="bg-white dark:bg-gray-900 rounded-[16px] shadow-sm mb-3 p-4">
+        <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm mb-3 p-4">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-[13px] text-text-sub">商品总价</span>
-            <span className="text-[13px] text-text-main">¥{productTotal.toFixed(2)}</span>
+            <span className="text-base text-text-sub">商品总价</span>
+            <span className="text-base text-text-main">¥{productTotal.toFixed(2)}</span>
           </div>
           <div className="flex items-center justify-between mb-2">
-            <span className="text-[13px] text-text-sub">运费</span>
-            <span className="text-[13px] text-text-main">+ ¥{shippingFee.toFixed(2)}</span>
+            <span className="text-base text-text-sub">运费</span>
+            <span className="text-base text-text-main">+ ¥{shippingFee.toFixed(2)}</span>
           </div>
           <div className="flex items-center justify-between mb-2">
-            <span className="text-[13px] text-text-sub">优惠</span>
-            <span className="text-[13px] text-primary-start">- ¥{discount.toFixed(2)}</span>
+            <span className="text-base text-text-sub">优惠</span>
+            <span className="text-base text-primary-start">- ¥{discount.toFixed(2)}</span>
           </div>
           {usePoints && (
             <div className="flex items-center justify-between mb-2">
-              <span className="text-[13px] text-text-sub">京豆抵扣</span>
-              <span className="text-[13px] text-primary-start">- ¥{pointsDeduction.toFixed(2)}</span>
+              <span className="text-base text-text-sub">京豆抵扣</span>
+              <span className="text-base text-primary-start">- ¥{pointsDeduction.toFixed(2)}</span>
             </div>
           )}
           <div className="flex items-center justify-end pt-3 mt-1 border-t border-border-light/50">
-            <span className="text-[14px] text-text-main font-bold mr-2">应付金额:</span>
+            <span className="text-md text-text-main font-bold mr-2">应付金额:</span>
             <span className="text-primary-start font-bold">
-              <span className="text-[12px]">¥</span>
-              <span className="text-[18px]">{finalTotal.toFixed(2).split('.')[0]}</span>
-              <span className="text-[12px]">.{finalTotal.toFixed(2).split('.')[1]}</span>
+              <span className="text-sm">¥</span>
+              <span className="text-3xl">{finalTotal.toFixed(2).split('.')[0]}</span>
+              <span className="text-sm">.{finalTotal.toFixed(2).split('.')[1]}</span>
             </span>
           </div>
         </div>
@@ -297,19 +297,16 @@ export const CheckoutPage = () => {
       {!moduleError && (
         <div className="absolute bottom-0 left-0 right-0 bg-white dark:bg-gray-900 border-t border-border-light px-4 h-14 flex items-center justify-between z-40 pb-safe">
           <div className="flex items-baseline">
-            <span className="text-[13px] text-text-main font-bold mr-1">应付:</span>
+            <span className="text-base text-text-main font-bold mr-1">应付:</span>
             <span className="text-primary-start font-bold">
-              <span className="text-[14px]">¥</span>
-              <span className="text-[20px]">{finalTotal.toFixed(2).split('.')[0]}</span>
-              <span className="text-[14px]">.{finalTotal.toFixed(2).split('.')[1]}</span>
+              <span className="text-md">¥</span>
+              <span className="text-4xl">{finalTotal.toFixed(2).split('.')[0]}</span>
+              <span className="text-md">.{finalTotal.toFixed(2).split('.')[1]}</span>
             </span>
           </div>
           <button 
-            onClick={() => {
-              const event = new CustomEvent('change-view', { detail: 'cashier' });
-              window.dispatchEvent(event);
-            }}
-            className="h-10 px-8 rounded-full bg-gradient-to-r from-primary-start to-primary-end text-white text-[14px] font-medium shadow-sm active:opacity-80"
+            onClick={() => goTo('cashier')}
+            className="h-10 px-8 rounded-full bg-gradient-to-r from-primary-start to-primary-end text-white text-md font-medium shadow-sm active:opacity-80"
           >
             提交订单
           </button>

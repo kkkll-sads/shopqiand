@@ -78,12 +78,12 @@ export const ActionSheet: React.FC<ActionSheetProps> = ({
         className={`relative w-full max-w-[390px] mx-auto px-4 pb-safe transition-transform duration-300 ease-out ${isVisible ? 'translate-y-0' : 'translate-y-full'}`}
       >
         {/* Main Options Card */}
-        <div className="bg-white dark:bg-gray-900 rounded-[16px] shadow-lg mb-3 overflow-hidden flex flex-col max-h-[70vh]">
+        <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-lg mb-3 overflow-hidden flex flex-col max-h-[70vh]">
           {/* Drag Handle & Title */}
           <div className="shrink-0 pt-3 pb-2 flex flex-col items-center relative bg-white dark:bg-gray-900 z-10">
             <div className="w-10 h-1 bg-gray-200 dark:bg-gray-700 rounded-full mb-3"></div>
             {title && (
-              <h3 className="text-[14px] font-medium text-gray-500 dark:text-gray-400 px-4 text-center w-full truncate">
+              <h3 className="text-md font-medium text-gray-500 dark:text-gray-400 px-4 text-center w-full truncate">
                 {title}
               </h3>
             )}
@@ -116,18 +116,18 @@ export const ActionSheet: React.FC<ActionSheetProps> = ({
                   >
                     <div className="flex items-center flex-1 min-w-0 mr-3">
                       {option.icon && (
-                        <div className={`mr-3 shrink-0 ${option.danger ? 'text-[#f2270c] dark:text-red-400' : 'text-gray-700 dark:text-gray-300'}`}>
+                        <div className={`mr-3 shrink-0 ${option.danger ? 'text-text-price dark:text-red-400' : 'text-gray-700 dark:text-gray-300'}`}>
                           {option.icon}
                         </div>
                       )}
-                      <span className={`text-[16px] truncate ${option.danger ? 'text-[#f2270c] dark:text-red-400 font-medium' : 'text-gray-900 dark:text-gray-100'}`}>
+                      <span className={`text-xl truncate ${option.danger ? 'text-text-price dark:text-red-400 font-medium' : 'text-gray-900 dark:text-gray-100'}`}>
                         {option.label}
                       </span>
                     </div>
                     
                     <div className="flex items-center shrink-0">
                       {option.desc && (
-                        <span className="text-[13px] text-gray-400 dark:text-gray-500 mr-1">
+                        <span className="text-base text-gray-400 dark:text-gray-500 mr-1">
                           {option.desc}
                         </span>
                       )}
@@ -141,7 +141,7 @@ export const ActionSheet: React.FC<ActionSheetProps> = ({
                 ))}
                 {/* Group Divider */}
                 {groupIndex < groups.length - 1 && (
-                  <div className="h-2 bg-[#F7F8FA] dark:bg-gray-950 w-full"></div>
+                  <div className="h-2 bg-bg-hover dark:bg-gray-950 w-full"></div>
                 )}
               </div>
             ))}
@@ -152,7 +152,7 @@ export const ActionSheet: React.FC<ActionSheetProps> = ({
         {showCancel && (
           <button
             onClick={onClose}
-            className="w-full h-[52px] bg-white dark:bg-gray-900 rounded-[16px] shadow-sm flex items-center justify-center text-[16px] font-medium text-gray-900 dark:text-gray-100 active:bg-gray-50 dark:active:bg-gray-800 transition-colors mb-4"
+            className="w-full h-[52px] bg-white dark:bg-gray-900 rounded-2xl shadow-sm flex items-center justify-center text-xl font-medium text-gray-900 dark:text-gray-100 active:bg-gray-50 dark:active:bg-gray-800 transition-colors mb-4"
           >
             {cancelText}
           </button>

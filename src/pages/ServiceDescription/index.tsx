@@ -5,6 +5,10 @@ import {
 } from 'lucide-react';
 import { Card } from '../../components/ui/Card';
 import { Skeleton } from '../../components/ui/Skeleton';
+import { useAppNavigate } from '../../lib/navigation';
+import { PageHeader } from '../../components/layout/PageHeader';
+import { ErrorState } from '../../components/ui/ErrorState';
+import { EmptyState } from '../../components/ui/EmptyState';
 
 const SERVICES = [
   {
@@ -38,6 +42,8 @@ const SERVICES = [
 ];
 
 export const ServiceDescriptionPage = () => {
+  const { goTo, goBack } = useAppNavigate();
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [empty, setEmpty] = useState(false);
@@ -64,7 +70,7 @@ export const ServiceDescriptionPage = () => {
   }, []);
 
   const handleBack = () => {
-    window.dispatchEvent(new CustomEvent('go-back'));
+    goBack();
   };
 
   const toggleExpand = (id: string) => {
@@ -89,29 +95,11 @@ export const ServiceDescriptionPage = () => {
   );
 
   const renderError = () => (
-    <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
-      <AlertCircle className="w-12 h-12 text-text-secondary mb-4" />
-      <h3 className="text-[16px] font-medium text-text-main mb-2">加载失败</h3>
-      <p className="text-[14px] text-text-secondary mb-6">抱歉，服务说明信息加载失败，请稍后重试</p>
-      <button 
-        onClick={() => {
-          setLoading(true);
-          setError(false);
-          setTimeout(() => setLoading(false), 1000);
-        }}
-        className="px-6 py-2 bg-primary-start text-white rounded-full text-[14px] font-medium active:opacity-80 transition-opacity"
-      >
-        重新加载
-      </button>
-    </div>
+    <ErrorState onRetry={fetchData} />
   );
 
   const renderEmpty = () => (
-    <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
-      <ShieldCheck className="w-12 h-12 text-text-secondary mb-4 opacity-50" />
-      <h3 className="text-[16px] font-medium text-text-main mb-2">暂无服务说明</h3>
-      <p className="text-[14px] text-text-secondary">该商品暂未提供详细的服务保障说明</p>
-    </div>
+    <EmptyState message="暂无服务说明" />
   );
 
   return (
@@ -124,7 +112,7 @@ export const ServiceDescriptionPage = () => {
         >
           <ChevronLeft size={24} className="text-text-main" />
         </button>
-        <h1 className="flex-1 text-center text-[16px] font-medium text-text-main pr-8">
+        <h1 className="flex-1 text-center text-xl font-medium text-text-main pr-8">
           服务说明
         </h1>
       </div>
@@ -133,16 +121,16 @@ export const ServiceDescriptionPage = () => {
       {offline && (
         <div className="bg-red-50 dark:bg-red-900/20 px-4 py-2 flex items-center shrink-0">
           <WifiOff size={14} className="text-primary-start mr-2 shrink-0" />
-          <span className="text-[12px] text-primary-start">当前网络不可用，请检查网络设置</span>
+          <span className="text-sm text-primary-start">当前网络不可用，请检查网络设置</span>
         </div>
       )}
 
       {/* Dev Controls (Hidden in production) */}
       <div className="absolute top-14 right-4 z-50 flex flex-col gap-2 opacity-50 hover:opacity-100 transition-opacity">
-        <button className="text-[10px] bg-black/50 text-white px-2 py-1 rounded" onClick={() => { setLoading(false); setError(false); setEmpty(false); }}>Normal</button>
-        <button className="text-[10px] bg-black/50 text-white px-2 py-1 rounded" onClick={() => { setLoading(true); setError(false); setEmpty(false); }}>Loading</button>
-        <button className="text-[10px] bg-black/50 text-white px-2 py-1 rounded" onClick={() => { setLoading(false); setError(true); setEmpty(false); }}>Error</button>
-        <button className="text-[10px] bg-black/50 text-white px-2 py-1 rounded" onClick={() => { setLoading(false); setError(false); setEmpty(true); }}>Empty</button>
+        <button className="text-xs bg-black/50 text-white px-2 py-1 rounded" onClick={() => { setLoading(false); setError(false); setEmpty(false); }}>Normal</button>
+        <button className="text-xs bg-black/50 text-white px-2 py-1 rounded" onClick={() => { setLoading(true); setError(false); setEmpty(false); }}>Loading</button>
+        <button className="text-xs bg-black/50 text-white px-2 py-1 rounded" onClick={() => { setLoading(false); setError(true); setEmpty(false); }}>Error</button>
+        <button className="text-xs bg-black/50 text-white px-2 py-1 rounded" onClick={() => { setLoading(false); setError(false); setEmpty(true); }}>Empty</button>
       </div>
 
       {/* Content */}
@@ -172,7 +160,7 @@ export const ServiceDescriptionPage = () => {
                       <Icon size={20} className="text-primary-start mt-0.5 shrink-0" />
                       <div className="ml-3 flex-1">
                         <div className="flex items-center justify-between">
-                          <h3 className="text-[15px] font-medium text-text-main">
+                          <h3 className="text-lg font-medium text-text-main">
                             {service.title}
                           </h3>
                           {isExpanded ? (
@@ -181,7 +169,7 @@ export const ServiceDescriptionPage = () => {
                             <ChevronDown size={16} className="text-text-secondary shrink-0" />
                           )}
                         </div>
-                        <p className="text-[13px] text-text-secondary mt-1">
+                        <p className="text-base text-text-secondary mt-1">
                           {service.summary}
                         </p>
                       </div>
@@ -195,7 +183,7 @@ export const ServiceDescriptionPage = () => {
                     >
                       <div className="px-4 pb-4 pt-1 ml-8">
                         <div className="p-3 bg-bg-base rounded-lg">
-                          <p className="text-[12px] text-text-secondary leading-relaxed">
+                          <p className="text-sm text-text-secondary leading-relaxed">
                             {service.details}
                           </p>
                         </div>
@@ -208,7 +196,7 @@ export const ServiceDescriptionPage = () => {
             
             {/* Bottom Hint */}
             <div className="mt-8 mb-4 text-center">
-              <p className="text-[12px] text-text-tertiary">
+              <p className="text-sm text-text-tertiary">
                 具体以订单与页面展示为准
               </p>
             </div>

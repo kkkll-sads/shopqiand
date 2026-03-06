@@ -1,7 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { ChevronLeft, WifiOff, AlertCircle, Bell, CheckCircle2 } from 'lucide-react';
+import { useAppNavigate } from '../../lib/navigation';
+import { PageHeader } from '../../components/layout/PageHeader';
+import { ErrorState } from '../../components/ui/ErrorState';
+import { EmptyState } from '../../components/ui/EmptyState';
 
 export const MessageCenterPage = () => {
+  const { goTo, goBack } = useAppNavigate();
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [offline, setOffline] = useState(!navigator.onLine);
@@ -49,7 +55,7 @@ export const MessageCenterPage = () => {
   };
 
   const handleBack = () => {
-    window.dispatchEvent(new CustomEvent('go-back'));
+    goBack();
   };
 
   const markAllAsRead = () => {
@@ -64,10 +70,10 @@ export const MessageCenterPage = () => {
             <ChevronLeft size={24} />
           </button>
         </div>
-        <h1 className="text-[17px] font-medium text-gray-900 dark:text-gray-100 text-center w-1/3">消息中心</h1>
+        <h1 className="text-2xl font-medium text-gray-900 dark:text-gray-100 text-center w-1/3">消息中心</h1>
         <div className="w-1/3 flex justify-end">
           {(!empty && !loading && !error && messages.some(m => !m.isRead)) && (
-            <button onClick={markAllAsRead} className="text-[14px] text-gray-600 dark:text-gray-400 px-2 py-1 active:opacity-70 flex items-center">
+            <button onClick={markAllAsRead} className="text-md text-gray-600 dark:text-gray-400 px-2 py-1 active:opacity-70 flex items-center">
               <CheckCircle2 size={14} className="mr-1" /> 全部已读
             </button>
           )}
@@ -85,11 +91,11 @@ export const MessageCenterPage = () => {
       ].map(tab => (
         <button 
           key={tab.id}
-          className={`flex-1 py-3 text-[14px] font-medium relative transition-colors ${activeTab === tab.id ? 'text-[#f2270c]' : 'text-gray-600 dark:text-gray-400'}`}
+          className={`flex-1 py-3 text-md font-medium relative transition-colors ${activeTab === tab.id ? 'text-text-price' : 'text-gray-600 dark:text-gray-400'}`}
           onClick={() => setActiveTab(tab.id as any)}
         >
           {tab.label}
-          {activeTab === tab.id && <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-8 h-[3px] bg-[#f2270c] rounded-t-full"></div>}
+          {activeTab === tab.id && <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-8 h-[3px] bg-brand-start rounded-t-full"></div>}
         </button>
       ))}
     </div>
@@ -111,29 +117,11 @@ export const MessageCenterPage = () => {
   );
 
   const renderError = () => (
-    <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
-      <div className="w-24 h-24 mb-4 text-gray-300 dark:text-gray-600">
-        <AlertCircle className="w-full h-full" />
-      </div>
-      <h3 className="text-[16px] font-medium text-gray-900 dark:text-gray-100 mb-2">加载失败</h3>
-      <p className="text-[13px] text-gray-500 dark:text-gray-400 mb-6">请检查您的网络设置后重试</p>
-      <button 
-        onClick={fetchData}
-        className="px-6 py-2 border border-gray-300 dark:border-gray-600 rounded-full text-[14px] text-gray-700 dark:text-gray-400 flex items-center active:bg-gray-50 dark:bg-gray-800"
-      >
-        重新加载
-      </button>
-    </div>
+    <ErrorState onRetry={fetchData} />
   );
 
   const renderEmpty = () => (
-    <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
-      <div className="w-24 h-24 mb-4 text-gray-300 dark:text-gray-600">
-        <Bell className="w-full h-full" strokeWidth={1.5} />
-      </div>
-      <h3 className="text-[16px] font-medium text-gray-900 dark:text-gray-100 mb-2">暂无消息</h3>
-      <p className="text-[13px] text-gray-500 dark:text-gray-400 mb-6">您还没有收到任何通知哦</p>
-    </div>
+    <EmptyState message="暂无消息" />
   );
 
   const renderContent = () => {
@@ -153,14 +141,14 @@ export const MessageCenterPage = () => {
           >
             <div className="flex justify-between items-start mb-2">
               <div className="flex items-center flex-1 min-w-0 pr-4">
-                {!msg.isRead && <div className="w-2 h-2 rounded-full bg-[#f2270c] mr-2 shrink-0"></div>}
-                <h3 className={`text-[15px] font-medium truncate ${msg.isRead ? 'text-gray-500 dark:text-gray-400' : 'text-gray-900 dark:text-gray-100'}`}>
+                {!msg.isRead && <div className="w-2 h-2 rounded-full bg-brand-start mr-2 shrink-0"></div>}
+                <h3 className={`text-lg font-medium truncate ${msg.isRead ? 'text-gray-500 dark:text-gray-400' : 'text-gray-900 dark:text-gray-100'}`}>
                   {msg.title}
                 </h3>
               </div>
-              <span className="text-[12px] text-gray-400 dark:text-gray-500 shrink-0 mt-0.5">{msg.time}</span>
+              <span className="text-sm text-gray-400 dark:text-gray-500 shrink-0 mt-0.5">{msg.time}</span>
             </div>
-            <p className={`text-[13px] line-clamp-2 leading-relaxed ${msg.isRead ? 'text-gray-400 dark:text-gray-500' : 'text-gray-600 dark:text-gray-400'}`}>
+            <p className={`text-base line-clamp-2 leading-relaxed ${msg.isRead ? 'text-gray-400 dark:text-gray-500' : 'text-gray-600 dark:text-gray-400'}`}>
               {msg.summary}
             </p>
           </div>
@@ -170,10 +158,10 @@ export const MessageCenterPage = () => {
   };
 
   return (
-    <div className="flex-1 flex flex-col bg-[#f5f5f5] dark:bg-gray-950 relative h-full overflow-hidden">
+    <div className="flex-1 flex flex-col bg-bg-hover dark:bg-gray-950 relative h-full overflow-hidden">
       {/* Offline Banner */}
       {offline && (
-        <div className="bg-[#ffe4e4] text-[#f2270c] text-[12px] py-2 px-4 flex items-center justify-center sticky top-0 z-50">
+        <div className="bg-[#ffe4e4] text-text-price text-sm py-2 px-4 flex items-center justify-center sticky top-0 z-50">
           <WifiOff size={14} className="mr-2" />
           网络连接已断开，请检查网络设置
         </div>

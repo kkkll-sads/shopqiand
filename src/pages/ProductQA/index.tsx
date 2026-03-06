@@ -1,7 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { ChevronLeft, MessageCircleQuestion, RefreshCcw, WifiOff } from 'lucide-react';
+import { useAppNavigate } from '../../lib/navigation';
+import { PageHeader } from '../../components/layout/PageHeader';
+import { ErrorState } from '../../components/ui/ErrorState';
+import { EmptyState } from '../../components/ui/EmptyState';
 
 export const ProductQAPage = () => {
+  const { goTo, goBack } = useAppNavigate();
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [offline, setOffline] = useState(!navigator.onLine);
@@ -64,7 +70,7 @@ export const ProductQAPage = () => {
   };
 
   const handleBack = () => {
-    window.dispatchEvent(new CustomEvent('go-back'));
+    goBack();
   };
 
   const renderHeader = () => (
@@ -75,7 +81,7 @@ export const ProductQAPage = () => {
             <ChevronLeft size={24} />
           </button>
         </div>
-        <h1 className="text-[17px] font-medium text-gray-900 dark:text-gray-100 text-center w-1/3">问大家</h1>
+        <h1 className="text-2xl font-medium text-gray-900 dark:text-gray-100 text-center w-1/3">问大家</h1>
         <div className="w-1/3"></div>
       </div>
     </div>
@@ -84,18 +90,18 @@ export const ProductQAPage = () => {
   const renderFilters = () => (
     <div className="bg-white dark:bg-gray-900 px-4 py-3 flex items-center space-x-6 border-b border-gray-100 dark:border-gray-800 shrink-0">
       <button 
-        className={`text-[14px] font-medium transition-colors relative pb-1 ${activeFilter === 'hottest' ? 'text-gray-900 dark:text-gray-100' : 'text-gray-500 dark:text-gray-400'}`}
+        className={`text-md font-medium transition-colors relative pb-1 ${activeFilter === 'hottest' ? 'text-gray-900 dark:text-gray-100' : 'text-gray-500 dark:text-gray-400'}`}
         onClick={() => setActiveFilter('hottest')}
       >
         最热
-        {activeFilter === 'hottest' && <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-4 h-1 bg-[#f2270c] rounded-full"></div>}
+        {activeFilter === 'hottest' && <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-4 h-1 bg-brand-start rounded-full"></div>}
       </button>
       <button 
-        className={`text-[14px] font-medium transition-colors relative pb-1 ${activeFilter === 'latest' ? 'text-gray-900 dark:text-gray-100' : 'text-gray-500 dark:text-gray-400'}`}
+        className={`text-md font-medium transition-colors relative pb-1 ${activeFilter === 'latest' ? 'text-gray-900 dark:text-gray-100' : 'text-gray-500 dark:text-gray-400'}`}
         onClick={() => setActiveFilter('latest')}
       >
         最新
-        {activeFilter === 'latest' && <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-4 h-1 bg-[#f2270c] rounded-full"></div>}
+        {activeFilter === 'latest' && <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-4 h-1 bg-brand-start rounded-full"></div>}
       </button>
     </div>
   );
@@ -121,30 +127,11 @@ export const ProductQAPage = () => {
   );
 
   const renderError = () => (
-    <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
-      <div className="w-24 h-24 mb-4 text-gray-300 dark:text-gray-600">
-        <WifiOff className="w-full h-full" />
-      </div>
-      <h3 className="text-[16px] font-medium text-gray-900 dark:text-gray-100 mb-2">网络请求失败</h3>
-      <p className="text-[13px] text-gray-500 dark:text-gray-400 mb-6">请检查您的网络设置后重试</p>
-      <button 
-        onClick={fetchData}
-        className="px-6 py-2 border border-gray-300 dark:border-gray-600 rounded-full text-[14px] text-gray-700 dark:text-gray-400 flex items-center active:bg-gray-50 dark:bg-gray-800"
-      >
-        <RefreshCcw size={16} className="mr-2" />
-        重新加载
-      </button>
-    </div>
+    <ErrorState onRetry={fetchData} />
   );
 
   const renderEmpty = () => (
-    <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
-      <div className="w-24 h-24 mb-4 text-gray-300 dark:text-gray-600">
-        <MessageCircleQuestion className="w-full h-full" strokeWidth={1.5} />
-      </div>
-      <h3 className="text-[16px] font-medium text-gray-900 dark:text-gray-100 mb-2">暂无问答</h3>
-      <p className="text-[13px] text-gray-500 dark:text-gray-400 mb-6">还没有人提问，快来做第一个提问的人吧</p>
-    </div>
+    <EmptyState message="暂无问答" />
   );
 
   const renderContent = () => {
@@ -157,18 +144,18 @@ export const ProductQAPage = () => {
         {mockData.map((item) => (
           <div key={item.id} className="bg-white dark:bg-gray-900 rounded-xl p-4">
             <div className="flex items-start mb-3">
-              <span className="bg-[#ff9600] text-white text-[12px] font-bold w-5 h-5 flex items-center justify-center rounded-sm mr-2 shrink-0 mt-0.5">问</span>
-              <h3 className="text-[15px] font-medium text-gray-900 dark:text-gray-100 leading-snug">
+              <span className="bg-[#ff9600] text-white text-sm font-bold w-5 h-5 flex items-center justify-center rounded-sm mr-2 shrink-0 mt-0.5">问</span>
+              <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 leading-snug">
                 {item.question}
               </h3>
             </div>
             <div className="flex items-start mb-3">
-              <span className="bg-[#25b513] text-white text-[12px] font-bold w-5 h-5 flex items-center justify-center rounded-sm mr-2 shrink-0 mt-0.5">答</span>
-              <p className="text-[14px] text-gray-600 dark:text-gray-400 leading-relaxed line-clamp-3">
+              <span className="bg-[#25b513] text-white text-sm font-bold w-5 h-5 flex items-center justify-center rounded-sm mr-2 shrink-0 mt-0.5">答</span>
+              <p className="text-md text-gray-600 dark:text-gray-400 leading-relaxed line-clamp-3">
                 {item.answer}
               </p>
             </div>
-            <div className="flex justify-between items-center text-[12px] text-gray-400 dark:text-gray-500 mt-2 pt-3 border-t border-gray-50 dark:border-gray-800">
+            <div className="flex justify-between items-center text-sm text-gray-400 dark:text-gray-500 mt-2 pt-3 border-t border-gray-50 dark:border-gray-800">
               <span>{item.time}</span>
               <span>共 {item.answerCount} 个回答</span>
             </div>
@@ -179,10 +166,10 @@ export const ProductQAPage = () => {
   };
 
   return (
-    <div className="flex-1 flex flex-col bg-[#f5f5f5] dark:bg-gray-950 relative h-full overflow-hidden">
+    <div className="flex-1 flex flex-col bg-bg-hover dark:bg-gray-950 relative h-full overflow-hidden">
       {/* Offline Banner */}
       {offline && (
-        <div className="bg-[#ffe4e4] text-[#f2270c] text-[12px] py-2 px-4 flex items-center justify-center sticky top-0 z-50">
+        <div className="bg-[#ffe4e4] text-text-price text-sm py-2 px-4 flex items-center justify-center sticky top-0 z-50">
           <WifiOff size={14} className="mr-2" />
           网络连接已断开，请检查网络设置
         </div>
@@ -201,7 +188,7 @@ export const ProductQAPage = () => {
       {!loading && !error && (
         <div className="absolute bottom-0 left-0 right-0 bg-white dark:bg-gray-900 border-t border-gray-100 dark:border-gray-800 px-4 py-3 pb-safe z-40">
           <button 
-            className="w-full h-[40px] rounded-full bg-gradient-to-r from-[#f2270c] to-[#ff4f18] text-white text-[15px] font-medium active:opacity-80 transition-opacity shadow-sm"
+            className="w-full h-[40px] rounded-full bg-gradient-to-r from-brand-start to-brand-end text-white text-lg font-medium active:opacity-80 transition-opacity shadow-sm"
             onClick={() => alert('提问功能开发中')}
           >
             向已买过的人提问

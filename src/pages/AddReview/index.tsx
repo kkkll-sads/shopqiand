@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { ChevronLeft, Star, Camera, X, AlertCircle, RefreshCcw, WifiOff, CheckCircle2, Loader2 } from 'lucide-react';
 import { Card } from '../../components/ui/Card';
 import { Skeleton } from '../../components/ui/Skeleton';
+import { useAppNavigate } from '../../lib/navigation';
+import { PageHeader } from '../../components/layout/PageHeader';
 
 // Mock Data
 const MOCK_PRODUCT = {
@@ -25,6 +27,8 @@ interface UploadImage {
 }
 
 export default function AddReviewPage() {
+  const { goTo, goBack } = useAppNavigate();
+
   const [pageState, setPageState] = useState<PageState>('loading');
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
   
@@ -56,7 +60,7 @@ export default function AddReviewPage() {
   }, []);
 
   const handleBack = () => {
-    window.dispatchEvent(new CustomEvent('go-back'));
+    goBack();
   };
 
   const toggleTag = (tag: string) => {
@@ -152,11 +156,11 @@ export default function AddReviewPage() {
           <button onClick={handleBack} className="p-1 -ml-1 active:opacity-70">
             <ChevronLeft size={24} className="text-text-main" />
           </button>
-          <h1 className="text-[17px] font-medium text-text-main">发表评价</h1>
+          <h1 className="text-2xl font-medium text-text-main">发表评价</h1>
           <div className="w-8"></div> {/* Placeholder for balance */}
         </div>
         {isOffline && (
-          <div className="bg-red-50 text-primary-start text-[12px] py-2 px-4 flex items-center justify-center">
+          <div className="bg-red-50 text-primary-start text-sm py-2 px-4 flex items-center justify-center">
             <WifiOff size={14} className="mr-1" />
             网络连接已断开，请检查网络设置
           </div>
@@ -197,15 +201,15 @@ export default function AddReviewPage() {
               referrerPolicy="no-referrer"
             />
             <div className="flex-1 min-w-0">
-              <h3 className="text-[14px] text-text-main truncate">{MOCK_PRODUCT.title}</h3>
-              <p className="text-[12px] text-text-sub mt-1">{MOCK_PRODUCT.sku}</p>
+              <h3 className="text-md text-text-main truncate">{MOCK_PRODUCT.title}</h3>
+              <p className="text-sm text-text-sub mt-1">{MOCK_PRODUCT.sku}</p>
             </div>
           </Card>
 
           {/* Rating Card */}
           <Card className="p-5 flex flex-col items-center">
             <div className="flex items-center space-x-4 mb-4">
-              <span className="text-[15px] font-medium text-text-main">商品评分</span>
+              <span className="text-lg font-medium text-text-main">商品评分</span>
               <div className="flex space-x-2">
                 {[1, 2, 3, 4, 5].map((star) => (
                   <button 
@@ -220,7 +224,7 @@ export default function AddReviewPage() {
                   </button>
                 ))}
               </div>
-              <span className="text-[13px] text-text-sub w-8">
+              <span className="text-base text-text-sub w-8">
                 {rating === 1 && '极差'}
                 {rating === 2 && '较差'}
                 {rating === 3 && '一般'}
@@ -236,7 +240,7 @@ export default function AddReviewPage() {
                   <button
                     key={tag}
                     onClick={() => toggleTag(tag)}
-                    className={`px-3 py-1.5 rounded-full text-[12px] transition-colors ${
+                    className={`px-3 py-1.5 rounded-full text-sm transition-colors ${
                       selectedTags.includes(tag)
                         ? 'bg-primary-start/10 text-primary-start border border-primary-start/30'
                         : 'bg-bg-sub text-text-main border border-transparent'
@@ -255,9 +259,9 @@ export default function AddReviewPage() {
               value={content}
               onChange={(e) => setContent(e.target.value.slice(0, 500))}
               placeholder="宝贝满足你的期待吗？说说你的使用心得，分享给想买的他们吧"
-              className="w-full h-32 text-[14px] text-text-main placeholder:text-text-aux resize-none outline-none bg-transparent"
+              className="w-full h-32 text-md text-text-main placeholder:text-text-aux resize-none outline-none bg-transparent"
             />
-            <div className="text-right text-[12px] text-text-aux mb-4">
+            <div className="text-right text-sm text-text-aux mb-4">
               {content.length}/500
             </div>
 
@@ -279,16 +283,16 @@ export default function AddReviewPage() {
                   {img.status === 'uploading' && (
                     <div className="absolute inset-0 bg-black/40 flex flex-col items-center justify-center text-white">
                       <Loader2 size={20} className="animate-spin mb-1" />
-                      <span className="text-[10px]">上传中</span>
+                      <span className="text-xs">上传中</span>
                     </div>
                   )}
                   {img.status === 'error' && (
                     <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center text-white">
                       <AlertCircle size={20} className="text-red-400 mb-1" />
-                      <span className="text-[10px] mb-1">上传失败</span>
+                      <span className="text-xs mb-1">上传失败</span>
                       <button 
                         onClick={() => retryUpload(img.id)}
-                        className="text-[10px] bg-white dark:bg-gray-900/20 px-2 py-0.5 rounded"
+                        className="text-xs bg-white dark:bg-gray-900/20 px-2 py-0.5 rounded"
                       >
                         重试
                       </button>
@@ -304,8 +308,8 @@ export default function AddReviewPage() {
                   className="aspect-square rounded-lg border border-dashed border-border-main flex flex-col items-center justify-center text-text-sub active:bg-bg-sub transition-colors"
                 >
                   <Camera size={24} className="mb-1" />
-                  <span className="text-[10px]">添加图片</span>
-                  <span className="text-[10px] text-text-aux">{images.length}/9</span>
+                  <span className="text-xs">添加图片</span>
+                  <span className="text-xs text-text-aux">{images.length}/9</span>
                 </button>
               )}
             </div>
@@ -327,9 +331,9 @@ export default function AddReviewPage() {
                 >
                   {isAnonymous && <div className="w-2.5 h-2.5 bg-text-main rounded-full" />}
                 </button>
-                <span className="text-[14px] text-text-main">匿名评价</span>
+                <span className="text-md text-text-main">匿名评价</span>
               </div>
-              <span className="text-[12px] text-text-aux">你的评价将以匿名形式展现</span>
+              <span className="text-sm text-text-aux">你的评价将以匿名形式展现</span>
             </div>
           </Card>
         </div>
@@ -340,7 +344,7 @@ export default function AddReviewPage() {
         <button
           onClick={handleSubmit}
           disabled={rating === 0 || isSubmitting || pageState !== 'normal'}
-          className={`w-full h-10 rounded-full flex items-center justify-center text-[15px] font-medium transition-all ${
+          className={`w-full h-10 rounded-full flex items-center justify-center text-lg font-medium transition-all ${
             rating === 0 || pageState !== 'normal'
               ? 'bg-bg-sub text-text-sub'
               : 'bg-gradient-to-r from-primary-start to-primary-end text-white active:opacity-90'

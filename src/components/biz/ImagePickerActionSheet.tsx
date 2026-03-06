@@ -82,7 +82,7 @@ export const ImagePickerActionSheet: React.FC<ImagePickerActionSheetProps> = ({
       
       {/* Simple Toast for Permission Warning */}
       {toastMsg && (
-        <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[200] bg-black/70 text-white text-[14px] px-4 py-2 rounded-[8px] animate-in fade-in zoom-in duration-200 whitespace-nowrap">
+        <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[200] bg-black/70 text-white text-md px-4 py-2 rounded-lg animate-in fade-in zoom-in duration-200 whitespace-nowrap">
           {toastMsg}
         </div>
       )}

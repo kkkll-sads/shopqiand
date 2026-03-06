@@ -1,8 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { ChevronLeft, Search, MessageCircle, ShoppingCart, WifiOff, RefreshCcw, FileX } from 'lucide-react';
 import { Skeleton } from '../../components/ui/Skeleton';
+import { useAppNavigate } from '../../lib/navigation';
+import { PageHeader } from '../../components/layout/PageHeader';
 
 export const CategoryPage = () => {
+  const { goTo, goBack } = useAppNavigate();
+
   const [loading, setLoading] = useState(true);
   const [offline, setOffline] = useState(false);
   const [moduleError, setModuleError] = useState(false);
@@ -33,19 +37,17 @@ export const CategoryPage = () => {
   }, [activeCategory]);
 
   const handleBack = () => {
-    const event = new CustomEvent('go-back');
-    window.dispatchEvent(event);
+    goBack();
   };
 
   const handleProductClick = () => {
-    const event = new CustomEvent('change-view', { detail: 'product_detail' });
-    window.dispatchEvent(event);
+    goTo('product_detail');
   };
 
   const renderHeader = () => (
     <div className="bg-white dark:bg-gray-900 z-40 relative border-b border-border-light">
       {offline && (
-        <div className="bg-red-50 text-primary-start px-4 py-2 flex items-center justify-between text-[12px]">
+        <div className="bg-red-50 text-primary-start px-4 py-2 flex items-center justify-between text-sm">
           <div className="flex items-center">
             <WifiOff size={14} className="mr-2" />
             <span>网络不稳定，请检查网络设置</span>
@@ -62,7 +64,7 @@ export const CategoryPage = () => {
           <input 
             type="text" 
             placeholder="搜索商品/SKU" 
-            className="bg-transparent border-none outline-none text-[13px] text-text-main w-full placeholder:text-text-aux"
+            className="bg-transparent border-none outline-none text-base text-text-main w-full placeholder:text-text-aux"
             readOnly
           />
         </div>
@@ -81,7 +83,7 @@ export const CategoryPage = () => {
           <div
             key={cat.id}
             onClick={() => setActiveCategory(cat.id)}
-            className={`h-[50px] flex items-center justify-center text-[13px] relative cursor-pointer transition-colors ${
+            className={`h-[50px] flex items-center justify-center text-base relative cursor-pointer transition-colors ${
               isActive ? 'bg-white dark:bg-gray-900 text-primary-start font-bold' : 'text-text-main hover:bg-white dark:bg-gray-900/50'
             }`}
           >
@@ -100,10 +102,10 @@ export const CategoryPage = () => {
       return (
         <div className="flex-1 bg-white dark:bg-gray-900 h-full flex flex-col items-center justify-center p-4">
           <RefreshCcw size={32} className="text-text-aux mb-3" />
-          <p className="text-[14px] text-text-sub mb-4">分类数据加载失败</p>
+          <p className="text-md text-text-sub mb-4">分类数据加载失败</p>
           <button 
             onClick={() => { setLoading(true); setModuleError(false); }} 
-            className="px-6 py-2 border border-border-light rounded-full text-[13px] text-text-main active:bg-bg-base"
+            className="px-6 py-2 border border-border-light rounded-full text-base text-text-main active:bg-bg-base"
           >
             重新加载
           </button>
@@ -115,7 +117,7 @@ export const CategoryPage = () => {
       return (
         <div className="flex-1 bg-white dark:bg-gray-900 h-full flex flex-col items-center justify-center p-4">
           <FileX size={40} className="text-text-aux mb-3 opacity-50" strokeWidth={1.5} />
-          <p className="text-[14px] text-text-sub">该分类下暂无内容</p>
+          <p className="text-md text-text-sub">该分类下暂无内容</p>
         </div>
       );
     }
@@ -124,8 +126,8 @@ export const CategoryPage = () => {
       <div className="flex-1 bg-white dark:bg-gray-900 h-full overflow-y-auto no-scrollbar p-3 pb-safe">
         {/* Subcategories */}
         <div className="mb-6">
-          <h3 className="text-[14px] font-bold text-text-main mb-3">常用分类</h3>
-          <div className="bg-bg-card rounded-[16px] p-3 shadow-sm border border-border-light">
+          <h3 className="text-md font-bold text-text-main mb-3">常用分类</h3>
+          <div className="bg-bg-card rounded-2xl p-3 shadow-sm border border-border-light">
             <div className="grid grid-cols-3 gap-y-4">
               {loading ? (
                 Array.from({ length: 6 }).map((_, i) => (
@@ -143,7 +145,7 @@ export const CategoryPage = () => {
                       className="w-12 h-12 rounded-full object-cover mb-2 border border-border-light"
                       referrerPolicy="no-referrer"
                     />
-                    <span className="text-[11px] text-text-main">子分类 {i + 1}</span>
+                    <span className="text-s text-text-main">子分类 {i + 1}</span>
                   </div>
                 ))
               )}
@@ -154,19 +156,19 @@ export const CategoryPage = () => {
         {/* Popular Products */}
         <div>
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-[14px] font-bold text-text-main">热门商品</h3>
+            <h3 className="text-md font-bold text-text-main">热门商品</h3>
             <div className="flex space-x-2">
-              <span className="text-[11px] text-text-sub bg-bg-base px-2 py-1 rounded-full">综合</span>
-              <span className="text-[11px] text-text-sub bg-bg-base px-2 py-1 rounded-full">销量</span>
-              <span className="text-[11px] text-text-sub bg-bg-base px-2 py-1 rounded-full">价格</span>
+              <span className="text-s text-text-sub bg-bg-base px-2 py-1 rounded-full">综合</span>
+              <span className="text-s text-text-sub bg-bg-base px-2 py-1 rounded-full">销量</span>
+              <span className="text-s text-text-sub bg-bg-base px-2 py-1 rounded-full">价格</span>
             </div>
           </div>
           
           <div className="space-y-3">
             {loading ? (
               Array.from({ length: 4 }).map((_, i) => (
-                <div key={i} className="flex bg-bg-card rounded-[12px] p-2 shadow-sm border border-border-light">
-                  <Skeleton className="w-[88px] h-[88px] rounded-[8px] mr-3 shrink-0" />
+                <div key={i} className="flex bg-bg-card rounded-xl p-2 shadow-sm border border-border-light">
+                  <Skeleton className="w-[88px] h-[88px] rounded-lg mr-3 shrink-0" />
                   <div className="flex-1 py-1 flex flex-col">
                     <Skeleton className="w-full h-4 mb-2" />
                     <Skeleton className="w-2/3 h-4 mb-auto" />
@@ -181,29 +183,29 @@ export const CategoryPage = () => {
               Array.from({ length: 6 }).map((_, i) => (
                 <div 
                   key={i} 
-                  className="flex bg-bg-card rounded-[12px] p-2 shadow-sm border border-border-light cursor-pointer active:opacity-70 transition-opacity"
+                  className="flex bg-bg-card rounded-xl p-2 shadow-sm border border-border-light cursor-pointer active:opacity-70 transition-opacity"
                   onClick={handleProductClick}
                 >
                   <img 
                     src={`https://picsum.photos/seed/catprod${activeCategory}${i}/200/200`} 
                     alt="Product" 
-                    className="w-[88px] h-[88px] rounded-[8px] object-cover mr-3 shrink-0 border border-border-light"
+                    className="w-[88px] h-[88px] rounded-lg object-cover mr-3 shrink-0 border border-border-light"
                     referrerPolicy="no-referrer"
                   />
                   <div className="flex-1 flex flex-col justify-between py-0.5">
                     <div>
-                      <div className="text-[13px] text-text-main line-clamp-2 leading-tight mb-1">
-                        <span className="inline-block bg-primary-start text-white text-[9px] px-1 rounded-[3px] mr-1 font-medium align-middle">自营</span>
+                      <div className="text-base text-text-main line-clamp-2 leading-tight mb-1">
+                        <span className="inline-block bg-primary-start text-white text-2xs px-1 rounded-sm mr-1 font-medium align-middle">自营</span>
                         <span className="align-middle">Apple iPhone 15 Pro 256GB 原色钛金属 移动联通电信5G双卡双待手机</span>
                       </div>
                       <div className="flex flex-wrap gap-1 mt-1">
-                        <span className="text-[9px] text-primary-start border border-primary-start/30 rounded-[3px] px-1">包邮</span>
-                        <span className="text-[9px] text-text-sub border border-border-light rounded-[3px] px-1">98%好评</span>
+                        <span className="text-2xs text-primary-start border border-primary-start/30 rounded-sm px-1">包邮</span>
+                        <span className="text-2xs text-text-sub border border-border-light rounded-sm px-1">98%好评</span>
                       </div>
                     </div>
                     <div className="flex justify-between items-end mt-2">
-                      <div className="text-[16px] font-bold text-primary-start leading-none">
-                        <span className="text-[11px]">¥</span>4999
+                      <div className="text-xl font-bold text-primary-start leading-none">
+                        <span className="text-s">¥</span>4999
                       </div>
                       <button 
                         className="w-6 h-6 rounded-full bg-red-50 flex items-center justify-center text-primary-start"

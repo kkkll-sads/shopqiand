@@ -1,8 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ChevronLeft, Search as SearchIcon, XCircle, Trash2, Clock, ArrowUpLeft, Flame, WifiOff, RefreshCcw, FileX } from 'lucide-react';
 import { Skeleton } from '../../components/ui/Skeleton';
+import { useAppNavigate } from '../../lib/navigation';
+import { PageHeader } from '../../components/layout/PageHeader';
 
 export const SearchPage = () => {
+  const { goTo, goBack } = useAppNavigate();
+
   const [query, setQuery] = useState('');
   const [isFocused, setIsFocused] = useState(true);
   const [loading, setLoading] = useState(true);
@@ -45,8 +49,7 @@ export const SearchPage = () => {
   }, []);
 
   const handleBack = () => {
-    const event = new CustomEvent('go-back');
-    window.dispatchEvent(event);
+    goBack();
   };
 
   const handleClearHistory = () => {
@@ -63,14 +66,13 @@ export const SearchPage = () => {
     }
     
     // Navigate to search result page
-    const event = new CustomEvent('change-view', { detail: 'search_result' });
-    window.dispatchEvent(event);
+    goTo('search_result');
   };
 
   const renderHeader = () => (
     <div className="bg-white dark:bg-gray-900 z-40 relative border-b border-border-light pb-2">
       {offline && (
-        <div className="bg-red-50 text-primary-start px-4 py-2 flex items-center justify-between text-[12px]">
+        <div className="bg-red-50 text-primary-start px-4 py-2 flex items-center justify-between text-sm">
           <div className="flex items-center">
             <WifiOff size={14} className="mr-2" />
             <span>网络不稳定，请检查网络设置</span>
@@ -91,7 +93,7 @@ export const SearchPage = () => {
             onChange={(e) => setQuery(e.target.value)}
             onFocus={() => setIsFocused(true)}
             placeholder="搜索商品/SKU" 
-            className="bg-transparent border-none outline-none text-[13px] text-text-main w-full placeholder:text-text-aux"
+            className="bg-transparent border-none outline-none text-base text-text-main w-full placeholder:text-text-aux"
           />
           {query && (
             <button 
@@ -104,7 +106,7 @@ export const SearchPage = () => {
         </div>
         <button 
           onClick={() => handleSearch(query)}
-          className="bg-gradient-to-r from-primary-start to-primary-end text-white text-[13px] font-medium px-3.5 py-1.5 rounded-full shadow-sm active:opacity-80 shrink-0"
+          className="bg-gradient-to-r from-primary-start to-primary-end text-white text-base font-medium px-3.5 py-1.5 rounded-full shadow-sm active:opacity-80 shrink-0"
         >
           搜索
         </button>
@@ -124,7 +126,7 @@ export const SearchPage = () => {
               onClick={() => handleSearch(item)}
               className="flex items-center justify-between px-4 py-3 border-b border-border-light active:bg-bg-base cursor-pointer"
             >
-              <div className="flex items-center text-[14px]">
+              <div className="flex items-center text-md">
                 <span className="text-primary-start">{query}</span>
                 <span className="text-text-main">{item.replace('苹果', '')}</span>
               </div>
@@ -142,7 +144,7 @@ export const SearchPage = () => {
     return (
       <div className="mb-6">
         <div className="flex items-center justify-between mb-3 px-1">
-          <h3 className="text-[14px] font-bold text-text-main">历史搜索</h3>
+          <h3 className="text-md font-bold text-text-main">历史搜索</h3>
           <button onClick={handleClearHistory} className="p-1 text-text-aux active:opacity-70">
             <Trash2 size={14} />
           </button>
@@ -152,7 +154,7 @@ export const SearchPage = () => {
             <div 
               key={index}
               onClick={() => handleSearch(item)}
-              className="bg-white dark:bg-gray-900 px-3 py-1.5 rounded-full text-[12px] text-text-main border border-border-light shadow-sm active:bg-bg-base cursor-pointer"
+              className="bg-white dark:bg-gray-900 px-3 py-1.5 rounded-full text-sm text-text-main border border-border-light shadow-sm active:bg-bg-base cursor-pointer"
             >
               {item}
             </div>
@@ -164,13 +166,13 @@ export const SearchPage = () => {
 
   const renderHotSearches = () => {
     return (
-      <div className="bg-white dark:bg-gray-900 rounded-[16px] p-4 shadow-sm border border-border-light">
+      <div className="bg-white dark:bg-gray-900 rounded-2xl p-4 shadow-sm border border-border-light">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-[14px] font-bold text-text-main flex items-center">
+          <h3 className="text-md font-bold text-text-main flex items-center">
             树交所热搜
             <Flame size={14} className="text-primary-start ml-1" />
           </h3>
-          <span className="text-[11px] text-text-aux">实时更新</span>
+          <span className="text-s text-text-aux">实时更新</span>
         </div>
         
         {loading ? (
@@ -192,18 +194,18 @@ export const SearchPage = () => {
                   onClick={() => handleSearch(item.text)}
                   className="flex items-center cursor-pointer active:opacity-70"
                 >
-                  <span className={`w-4 text-center text-[13px] font-bold mr-2 shrink-0 ${
+                  <span className={`w-4 text-center text-base font-bold mr-2 shrink-0 ${
                     isTop3 ? 'text-primary-start' : 'text-text-aux'
                   }`}>
                     {index + 1}
                   </span>
-                  <span className={`text-[13px] truncate flex-1 ${
+                  <span className={`text-base truncate flex-1 ${
                     isTop3 ? 'text-text-main font-medium' : 'text-text-sub'
                   }`}>
                     {item.text}
                   </span>
                   {item.hot && (
-                    <span className="text-[9px] text-primary-start bg-red-50 px-1 rounded-[3px] ml-1 shrink-0">热</span>
+                    <span className="text-2xs text-primary-start bg-red-50 px-1 rounded-sm ml-1 shrink-0">热</span>
                   )}
                 </div>
               );
@@ -219,10 +221,10 @@ export const SearchPage = () => {
       return (
         <div className="flex-1 flex flex-col items-center justify-center p-4">
           <RefreshCcw size={32} className="text-text-aux mb-3" />
-          <p className="text-[14px] text-text-sub mb-4">搜索服务暂时不可用</p>
+          <p className="text-md text-text-sub mb-4">搜索服务暂时不可用</p>
           <button 
             onClick={() => { setLoading(true); setModuleError(false); }} 
-            className="px-6 py-2 border border-border-light rounded-full text-[13px] text-text-main bg-white dark:bg-gray-900 shadow-sm active:bg-bg-base"
+            className="px-6 py-2 border border-border-light rounded-full text-base text-text-main bg-white dark:bg-gray-900 shadow-sm active:bg-bg-base"
           >
             重试
           </button>
@@ -234,14 +236,11 @@ export const SearchPage = () => {
       return (
         <div className="flex-1 flex flex-col items-center justify-center p-4">
           <FileX size={48} className="text-text-aux mb-4 opacity-50" strokeWidth={1.5} />
-          <p className="text-[15px] font-medium text-text-main mb-1">没找到相关商品</p>
-          <p className="text-[13px] text-text-sub mb-6">换个词搜搜，或者去分类看看</p>
+          <p className="text-lg font-medium text-text-main mb-1">没找到相关商品</p>
+          <p className="text-base text-text-sub mb-6">换个词搜搜，或者去分类看看</p>
           <button 
-            onClick={() => {
-              const event = new CustomEvent('change-view', { detail: 'category' });
-              window.dispatchEvent(event);
-            }}
-            className="px-6 py-2 bg-white dark:bg-gray-900 border border-border-light rounded-full text-[13px] text-text-main shadow-sm active:bg-bg-base"
+            onClick={() => goTo('category')}
+            className="px-6 py-2 bg-white dark:bg-gray-900 border border-border-light rounded-full text-base text-text-main shadow-sm active:bg-bg-base"
           >
             去分类逛逛
           </button>
@@ -253,11 +252,11 @@ export const SearchPage = () => {
       // Simulate search results view
       return (
         <div className="flex-1 flex flex-col items-center justify-center p-4">
-          <p className="text-[14px] text-text-sub mb-4">正在搜索: <span className="text-primary-start font-bold">{query}</span></p>
-          <p className="text-[12px] text-text-aux">（此处应展示搜索结果列表）</p>
+          <p className="text-md text-text-sub mb-4">正在搜索: <span className="text-primary-start font-bold">{query}</span></p>
+          <p className="text-sm text-text-aux">（此处应展示搜索结果列表）</p>
           <button 
             onClick={() => setIsFocused(true)}
-            className="mt-4 px-4 py-1.5 bg-white dark:bg-gray-900 border border-border-light rounded-full text-[12px] text-text-main shadow-sm"
+            className="mt-4 px-4 py-1.5 bg-white dark:bg-gray-900 border border-border-light rounded-full text-sm text-text-main shadow-sm"
           >
             重新搜索
           </button>

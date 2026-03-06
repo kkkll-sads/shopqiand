@@ -1,8 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { ChevronLeft, Search as SearchIcon, LayoutGrid, List as ListIcon, Filter, ShoppingCart, X, WifiOff, RefreshCcw, FileX, ChevronDown, ChevronUp } from 'lucide-react';
 import { Skeleton } from '../../components/ui/Skeleton';
+import { useAppNavigate } from '../../lib/navigation';
+import { PageHeader } from '../../components/layout/PageHeader';
 
 export const SearchResultPage = () => {
+  const { goTo, goBack } = useAppNavigate();
+
   const [isGrid, setIsGrid] = useState(true);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -28,29 +32,25 @@ export const SearchResultPage = () => {
   }, []);
 
   const handleBack = () => {
-    const event = new CustomEvent('go-back');
-    window.dispatchEvent(event);
+    goBack();
   };
 
   const goToSearch = () => {
-    const event = new CustomEvent('change-view', { detail: 'search' });
-    window.dispatchEvent(event);
+    goTo('search');
   };
 
   const goToCategory = () => {
-    const event = new CustomEvent('change-view', { detail: 'category' });
-    window.dispatchEvent(event);
+    goTo('category');
   };
 
   const goToProductDetail = () => {
-    const event = new CustomEvent('change-view', { detail: 'product_detail' });
-    window.dispatchEvent(event);
+    goTo('product_detail');
   };
 
   const renderHeader = () => (
     <div className="bg-white dark:bg-gray-900 z-40 relative shrink-0">
       {offline && (
-        <div className="bg-red-50 text-primary-start px-4 py-2 flex items-center justify-between text-[12px]">
+        <div className="bg-red-50 text-primary-start px-4 py-2 flex items-center justify-between text-sm">
           <div className="flex items-center">
             <WifiOff size={14} className="mr-2" />
             <span>网络不稳定，请检查网络设置</span>
@@ -69,7 +69,7 @@ export const SearchResultPage = () => {
           onClick={goToSearch}
         >
           <SearchIcon size={16} className="text-text-aux mr-2 shrink-0" />
-          <span className="text-[13px] text-text-main flex-1 truncate">手机</span>
+          <span className="text-base text-text-main flex-1 truncate">手机</span>
           <button className="p-1 -mr-1 text-text-aux active:opacity-70">
             <X size={14} />
           </button>
@@ -77,7 +77,7 @@ export const SearchResultPage = () => {
       </div>
 
       {/* Filter Bar Row */}
-      <div className="h-10 flex items-center px-3 border-b border-border-light text-[13px] text-text-main">
+      <div className="h-10 flex items-center px-3 border-b border-border-light text-base text-text-main">
         <div className="flex-1 flex items-center">
           {['综合', '销量'].map((tab) => (
             <div 
@@ -124,7 +124,7 @@ export const SearchResultPage = () => {
         <div className="flex flex-wrap px-2 pt-2">
           {Array.from({ length: 6 }).map((_, i) => (
             <div key={i} className="w-[calc(50%-4px)] mb-2" style={{ marginRight: i % 2 === 0 ? '8px' : '0' }}>
-              <div className="bg-white dark:bg-gray-900 rounded-[16px] overflow-hidden shadow-sm pb-2">
+              <div className="bg-white dark:bg-gray-900 rounded-2xl overflow-hidden shadow-sm pb-2">
                 <Skeleton className="w-full aspect-square" />
                 <div className="px-2 mt-2">
                   <Skeleton className="w-full h-4 mb-1" />
@@ -145,8 +145,8 @@ export const SearchResultPage = () => {
     return (
       <div className="px-2 pt-2">
         {Array.from({ length: 6 }).map((_, i) => (
-          <div key={i} className="bg-white dark:bg-gray-900 rounded-[16px] overflow-hidden shadow-sm mb-2 flex p-2">
-            <Skeleton className="w-[120px] h-[120px] rounded-[8px] shrink-0 mr-3" />
+          <div key={i} className="bg-white dark:bg-gray-900 rounded-2xl overflow-hidden shadow-sm mb-2 flex p-2">
+            <Skeleton className="w-[120px] h-[120px] rounded-lg shrink-0 mr-3" />
             <div className="flex-1 flex flex-col justify-between py-1">
               <div>
                 <Skeleton className="w-full h-4 mb-1" />
@@ -169,10 +169,10 @@ export const SearchResultPage = () => {
       return (
         <div className="flex-1 flex flex-col items-center justify-center p-4">
           <RefreshCcw size={32} className="text-text-aux mb-3" />
-          <p className="text-[14px] text-text-sub mb-4">加载失败，请检查网络</p>
+          <p className="text-md text-text-sub mb-4">加载失败，请检查网络</p>
           <button 
             onClick={() => { setLoading(true); setModuleError(false); }} 
-            className="px-6 py-2 border border-border-light rounded-full text-[13px] text-text-main bg-white dark:bg-gray-900 shadow-sm active:bg-bg-base"
+            className="px-6 py-2 border border-border-light rounded-full text-base text-text-main bg-white dark:bg-gray-900 shadow-sm active:bg-bg-base"
           >
             重试
           </button>
@@ -184,11 +184,11 @@ export const SearchResultPage = () => {
       return (
         <div className="flex-1 flex flex-col items-center justify-center p-4">
           <FileX size={48} className="text-text-aux mb-4 opacity-50" strokeWidth={1.5} />
-          <p className="text-[15px] font-medium text-text-main mb-1">没找到相关商品</p>
-          <p className="text-[13px] text-text-sub mb-6">换个词搜搜，或者去分类看看</p>
+          <p className="text-lg font-medium text-text-main mb-1">没找到相关商品</p>
+          <p className="text-base text-text-sub mb-6">换个词搜搜，或者去分类看看</p>
           <button 
             onClick={goToCategory}
-            className="px-6 py-2 bg-white dark:bg-gray-900 border border-border-light rounded-full text-[13px] text-text-main shadow-sm active:bg-bg-base"
+            className="px-6 py-2 bg-white dark:bg-gray-900 border border-border-light rounded-full text-base text-text-main shadow-sm active:bg-bg-base"
           >
             去分类逛逛
           </button>
@@ -210,23 +210,23 @@ export const SearchResultPage = () => {
               style={{ marginRight: i % 2 === 0 ? '8px' : '0' }}
               onClick={goToProductDetail}
             >
-              <div className="bg-white dark:bg-gray-900 rounded-[16px] overflow-hidden shadow-sm pb-2 h-full flex flex-col">
+              <div className="bg-white dark:bg-gray-900 rounded-2xl overflow-hidden shadow-sm pb-2 h-full flex flex-col">
                 <img src={item.image} className="w-full aspect-square object-cover" referrerPolicy="no-referrer" alt={item.title} />
                 <div className="px-2 mt-2 flex-1 flex flex-col">
-                  <h3 className="text-[13px] text-text-main font-medium line-clamp-2 leading-snug mb-1.5">
-                    {item.isSelf && <span className="inline-block bg-primary-start text-white text-[10px] px-1 rounded-[3px] mr-1 leading-tight align-middle">自营</span>}
+                  <h3 className="text-base text-text-main font-medium line-clamp-2 leading-snug mb-1.5">
+                    {item.isSelf && <span className="inline-block bg-primary-start text-white text-xs px-1 rounded-sm mr-1 leading-tight align-middle">自营</span>}
                     <span className="align-middle">{item.title}</span>
                   </h3>
                   <div className="mt-auto">
-                    {item.freeShipping && <span className="inline-block border border-primary-start text-primary-start text-[9px] px-1 rounded-[3px] mb-1.5">包邮</span>}
+                    {item.freeShipping && <span className="inline-block border border-primary-start text-primary-start text-2xs px-1 rounded-sm mb-1.5">包邮</span>}
                     <div className="flex items-center justify-between mt-1">
                       <div>
                         <div className="text-primary-start font-bold leading-none mb-1">
-                          <span className="text-[10px]">¥</span>
-                          <span className="text-[16px]">{item.price.split('.')[0]}</span>
-                          <span className="text-[10px]">.{item.price.split('.')[1]}</span>
+                          <span className="text-xs">¥</span>
+                          <span className="text-xl">{item.price.split('.')[0]}</span>
+                          <span className="text-xs">.{item.price.split('.')[1]}</span>
                         </div>
-                        <div className="text-[10px] text-text-aux leading-none">已售 {item.sold}</div>
+                        <div className="text-xs text-text-aux leading-none">已售 {item.sold}</div>
                       </div>
                       <button 
                         className="w-6 h-6 bg-primary-start rounded-full flex items-center justify-center shrink-0 active:scale-95 transition-transform"
@@ -249,26 +249,26 @@ export const SearchResultPage = () => {
         {mockProducts.map((item) => (
           <div 
             key={item.id} 
-            className="bg-white dark:bg-gray-900 rounded-[16px] overflow-hidden shadow-sm mb-2 flex p-2 cursor-pointer active:opacity-90 transition-opacity"
+            className="bg-white dark:bg-gray-900 rounded-2xl overflow-hidden shadow-sm mb-2 flex p-2 cursor-pointer active:opacity-90 transition-opacity"
             onClick={goToProductDetail}
           >
-            <img src={item.image} className="w-[120px] h-[120px] rounded-[8px] object-cover shrink-0 mr-3" referrerPolicy="no-referrer" alt={item.title} />
+            <img src={item.image} className="w-[120px] h-[120px] rounded-lg object-cover shrink-0 mr-3" referrerPolicy="no-referrer" alt={item.title} />
             <div className="flex-1 flex flex-col justify-between py-1">
               <div>
-                <h3 className="text-[14px] text-text-main font-medium line-clamp-2 leading-snug mb-1.5">
-                  {item.isSelf && <span className="inline-block bg-primary-start text-white text-[10px] px-1 rounded-[3px] mr-1 leading-tight align-middle">自营</span>}
+                <h3 className="text-md text-text-main font-medium line-clamp-2 leading-snug mb-1.5">
+                  {item.isSelf && <span className="inline-block bg-primary-start text-white text-xs px-1 rounded-sm mr-1 leading-tight align-middle">自营</span>}
                   <span className="align-middle">{item.title}</span>
                 </h3>
-                {item.freeShipping && <span className="inline-block border border-primary-start text-primary-start text-[9px] px-1 rounded-[3px] mb-1.5">包邮</span>}
+                {item.freeShipping && <span className="inline-block border border-primary-start text-primary-start text-2xs px-1 rounded-sm mb-1.5">包邮</span>}
               </div>
               <div className="flex items-center justify-between">
                 <div>
                   <div className="text-primary-start font-bold leading-none mb-1">
-                    <span className="text-[11px]">¥</span>
-                    <span className="text-[18px]">{item.price.split('.')[0]}</span>
-                    <span className="text-[11px]">.{item.price.split('.')[1]}</span>
+                    <span className="text-s">¥</span>
+                    <span className="text-3xl">{item.price.split('.')[0]}</span>
+                    <span className="text-s">.{item.price.split('.')[1]}</span>
                   </div>
-                  <div className="text-[11px] text-text-aux leading-none">已售 {item.sold}</div>
+                  <div className="text-s text-text-aux leading-none">已售 {item.sold}</div>
                 </div>
                 <button 
                   className="w-7 h-7 bg-primary-start rounded-full flex items-center justify-center shrink-0 active:scale-95 transition-transform"
@@ -293,22 +293,22 @@ export const SearchResultPage = () => {
         <div className="flex-1 overflow-y-auto p-4 pt-safe">
           {/* Price Range */}
           <div className="mb-6">
-            <h4 className="text-[14px] font-bold text-text-main mb-3">价格区间</h4>
+            <h4 className="text-md font-bold text-text-main mb-3">价格区间</h4>
             <div className="flex items-center justify-between">
-              <input type="number" placeholder="最低价" className="w-[45%] h-8 bg-bg-card rounded-full text-center text-[12px] text-text-main outline-none border border-transparent focus:border-primary-start/30" />
+              <input type="number" placeholder="最低价" className="w-[45%] h-8 bg-bg-card rounded-full text-center text-sm text-text-main outline-none border border-transparent focus:border-primary-start/30" />
               <span className="text-text-aux">-</span>
-              <input type="number" placeholder="最高价" className="w-[45%] h-8 bg-bg-card rounded-full text-center text-[12px] text-text-main outline-none border border-transparent focus:border-primary-start/30" />
+              <input type="number" placeholder="最高价" className="w-[45%] h-8 bg-bg-card rounded-full text-center text-sm text-text-main outline-none border border-transparent focus:border-primary-start/30" />
             </div>
           </div>
           
           {/* Category */}
           <div className="mb-6">
-            <h4 className="text-[14px] font-bold text-text-main mb-3">分类</h4>
+            <h4 className="text-md font-bold text-text-main mb-3">分类</h4>
             <div className="flex flex-wrap mx-[-4px]">
               {['手机', '手机配件', '数码相机', '无人机'].map((cat, i) => (
                 <button 
                   key={i} 
-                  className={`w-[calc(33.33%-8px)] mx-[4px] mb-[8px] h-8 rounded-full text-[12px] truncate px-2 border transition-colors
+                  className={`w-[calc(33.33%-8px)] mx-[4px] mb-[8px] h-8 rounded-full text-sm truncate px-2 border transition-colors
                     ${i === 0 ? 'bg-primary-start/10 text-primary-start border-primary-start/30' : 'bg-bg-card text-text-main border-transparent active:bg-bg-base'}
                   `}
                 >
@@ -320,12 +320,12 @@ export const SearchResultPage = () => {
 
           {/* Brand */}
           <div className="mb-6">
-            <h4 className="text-[14px] font-bold text-text-main mb-3">品牌</h4>
+            <h4 className="text-md font-bold text-text-main mb-3">品牌</h4>
             <div className="flex flex-wrap mx-[-4px]">
               {['Apple', '华为', '小米', '大疆', '索尼', '三星'].map((brand, i) => (
                 <button 
                   key={i} 
-                  className="w-[calc(33.33%-8px)] mx-[4px] mb-[8px] h-8 bg-bg-card rounded-full text-[12px] text-text-main truncate px-2 border border-transparent active:bg-primary-start/10 active:text-primary-start active:border-primary-start/30 transition-colors"
+                  className="w-[calc(33.33%-8px)] mx-[4px] mb-[8px] h-8 bg-bg-card rounded-full text-sm text-text-main truncate px-2 border border-transparent active:bg-primary-start/10 active:text-primary-start active:border-primary-start/30 transition-colors"
                 >
                   {brand}
                 </button>
@@ -335,12 +335,12 @@ export const SearchResultPage = () => {
 
           {/* Options */}
           <div className="mb-6">
-            <h4 className="text-[14px] font-bold text-text-main mb-3">选项</h4>
+            <h4 className="text-md font-bold text-text-main mb-3">选项</h4>
             <div className="flex flex-wrap mx-[-4px]">
-              <button className="w-[calc(33.33%-8px)] mx-[4px] mb-[8px] h-8 bg-primary-start/10 border border-primary-start/30 text-primary-start rounded-full text-[12px] truncate px-2">
+              <button className="w-[calc(33.33%-8px)] mx-[4px] mb-[8px] h-8 bg-primary-start/10 border border-primary-start/30 text-primary-start rounded-full text-sm truncate px-2">
                 仅看有货
               </button>
-              <button className="w-[calc(33.33%-8px)] mx-[4px] mb-[8px] h-8 bg-bg-card rounded-full text-[12px] text-text-main truncate px-2 border border-transparent active:bg-bg-base">
+              <button className="w-[calc(33.33%-8px)] mx-[4px] mb-[8px] h-8 bg-bg-card rounded-full text-sm text-text-main truncate px-2 border border-transparent active:bg-bg-base">
                 树交所发货
               </button>
             </div>
@@ -350,13 +350,13 @@ export const SearchResultPage = () => {
         {/* Bottom Buttons */}
         <div className="h-14 bg-white dark:bg-gray-900 border-t border-border-light flex items-center px-4 pb-safe shrink-0">
           <button 
-            className="flex-1 h-10 rounded-full border border-border-light text-[14px] text-text-main font-medium mr-3 active:bg-bg-base transition-colors" 
+            className="flex-1 h-10 rounded-full border border-border-light text-md text-text-main font-medium mr-3 active:bg-bg-base transition-colors" 
             onClick={() => setIsDrawerOpen(false)}
           >
             重置
           </button>
           <button 
-            className="flex-1 h-10 rounded-full bg-gradient-to-r from-primary-start to-primary-end text-white text-[14px] font-medium active:opacity-80 transition-opacity" 
+            className="flex-1 h-10 rounded-full bg-gradient-to-r from-primary-start to-primary-end text-white text-md font-medium active:opacity-80 transition-opacity" 
             onClick={() => setIsDrawerOpen(false)}
           >
             确定

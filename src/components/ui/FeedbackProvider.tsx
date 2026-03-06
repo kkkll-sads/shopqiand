@@ -121,23 +121,23 @@ export const FeedbackProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     const icons = {
       info: <Info size={16} className="text-blue-500 shrink-0" />,
       warning: <AlertCircle size={16} className="text-orange-500 shrink-0" />,
-      error: <XCircle size={16} className="text-[#f2270c] shrink-0" />,
+      error: <XCircle size={16} className="text-text-price shrink-0" />,
       success: <CheckCircle2 size={16} className="text-green-500 shrink-0" />
     };
 
     return (
       <div className="fixed top-safe pt-2 left-4 right-4 z-[100] animate-in slide-in-from-top-4 fade-in duration-300 pointer-events-none">
         <div 
-          className="bg-gray-100 dark:bg-gray-800 rounded-[12px] min-h-[40px] px-3 py-2 flex items-center shadow-sm pointer-events-auto"
+          className="bg-gray-100 dark:bg-gray-800 rounded-xl min-h-[40px] px-3 py-2 flex items-center shadow-sm pointer-events-auto"
           onClick={noticeBar.onClick}
         >
           {icons[noticeBar.type || 'info']}
-          <div className="flex-1 truncate text-[13px] text-gray-800 dark:text-gray-200 mx-2">
+          <div className="flex-1 truncate text-base text-gray-800 dark:text-gray-200 mx-2">
             {noticeBar.message}
           </div>
           {noticeBar.actionText && (
             <button 
-              className="text-[13px] text-[#f2270c] shrink-0 mr-3 font-medium active:opacity-70"
+              className="text-base text-text-price shrink-0 mr-3 font-medium active:opacity-70"
               onClick={(e) => {
                 e.stopPropagation();
                 if (noticeBar.onAction) noticeBar.onAction();
@@ -174,9 +174,9 @@ export const FeedbackProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
     return (
       <div className="fixed bottom-[120px] left-1/2 -translate-x-1/2 z-[110] animate-in fade-in slide-in-from-bottom-4 duration-200 pointer-events-none w-full px-8 flex justify-center">
-        <div className="bg-gray-900/90 dark:bg-gray-800/95 text-white px-4 py-2.5 rounded-[20px] flex items-center shadow-sm max-w-full">
+        <div className="bg-gray-900/90 dark:bg-gray-800/95 text-white px-4 py-2.5 rounded-2xl flex items-center shadow-sm max-w-full">
           {toast.type && icons[toast.type]}
-          <span className="text-[14px] leading-snug line-clamp-2 text-center break-words">
+          <span className="text-md leading-snug line-clamp-2 text-center break-words">
             {toast.message}
           </span>
         </div>
@@ -190,7 +190,7 @@ export const FeedbackProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     return (
       <div className="fixed inset-0 z-[120] flex items-center justify-center">
         <div className="absolute inset-0 bg-black/40 transition-opacity"></div>
-        <div className="bg-white dark:bg-gray-800 rounded-[16px] p-6 flex flex-col items-center min-w-[120px] max-w-[240px] relative z-10 shadow-lg animate-in zoom-in-95 duration-200">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 flex flex-col items-center min-w-[120px] max-w-[240px] relative z-10 shadow-lg animate-in zoom-in-95 duration-200">
           {loading.cancelable && (
             <button 
               className="absolute top-3 right-3 text-gray-400 active:text-gray-600"
@@ -203,14 +203,14 @@ export const FeedbackProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             </button>
           )}
           
-          <Loader2 className="w-8 h-8 text-[#f2270c] animate-spin mb-3" />
+          <Loader2 className="w-8 h-8 text-text-price animate-spin mb-3" />
           
-          <div className="text-[14px] text-gray-800 dark:text-gray-200 font-medium text-center">
+          <div className="text-md text-gray-800 dark:text-gray-200 font-medium text-center">
             {loadingTimeoutReached ? '仍在处理中' : loading.message}
           </div>
           
           {loading.subMessage && !loadingTimeoutReached && (
-            <div className="text-[12px] text-gray-500 dark:text-gray-400 mt-1 text-center leading-tight">
+            <div className="text-sm text-gray-500 dark:text-gray-400 mt-1 text-center leading-tight">
               {loading.subMessage}
             </div>
           )}
@@ -218,7 +218,7 @@ export const FeedbackProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           {loadingTimeoutReached && (
             <div className="mt-4 flex flex-col w-full space-y-2.5">
               <button 
-                className="w-full h-[36px] rounded-full border border-[#f2270c] text-[#f2270c] text-[13px] font-medium active:bg-red-50 dark:active:bg-red-900/20"
+                className="w-full h-[36px] rounded-full border border-[#f2270c] text-text-price text-base font-medium active:bg-red-50 dark:active:bg-red-900/20"
                 onClick={() => {
                   setLoadingTimeoutReached(false);
                   // Reset timeout
@@ -232,7 +232,7 @@ export const FeedbackProvider: React.FC<{ children: React.ReactNode }> = ({ chil
               </button>
               {loading.onCancel && (
                 <button 
-                  className="w-full h-[36px] rounded-full border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 text-[13px] font-medium active:bg-gray-50 dark:active:bg-gray-700"
+                  className="w-full h-[36px] rounded-full border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 text-base font-medium active:bg-gray-50 dark:active:bg-gray-700"
                   onClick={() => {
                     loading.onCancel!();
                     hideLoading();

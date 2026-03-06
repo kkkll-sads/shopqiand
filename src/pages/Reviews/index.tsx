@@ -2,6 +2,10 @@ import React, { useState, useEffect, useRef } from 'react';
 import { ChevronLeft, Star, StarHalf, ThumbsUp, MessageCircle, MoreHorizontal, AlertCircle, RefreshCcw, WifiOff, X } from 'lucide-react';
 import { Card } from '../../components/ui/Card';
 import { Skeleton } from '../../components/ui/Skeleton';
+import { useAppNavigate } from '../../lib/navigation';
+import { PageHeader } from '../../components/layout/PageHeader';
+import { ErrorState } from '../../components/ui/ErrorState';
+import { EmptyState } from '../../components/ui/EmptyState';
 
 // Mock Data
 const MOCK_REVIEWS = [
@@ -98,6 +102,7 @@ const TAGS = [
 ];
 
 export function ReviewsPage() {
+  const { goTo, goBack } = useAppNavigate();
   const [viewState, setViewState] = useState<'loading' | 'error' | 'empty' | 'normal'>('loading');
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
   const [activeFilter, setActiveFilter] = useState('全部');
@@ -127,7 +132,7 @@ export function ReviewsPage() {
   }, []);
 
   const handleBack = () => {
-    window.dispatchEvent(new CustomEvent('go-back'));
+    goBack();
   };
 
   const toggleExpand = (id: string) => {
@@ -200,27 +205,11 @@ export function ReviewsPage() {
   );
 
   const renderError = () => (
-    <div className="flex flex-col items-center justify-center h-[60vh] text-text-sub">
-      <AlertCircle size={48} className="text-border-main mb-4" />
-      <p className="mb-4">加载评价失败，请检查网络</p>
-      <button 
-        onClick={() => {
-          setViewState('loading');
-          setTimeout(() => setViewState('normal'), 1000);
-        }}
-        className="flex items-center px-4 py-2 bg-primary-start text-white rounded-full active:opacity-80"
-      >
-        <RefreshCcw size={16} className="mr-2" />
-        重新加载
-      </button>
-    </div>
+    <ErrorState onRetry={fetchData} />
   );
 
   const renderEmpty = () => (
-    <div className="flex flex-col items-center justify-center h-[60vh] text-text-sub">
-      <MessageCircle size={48} className="text-border-main mb-4" />
-      <p>暂无评价</p>
-    </div>
+    <EmptyState message="暂无评价" />
   );
 
   const renderContent = () => {
@@ -234,15 +223,15 @@ export function ReviewsPage() {
         <Card className="m-4 p-4 shadow-sm">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-baseline space-x-2">
-              <span className="text-[13px] text-text-main font-medium">好评度</span>
-              <span className="text-[28px] font-bold text-primary-start">98%</span>
+              <span className="text-base text-text-main font-medium">好评度</span>
+              <span className="text-6xl font-bold text-primary-start">98%</span>
             </div>
             <div className="flex flex-col items-end">
               <div className="flex items-center space-x-1 mb-1">
-                <span className="text-[12px] text-text-sub">综合评分</span>
+                <span className="text-sm text-text-sub">综合评分</span>
                 {renderStars(5, 12)}
               </div>
-              <span className="text-[11px] text-text-aux">10万+条评价</span>
+              <span className="text-s text-text-aux">10万+条评价</span>
             </div>
           </div>
           
@@ -250,7 +239,7 @@ export function ReviewsPage() {
             {TAGS.map((tag, index) => (
               <div 
                 key={index}
-                className="px-2.5 py-1 bg-red-50 text-text-main text-[11px] rounded-full"
+                className="px-2.5 py-1 bg-red-50 text-text-main text-s rounded-full"
               >
                 {tag.label} <span className="text-text-aux">{tag.count}</span>
               </div>
@@ -264,7 +253,7 @@ export function ReviewsPage() {
             <button
               key={filter}
               onClick={() => setActiveFilter(filter)}
-              className={`whitespace-nowrap text-[13px] px-1 py-1 ${
+              className={`whitespace-nowrap text-base px-1 py-1 ${
                 activeFilter === filter 
                   ? 'text-text-main font-bold border-b-2 border-primary-start' 
                   : 'text-text-sub'
@@ -289,10 +278,10 @@ export function ReviewsPage() {
                     <img src={review.user.avatar} alt="avatar" className="w-8 h-8 rounded-full bg-border-light object-cover" referrerPolicy="no-referrer" />
                     <div>
                       <div className="flex items-center space-x-2">
-                        <span className="text-[13px] font-medium text-text-main">{review.user.nickname}</span>
+                        <span className="text-base font-medium text-text-main">{review.user.nickname}</span>
                         {renderStars(review.rating, 10)}
                       </div>
-                      <span className="text-[11px] text-text-aux">{review.date}</span>
+                      <span className="text-s text-text-aux">{review.date}</span>
                     </div>
                   </div>
                   <MoreHorizontal size={16} className="text-text-aux" />
@@ -300,13 +289,13 @@ export function ReviewsPage() {
 
                 {/* Review Text */}
                 <div className="mb-3 relative">
-                  <p className={`text-[14px] text-text-main leading-relaxed ${!isExpanded && textLines ? 'line-clamp-3' : ''}`}>
+                  <p className={`text-md text-text-main leading-relaxed ${!isExpanded && textLines ? 'line-clamp-3' : ''}`}>
                     {review.text}
                   </p>
                   {textLines && !isExpanded && (
                     <button 
                       onClick={() => toggleExpand(review.id)}
-                      className="absolute bottom-0 right-0 bg-white dark:bg-gray-900 pl-2 text-primary-start text-[13px] font-medium"
+                      className="absolute bottom-0 right-0 bg-white dark:bg-gray-900 pl-2 text-primary-start text-base font-medium"
                     >
                       展开
                     </button>
@@ -314,7 +303,7 @@ export function ReviewsPage() {
                   {textLines && isExpanded && (
                     <button 
                       onClick={() => toggleExpand(review.id)}
-                      className="text-primary-start text-[13px] font-medium mt-1"
+                      className="text-primary-start text-base font-medium mt-1"
                     >
                       收起
                     </button>
@@ -338,13 +327,13 @@ export function ReviewsPage() {
 
                 {/* SKU Info & Actions */}
                 <div className="flex justify-between items-center mt-2">
-                  <span className="text-[11px] text-text-aux line-clamp-1 flex-1 mr-4">{review.skuInfo}</span>
+                  <span className="text-s text-text-aux line-clamp-1 flex-1 mr-4">{review.skuInfo}</span>
                   <div className="flex items-center space-x-4 text-text-sub">
-                    <button className="flex items-center space-x-1 text-[12px]">
+                    <button className="flex items-center space-x-1 text-sm">
                       <MessageCircle size={14} />
                       <span>{review.comments || '评论'}</span>
                     </button>
-                    <button className="flex items-center space-x-1 text-[12px]">
+                    <button className="flex items-center space-x-1 text-sm">
                       <ThumbsUp size={14} />
                       <span>{review.likes || '点赞'}</span>
                     </button>
@@ -358,7 +347,7 @@ export function ReviewsPage() {
         {/* Load More */}
         {hasMore ? (
           <div 
-            className="py-6 flex justify-center items-center text-[12px] text-text-sub cursor-pointer"
+            className="py-6 flex justify-center items-center text-sm text-text-sub cursor-pointer"
             onClick={loadMore}
           >
             {loadingMore ? (
@@ -368,7 +357,7 @@ export function ReviewsPage() {
             )}
           </div>
         ) : (
-          <div className="py-6 text-center text-[12px] text-text-aux">
+          <div className="py-6 text-center text-sm text-text-aux">
             没有更多评价了
           </div>
         )}
@@ -380,7 +369,7 @@ export function ReviewsPage() {
     <div className="min-h-screen bg-bg-base flex flex-col">
       {/* Offline Banner */}
       {isOffline && (
-        <div className="bg-red-500 text-white text-[12px] py-1.5 px-4 flex items-center justify-center sticky top-0 z-50">
+        <div className="bg-red-500 text-white text-sm py-1.5 px-4 flex items-center justify-center sticky top-0 z-50">
           <WifiOff size={14} className="mr-2" />
           网络连接已断开，请检查网络设置
         </div>
@@ -391,13 +380,10 @@ export function ReviewsPage() {
         <button onClick={handleBack} className="p-1 -ml-1 active:bg-border-light rounded-full">
           <ChevronLeft size={24} className="text-text-main" />
         </button>
-        <h1 className="text-[16px] font-medium text-text-main">评价</h1>
+        <h1 className="text-xl font-medium text-text-main">评价</h1>
         <button 
-          onClick={() => {
-            const event = new CustomEvent('change-view', { detail: 'add_review' });
-            window.dispatchEvent(event);
-          }}
-          className="text-[14px] text-primary-start font-medium active:opacity-70"
+          onClick={() => goTo('add_review')}
+          className="text-md text-primary-start font-medium active:opacity-70"
         >
           写评价
         </button>
@@ -412,7 +398,7 @@ export function ReviewsPage() {
       {previewImage && (
         <div className="fixed inset-0 z-50 bg-black flex flex-col">
           <div className="flex justify-between items-center p-4 text-white">
-            <span className="text-[14px]">图片预览</span>
+            <span className="text-md">图片预览</span>
             <button onClick={() => setPreviewImage(null)} className="p-2">
               <X size={24} />
             </button>
@@ -430,7 +416,7 @@ export function ReviewsPage() {
 
       {/* Debug State Controller */}
       <div className="fixed bottom-20 right-4 flex flex-col gap-2 z-50 opacity-50 hover:opacity-100 transition-opacity">
-        <div className="bg-black/80 text-white text-[10px] p-2 rounded-lg flex flex-col gap-1">
+        <div className="bg-black/80 text-white text-xs p-2 rounded-lg flex flex-col gap-1">
           <div className="font-bold mb-1 border-b border-white/20 pb-1">状态控制</div>
           <button onClick={() => setViewState('normal')} className={viewState === 'normal' ? 'text-primary-start' : ''}>Normal</button>
           <button onClick={() => setViewState('loading')} className={viewState === 'loading' ? 'text-primary-start' : ''}>Loading</button>

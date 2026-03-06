@@ -6,8 +6,12 @@ import {
 } from 'lucide-react';
 import { Card } from '../../components/ui/Card';
 import { Skeleton } from '../../components/ui/Skeleton';
+import { useAppNavigate } from '../../lib/navigation';
+import { PageHeader } from '../../components/layout/PageHeader';
 
 export const WithdrawPage = () => {
+  const { goTo, goBack } = useAppNavigate();
+
   const [loading, setLoading] = useState(true);
   const [offline, setOffline] = useState(false);
   const [moduleError, setModuleError] = useState(false);
@@ -39,8 +43,7 @@ export const WithdrawPage = () => {
   }, []);
 
   const handleGoBack = () => {
-    const event = new CustomEvent('go-back');
-    window.dispatchEvent(event);
+    goBack();
   };
 
   const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -70,7 +73,7 @@ export const WithdrawPage = () => {
         <button onClick={handleGoBack} className="p-1 -ml-1 active:opacity-70 text-text-main">
           <ChevronLeft size={24} />
         </button>
-        <h1 className="text-[17px] font-medium text-text-main">收益提现</h1>
+        <h1 className="text-2xl font-medium text-text-main">收益提现</h1>
         <button 
           className="p-1 -mr-1 active:opacity-70 text-text-main"
           onClick={() => alert('提现记录')}
@@ -87,15 +90,15 @@ export const WithdrawPage = () => {
         {renderHeader()}
         <div className="flex-1 flex flex-col items-center justify-center p-6">
           <RefreshCcw size={48} className="text-text-aux mb-4" />
-          <p className="text-[15px] text-text-main mb-2">页面加载失败</p>
-          <p className="text-[13px] text-text-sub mb-6 text-center">请检查网络连接后重试</p>
+          <p className="text-lg text-text-main mb-2">页面加载失败</p>
+          <p className="text-base text-text-sub mb-6 text-center">请检查网络连接后重试</p>
           <button 
             onClick={() => {
               setLoading(true);
               setModuleError(false);
               setTimeout(() => setLoading(false), 1000);
             }}
-            className="px-6 py-2 bg-gradient-to-r from-primary-start to-primary-end text-white rounded-full text-[14px] font-medium shadow-sm active:opacity-80"
+            className="px-6 py-2 bg-gradient-to-r from-primary-start to-primary-end text-white rounded-full text-md font-medium shadow-sm active:opacity-80"
           >
             重新加载
           </button>
@@ -107,7 +110,7 @@ export const WithdrawPage = () => {
   return (
     <div className="flex-1 flex flex-col bg-red-50/30 relative h-full">
       {offline && (
-        <div className="bg-red-50 text-primary-start px-4 py-2 flex items-center justify-between text-[12px] z-50 absolute top-12 left-0 right-0">
+        <div className="bg-red-50 text-primary-start px-4 py-2 flex items-center justify-between text-sm z-50 absolute top-12 left-0 right-0">
           <div className="flex items-center">
             <WifiOff size={14} className="mr-2" />
             <span>网络不稳定，请检查网络设置</span>
@@ -133,19 +136,19 @@ export const WithdrawPage = () => {
             ) : (
               <div>
                 <div className="flex items-center justify-between mb-1">
-                  <span className="text-[13px] text-text-sub">可提现余额 (元)</span>
+                  <span className="text-base text-text-sub">可提现余额 (元)</span>
                   <button 
-                    className="text-[12px] text-text-aux flex items-center active:opacity-70"
+                    className="text-sm text-text-aux flex items-center active:opacity-70"
                     onClick={() => setShowRulesModal(true)}
                   >
                     提现规则 <Info size={12} className="ml-1" />
                   </button>
                 </div>
-                <div className="text-[32px] font-bold text-primary-start mb-2 tracking-tight">
+                <div className="text-7xl font-bold text-primary-start mb-2 tracking-tight">
                   {withdrawableBalance.toFixed(2)}
                 </div>
                 {withdrawingAmount > 0 && (
-                  <div className="text-[12px] text-text-sub flex items-center">
+                  <div className="text-sm text-text-sub flex items-center">
                     <span className="w-1.5 h-1.5 rounded-full bg-orange-400 mr-1.5"></span>
                     提现中金额：{withdrawingAmount.toFixed(2)} 元
                   </div>
@@ -177,12 +180,12 @@ export const WithdrawPage = () => {
                     <selectedMethod.icon size={18} />
                   </div>
                   <div>
-                    <div className="text-[15px] font-medium text-text-main mb-0.5">{selectedMethod.name}</div>
-                    <div className="text-[12px] text-text-sub">{selectedMethod.account}</div>
+                    <div className="text-lg font-medium text-text-main mb-0.5">{selectedMethod.name}</div>
+                    <div className="text-sm text-text-sub">{selectedMethod.account}</div>
                   </div>
                 </div>
                 <div className="flex items-center text-text-aux">
-                  <span className="text-[12px] mr-1">更换</span>
+                  <span className="text-sm mr-1">更换</span>
                   <ChevronRight size={16} />
                 </div>
               </div>
@@ -199,15 +202,15 @@ export const WithdrawPage = () => {
               </div>
             ) : (
               <>
-                <div className="text-[14px] font-medium text-text-main mb-3">提现金额</div>
+                <div className="text-md font-medium text-text-main mb-3">提现金额</div>
                 <div className="flex items-center border-b border-border-light pb-2 mb-3">
-                  <span className="text-[24px] font-medium text-text-main mr-2 shrink-0">¥</span>
+                  <span className="text-5xl font-medium text-text-main mr-2 shrink-0">¥</span>
                   <input
                     type="text"
                     value={amount}
                     onChange={handleAmountChange}
                     placeholder={`最低提现 ${minWithdrawAmount} 元`}
-                    className="flex-1 text-[28px] font-bold text-text-main bg-transparent outline-none placeholder:text-[16px] placeholder:font-normal placeholder:text-text-aux min-w-0"
+                    className="flex-1 text-6xl font-bold text-text-main bg-transparent outline-none placeholder:text-xl placeholder:font-normal placeholder:text-text-aux min-w-0"
                   />
                   {amount && (
                     <button 
@@ -220,7 +223,7 @@ export const WithdrawPage = () => {
                   <div className="w-px h-4 bg-border-light mx-3 shrink-0"></div>
                   <button 
                     onClick={handleWithdrawAll}
-                    className="text-[14px] font-medium text-primary-start active:opacity-70 shrink-0 whitespace-nowrap"
+                    className="text-md font-medium text-primary-start active:opacity-70 shrink-0 whitespace-nowrap"
                   >
                     全部
                   </button>
@@ -229,20 +232,20 @@ export const WithdrawPage = () => {
                 {/* Error/Hint Message */}
                 <div className="min-h-[18px]">
                   {numAmount > withdrawableBalance ? (
-                    <div className="text-[12px] text-primary-start flex items-center">
+                    <div className="text-sm text-primary-start flex items-center">
                       <AlertCircle size={12} className="mr-1" /> 输入金额超过可提现余额
                     </div>
                   ) : numAmount > 0 && numAmount < minWithdrawAmount ? (
-                    <div className="text-[12px] text-primary-start flex items-center">
+                    <div className="text-sm text-primary-start flex items-center">
                       <AlertCircle size={12} className="mr-1" /> 最低提现金额为 {minWithdrawAmount} 元
                     </div>
                   ) : numAmount > 0 ? (
-                    <div className="text-[12px] text-text-sub flex items-center justify-between">
+                    <div className="text-sm text-text-sub flex items-center justify-between">
                       <span>额外扣除手续费 ¥{fee.toFixed(2)}</span>
                       <span className="text-text-main">预计 <span className="font-medium">T+1</span> 到账</span>
                     </div>
                   ) : (
-                    <div className="text-[12px] text-text-aux">
+                    <div className="text-sm text-text-aux">
                       提现手续费 {feeRate * 100}%，最低 ¥{minFee}
                     </div>
                   )}
@@ -255,7 +258,7 @@ export const WithdrawPage = () => {
           {!loading && (
             <div className="flex items-start px-1 mt-4">
               <ShieldCheck size={14} className="text-green-500 mr-1.5 mt-0.5 shrink-0" />
-              <p className="text-[11px] text-text-sub leading-relaxed">
+              <p className="text-s text-text-sub leading-relaxed">
                 为保障您的资金安全，提现操作可能需要进行短信验证或支付密码校验。请确保本人操作，谨防诈骗。
               </p>
             </div>
@@ -267,16 +270,16 @@ export const WithdrawPage = () => {
       <div className="fixed bottom-0 left-0 right-0 bg-bg-card border-t border-border-light pb-safe z-40">
         <div className="max-w-[390px] mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex flex-col">
-            <span className="text-[11px] text-text-sub mb-0.5">实际到账</span>
+            <span className="text-s text-text-sub mb-0.5">实际到账</span>
             <div className="flex items-baseline text-primary-start">
-              <span className="text-[14px] font-medium mr-0.5">¥</span>
-              <span className="text-[20px] font-bold">{actualArrival.toFixed(2)}</span>
+              <span className="text-md font-medium mr-0.5">¥</span>
+              <span className="text-4xl font-bold">{actualArrival.toFixed(2)}</span>
             </div>
           </div>
           <button
             disabled={isSubmitDisabled}
             onClick={() => alert('提现请求已提交')}
-            className={`w-[160px] h-[44px] rounded-full text-[15px] font-medium transition-all shadow-sm ${
+            className={`w-[160px] h-[44px] rounded-full text-lg font-medium transition-all shadow-sm ${
               isSubmitDisabled 
                 ? 'bg-bg-base text-text-aux border border-border-light shadow-none' 
                 : 'bg-gradient-to-r from-primary-start to-primary-end text-white active:opacity-80'
@@ -293,7 +296,7 @@ export const WithdrawPage = () => {
           <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setShowMethodModal(false)}></div>
           <div className="bg-bg-card rounded-t-[20px] w-full max-w-[390px] mx-auto relative z-10 flex flex-col max-h-[70vh] animate-in slide-in-from-bottom duration-200">
             <div className="flex items-center justify-between p-4 border-b border-border-light">
-              <h3 className="text-[16px] font-bold text-text-main">选择收款方式</h3>
+              <h3 className="text-xl font-bold text-text-main">选择收款方式</h3>
               <button onClick={() => setShowMethodModal(false)} className="p-1 text-text-aux active:text-text-main">
                 <XCircle size={20} />
               </button>
@@ -302,7 +305,7 @@ export const WithdrawPage = () => {
               {methods.map((method) => (
                 <div 
                   key={method.id}
-                  className="flex items-center justify-between p-3 rounded-[12px] active:bg-bg-base transition-colors cursor-pointer mb-1"
+                  className="flex items-center justify-between p-3 rounded-xl active:bg-bg-base transition-colors cursor-pointer mb-1"
                   onClick={() => {
                     setSelectedMethodId(method.id);
                     setShowMethodModal(false);
@@ -313,8 +316,8 @@ export const WithdrawPage = () => {
                       <method.icon size={18} />
                     </div>
                     <div>
-                      <div className="text-[15px] font-medium text-text-main mb-0.5">{method.name}</div>
-                      <div className="text-[12px] text-text-sub">{method.account}</div>
+                      <div className="text-lg font-medium text-text-main mb-0.5">{method.name}</div>
+                      <div className="text-sm text-text-sub">{method.account}</div>
                     </div>
                   </div>
                   {selectedMethodId === method.id && (
@@ -323,7 +326,7 @@ export const WithdrawPage = () => {
                 </div>
               ))}
               <div 
-                className="flex items-center justify-center p-4 mt-2 border border-dashed border-border-light rounded-[12px] text-text-sub text-[14px] active:bg-bg-base cursor-pointer"
+                className="flex items-center justify-center p-4 mt-2 border border-dashed border-border-light rounded-xl text-text-sub text-md active:bg-bg-base cursor-pointer"
                 onClick={() => alert('添加新收款方式')}
               >
                 + 添加新收款方式
@@ -339,12 +342,12 @@ export const WithdrawPage = () => {
           <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setShowRulesModal(false)}></div>
           <Card className="w-full max-w-[320px] relative z-10 p-6 flex flex-col animate-in fade-in zoom-in duration-200">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-[16px] font-bold text-text-main">提现规则说明</h3>
+              <h3 className="text-xl font-bold text-text-main">提现规则说明</h3>
               <button onClick={() => setShowRulesModal(false)} className="text-text-aux active:text-text-main">
                 <XCircle size={20} />
               </button>
             </div>
-            <div className="space-y-4 text-[13px] text-text-sub max-h-[60vh] overflow-y-auto no-scrollbar">
+            <div className="space-y-4 text-base text-text-sub max-h-[60vh] overflow-y-auto no-scrollbar">
               <div>
                 <h4 className="font-medium text-text-main mb-1">1. 提现额度</h4>
                 <p>单笔最低提现金额为 {minWithdrawAmount} 元，单日最高提现限额为 50,000 元。</p>
@@ -363,7 +366,7 @@ export const WithdrawPage = () => {
               </div>
             </div>
             <button 
-              className="w-full mt-6 py-2.5 bg-bg-base text-text-main rounded-full text-[14px] font-medium active:bg-border-light transition-colors"
+              className="w-full mt-6 py-2.5 bg-bg-base text-text-main rounded-full text-md font-medium active:bg-border-light transition-colors"
               onClick={() => setShowRulesModal(false)}
             >
               我知道了

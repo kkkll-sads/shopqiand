@@ -1,8 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { ChevronLeft, WifiOff, RefreshCcw, Copy, Package, MapPin, Phone, HeadphonesIcon, CheckCircle2, Truck } from 'lucide-react';
 import { Skeleton } from '../../components/ui/Skeleton';
+import { useAppNavigate } from '../../lib/navigation';
+import { PageHeader } from '../../components/layout/PageHeader';
 
 export const LogisticsPage = () => {
+  const { goTo, goBack } = useAppNavigate();
+
   const [loading, setLoading] = useState(true);
   const [offline, setOffline] = useState(false);
   const [moduleError, setModuleError] = useState(false);
@@ -39,8 +43,7 @@ export const LogisticsPage = () => {
   }, []);
 
   const handleBack = () => {
-    const event = new CustomEvent('go-back');
-    window.dispatchEvent(event);
+    goBack();
   };
 
   const handleCopy = (text: string) => {
@@ -50,7 +53,7 @@ export const LogisticsPage = () => {
   const renderHeader = () => (
     <div className="bg-white dark:bg-gray-900 z-40 relative shrink-0 border-b border-border-light">
       {offline && (
-        <div className="bg-red-50 text-primary-start px-4 py-2 flex items-center justify-between text-[12px]">
+        <div className="bg-red-50 text-primary-start px-4 py-2 flex items-center justify-between text-sm">
           <div className="flex items-center">
             <WifiOff size={14} className="mr-2" />
             <span>网络不稳定，请检查网络设置</span>
@@ -64,7 +67,7 @@ export const LogisticsPage = () => {
             <ChevronLeft size={24} />
           </button>
         </div>
-        <h1 className="text-[16px] font-bold text-text-main text-center w-1/3">物流详情</h1>
+        <h1 className="text-xl font-bold text-text-main text-center w-1/3">物流详情</h1>
         <div className="w-1/3"></div>
       </div>
     </div>
@@ -73,7 +76,7 @@ export const LogisticsPage = () => {
   const renderSkeleton = () => (
     <div className="p-3">
       {/* Info Card Skeleton */}
-      <div className="bg-white dark:bg-gray-900 rounded-[16px] p-4 mb-3 shadow-sm">
+      <div className="bg-white dark:bg-gray-900 rounded-2xl p-4 mb-3 shadow-sm">
         <div className="flex items-center mb-3">
           <Skeleton className="w-10 h-10 rounded-full mr-3" />
           <div>
@@ -84,7 +87,7 @@ export const LogisticsPage = () => {
       </div>
       
       {/* Address Skeleton */}
-      <div className="bg-white dark:bg-gray-900 rounded-[16px] p-4 mb-3 shadow-sm flex items-center">
+      <div className="bg-white dark:bg-gray-900 rounded-2xl p-4 mb-3 shadow-sm flex items-center">
         <Skeleton className="w-6 h-6 rounded-full mr-3 shrink-0" />
         <div className="flex-1">
           <Skeleton className="w-3/4 h-4 mb-1" />
@@ -93,7 +96,7 @@ export const LogisticsPage = () => {
       </div>
 
       {/* Timeline Skeleton */}
-      <div className="bg-white dark:bg-gray-900 rounded-[16px] p-4 mb-3 shadow-sm">
+      <div className="bg-white dark:bg-gray-900 rounded-2xl p-4 mb-3 shadow-sm">
         {[1, 2, 3, 4].map((i) => (
           <div key={i} className="flex mb-6 last:mb-0">
             <div className="w-6 flex flex-col items-center mr-3">
@@ -116,10 +119,10 @@ export const LogisticsPage = () => {
       return (
         <div className="flex-1 flex flex-col items-center justify-center p-4">
           <RefreshCcw size={32} className="text-text-aux mb-3" />
-          <p className="text-[14px] text-text-sub mb-4">加载失败，请检查网络</p>
+          <p className="text-md text-text-sub mb-4">加载失败，请检查网络</p>
           <button 
             onClick={() => { setLoading(true); setModuleError(false); }} 
-            className="px-6 py-2 border border-border-light rounded-full text-[13px] text-text-main bg-white dark:bg-gray-900 shadow-sm active:bg-bg-base"
+            className="px-6 py-2 border border-border-light rounded-full text-base text-text-main bg-white dark:bg-gray-900 shadow-sm active:bg-bg-base"
           >
             重试
           </button>
@@ -131,8 +134,8 @@ export const LogisticsPage = () => {
       return (
         <div className="flex-1 flex flex-col items-center justify-center p-4">
           <Package size={48} className="text-border-light mb-4" />
-          <p className="text-[15px] text-text-main font-medium mb-1">暂无物流信息</p>
-          <p className="text-[13px] text-text-sub">商家正快马加鞭为您准备商品，请耐心等待</p>
+          <p className="text-lg text-text-main font-medium mb-1">暂无物流信息</p>
+          <p className="text-base text-text-sub">商家正快马加鞭为您准备商品，请耐心等待</p>
         </div>
       );
     }
@@ -144,7 +147,7 @@ export const LogisticsPage = () => {
     return (
       <div className="p-3 pb-24">
         {/* Top Info Card */}
-        <div className="bg-white dark:bg-gray-900 rounded-[16px] shadow-sm mb-3 p-4 flex items-center">
+        <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm mb-3 p-4 flex items-center">
           <div className="w-10 h-10 rounded-full bg-primary-start/10 flex items-center justify-center mr-3 shrink-0">
             {logisticsInfo.status === '已签收' ? (
               <CheckCircle2 size={20} className="text-primary-start" />
@@ -154,10 +157,10 @@ export const LogisticsPage = () => {
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center mb-1">
-              <span className="text-[16px] font-bold text-text-main mr-2">{logisticsInfo.status}</span>
-              <span className="text-[13px] text-text-sub">{logisticsInfo.company}</span>
+              <span className="text-xl font-bold text-text-main mr-2">{logisticsInfo.status}</span>
+              <span className="text-base text-text-sub">{logisticsInfo.company}</span>
             </div>
-            <div className="flex items-center text-[12px] text-text-sub">
+            <div className="flex items-center text-sm text-text-sub">
               <span className="mr-2">运单号：{logisticsInfo.waybillNo}</span>
               <button onClick={() => handleCopy(logisticsInfo.waybillNo)} className="active:opacity-70 flex items-center text-text-main">
                 <Copy size={12} className="mr-1" />
@@ -168,20 +171,20 @@ export const LogisticsPage = () => {
         </div>
 
         {/* Address Card */}
-        <div className="bg-white dark:bg-gray-900 rounded-[16px] shadow-sm mb-3 p-4 flex items-start">
+        <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm mb-3 p-4 flex items-start">
           <MapPin size={16} className="text-text-main mt-0.5 mr-2 shrink-0" />
           <div className="flex-1 min-w-0">
-            <div className="text-[13px] text-text-main leading-snug mb-1">
+            <div className="text-base text-text-main leading-snug mb-1">
               [收货地址] {addressInfo.address}
             </div>
-            <div className="text-[12px] text-text-sub">
+            <div className="text-sm text-text-sub">
               {addressInfo.name} {addressInfo.phone}
             </div>
           </div>
         </div>
 
         {/* Timeline Card */}
-        <div className="bg-white dark:bg-gray-900 rounded-[16px] shadow-sm mb-3 p-4">
+        <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm mb-3 p-4">
           {timelineData.map((item, index) => {
             const isLast = index === timelineData.length - 1;
             return (
@@ -196,10 +199,10 @@ export const LogisticsPage = () => {
                 
                 {/* Timeline Content */}
                 <div className={`flex-1 pb-6 ${item.isLatest ? '' : 'opacity-70'}`}>
-                  <div className={`text-[14px] leading-snug mb-1 ${item.isLatest ? 'text-text-main font-medium' : 'text-text-sub'}`}>
+                  <div className={`text-md leading-snug mb-1 ${item.isLatest ? 'text-text-main font-medium' : 'text-text-sub'}`}>
                     {item.desc}
                   </div>
-                  <div className={`text-[12px] ${item.isLatest ? 'text-text-main' : 'text-text-aux'}`}>
+                  <div className={`text-sm ${item.isLatest ? 'text-text-main' : 'text-text-aux'}`}>
                     {item.time}
                   </div>
                 </div>
@@ -224,11 +227,11 @@ export const LogisticsPage = () => {
       {/* Bottom Fixed Bar */}
       {!moduleError && !loading && !isEmpty && (
         <div className="absolute bottom-0 left-0 right-0 bg-white dark:bg-gray-900 border-t border-border-light px-4 py-2 z-40 pb-safe flex space-x-3">
-          <button className="flex-1 h-10 rounded-full border border-border-light text-[14px] font-medium text-text-main active:bg-bg-base flex items-center justify-center">
+          <button className="flex-1 h-10 rounded-full border border-border-light text-md font-medium text-text-main active:bg-bg-base flex items-center justify-center">
             <HeadphonesIcon size={16} className="mr-1.5 text-text-sub" />
             联系客服
           </button>
-          <button className="flex-1 h-10 rounded-full border border-border-light text-[14px] font-medium text-text-main active:bg-bg-base flex items-center justify-center">
+          <button className="flex-1 h-10 rounded-full border border-border-light text-md font-medium text-text-main active:bg-bg-base flex items-center justify-center">
             <Phone size={16} className="mr-1.5 text-text-sub" />
             联系快递
           </button>

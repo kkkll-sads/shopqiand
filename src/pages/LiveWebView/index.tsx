@@ -1,7 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ChevronLeft, MoreHorizontal, X, RefreshCcw, Copy, ExternalLink, MessageSquare, AlertCircle, WifiOff, ShieldAlert } from 'lucide-react';
+import { useAppNavigate } from '../../lib/navigation';
+import { PageHeader } from '../../components/layout/PageHeader';
 
 export const LiveWebViewPage = () => {
+  const { goTo, goBack } = useAppNavigate();
+
   const [loading, setLoading] = useState(true);
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState(false);
@@ -61,7 +65,7 @@ export const LiveWebViewPage = () => {
   }, [offline]);
 
   const handleBack = () => {
-    window.dispatchEvent(new CustomEvent('go-back'));
+    goBack();
   };
 
   const handleRefresh = () => {
@@ -82,7 +86,7 @@ export const LiveWebViewPage = () => {
 
   const handleContactCS = () => {
     setShowActionSheet(false);
-    window.dispatchEvent(new CustomEvent('change-view', { detail: 'help_center' }));
+    goTo('help_center');
   };
 
   const showToastMessage = (msg: string) => {
@@ -91,16 +95,16 @@ export const LiveWebViewPage = () => {
   };
 
   return (
-    <div className="flex-1 flex flex-col bg-[#F5F5F5] dark:bg-[#121212] h-full overflow-hidden relative">
+    <div className="flex-1 flex flex-col bg-bg-hover dark:bg-bg-base h-full overflow-hidden relative">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 h-12 bg-white dark:bg-[#1E1E1E] relative z-20">
-        <button onClick={handleBack} className="p-2 -ml-2 text-[#1A1A1A] dark:text-[#E5E5E5] active:opacity-70">
+      <div className="flex items-center justify-between px-4 h-12 bg-white dark:bg-bg-card relative z-20">
+        <button onClick={handleBack} className="p-2 -ml-2 text-text-main dark:text-text-main active:opacity-70">
           <ChevronLeft size={24} />
         </button>
-        <span className="text-[17px] font-medium text-[#1A1A1A] dark:text-[#E5E5E5]">直播</span>
+        <span className="text-2xl font-medium text-text-main dark:text-text-main">直播</span>
         <button 
           onClick={() => setShowActionSheet(true)}
-          className="p-2 -mr-2 text-[#1A1A1A] dark:text-[#E5E5E5] active:opacity-70"
+          className="p-2 -mr-2 text-text-main dark:text-text-main active:opacity-70"
         >
           <MoreHorizontal size={24} />
         </button>
@@ -109,7 +113,7 @@ export const LiveWebViewPage = () => {
         {loading && !offline && (
           <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-transparent">
             <div 
-              className="h-full bg-[#E2231A] transition-all duration-200 ease-out"
+              className="h-full bg-brand-start transition-all duration-200 ease-out"
               style={{ width: `${progress}%` }}
             />
           </div>
@@ -119,13 +123,13 @@ export const LiveWebViewPage = () => {
       {/* Offline Banner */}
       {offline && (
         <div className="bg-[#FFF3F3] dark:bg-[#3A1E1E] px-4 py-2 flex items-center justify-between z-10">
-          <div className="flex items-center text-[#E2231A] dark:text-[#FF6B6B]">
+          <div className="flex items-center text-brand-start dark:text-brand-start">
             <WifiOff size={16} className="mr-2" />
-            <span className="text-[13px]">网络不稳定，请检查网络设置</span>
+            <span className="text-base">网络不稳定，请检查网络设置</span>
           </div>
           <button 
             onClick={simulateLoad}
-            className="text-[13px] text-[#E2231A] dark:text-[#FF6B6B] px-2 py-1 active:opacity-70"
+            className="text-base text-brand-start dark:text-brand-start px-2 py-1 active:opacity-70"
           >
             刷新
           </button>
@@ -137,7 +141,7 @@ export const LiveWebViewPage = () => {
         <div className="bg-[#FFF9E6] dark:bg-[#2A2415] px-4 py-2 flex items-center justify-between z-10 border-b border-[#FFE5B4] dark:border-[#4A3B1C]">
           <div className="flex items-center text-[#B27B00] dark:text-[#D4A347] flex-1 mr-2">
             <ShieldAlert size={14} className="mr-1.5 shrink-0" />
-            <span className="text-[12px] line-clamp-1">当前内容来自第三方网页：{domain}</span>
+            <span className="text-sm line-clamp-1">当前内容来自第三方网页：{domain}</span>
           </div>
           <button 
             onClick={() => setShowSecurityPrompt(false)}
@@ -149,30 +153,30 @@ export const LiveWebViewPage = () => {
       )}
 
       {/* Main Content Area */}
-      <div className="flex-1 relative overflow-hidden bg-white dark:bg-[#1E1E1E]">
+      <div className="flex-1 relative overflow-hidden bg-white dark:bg-bg-card">
         {error ? (
           // Error Fallback
-          <div className="absolute inset-0 flex flex-col items-center justify-center px-6 bg-[#F5F5F5] dark:bg-[#121212]">
-            <AlertCircle size={64} className="text-[#CCCCCC] dark:text-[#666666] mb-4" />
-            <h3 className="text-[18px] font-medium text-[#1A1A1A] dark:text-[#E5E5E5] mb-2">页面加载失败</h3>
-            <p className="text-[14px] text-[#666666] dark:text-[#999999] text-center mb-8">
+          <div className="absolute inset-0 flex flex-col items-center justify-center px-6 bg-bg-hover dark:bg-bg-base">
+            <AlertCircle size={64} className="text-text-aux dark:text-text-sub mb-4" />
+            <h3 className="text-3xl font-medium text-text-main dark:text-text-main mb-2">页面加载失败</h3>
+            <p className="text-md text-text-sub dark:text-text-aux text-center mb-8">
               网络不稳定或链接已失效，请稍后再试
             </p>
             <div className="w-full space-y-3 max-w-[240px]">
               <button 
                 onClick={simulateLoad}
-                className="w-full h-[44px] rounded-[22px] bg-gradient-to-r from-[#E2231A] to-[#F93A3A] text-white font-medium text-[15px] active:opacity-80"
+                className="w-full h-[44px] rounded-3xl bg-gradient-to-r from-brand-start to-brand-end text-white font-medium text-lg active:opacity-80"
               >
                 刷新重试
               </button>
               <button 
                 onClick={handleCopyLink}
-                className="w-full h-[44px] rounded-[22px] border border-[#E2231A] dark:border-[#FF6B6B] text-[#E2231A] dark:text-[#FF6B6B] font-medium text-[15px] active:bg-[#FFF3F3] dark:active:bg-[#3A1E1E]"
+                className="w-full h-[44px] rounded-3xl border border-[#E2231A] dark:border-[#FF6B6B] text-brand-start dark:text-brand-start font-medium text-lg active:bg-[#FFF3F3] dark:active:bg-[#3A1E1E]"
               >
                 复制链接
               </button>
             </div>
-            <div className="mt-8 flex items-center space-x-4 text-[13px] text-[#999999] dark:text-[#666666]">
+            <div className="mt-8 flex items-center space-x-4 text-base text-text-aux dark:text-text-sub">
               <span onClick={simulateLoad} className="active:underline cursor-pointer">检查网络</span>
               <span>|</span>
               <span onClick={handleContactCS} className="active:underline cursor-pointer">联系客服</span>
@@ -180,14 +184,14 @@ export const LiveWebViewPage = () => {
           </div>
         ) : loading ? (
           // Loading Skeleton
-          <div className="absolute inset-0 p-4 space-y-4 bg-white dark:bg-[#1E1E1E]">
-            <div className="w-full aspect-video bg-[#F5F5F5] dark:bg-[#2A2A2A] rounded-[8px] animate-pulse" />
+          <div className="absolute inset-0 p-4 space-y-4 bg-white dark:bg-bg-card">
+            <div className="w-full aspect-video bg-bg-hover dark:bg-bg-hover rounded-lg animate-pulse" />
             <div className="space-y-3 mt-6">
-              <div className="h-6 bg-[#F5F5F5] dark:bg-[#2A2A2A] rounded w-3/4 animate-pulse" />
-              <div className="h-4 bg-[#F5F5F5] dark:bg-[#2A2A2A] rounded w-1/2 animate-pulse" />
-              <div className="h-4 bg-[#F5F5F5] dark:bg-[#2A2A2A] rounded w-5/6 animate-pulse mt-4" />
-              <div className="h-4 bg-[#F5F5F5] dark:bg-[#2A2A2A] rounded w-full animate-pulse" />
-              <div className="h-4 bg-[#F5F5F5] dark:bg-[#2A2A2A] rounded w-4/5 animate-pulse" />
+              <div className="h-6 bg-bg-hover dark:bg-bg-hover rounded w-3/4 animate-pulse" />
+              <div className="h-4 bg-bg-hover dark:bg-bg-hover rounded w-1/2 animate-pulse" />
+              <div className="h-4 bg-bg-hover dark:bg-bg-hover rounded w-5/6 animate-pulse mt-4" />
+              <div className="h-4 bg-bg-hover dark:bg-bg-hover rounded w-full animate-pulse" />
+              <div className="h-4 bg-bg-hover dark:bg-bg-hover rounded w-4/5 animate-pulse" />
             </div>
           </div>
         ) : (
@@ -207,36 +211,36 @@ export const LiveWebViewPage = () => {
               </div>
               <div className="absolute top-4 left-4 flex items-center space-x-2">
                 <div className="bg-black/40 rounded-full px-2 py-1 flex items-center">
-                  <div className="w-6 h-6 rounded-full bg-[#E2231A] mr-2 overflow-hidden">
+                  <div className="w-6 h-6 rounded-full bg-brand-start mr-2 overflow-hidden">
                     <img src="https://picsum.photos/seed/avatar/100/100" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                   </div>
-                  <span className="text-white text-[12px] mr-2">京东家电官方旗舰店</span>
-                  <button className="bg-[#E2231A] text-white text-[10px] px-2 py-0.5 rounded-full">关注</button>
+                  <span className="text-white text-sm mr-2">京东家电官方旗舰店</span>
+                  <button className="bg-brand-start text-white text-xs px-2 py-0.5 rounded-full">关注</button>
                 </div>
               </div>
               <div className="absolute top-4 right-4 bg-black/40 rounded-full px-2 py-1">
-                <span className="text-white text-[10px]">12.5w 观看</span>
+                <span className="text-white text-xs">12.5w 观看</span>
               </div>
             </div>
             <div className="p-4">
-              <h1 className="text-[18px] font-medium text-[#1A1A1A] dark:text-[#E5E5E5] mb-2">京东家电超级品牌日，全场5折起！</h1>
-              <p className="text-[14px] text-[#666666] dark:text-[#999999] mb-6">看直播抽免单，更有万元红包雨等你来抢！</p>
+              <h1 className="text-3xl font-medium text-text-main dark:text-text-main mb-2">京东家电超级品牌日，全场5折起！</h1>
+              <p className="text-md text-text-sub dark:text-text-aux mb-6">看直播抽免单，更有万元红包雨等你来抢！</p>
               
               <div className="space-y-4">
-                <h3 className="text-[16px] font-medium text-[#1A1A1A] dark:text-[#E5E5E5]">直播商品</h3>
+                <h3 className="text-xl font-medium text-text-main dark:text-text-main">直播商品</h3>
                 {[1, 2, 3, 4].map(i => (
-                  <div key={i} className="flex bg-[#F9F9F9] dark:bg-[#2A2A2A] rounded-[12px] p-2">
-                    <div className="w-20 h-20 bg-white dark:bg-[#1E1E1E] rounded-[8px] shrink-0 overflow-hidden">
+                  <div key={i} className="flex bg-bg-hover dark:bg-bg-hover rounded-xl p-2">
+                    <div className="w-20 h-20 bg-white dark:bg-bg-card rounded-lg shrink-0 overflow-hidden">
                       <img src={`https://picsum.photos/seed/prod${i}/200/200`} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                     </div>
                     <div className="ml-3 flex-1 flex flex-col justify-between py-1">
-                      <div className="text-[14px] text-[#1A1A1A] dark:text-[#E5E5E5] line-clamp-2">海尔（Haier）513升十字对开门冰箱 一级能效</div>
+                      <div className="text-md text-text-main dark:text-text-main line-clamp-2">海尔（Haier）513升十字对开门冰箱 一级能效</div>
                       <div className="flex items-end justify-between">
-                        <div className="text-[#E2231A] dark:text-[#FF6B6B] font-medium">
-                          <span className="text-[12px]">¥</span>
-                          <span className="text-[16px]">3299</span>
+                        <div className="text-brand-start dark:text-brand-start font-medium">
+                          <span className="text-sm">¥</span>
+                          <span className="text-xl">3299</span>
                         </div>
-                        <button className="bg-[#E2231A] text-white text-[12px] px-3 py-1 rounded-full">抢购</button>
+                        <button className="bg-brand-start text-white text-sm px-3 py-1 rounded-full">抢购</button>
                       </div>
                     </div>
                   </div>
@@ -256,36 +260,36 @@ export const LiveWebViewPage = () => {
             className="absolute inset-0 bg-black/40 transition-opacity"
             onClick={() => setShowActionSheet(false)}
           />
-          <div className="relative bg-[#F5F5F5] dark:bg-[#121212] rounded-t-[16px] overflow-hidden pb-safe">
+          <div className="relative bg-bg-hover dark:bg-bg-base rounded-t-[16px] overflow-hidden pb-safe">
             <div className="p-4 grid grid-cols-4 gap-4">
               <div className="flex flex-col items-center" onClick={handleRefresh}>
-                <div className="w-14 h-14 bg-white dark:bg-[#1E1E1E] rounded-[16px] flex items-center justify-center mb-2 active:bg-[#F0F0F0] dark:active:bg-[#2A2A2A]">
-                  <RefreshCcw size={24} className="text-[#1A1A1A] dark:text-[#E5E5E5]" />
+                <div className="w-14 h-14 bg-white dark:bg-bg-card rounded-2xl flex items-center justify-center mb-2 active:bg-bg-skeleton dark:active:bg-[#2A2A2A]">
+                  <RefreshCcw size={24} className="text-text-main dark:text-text-main" />
                 </div>
-                <span className="text-[12px] text-[#666666] dark:text-[#999999]">刷新页面</span>
+                <span className="text-sm text-text-sub dark:text-text-aux">刷新页面</span>
               </div>
               <div className="flex flex-col items-center" onClick={handleCopyLink}>
-                <div className="w-14 h-14 bg-white dark:bg-[#1E1E1E] rounded-[16px] flex items-center justify-center mb-2 active:bg-[#F0F0F0] dark:active:bg-[#2A2A2A]">
-                  <Copy size={24} className="text-[#1A1A1A] dark:text-[#E5E5E5]" />
+                <div className="w-14 h-14 bg-white dark:bg-bg-card rounded-2xl flex items-center justify-center mb-2 active:bg-bg-skeleton dark:active:bg-[#2A2A2A]">
+                  <Copy size={24} className="text-text-main dark:text-text-main" />
                 </div>
-                <span className="text-[12px] text-[#666666] dark:text-[#999999]">复制链接</span>
+                <span className="text-sm text-text-sub dark:text-text-aux">复制链接</span>
               </div>
               <div className="flex flex-col items-center" onClick={handleOpenBrowser}>
-                <div className="w-14 h-14 bg-white dark:bg-[#1E1E1E] rounded-[16px] flex items-center justify-center mb-2 active:bg-[#F0F0F0] dark:active:bg-[#2A2A2A]">
-                  <ExternalLink size={24} className="text-[#1A1A1A] dark:text-[#E5E5E5]" />
+                <div className="w-14 h-14 bg-white dark:bg-bg-card rounded-2xl flex items-center justify-center mb-2 active:bg-bg-skeleton dark:active:bg-[#2A2A2A]">
+                  <ExternalLink size={24} className="text-text-main dark:text-text-main" />
                 </div>
-                <span className="text-[12px] text-[#666666] dark:text-[#999999]">默认浏览器</span>
+                <span className="text-sm text-text-sub dark:text-text-aux">默认浏览器</span>
               </div>
               <div className="flex flex-col items-center" onClick={handleContactCS}>
-                <div className="w-14 h-14 bg-white dark:bg-[#1E1E1E] rounded-[16px] flex items-center justify-center mb-2 active:bg-[#F0F0F0] dark:active:bg-[#2A2A2A]">
-                  <MessageSquare size={24} className="text-[#1A1A1A] dark:text-[#E5E5E5]" />
+                <div className="w-14 h-14 bg-white dark:bg-bg-card rounded-2xl flex items-center justify-center mb-2 active:bg-bg-skeleton dark:active:bg-[#2A2A2A]">
+                  <MessageSquare size={24} className="text-text-main dark:text-text-main" />
                 </div>
-                <span className="text-[12px] text-[#666666] dark:text-[#999999]">问题反馈</span>
+                <span className="text-sm text-text-sub dark:text-text-aux">问题反馈</span>
               </div>
             </div>
-            <div className="h-2 bg-[#EFEFEF] dark:bg-[#0A0A0A]" />
+            <div className="h-2 bg-bg-skeleton dark:bg-bg-base" />
             <button 
-              className="w-full h-[56px] bg-white dark:bg-[#1E1E1E] text-[16px] text-[#1A1A1A] dark:text-[#E5E5E5] font-medium active:bg-[#F5F5F5] dark:active:bg-[#2A2A2A]"
+              className="w-full h-[56px] bg-white dark:bg-bg-card text-xl text-text-main dark:text-text-main font-medium active:bg-bg-hover dark:active:bg-[#2A2A2A]"
               onClick={() => setShowActionSheet(false)}
             >
               取消
@@ -296,7 +300,7 @@ export const LiveWebViewPage = () => {
 
       {/* Toast */}
       {showToast && (
-        <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-black/70 text-white px-4 py-2 rounded-[8px] text-[14px] z-50">
+        <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-black/70 text-white px-4 py-2 rounded-lg text-md z-50">
           {showToast}
         </div>
       )}

@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { ChevronLeft, HeadphonesIcon, AlertCircle, WifiOff, RefreshCcw, PlayCircle, Clock, RotateCcw } from 'lucide-react';
 import { Card } from '../../components/ui/Card';
+import { useAppNavigate } from '../../lib/navigation';
+import { PageHeader } from '../../components/layout/PageHeader';
 
 interface LiveStream {
   id: string;
@@ -60,6 +62,8 @@ const MOCK_LIVES: LiveStream[] = [
 ];
 
 export const LivePage = () => {
+  const { goTo, goBack } = useAppNavigate();
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [offline, setOffline] = useState(!navigator.onLine);
@@ -97,7 +101,7 @@ export const LivePage = () => {
   }, [offline]);
 
   const handleBack = () => {
-    window.dispatchEvent(new CustomEvent('go-back'));
+    goBack();
   };
 
   const handleLiveClick = (live: LiveStream) => {
@@ -106,7 +110,7 @@ export const LivePage = () => {
 
   const confirmEnterLive = () => {
     if (selectedLive) {
-      window.dispatchEvent(new CustomEvent('change-view', { detail: 'live_webview' }));
+      goTo('live_webview');
       setSelectedLive(null);
     }
   };
@@ -115,21 +119,21 @@ export const LivePage = () => {
     switch (status) {
       case 'live':
         return (
-          <div className="flex items-center bg-gradient-to-r from-[#E2231A] to-[#F93A3A] text-white text-[10px] px-1.5 py-0.5 rounded-sm">
+          <div className="flex items-center bg-gradient-to-r from-brand-start to-brand-end text-white text-xs px-1.5 py-0.5 rounded-sm">
             <span className="w-1.5 h-1.5 bg-white rounded-full mr-1 animate-pulse" />
             直播中
           </div>
         );
       case 'upcoming':
         return (
-          <div className="flex items-center bg-[#FF8C00] text-white text-[10px] px-1.5 py-0.5 rounded-sm">
+          <div className="flex items-center bg-[#FF8C00] text-white text-xs px-1.5 py-0.5 rounded-sm">
             <Clock size={10} className="mr-1" />
             预告
           </div>
         );
       case 'replay':
         return (
-          <div className="flex items-center bg-[#999999] text-white text-[10px] px-1.5 py-0.5 rounded-sm">
+          <div className="flex items-center bg-[#999999] text-white text-xs px-1.5 py-0.5 rounded-sm">
             <RotateCcw size={10} className="mr-1" />
             回放
           </div>
@@ -148,14 +152,14 @@ export const LivePage = () => {
   };
 
   return (
-    <div className="flex-1 flex flex-col bg-[#FFF9F9] dark:bg-[#121212] h-full overflow-hidden">
+    <div className="flex-1 flex flex-col bg-[#FFF9F9] dark:bg-bg-base h-full overflow-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 h-12 bg-white dark:bg-[#1E1E1E] sticky top-0 z-10">
-        <button onClick={handleBack} className="p-2 -ml-2 text-[#1A1A1A] dark:text-[#E5E5E5] active:opacity-70">
+      <div className="flex items-center justify-between px-4 h-12 bg-white dark:bg-bg-card sticky top-0 z-10">
+        <button onClick={handleBack} className="p-2 -ml-2 text-text-main dark:text-text-main active:opacity-70">
           <ChevronLeft size={24} />
         </button>
-        <span className="text-[17px] font-medium text-[#1A1A1A] dark:text-[#E5E5E5]">直播</span>
-        <button className="p-2 -mr-2 text-[#666666] dark:text-[#999999] active:opacity-70 flex items-center">
+        <span className="text-2xl font-medium text-text-main dark:text-text-main">直播</span>
+        <button className="p-2 -mr-2 text-text-sub dark:text-text-aux active:opacity-70 flex items-center">
           <HeadphonesIcon size={20} />
         </button>
       </div>
@@ -163,22 +167,22 @@ export const LivePage = () => {
       <div className="flex-1 overflow-y-auto pb-6">
         {offline ? (
           <div className="flex flex-col items-center justify-center pt-32 px-4">
-            <WifiOff size={48} className="text-[#CCCCCC] dark:text-[#666666] mb-4" />
-            <p className="text-[#666666] dark:text-[#999999] text-[15px] mb-6">网络连接已断开，请检查网络设置</p>
+            <WifiOff size={48} className="text-text-aux dark:text-text-sub mb-4" />
+            <p className="text-text-sub dark:text-text-aux text-lg mb-6">网络连接已断开，请检查网络设置</p>
             <button 
               onClick={fetchData}
-              className="h-[48px] px-8 rounded-[16px] border border-[#CCCCCC] dark:border-[#666666] text-[#1A1A1A] dark:text-[#E5E5E5] font-medium active:bg-[#F5F5F5] dark:active:bg-[#2A2A2A]"
+              className="h-[48px] px-8 rounded-2xl border border-[#CCCCCC] dark:border-[#666666] text-text-main dark:text-text-main font-medium active:bg-bg-hover dark:active:bg-[#2A2A2A]"
             >
               刷新重试
             </button>
           </div>
         ) : error ? (
           <div className="flex flex-col items-center justify-center pt-32 px-4">
-            <AlertCircle size={48} className="text-[#CCCCCC] dark:text-[#666666] mb-4" />
-            <p className="text-[#666666] dark:text-[#999999] text-[15px] mb-6">加载失败，请稍后再试</p>
+            <AlertCircle size={48} className="text-text-aux dark:text-text-sub mb-4" />
+            <p className="text-text-sub dark:text-text-aux text-lg mb-6">加载失败，请稍后再试</p>
             <button 
               onClick={fetchData}
-              className="h-[48px] px-8 rounded-[16px] border border-[#CCCCCC] dark:border-[#666666] text-[#1A1A1A] dark:text-[#E5E5E5] font-medium active:bg-[#F5F5F5] dark:active:bg-[#2A2A2A]"
+              className="h-[48px] px-8 rounded-2xl border border-[#CCCCCC] dark:border-[#666666] text-text-main dark:text-text-main font-medium active:bg-bg-hover dark:active:bg-[#2A2A2A]"
             >
               重新加载
             </button>
@@ -186,35 +190,35 @@ export const LivePage = () => {
         ) : loading ? (
           <div className="p-4 space-y-4">
             {/* Skeleton for Featured Card */}
-            <div className="bg-white dark:bg-[#1E1E1E] rounded-[16px] overflow-hidden shadow-sm">
-              <div className="w-full aspect-video bg-[#F5F5F5] dark:bg-[#2A2A2A] animate-pulse" />
+            <div className="bg-white dark:bg-bg-card rounded-2xl overflow-hidden shadow-sm">
+              <div className="w-full aspect-video bg-bg-hover dark:bg-bg-hover animate-pulse" />
               <div className="p-4 space-y-3">
-                <div className="h-5 bg-[#F5F5F5] dark:bg-[#2A2A2A] rounded w-3/4 animate-pulse" />
-                <div className="h-4 bg-[#F5F5F5] dark:bg-[#2A2A2A] rounded w-1/2 animate-pulse" />
-                <div className="h-[48px] bg-[#F5F5F5] dark:bg-[#2A2A2A] rounded-[16px] w-full mt-2 animate-pulse" />
+                <div className="h-5 bg-bg-hover dark:bg-bg-hover rounded w-3/4 animate-pulse" />
+                <div className="h-4 bg-bg-hover dark:bg-bg-hover rounded w-1/2 animate-pulse" />
+                <div className="h-[48px] bg-bg-hover dark:bg-bg-hover rounded-2xl w-full mt-2 animate-pulse" />
               </div>
             </div>
             {/* Skeleton for List Cards */}
             {[1, 2, 3].map(i => (
-              <div key={i} className="bg-white dark:bg-[#1E1E1E] rounded-[16px] p-3 flex shadow-sm">
-                <div className="w-[100px] h-[100px] bg-[#F5F5F5] dark:bg-[#2A2A2A] rounded-[8px] animate-pulse shrink-0" />
+              <div key={i} className="bg-white dark:bg-bg-card rounded-2xl p-3 flex shadow-sm">
+                <div className="w-[100px] h-[100px] bg-bg-hover dark:bg-bg-hover rounded-lg animate-pulse shrink-0" />
                 <div className="ml-3 flex-1 flex flex-col justify-between py-1">
                   <div className="space-y-2">
-                    <div className="h-4 bg-[#F5F5F5] dark:bg-[#2A2A2A] rounded w-full animate-pulse" />
-                    <div className="h-4 bg-[#F5F5F5] dark:bg-[#2A2A2A] rounded w-2/3 animate-pulse" />
+                    <div className="h-4 bg-bg-hover dark:bg-bg-hover rounded w-full animate-pulse" />
+                    <div className="h-4 bg-bg-hover dark:bg-bg-hover rounded w-2/3 animate-pulse" />
                   </div>
-                  <div className="h-3 bg-[#F5F5F5] dark:bg-[#2A2A2A] rounded w-1/3 animate-pulse" />
+                  <div className="h-3 bg-bg-hover dark:bg-bg-hover rounded w-1/3 animate-pulse" />
                 </div>
               </div>
             ))}
           </div>
         ) : lives.length === 0 ? (
           <div className="flex flex-col items-center justify-center pt-32 px-4">
-            <PlayCircle size={48} className="text-[#CCCCCC] dark:text-[#666666] mb-4" />
-            <p className="text-[#666666] dark:text-[#999999] text-[15px] mb-6">暂无直播内容</p>
+            <PlayCircle size={48} className="text-text-aux dark:text-text-sub mb-4" />
+            <p className="text-text-sub dark:text-text-aux text-lg mb-6">暂无直播内容</p>
             <button 
               onClick={handleBack}
-              className="h-[48px] px-8 rounded-[16px] border border-[#CCCCCC] dark:border-[#666666] text-[#1A1A1A] dark:text-[#E5E5E5] font-medium active:bg-[#F5F5F5] dark:active:bg-[#2A2A2A]"
+              className="h-[48px] px-8 rounded-2xl border border-[#CCCCCC] dark:border-[#666666] text-text-main dark:text-text-main font-medium active:bg-bg-hover dark:active:bg-[#2A2A2A]"
             >
               返回首页
             </button>
@@ -224,10 +228,10 @@ export const LivePage = () => {
             {/* Featured Live Card */}
             {lives.length > 0 && (
               <div 
-                className="bg-white dark:bg-[#1E1E1E] rounded-[16px] overflow-hidden shadow-sm active:scale-[0.98] transition-transform"
+                className="bg-white dark:bg-bg-card rounded-2xl overflow-hidden shadow-sm active:scale-[0.98] transition-transform"
                 onClick={() => handleLiveClick(lives[0])}
               >
-                <div className="relative w-full aspect-video bg-[#F5F5F5] dark:bg-[#2A2A2A]">
+                <div className="relative w-full aspect-video bg-bg-hover dark:bg-bg-hover">
                   <img 
                     src={lives[0].coverUrl} 
                     alt={lives[0].title}
@@ -240,22 +244,22 @@ export const LivePage = () => {
                   <div className="absolute top-3 left-3 flex items-center">
                     {renderBadge(lives[0].status)}
                     {lives[0].viewers && (
-                      <div className="bg-black/40 text-white text-[10px] px-1.5 py-0.5 rounded-sm ml-1">
+                      <div className="bg-black/40 text-white text-xs px-1.5 py-0.5 rounded-sm ml-1">
                         {formatViewers(lives[0].viewers)}
                       </div>
                     )}
                   </div>
                 </div>
                 <div className="p-4">
-                  <h3 className="text-[16px] font-medium text-[#1A1A1A] dark:text-[#E5E5E5] line-clamp-1 mb-1">
+                  <h3 className="text-xl font-medium text-text-main dark:text-text-main line-clamp-1 mb-1">
                     {lives[0].title}
                   </h3>
-                  <div className="flex items-center text-[13px] text-[#666666] dark:text-[#999999] mb-4">
+                  <div className="flex items-center text-base text-text-sub dark:text-text-aux mb-4">
                     <span className="truncate max-w-[150px]">{lives[0].streamer}</span>
                     <span className="mx-2">|</span>
                     <span>{lives[0].startTime}</span>
                   </div>
-                  <button className="w-full h-[48px] rounded-[16px] bg-gradient-to-r from-[#E2231A] to-[#F93A3A] text-white font-medium text-[15px] flex items-center justify-center active:opacity-80">
+                  <button className="w-full h-[48px] rounded-2xl bg-gradient-to-r from-brand-start to-brand-end text-white font-medium text-lg flex items-center justify-center active:opacity-80">
                     进入直播
                   </button>
                 </div>
@@ -267,10 +271,10 @@ export const LivePage = () => {
               {lives.slice(1).map(live => (
                 <div 
                   key={live.id}
-                  className="bg-white dark:bg-[#1E1E1E] rounded-[16px] p-3 flex shadow-sm active:bg-[#F9F9F9] dark:active:bg-[#2A2A2A] transition-colors"
+                  className="bg-white dark:bg-bg-card rounded-2xl p-3 flex shadow-sm active:bg-bg-hover dark:active:bg-[#2A2A2A] transition-colors"
                   onClick={() => handleLiveClick(live)}
                 >
-                  <div className="relative w-[100px] h-[100px] rounded-[8px] overflow-hidden shrink-0 bg-[#F5F5F5] dark:bg-[#2A2A2A]">
+                  <div className="relative w-[100px] h-[100px] rounded-lg overflow-hidden shrink-0 bg-bg-hover dark:bg-bg-hover">
                     <img 
                       src={live.coverUrl} 
                       alt={live.title}
@@ -285,13 +289,13 @@ export const LivePage = () => {
                     </div>
                   </div>
                   <div className="ml-3 flex-1 flex flex-col py-0.5">
-                    <h4 className="text-[15px] font-medium text-[#1A1A1A] dark:text-[#E5E5E5] line-clamp-2 leading-snug mb-1">
+                    <h4 className="text-lg font-medium text-text-main dark:text-text-main line-clamp-2 leading-snug mb-1">
                       {live.title}
                     </h4>
-                    <div className="text-[12px] text-[#999999] dark:text-[#666666] line-clamp-1 mt-auto mb-1">
+                    <div className="text-sm text-text-aux dark:text-text-sub line-clamp-1 mt-auto mb-1">
                       {live.description}
                     </div>
-                    <div className="flex items-center justify-between text-[12px] text-[#666666] dark:text-[#999999]">
+                    <div className="flex items-center justify-between text-sm text-text-sub dark:text-text-aux">
                       <span className="truncate max-w-[100px]">{live.streamer}</span>
                       <span>{live.startTime}</span>
                     </div>
@@ -302,7 +306,7 @@ export const LivePage = () => {
 
             {/* Security Notice */}
             <div className="pt-6 pb-2 text-center">
-              <p className="text-[12px] text-[#999999] dark:text-[#666666]">
+              <p className="text-sm text-text-aux dark:text-text-sub">
                 直播内容由第三方页面提供，将在App内打开网页。
               </p>
             </div>
@@ -317,25 +321,25 @@ export const LivePage = () => {
             className="absolute inset-0 bg-black/50"
             onClick={() => setSelectedLive(null)}
           />
-          <div className="relative w-full max-w-[320px] bg-white dark:bg-[#1E1E1E] rounded-[16px] overflow-hidden shadow-xl p-6">
-            <h3 className="text-[18px] font-medium text-[#1A1A1A] dark:text-[#E5E5E5] mb-2 text-center">
+          <div className="relative w-full max-w-[320px] bg-white dark:bg-bg-card rounded-2xl overflow-hidden shadow-xl p-6">
+            <h3 className="text-3xl font-medium text-text-main dark:text-text-main mb-2 text-center">
               即将打开直播网页
             </h3>
-            <p className="text-[14px] text-[#666666] dark:text-[#999999] mb-1 text-center">
-              即将访问：<span className="text-[#1A1A1A] dark:text-[#E5E5E5]">{selectedLive.domain}</span>
+            <p className="text-md text-text-sub dark:text-text-aux mb-1 text-center">
+              即将访问：<span className="text-text-main dark:text-text-main">{selectedLive.domain}</span>
             </p>
-            <p className="text-[13px] text-[#999999] dark:text-[#666666] text-center mb-6">
+            <p className="text-base text-text-aux dark:text-text-sub text-center mb-6">
               请确认来源可信，注意保护个人信息安全。
             </p>
             <div className="flex space-x-3">
               <button 
-                className="flex-1 h-[44px] rounded-[16px] border border-[#CCCCCC] dark:border-[#666666] text-[#666666] dark:text-[#999999] font-medium active:bg-[#F5F5F5] dark:active:bg-[#2A2A2A]"
+                className="flex-1 h-[44px] rounded-2xl border border-[#CCCCCC] dark:border-[#666666] text-text-sub dark:text-text-aux font-medium active:bg-bg-hover dark:active:bg-[#2A2A2A]"
                 onClick={() => setSelectedLive(null)}
               >
                 取消
               </button>
               <button 
-                className="flex-1 h-[44px] rounded-[16px] bg-gradient-to-r from-[#E2231A] to-[#F93A3A] text-white font-medium active:opacity-80 shadow-sm"
+                className="flex-1 h-[44px] rounded-2xl bg-gradient-to-r from-brand-start to-brand-end text-white font-medium active:opacity-80 shadow-sm"
                 onClick={confirmEnterLive}
               >
                 继续

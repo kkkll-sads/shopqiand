@@ -1,7 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { ChevronLeft, WifiOff, AlertCircle, Megaphone, RefreshCcw } from 'lucide-react';
+import { useAppNavigate } from '../../lib/navigation';
+import { PageHeader } from '../../components/layout/PageHeader';
+import { ErrorState } from '../../components/ui/ErrorState';
+import { EmptyState } from '../../components/ui/EmptyState';
 
 export const AnnouncementPage = () => {
+  const { goTo, goBack } = useAppNavigate();
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [offline, setOffline] = useState(!navigator.onLine);
@@ -63,8 +69,7 @@ export const AnnouncementPage = () => {
     if (selectedAnnouncement) {
       setSelectedAnnouncement(null);
     } else {
-      const event = new CustomEvent('change-view', { detail: 'profile' });
-      window.dispatchEvent(event);
+      goTo('profile');
     }
   };
 
@@ -76,7 +81,7 @@ export const AnnouncementPage = () => {
             <ChevronLeft size={24} />
           </button>
         </div>
-        <h1 className="text-[17px] font-medium text-gray-900 dark:text-gray-100 text-center w-1/3">
+        <h1 className="text-2xl font-medium text-gray-900 dark:text-gray-100 text-center w-1/3">
           {selectedAnnouncement ? '公告详情' : '公告中心'}
         </h1>
         <div className="w-1/3"></div>
@@ -98,30 +103,11 @@ export const AnnouncementPage = () => {
   );
 
   const renderError = () => (
-    <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
-      <div className="w-24 h-24 mb-4 text-gray-300 dark:text-gray-600">
-        <WifiOff className="w-full h-full" />
-      </div>
-      <h3 className="text-[16px] font-medium text-gray-900 dark:text-gray-100 mb-2">网络请求失败</h3>
-      <p className="text-[13px] text-gray-500 dark:text-gray-400 mb-6">请检查您的网络设置后重试</p>
-      <button 
-        onClick={fetchData}
-        className="px-6 py-2 border border-gray-300 dark:border-gray-600 rounded-full text-[14px] text-gray-700 dark:text-gray-400 flex items-center active:bg-gray-50 dark:bg-gray-800"
-      >
-        <RefreshCcw size={16} className="mr-2" />
-        重新加载
-      </button>
-    </div>
+    <ErrorState onRetry={fetchData} />
   );
 
   const renderEmpty = () => (
-    <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
-      <div className="w-24 h-24 mb-4 text-gray-300 dark:text-gray-600">
-        <Megaphone className="w-full h-full" strokeWidth={1.5} />
-      </div>
-      <h3 className="text-[16px] font-medium text-gray-900 dark:text-gray-100 mb-2">暂无公告</h3>
-      <p className="text-[13px] text-gray-500 dark:text-gray-400 mb-6">目前没有新的公告信息哦</p>
-    </div>
+    <EmptyState message="暂无公告" />
   );
 
   const renderList = () => {
@@ -139,16 +125,16 @@ export const AnnouncementPage = () => {
           >
             <div className="flex items-start mb-2">
               {item.isPinned && (
-                <span className="bg-[#ffe4e4] text-[#f2270c] text-[10px] px-1.5 py-0.5 rounded-sm font-medium mr-2 shrink-0 mt-0.5">
+                <span className="bg-[#ffe4e4] text-text-price text-xs px-1.5 py-0.5 rounded-sm font-medium mr-2 shrink-0 mt-0.5">
                   置顶
                 </span>
               )}
-              <h3 className="text-[15px] font-medium text-gray-900 dark:text-gray-100 leading-snug line-clamp-2">
+              <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 leading-snug line-clamp-2">
                 {item.title}
               </h3>
             </div>
-            <div className="text-[12px] text-gray-400 dark:text-gray-500 mb-2">{item.time}</div>
-            <p className="text-[13px] text-gray-600 dark:text-gray-400 line-clamp-2 leading-relaxed">
+            <div className="text-sm text-gray-400 dark:text-gray-500 mb-2">{item.time}</div>
+            <p className="text-base text-gray-600 dark:text-gray-400 line-clamp-2 leading-relaxed">
               {item.summary}
             </p>
           </div>
@@ -162,20 +148,20 @@ export const AnnouncementPage = () => {
     return (
       <div className="flex-1 flex flex-col bg-white dark:bg-gray-900 h-full relative">
         <div className="flex-1 overflow-y-auto p-5 pb-24">
-          <h2 className="text-[20px] font-bold text-gray-900 dark:text-gray-100 leading-snug mb-3">
+          <h2 className="text-4xl font-bold text-gray-900 dark:text-gray-100 leading-snug mb-3">
             {selectedAnnouncement.title}
           </h2>
-          <div className="text-[13px] text-gray-400 dark:text-gray-500 mb-6 pb-4 border-b border-gray-100 dark:border-gray-800">
+          <div className="text-base text-gray-400 dark:text-gray-500 mb-6 pb-4 border-b border-gray-100 dark:border-gray-800">
             发布时间：{selectedAnnouncement.time}
           </div>
-          <div className="text-[15px] text-gray-700 dark:text-gray-400 leading-loose whitespace-pre-wrap">
+          <div className="text-lg text-gray-700 dark:text-gray-400 leading-loose whitespace-pre-wrap">
             {selectedAnnouncement.content}
           </div>
         </div>
         <div className="absolute bottom-0 left-0 right-0 bg-white dark:bg-gray-900 border-t border-gray-100 dark:border-gray-800 px-4 py-3 pb-safe z-40">
           <button 
             onClick={() => setSelectedAnnouncement(null)}
-            className="w-full h-[40px] rounded-full bg-gradient-to-r from-[#f2270c] to-[#ff4f18] text-white text-[15px] font-medium active:opacity-80 transition-opacity"
+            className="w-full h-[40px] rounded-full bg-gradient-to-r from-brand-start to-brand-end text-white text-lg font-medium active:opacity-80 transition-opacity"
           >
             我知道了
           </button>
@@ -185,10 +171,10 @@ export const AnnouncementPage = () => {
   };
 
   return (
-    <div className="flex-1 flex flex-col bg-[#f5f5f5] dark:bg-gray-950 relative h-full overflow-hidden">
+    <div className="flex-1 flex flex-col bg-bg-hover dark:bg-gray-950 relative h-full overflow-hidden">
       {/* Offline Banner */}
       {offline && (
-        <div className="bg-[#ffe4e4] text-[#f2270c] text-[12px] py-2 px-4 flex items-center justify-center sticky top-0 z-50">
+        <div className="bg-[#ffe4e4] text-text-price text-sm py-2 px-4 flex items-center justify-center sticky top-0 z-50">
           <WifiOff size={14} className="mr-2" />
           网络连接已断开，请检查网络设置
         </div>
@@ -196,12 +182,12 @@ export const AnnouncementPage = () => {
 
       {/* Demo Controls */}
       {!selectedAnnouncement && (
-        <div className="px-4 py-2 flex space-x-2 overflow-x-auto no-scrollbar bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800 text-[10px] absolute top-11 left-0 right-0 z-50 opacity-30 hover:opacity-100 transition-opacity">
+        <div className="px-4 py-2 flex space-x-2 overflow-x-auto no-scrollbar bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800 text-xs absolute top-11 left-0 right-0 z-50 opacity-30 hover:opacity-100 transition-opacity">
           <span className="text-gray-500 dark:text-gray-400 flex items-center shrink-0">状态切换:</span>
-          <button onClick={() => {setLoading(false); setError(false); setEmpty(false);}} className={`px-2 py-1 rounded border ${!loading && !error && !empty ? 'bg-[#f2270c] text-white border-[#f2270c]' : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400'}`}>正常</button>
-          <button onClick={() => {setLoading(true); setError(false); setEmpty(false);}} className={`px-2 py-1 rounded border ${loading ? 'bg-[#f2270c] text-white border-[#f2270c]' : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400'}`}>加载中</button>
-          <button onClick={() => {setLoading(false); setError(true); setEmpty(false);}} className={`px-2 py-1 rounded border ${error ? 'bg-[#f2270c] text-white border-[#f2270c]' : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400'}`}>错误</button>
-          <button onClick={() => {setLoading(false); setError(false); setEmpty(true);}} className={`px-2 py-1 rounded border ${empty ? 'bg-[#f2270c] text-white border-[#f2270c]' : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400'}`}>空态</button>
+          <button onClick={() => {setLoading(false); setError(false); setEmpty(false);}} className={`px-2 py-1 rounded border ${!loading && !error && !empty ? 'bg-brand-start text-white border-[#f2270c]' : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400'}`}>正常</button>
+          <button onClick={() => {setLoading(true); setError(false); setEmpty(false);}} className={`px-2 py-1 rounded border ${loading ? 'bg-brand-start text-white border-[#f2270c]' : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400'}`}>加载中</button>
+          <button onClick={() => {setLoading(false); setError(true); setEmpty(false);}} className={`px-2 py-1 rounded border ${error ? 'bg-brand-start text-white border-[#f2270c]' : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400'}`}>错误</button>
+          <button onClick={() => {setLoading(false); setError(false); setEmpty(true);}} className={`px-2 py-1 rounded border ${empty ? 'bg-brand-start text-white border-[#f2270c]' : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400'}`}>空态</button>
         </div>
       )}
 

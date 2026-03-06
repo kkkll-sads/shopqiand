@@ -1,7 +1,18 @@
+/**
+ * @file BottomTab - 底部标签导航栏
+ * @description 使用 React Router 的 useNavigate 实现 Tab 切换，
+ *              替代旧版 CustomEvent('change-view') 机制。
+ */
+
 import React from 'react';
-import { Home, Store, ShieldCheck, FileText, User, ShoppingCart } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Home, Store, ShieldCheck, FileText, User } from 'lucide-react';
+import { VIEW_TO_PATH } from '../../lib/navigation';
 
 export const BottomTab = ({ active = 'home', absolute = false }: any) => {
+  const navigate = useNavigate();
+
+  /** Tab 配置列表 */
   const tabs = [
     { id: 'home', icon: Home, label: '首页' },
     { id: 'store', icon: Store, label: '商城' },
@@ -10,8 +21,10 @@ export const BottomTab = ({ active = 'home', absolute = false }: any) => {
     { id: 'user', icon: User, label: '我的' },
   ];
 
+  /** 使用 navigate 替代 CustomEvent 进行 Tab 切换 */
   const handleTabClick = (id: string) => {
-    window.dispatchEvent(new CustomEvent('change-view', { detail: id }));
+    const path = VIEW_TO_PATH[id] || '/';
+    navigate(path);
   };
 
   return (

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useAppNavigate } from '../../lib/navigation';
 import { Search, Headset, ChevronRight, Store, ShieldCheck, FileText, Volume2, Wallet, Package, Truck, Plus, ShoppingCart, WifiOff, RefreshCcw, FileX, ArrowRight } from 'lucide-react';
 import { Card } from '../../components/ui/Card';
 import { Skeleton } from '../../components/ui/Skeleton';
@@ -8,6 +9,7 @@ import { ImagePickerActionSheet } from '../../components/biz/ImagePickerActionSh
 import { useFeedback } from '../../components/ui/FeedbackProvider';
 
 export const HomePage = () => {
+  const { goTo } = useAppNavigate();
   const [loading, setLoading] = useState(true);
   const [offline, setOffline] = useState(false);
   const [error, setError] = useState(false);
@@ -35,20 +37,14 @@ export const HomePage = () => {
       </div>
       <div 
         className="flex-1 h-8 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center px-3 shadow-sm border border-transparent dark:border-gray-700 cursor-pointer"
-        onClick={() => {
-          const event = new CustomEvent('change-view', { detail: 'search' });
-          window.dispatchEvent(event);
-        }}
+        onClick={() => goTo('search')}
       >
         <Search size={14} className="text-gray-400 dark:text-gray-500 mr-2 shrink-0" />
         <span className="text-[12px] text-gray-400 dark:text-gray-500 truncate">搜索商品 / SKU / 订单</span>
       </div>
       <button 
         className="flex items-center justify-center w-8 h-8 text-gray-900 dark:text-gray-100 shrink-0 active:opacity-70"
-        onClick={() => {
-          const event = new CustomEvent('change-view', { detail: 'help_center' });
-          window.dispatchEvent(event);
-        }}
+        onClick={() => goTo('help_center')}
       >
         <Headset size={20} />
       </button>
@@ -77,10 +73,7 @@ export const HomePage = () => {
         <div className="grid grid-cols-5 gap-2 px-4 mt-4 mb-4">
           <div 
             className="flex flex-col items-center cursor-pointer active:opacity-70"
-            onClick={() => {
-              const event = new CustomEvent('change-view', { detail: 'store' });
-              window.dispatchEvent(event);
-            }}
+            onClick={() => goTo('store')}
           >
             <div className="w-11 h-11 rounded-[14px] bg-white dark:bg-gray-800 shadow-sm flex items-center justify-center text-[#FF4142] mb-1.5">
               <Store size={22} strokeWidth={1.5} />
@@ -89,10 +82,7 @@ export const HomePage = () => {
           </div>
           <div 
             className="flex flex-col items-center cursor-pointer active:opacity-70"
-            onClick={() => {
-              const event = new CustomEvent('change-view', { detail: 'shield' });
-              window.dispatchEvent(event);
-            }}
+            onClick={() => goTo('shield')}
           >
             <div className="w-11 h-11 rounded-[14px] bg-white dark:bg-gray-800 shadow-sm flex items-center justify-center text-[#FF4142] mb-1.5">
               <ShieldCheck size={22} strokeWidth={1.5} />
@@ -101,10 +91,7 @@ export const HomePage = () => {
           </div>
           <div 
             className="flex flex-col items-center cursor-pointer active:opacity-70"
-            onClick={() => {
-              const event = new CustomEvent('change-view', { detail: 'order' });
-              window.dispatchEvent(event);
-            }}
+            onClick={() => goTo('order')}
           >
             <div className="w-11 h-11 rounded-[14px] bg-white dark:bg-gray-800 shadow-sm flex items-center justify-center text-[#FF4142] mb-1.5">
               <FileText size={22} strokeWidth={1.5} />
@@ -113,10 +100,7 @@ export const HomePage = () => {
           </div>
           <div 
             className="flex flex-col items-center cursor-pointer active:opacity-70"
-            onClick={() => {
-              const event = new CustomEvent('change-view', { detail: 'live' });
-              window.dispatchEvent(event);
-            }}
+            onClick={() => goTo('live')}
           >
             <div className="w-11 h-11 rounded-[14px] bg-white dark:bg-gray-800 shadow-sm flex items-center justify-center text-[#FF4142] mb-1.5">
               <Volume2 size={22} strokeWidth={1.5} />
@@ -125,10 +109,7 @@ export const HomePage = () => {
           </div>
           <div 
             className="flex flex-col items-center cursor-pointer active:opacity-70"
-            onClick={() => {
-              const event = new CustomEvent('change-view', { detail: 'help_center' });
-              window.dispatchEvent(event);
-            }}
+            onClick={() => goTo('help_center')}
           >
             <div className="w-11 h-11 rounded-[14px] bg-white dark:bg-gray-800 shadow-sm flex items-center justify-center text-[#FF4142] mb-1.5">
               <Headset size={22} strokeWidth={1.5} />
@@ -140,10 +121,7 @@ export const HomePage = () => {
         {/* Announcement */}
         <div 
           className="mx-4 mb-4 h-9 bg-white dark:bg-gray-800 rounded-full flex items-center px-3 shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden cursor-pointer active:opacity-80"
-          onClick={() => {
-            const event = new CustomEvent('change-view', { detail: 'announcement' });
-            window.dispatchEvent(event);
-          }}
+          onClick={() => goTo('announcement')}
         >
           <Volume2 size={16} className="text-[#FF4142] mr-2 shrink-0" />
           <div className="flex-1 overflow-hidden relative h-full flex items-center">
@@ -156,10 +134,7 @@ export const HomePage = () => {
         {/* Trading Zone Banner (Replaced Asset/Flash Sale Banner) */}
         <div 
           className="mx-4 mb-4 rounded-[16px] bg-gradient-to-r from-[#D32F2F] to-[#FF4B2B] p-5 relative overflow-hidden shadow-md cursor-pointer active:opacity-90 transition-opacity flex items-center justify-between min-h-[88px]"
-          onClick={() => {
-            const event = new CustomEvent('change-view', { detail: 'trading_zone' });
-            window.dispatchEvent(event);
-          }}
+          onClick={() => goTo('trading_zone')}
         >
           {/* Decorative background elements */}
           <div className="absolute right-0 top-0 bottom-0 w-1/2 bg-gradient-to-l from-white/10 to-transparent"></div>
@@ -180,10 +155,7 @@ export const HomePage = () => {
           <div className="flex justify-around">
             <div 
               className="flex flex-col items-center text-gray-900 dark:text-gray-100 relative cursor-pointer active:opacity-70 w-1/4"
-              onClick={() => {
-                const event = new CustomEvent('change-view', { detail: 'order' });
-                window.dispatchEvent(event);
-              }}
+              onClick={() => goTo('order')}
             >
               <Wallet size={24} strokeWidth={1.5} className="mb-1.5 text-gray-700 dark:text-gray-400" />
               <span className="text-[12px]">待付款</span>
@@ -191,30 +163,21 @@ export const HomePage = () => {
             </div>
             <div 
               className="flex flex-col items-center text-gray-900 dark:text-gray-100 cursor-pointer active:opacity-70 w-1/4"
-              onClick={() => {
-                const event = new CustomEvent('change-view', { detail: 'order' });
-                window.dispatchEvent(event);
-              }}
+              onClick={() => goTo('order')}
             >
               <Package size={24} strokeWidth={1.5} className="mb-1.5 text-gray-700 dark:text-gray-400" />
               <span className="text-[12px]">待发货</span>
             </div>
             <div 
               className="flex flex-col items-center text-gray-900 dark:text-gray-100 cursor-pointer active:opacity-70 w-1/4"
-              onClick={() => {
-                const event = new CustomEvent('change-view', { detail: 'order' });
-                window.dispatchEvent(event);
-              }}
+              onClick={() => goTo('order')}
             >
               <Truck size={24} strokeWidth={1.5} className="mb-1.5 text-gray-700 dark:text-gray-400" />
               <span className="text-[12px]">待收货</span>
             </div>
             <div 
               className="flex flex-col items-center text-gray-900 dark:text-gray-100 cursor-pointer active:opacity-70 w-1/4"
-              onClick={() => {
-                const event = new CustomEvent('change-view', { detail: 'after_sales' });
-                window.dispatchEvent(event);
-              }}
+              onClick={() => goTo('after_sales')}
             >
               <Headset size={24} strokeWidth={1.5} className="mb-1.5 text-gray-700 dark:text-gray-400" />
               <span className="text-[12px]">售后</span>
@@ -236,10 +199,7 @@ export const HomePage = () => {
               <p className="text-[14px] text-gray-500 dark:text-gray-400 mb-4">暂无推荐商品</p>
               <button 
                 className="px-5 py-2 border border-[#FF4142] text-[#FF4142] rounded-full text-[13px] font-medium active:bg-red-50 dark:active:bg-red-900/20 transition-colors"
-                onClick={() => {
-                  const event = new CustomEvent('change-view', { detail: 'category' });
-                  window.dispatchEvent(event);
-                }}
+                onClick={() => goTo('category')}
               >
                 去分类看看
               </button>
@@ -262,10 +222,7 @@ export const HomePage = () => {
                   <div 
                     key={i} 
                     className="bg-white dark:bg-gray-900 rounded-[16px] overflow-hidden shadow-sm border border-gray-100 dark:border-gray-800 cursor-pointer active:opacity-70 transition-opacity flex flex-col"
-                    onClick={() => {
-                      const event = new CustomEvent('change-view', { detail: 'product_detail' });
-                      window.dispatchEvent(event);
-                    }}
+                    onClick={() => goTo('product_detail')}
                   >
                     <img src={`https://picsum.photos/seed/prod${i}/200/200`} alt="Product" className="w-full aspect-square object-cover" referrerPolicy="no-referrer" />
                     <div className="p-3 flex-1 flex flex-col">
@@ -319,8 +276,7 @@ export const HomePage = () => {
         onClose={() => setShowForceAnnouncement(false)}
         onViewDetail={() => {
           setShowForceAnnouncement(false);
-          const event = new CustomEvent('change-view', { detail: 'announcement' });
-          window.dispatchEvent(event);
+          goTo('announcement');
         }}
       />
 

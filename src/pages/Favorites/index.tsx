@@ -1,7 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { ChevronLeft, WifiOff, AlertCircle, ShoppingCart, CheckCircle2, Circle, Trash2, HeartOff, RefreshCcw } from 'lucide-react';
+import { useAppNavigate } from '../../lib/navigation';
+import { PageHeader } from '../../components/layout/PageHeader';
+import { ErrorState } from '../../components/ui/ErrorState';
+import { EmptyState } from '../../components/ui/EmptyState';
 
 export const FavoritesPage = () => {
+  const { goTo, goBack } = useAppNavigate();
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [offline, setOffline] = useState(!navigator.onLine);
@@ -45,7 +51,7 @@ export const FavoritesPage = () => {
   };
 
   const handleBack = () => {
-    window.dispatchEvent(new CustomEvent('go-back'));
+    goBack();
   };
 
   const toggleEdit = () => {
@@ -90,10 +96,10 @@ export const FavoritesPage = () => {
             <ChevronLeft size={24} />
           </button>
         </div>
-        <h1 className="text-[17px] font-medium text-gray-900 dark:text-gray-100 text-center w-1/3">我的收藏</h1>
+        <h1 className="text-2xl font-medium text-gray-900 dark:text-gray-100 text-center w-1/3">我的收藏</h1>
         <div className="w-1/3 flex justify-end">
           {(!empty && !loading && !error) && (
-            <button onClick={toggleEdit} className="text-[14px] text-gray-600 dark:text-gray-400 px-2 py-1 active:opacity-70">
+            <button onClick={toggleEdit} className="text-md text-gray-600 dark:text-gray-400 px-2 py-1 active:opacity-70">
               {isEditing ? '完成' : '编辑'}
             </button>
           )}
@@ -123,39 +129,13 @@ export const FavoritesPage = () => {
   );
 
   const renderError = () => (
-    <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
-      <div className="w-24 h-24 mb-4 text-gray-300 dark:text-gray-600">
-        <WifiOff className="w-full h-full" />
-      </div>
-      <h3 className="text-[16px] font-medium text-gray-900 dark:text-gray-100 mb-2">网络请求失败</h3>
-      <p className="text-[13px] text-gray-500 dark:text-gray-400 mb-6">请检查您的网络设置后重试</p>
-      <button 
-        onClick={fetchData}
-        className="px-6 py-2 border border-gray-300 dark:border-gray-600 rounded-full text-[14px] text-gray-700 dark:text-gray-400 flex items-center active:bg-gray-50 dark:bg-gray-800"
-      >
-        <RefreshCcw size={16} className="mr-2" />
-        重新加载
-      </button>
-    </div>
+    <ErrorState onRetry={fetchData} />
   );
 
   const renderEmpty = () => (
-    <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
-      <div className="w-24 h-24 mb-4 text-gray-300 dark:text-gray-600">
-        <HeartOff className="w-full h-full" strokeWidth={1.5} />
-      </div>
-      <h3 className="text-[16px] font-medium text-gray-900 dark:text-gray-100 mb-2">暂无收藏</h3>
-      <p className="text-[13px] text-gray-500 dark:text-gray-400 mb-6">您还没有收藏任何商品哦</p>
-      <button 
-        className="px-8 py-2 rounded-full border border-[#f2270c] text-[#f2270c] text-[14px] font-medium active:bg-red-50"
-        onClick={() => {
-          const event = new CustomEvent('change-view', { detail: 'home' });
-          window.dispatchEvent(event);
-        }}
-      >
-        去逛逛
-      </button>
-    </div>
+    <EmptyState message="暂无收藏"
+      actionText="去逛逛"
+      onAction={() => goTo('home')} />
   );
 
   const renderContent = () => {
@@ -175,7 +155,7 @@ export const FavoritesPage = () => {
             {isEditing && (
               <div className="pr-3 shrink-0">
                 {selectedIds.includes(item.id) ? (
-                  <CheckCircle2 size={20} className="text-[#f2270c] fill-current text-white bg-[#f2270c] rounded-full" />
+                  <CheckCircle2 size={20} className="text-text-price fill-current text-white bg-brand-start rounded-full" />
                 ) : (
                   <Circle size={20} className="text-gray-300 dark:text-gray-600" />
                 )}
@@ -189,22 +169,22 @@ export const FavoritesPage = () => {
 
             {/* Details */}
             <div className="flex-1 flex flex-col h-28 py-0.5 justify-between min-w-0">
-              <div className="text-[14px] text-gray-900 dark:text-gray-100 line-clamp-2 leading-snug font-medium">
+              <div className="text-md text-gray-900 dark:text-gray-100 line-clamp-2 leading-snug font-medium">
                 {item.isSelfOperated && (
-                  <span className="inline-block bg-[#f2270c] text-white text-[10px] px-1 rounded-sm mr-1.5 align-middle leading-tight font-normal">自营</span>
+                  <span className="inline-block bg-brand-start text-white text-xs px-1 rounded-sm mr-1.5 align-middle leading-tight font-normal">自营</span>
                 )}
                 <span className="align-middle">{item.title}</span>
               </div>
               
               <div className="flex justify-between items-end mt-2">
-                <div className="text-[18px] font-bold text-[#f2270c] leading-none">
-                  <span className="text-[12px] mr-0.5">¥</span>{item.price.split('.')[0]}
-                  <span className="text-[12px]">.{item.price.split('.')[1]}</span>
+                <div className="text-3xl font-bold text-text-price leading-none">
+                  <span className="text-sm mr-0.5">¥</span>{item.price.split('.')[0]}
+                  <span className="text-sm">.{item.price.split('.')[1]}</span>
                 </div>
                 
                 {!isEditing && (
                   <button 
-                    className="w-7 h-7 rounded-full bg-[#f2270c] flex items-center justify-center text-white active:opacity-80 shrink-0"
+                    className="w-7 h-7 rounded-full bg-brand-start flex items-center justify-center text-white active:opacity-80 shrink-0"
                     onClick={(e) => {
                       e.stopPropagation();
                       alert('已加入购物车');
@@ -222,10 +202,10 @@ export const FavoritesPage = () => {
   };
 
   return (
-    <div className="flex-1 flex flex-col bg-[#f5f5f5] dark:bg-gray-950 relative h-full overflow-hidden">
+    <div className="flex-1 flex flex-col bg-bg-hover dark:bg-gray-950 relative h-full overflow-hidden">
       {/* Offline Banner */}
       {offline && (
-        <div className="bg-[#ffe4e4] text-[#f2270c] text-[12px] py-2 px-4 flex items-center justify-center sticky top-0 z-50">
+        <div className="bg-[#ffe4e4] text-text-price text-sm py-2 px-4 flex items-center justify-center sticky top-0 z-50">
           <WifiOff size={14} className="mr-2" />
           网络连接已断开，请检查网络设置
         </div>
@@ -247,16 +227,16 @@ export const FavoritesPage = () => {
             onClick={toggleSelectAll}
           >
             {isAllSelected ? (
-              <CheckCircle2 size={20} className="text-[#f2270c] fill-current text-white bg-[#f2270c] rounded-full mr-2" />
+              <CheckCircle2 size={20} className="text-text-price fill-current text-white bg-brand-start rounded-full mr-2" />
             ) : (
               <Circle size={20} className="text-gray-300 dark:text-gray-600 mr-2" />
             )}
-            <span className="text-[14px] text-gray-900 dark:text-gray-100">全选</span>
+            <span className="text-md text-gray-900 dark:text-gray-100">全选</span>
           </div>
           <button 
-            className={`h-[36px] px-6 rounded-full text-[14px] font-medium transition-all flex items-center ${
+            className={`h-[36px] px-6 rounded-full text-md font-medium transition-all flex items-center ${
               selectedIds.length > 0 
-                ? 'bg-gradient-to-r from-[#f2270c] to-[#ff4f18] text-white active:opacity-80' 
+                ? 'bg-gradient-to-r from-brand-start to-brand-end text-white active:opacity-80' 
                 : 'bg-gray-200 dark:bg-gray-800 text-gray-400 dark:text-gray-500 cursor-not-allowed'
             }`}
             disabled={selectedIds.length === 0}

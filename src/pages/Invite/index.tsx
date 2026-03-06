@@ -1,7 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { ChevronLeft, WifiOff, AlertCircle, Copy, QrCode, Download, Share2, Link as LinkIcon, Image as ImageIcon, MessageCircle, ChevronDown, ChevronUp, AlertTriangle } from 'lucide-react';
+import { useAppNavigate } from '../../lib/navigation';
+import { PageHeader } from '../../components/layout/PageHeader';
+import { ErrorState } from '../../components/ui/ErrorState';
 
 export const InvitePage = () => {
+  const { goTo, goBack } = useAppNavigate();
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [offline, setOffline] = useState(false);
@@ -34,8 +39,7 @@ export const InvitePage = () => {
   };
 
   const handleBack = () => {
-    const event = new CustomEvent('go-back');
-    window.dispatchEvent(event);
+    goBack();
   };
 
   const handleCopy = (text: string, type: string) => {
@@ -55,7 +59,7 @@ export const InvitePage = () => {
   const renderHeader = () => (
     <div className="bg-white dark:bg-gray-900 z-40 relative shrink-0 border-b border-gray-100 dark:border-gray-800">
       {offline && (
-        <div className="bg-red-50 dark:bg-red-900/30 text-[#FF4142] dark:text-red-400 px-4 py-2 flex items-center justify-between text-[12px]">
+        <div className="bg-red-50 dark:bg-red-900/30 text-brand-start dark:text-red-400 px-4 py-2 flex items-center justify-between text-sm">
           <div className="flex items-center">
             <WifiOff size={14} className="mr-2" />
             <span>网络不稳定，请检查网络设置</span>
@@ -69,7 +73,7 @@ export const InvitePage = () => {
             <ChevronLeft size={24} />
           </button>
         </div>
-        <h1 className="text-[17px] font-bold text-gray-900 dark:text-gray-100 text-center w-1/3">邀请推广</h1>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 text-center w-1/3">邀请推广</h1>
         <div className="w-1/3"></div>
       </div>
     </div>
@@ -78,19 +82,19 @@ export const InvitePage = () => {
   const renderSkeleton = () => (
     <div className="p-4 space-y-4">
       {/* Invite Card Skeleton */}
-      <div className="bg-white dark:bg-gray-900 rounded-[16px] p-6 shadow-sm animate-pulse flex flex-col items-center">
+      <div className="bg-white dark:bg-gray-900 rounded-2xl p-6 shadow-sm animate-pulse flex flex-col items-center">
         <div className="w-24 h-4 bg-gray-200 dark:bg-gray-800 rounded mb-4"></div>
         <div className="w-48 h-10 bg-gray-200 dark:bg-gray-800 rounded mb-6"></div>
-        <div className="w-32 h-32 bg-gray-200 dark:bg-gray-800 rounded-[12px] mb-6"></div>
-        <div className="w-full h-10 bg-gray-100 dark:bg-gray-800 rounded-[8px]"></div>
+        <div className="w-32 h-32 bg-gray-200 dark:bg-gray-800 rounded-xl mb-6"></div>
+        <div className="w-full h-10 bg-gray-100 dark:bg-gray-800 rounded-lg"></div>
       </div>
       
       {/* Templates Skeleton */}
-      <div className="bg-white dark:bg-gray-900 rounded-[16px] p-4 shadow-sm animate-pulse">
+      <div className="bg-white dark:bg-gray-900 rounded-2xl p-4 shadow-sm animate-pulse">
         <div className="w-24 h-5 bg-gray-200 dark:bg-gray-800 rounded mb-4"></div>
         <div className="flex space-x-3 overflow-hidden">
           {[1, 2, 3].map(i => (
-            <div key={i} className="w-[100px] h-[150px] bg-gray-200 dark:bg-gray-800 rounded-[8px] shrink-0"></div>
+            <div key={i} className="w-[100px] h-[150px] bg-gray-200 dark:bg-gray-800 rounded-lg shrink-0"></div>
           ))}
         </div>
       </div>
@@ -98,18 +102,7 @@ export const InvitePage = () => {
   );
 
   const renderError = () => (
-    <div className="flex flex-col items-center justify-center pt-32 px-4">
-      <div className="w-24 h-24 bg-red-50 dark:bg-red-900/20 rounded-full flex items-center justify-center mb-4 text-[#FF4142]">
-        <AlertCircle size={48} />
-      </div>
-      <p className="text-[15px] text-gray-500 dark:text-gray-400 mb-6">加载失败，请重试</p>
-      <button 
-        onClick={fetchData}
-        className="px-6 py-2 rounded-full bg-gradient-to-r from-[#FF4142] to-[#FF4B2B] text-white text-[14px] font-medium active:opacity-80 shadow-sm"
-      >
-        重新加载
-      </button>
-    </div>
+    <ErrorState onRetry={fetchData} />
   );
 
   const renderContent = () => {
@@ -120,41 +113,41 @@ export const InvitePage = () => {
       <div className="p-4 pb-10 space-y-4">
         
         {/* Invite Card */}
-        <div className="bg-white dark:bg-gray-900 rounded-[16px] p-6 shadow-sm dark:shadow-none border border-transparent dark:border-gray-800 flex flex-col items-center relative overflow-hidden">
+        <div className="bg-white dark:bg-gray-900 rounded-2xl p-6 shadow-sm dark:shadow-none border border-transparent dark:border-gray-800 flex flex-col items-center relative overflow-hidden">
           {/* Decorative background elements */}
           <div className="absolute top-0 left-0 w-full h-24 bg-gradient-to-b from-red-50 dark:from-transparent to-transparent"></div>
           
 
-          <div className="text-[14px] text-gray-500 dark:text-gray-400 mb-2 relative z-10">我的专属邀请码</div>
+          <div className="text-md text-gray-500 dark:text-gray-400 mb-2 relative z-10">我的专属邀请码</div>
           <div className="flex items-center justify-center mb-6 relative z-10">
-            <span className="text-[40px] font-bold text-[#FF4142] tracking-wider leading-none mr-3">{inviteCode}</span>
+            <span className="text-7xl font-bold text-brand-start tracking-wider leading-none mr-3">{inviteCode}</span>
             <button 
               onClick={() => handleCopy(inviteCode, '邀请码')}
-              className="w-8 h-8 rounded-full bg-red-50 dark:bg-red-900/20 flex items-center justify-center text-[#FF4142] active:opacity-70"
+              className="w-8 h-8 rounded-full bg-red-50 dark:bg-red-900/20 flex items-center justify-center text-brand-start active:opacity-70"
             >
               <Copy size={16} />
             </button>
           </div>
 
-          <div className="w-40 h-40 bg-gray-50 dark:bg-gray-800 rounded-[16px] p-3 mb-6 relative z-10 border border-gray-100 dark:border-gray-700 flex items-center justify-center">
+          <div className="w-40 h-40 bg-gray-50 dark:bg-gray-800 rounded-2xl p-3 mb-6 relative z-10 border border-gray-100 dark:border-gray-700 flex items-center justify-center">
             {/* Placeholder for actual QR Code */}
             <QrCode size={120} className="text-gray-800 dark:text-gray-200" strokeWidth={1} />
-            <div className="absolute inset-0 flex items-center justify-center opacity-0 hover:opacity-100 bg-black/50 rounded-[16px] transition-opacity cursor-pointer" onClick={handleSaveImage}>
+            <div className="absolute inset-0 flex items-center justify-center opacity-0 hover:opacity-100 bg-black/50 rounded-2xl transition-opacity cursor-pointer" onClick={handleSaveImage}>
               <div className="flex flex-col items-center text-white">
                 <Download size={24} className="mb-1" />
-                <span className="text-[12px]">保存二维码</span>
+                <span className="text-sm">保存二维码</span>
               </div>
             </div>
           </div>
 
-          <div className="w-full bg-gray-50 dark:bg-gray-800 rounded-[8px] p-3 flex items-center justify-between relative z-10">
+          <div className="w-full bg-gray-50 dark:bg-gray-800 rounded-lg p-3 flex items-center justify-between relative z-10">
             <div className="flex-1 min-w-0 mr-3">
-              <div className="text-[12px] text-gray-400 dark:text-gray-500 mb-1">专属邀请链接</div>
-              <div className="text-[13px] text-gray-900 dark:text-gray-100 truncate">{inviteLink}</div>
+              <div className="text-sm text-gray-400 dark:text-gray-500 mb-1">专属邀请链接</div>
+              <div className="text-base text-gray-900 dark:text-gray-100 truncate">{inviteLink}</div>
             </div>
             <button 
               onClick={() => handleCopy(inviteLink, '邀请链接')}
-              className="px-4 py-1.5 rounded-full border border-[#FF4142] text-[#FF4142] text-[12px] font-medium active:bg-red-50 dark:active:bg-red-900/20 whitespace-nowrap"
+              className="px-4 py-1.5 rounded-full border border-[#FF4142] text-brand-start text-sm font-medium active:bg-red-50 dark:active:bg-red-900/20 whitespace-nowrap"
             >
               复制链接
             </button>
@@ -163,14 +156,14 @@ export const InvitePage = () => {
 
         {/* Save Error Banner */}
         {saveError && (
-          <div className="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-[12px] p-3 flex items-start">
+          <div className="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-xl p-3 flex items-start">
             <AlertTriangle size={16} className="text-orange-500 mt-0.5 mr-2 shrink-0" />
             <div className="flex-1">
-              <div className="text-[13px] text-orange-700 dark:text-orange-400 font-medium mb-1">保存图片失败</div>
-              <div className="text-[12px] text-orange-600/80 dark:text-orange-400/80 mb-2">请在系统设置中允许应用访问相册权限</div>
+              <div className="text-base text-orange-700 dark:text-orange-400 font-medium mb-1">保存图片失败</div>
+              <div className="text-sm text-orange-600/80 dark:text-orange-400/80 mb-2">请在系统设置中允许应用访问相册权限</div>
               <button 
                 onClick={handleSaveImage}
-                className="text-[12px] text-white bg-orange-500 px-3 py-1 rounded-full active:opacity-80"
+                className="text-sm text-white bg-orange-500 px-3 py-1 rounded-full active:opacity-80"
               >
                 重新尝试
               </button>
@@ -179,15 +172,15 @@ export const InvitePage = () => {
         )}
 
         {/* Poster Templates */}
-        <div className="bg-white dark:bg-gray-900 rounded-[16px] p-4 shadow-sm dark:shadow-none border border-transparent dark:border-gray-800">
+        <div className="bg-white dark:bg-gray-900 rounded-2xl p-4 shadow-sm dark:shadow-none border border-transparent dark:border-gray-800">
           <div className="flex justify-between items-center mb-4">
-            <h3 className="text-[15px] font-bold text-gray-900 dark:text-gray-100">海报模板</h3>
+            <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">海报模板</h3>
           </div>
           
           {empty ? (
             <div className="py-8 flex flex-col items-center justify-center text-gray-400 dark:text-gray-500">
               <ImageIcon size={32} className="mb-2 opacity-50" />
-              <span className="text-[13px]">暂无可用海报模板</span>
+              <span className="text-base">暂无可用海报模板</span>
             </div>
           ) : (
             <>
@@ -196,7 +189,7 @@ export const InvitePage = () => {
                   <div 
                     key={idx}
                     onClick={() => setSelectedTemplate(idx)}
-                    className={`relative shrink-0 rounded-[8px] overflow-hidden cursor-pointer transition-all ${
+                    className={`relative shrink-0 rounded-lg overflow-hidden cursor-pointer transition-all ${
                       selectedTemplate === idx 
                         ? 'border-2 border-[#FF4142] shadow-md scale-105' 
                         : 'border border-gray-200 dark:border-gray-700 opacity-80'
@@ -204,14 +197,14 @@ export const InvitePage = () => {
                   >
                     <img src={url} alt={`Template ${idx + 1}`} className="w-[100px] h-[150px] object-cover" referrerPolicy="no-referrer" />
                     {selectedTemplate === idx && (
-                      <div className="absolute bottom-0 left-0 right-0 bg-[#FF4142] text-white text-[10px] text-center py-0.5">
+                      <div className="absolute bottom-0 left-0 right-0 bg-brand-start text-white text-xs text-center py-0.5">
                         已选择
                       </div>
                     )}
                   </div>
                 ))}
               </div>
-              <button className="w-full h-[48px] rounded-full bg-gradient-to-r from-[#FF4142] to-[#FF4B2B] text-white text-[16px] font-medium shadow-sm active:opacity-80 transition-opacity flex items-center justify-center">
+              <button className="w-full h-[48px] rounded-full bg-gradient-to-r from-brand-start to-brand-end text-white text-xl font-medium shadow-sm active:opacity-80 transition-opacity flex items-center justify-center">
                 生成专属海报
               </button>
             </>
@@ -219,20 +212,20 @@ export const InvitePage = () => {
         </div>
 
         {/* Share Methods */}
-        <div className="bg-white dark:bg-gray-900 rounded-[16px] p-4 shadow-sm dark:shadow-none border border-transparent dark:border-gray-800">
-          <h3 className="text-[15px] font-bold text-gray-900 dark:text-gray-100 mb-4">分享至</h3>
+        <div className="bg-white dark:bg-gray-900 rounded-2xl p-4 shadow-sm dark:shadow-none border border-transparent dark:border-gray-800">
+          <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">分享至</h3>
           <div className="grid grid-cols-4 gap-4">
             <div className="flex flex-col items-center cursor-pointer active:opacity-70">
-              <div className="w-12 h-12 rounded-full bg-[#07C160]/10 flex items-center justify-center text-[#07C160] mb-2">
+              <div className="w-12 h-12 rounded-full bg-success/10 flex items-center justify-center text-success mb-2">
                 <MessageCircle size={24} />
               </div>
-              <span className="text-[12px] text-gray-600 dark:text-gray-400">微信好友</span>
+              <span className="text-sm text-gray-600 dark:text-gray-400">微信好友</span>
             </div>
             <div className="flex flex-col items-center cursor-pointer active:opacity-70">
-              <div className="w-12 h-12 rounded-full bg-[#07C160]/10 flex items-center justify-center text-[#07C160] mb-2">
+              <div className="w-12 h-12 rounded-full bg-success/10 flex items-center justify-center text-success mb-2">
                 <Share2 size={24} />
               </div>
-              <span className="text-[12px] text-gray-600 dark:text-gray-400">朋友圈</span>
+              <span className="text-sm text-gray-600 dark:text-gray-400">朋友圈</span>
             </div>
             <div 
               className="flex flex-col items-center cursor-pointer active:opacity-70"
@@ -241,7 +234,7 @@ export const InvitePage = () => {
               <div className="w-12 h-12 rounded-full bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center text-blue-500 mb-2">
                 <LinkIcon size={24} />
               </div>
-              <span className="text-[12px] text-gray-600 dark:text-gray-400">复制链接</span>
+              <span className="text-sm text-gray-600 dark:text-gray-400">复制链接</span>
             </div>
             <div 
               className="flex flex-col items-center cursor-pointer active:opacity-70"
@@ -250,23 +243,23 @@ export const InvitePage = () => {
               <div className="w-12 h-12 rounded-full bg-orange-50 dark:bg-orange-900/20 flex items-center justify-center text-orange-500 mb-2">
                 <Download size={24} />
               </div>
-              <span className="text-[12px] text-gray-600 dark:text-gray-400">保存图片</span>
+              <span className="text-sm text-gray-600 dark:text-gray-400">保存图片</span>
             </div>
           </div>
         </div>
 
         {/* Rules Foldable Card */}
-        <div className="bg-white dark:bg-gray-900 rounded-[16px] shadow-sm dark:shadow-none border border-transparent dark:border-gray-800 overflow-hidden">
+        <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm dark:shadow-none border border-transparent dark:border-gray-800 overflow-hidden">
           <div 
             className="px-4 py-4 flex justify-between items-center cursor-pointer active:bg-gray-50 dark:active:bg-gray-800 transition-colors"
             onClick={() => setRulesExpanded(!rulesExpanded)}
           >
-            <h3 className="text-[15px] font-bold text-gray-900 dark:text-gray-100">奖励说明与注意事项</h3>
+            <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">奖励说明与注意事项</h3>
             {rulesExpanded ? <ChevronUp size={20} className="text-gray-400 dark:text-gray-500" /> : <ChevronDown size={20} className="text-gray-400 dark:text-gray-500" />}
           </div>
           
           {rulesExpanded && (
-            <div className="px-4 pb-4 pt-1 border-t border-gray-100 dark:border-gray-800 text-[13px] text-gray-500 dark:text-gray-400 leading-relaxed space-y-2">
+            <div className="px-4 pb-4 pt-1 border-t border-gray-100 dark:border-gray-800 text-base text-gray-500 dark:text-gray-400 leading-relaxed space-y-2">
               <p>1. 邀请好友注册并完成首次实名认证，您和好友各得 100 积分奖励。</p>
               <p>2. 好友在注册后 30 天内完成首笔交易，您将获得交易额 1% 的现金返利，最高不超过 1000 元。</p>
               <p>3. 邀请奖励将在满足条件后的 24 小时内自动发放到您的账户余额/积分中。</p>
