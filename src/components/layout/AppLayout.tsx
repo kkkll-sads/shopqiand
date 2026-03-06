@@ -37,7 +37,7 @@ export const AppLayout = () => {
         </button>
 
         {/* 主内容区域 */}
-        <div className="flex-1 w-full max-w-[390px] mx-auto bg-bg-base relative flex flex-col shadow-2xl overflow-hidden">
+        <div className="relative flex flex-1 w-full flex-col overflow-hidden bg-bg-base sm:mx-auto sm:max-w-[430px] sm:shadow-2xl">
           <div className="flex-1 relative flex flex-col overflow-hidden">
             {/* React Router 子路由出口 */}
             <Outlet />

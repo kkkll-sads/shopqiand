@@ -478,7 +478,7 @@ export const WithdrawPage = () => {
       </div>
 
       <div className="fixed right-0 bottom-0 left-0 z-40 border-t border-border-light bg-bg-card pb-safe">
-        <div className="mx-auto flex max-w-[390px] items-center justify-between px-4 py-3">
+        <div className="mx-auto flex w-full items-center justify-between px-4 py-3 sm:max-w-[430px]">
           <div className="flex flex-col">
             <span className="mb-0.5 text-s text-text-sub">预计到账</span>
             <div className="flex items-baseline text-primary-start">
@@ -506,7 +506,7 @@ export const WithdrawPage = () => {
             className="absolute inset-0 bg-black/40 backdrop-blur-sm"
             onClick={() => setShowMethodModal(false)}
           />
-          <div className="relative z-10 mx-auto flex max-h-[70vh] w-full max-w-[390px] flex-col rounded-t-[20px] bg-bg-card animate-in slide-in-from-bottom duration-200">
+          <div className="relative z-10 mx-auto flex max-h-[70vh] w-full flex-col rounded-t-[20px] bg-bg-card animate-in slide-in-from-bottom duration-200 sm:max-w-[430px]">
             <div className="flex items-center justify-between border-b border-border-light p-4">
               <h3 className="text-xl font-bold text-text-main">选择收款方式</h3>
               <button

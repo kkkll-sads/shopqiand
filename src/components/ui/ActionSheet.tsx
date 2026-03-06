@@ -75,7 +75,7 @@ export const ActionSheet: React.FC<ActionSheetProps> = ({
 
       {/* Panel */}
       <div 
-        className={`relative w-full max-w-[390px] mx-auto px-4 pb-safe transition-transform duration-300 ease-out ${isVisible ? 'translate-y-0' : 'translate-y-full'}`}
+        className={`relative mx-auto w-full px-4 pb-safe transition-transform duration-300 ease-out sm:max-w-[430px] ${isVisible ? 'translate-y-0' : 'translate-y-full'}`}
       >
         {/* Main Options Card */}
         <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-lg mb-3 overflow-hidden flex flex-col max-h-[70vh]">

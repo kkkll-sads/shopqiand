@@ -44,20 +44,20 @@
   --color-border-card: var(--border-card);
 
   /* 字体大小层级（语义化 Token） */
-  --text-2xs: 9px;    /* 极小标签 */
-  --text-xs: 10px;    /* 辅助标签 */
-  --text-s: 11px;     /* 次要信息 */
-  --text-sm: 12px;    /* 常规辅助文字 */
-  --text-base: 13px;  /* 正文基准 */
-  --text-md: 14px;    /* 正文稍大 */
-  --text-lg: 15px;    /* 副标题 */
-  --text-xl: 16px;    /* 标题 */
-  --text-2xl: 17px;   /* 页面标题 */
-  --text-3xl: 18px;   /* 大标题 */
-  --text-4xl: 20px;   /* 特大标题 */
-  --text-5xl: 24px;   /* 数据强调 */
-  --text-6xl: 28px;   /* 价格/数字 */
-  --text-7xl: 32px;   /* 超大数字 */
+  --text-2xs: 10px;   /* 极小标签 */
+  --text-xs: 11px;    /* 辅助标签 */
+  --text-s: 12px;     /* 次要信息 */
+  --text-sm: 13px;    /* 常规辅助文字 */
+  --text-base: 14px;  /* 正文基准 */
+  --text-md: 15px;    /* 正文稍大 */
+  --text-lg: 16px;    /* 副标题 */
+  --text-xl: 17px;    /* 标题 */
+  --text-2xl: 18px;   /* 页面标题 */
+  --text-3xl: 20px;   /* 大标题 */
+  --text-4xl: 22px;   /* 特大标题 */
+  --text-5xl: 26px;   /* 数据强调 */
+  --text-6xl: 30px;   /* 价格/数字 */
+  --text-7xl: 34px;   /* 超大数字 */
 
   --shadow-soft: var(--shadow-soft);
 }
