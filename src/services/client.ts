@@ -7,6 +7,21 @@
  */
 import { apiFetch, type ApiFetchConfig, type ApiResponse } from './networking';
 import { useAuthStore } from '@/stores/authStore';
+import {
+  type RequestStrategyConfig,
+  buildRequestKey,
+  clearInflightRequest,
+  clearRequestCache,
+  getInflightRequest,
+  getLastInvokeAt,
+  getValidCachedResponse,
+  invalidateRequestCache,
+  isCacheableResponse,
+  setCachedResponse,
+  setInflightRequest,
+  setLastInvokeAt,
+  shouldUseRequestStrategy,
+} from './request-cache';
 
 // ============================================================
 // Token 管理
@@ -42,13 +57,15 @@ export const hasToken = (): boolean => !!getStoredToken();
  * - onNeedLogin: 捕获 NeedLoginError 时回调，便于全局统一处理
  * - onNetworkError: 网络错误回调（最终失败时触发）
  */
-export interface AuthedFetchConfig extends ApiFetchConfig {
+export interface AuthedFetchConfig extends ApiFetchConfig, RequestStrategyConfig {
   token?: string;
   retry?: number;
   retryDelayMs?: number;
   onNeedLogin?: () => void;
   onNetworkError?: (error: any) => void;
 }
+
+export interface RequestConfig extends ApiFetchConfig, RequestStrategyConfig {}
 
 // ============================================================
 // 工具函数
@@ -80,45 +97,99 @@ export async function authedFetch<T = any>(
     retryDelayMs = 500,
     onNeedLogin,
     onNetworkError,
+    cacheTTL = 0,
+    dedup = false,
+    throttleMs = 0,
+    forceRefresh = false,
     ...rest
   } = config;
 
   const finalToken = token ?? getStoredToken();
-  let attempt = 0;
+  const method = (rest.method ?? 'GET').toUpperCase();
+  const strategy = { cacheTTL, dedup, throttleMs, forceRefresh };
+  const useStrategy = shouldUseRequestStrategy(method, strategy);
+  const requestKey = useStrategy ? buildRequestKey({ method, path, token: finalToken }) : '';
 
-  while (true) {
-    try {
-      return await apiFetch<T>(path, { ...rest, token: finalToken });
-    } catch (error: any) {
-      const needLogin = error?.name === 'NeedLoginError';
-      const networkError = isNetworkError(error);
-
-      // 需要登录的错误交由上层统一处理
-      if (needLogin && onNeedLogin) {
-        try {
-          onNeedLogin();
-        } catch { /* 回调失败不影响主流程 */ }
-      }
-
-      // 网络错误重试
-      if (networkError && attempt < retry) {
-        attempt += 1;
-        if (retryDelayMs > 0) {
-          await new Promise((resolve) => setTimeout(resolve, retryDelayMs));
+  const executeWithRetry = async (): Promise<ApiResponse<T>> => {
+    let attempt = 0;
+    while (true) {
+      try {
+        const response = await apiFetch<T>(path, { ...rest, token: finalToken });
+        if (useStrategy && cacheTTL > 0 && isCacheableResponse(response)) {
+          setCachedResponse(requestKey, response, cacheTTL);
         }
-        continue;
-      }
+        return response;
+      } catch (error: any) {
+        const needLogin = error?.name === 'NeedLoginError';
+        const networkError = isNetworkError(error);
 
-      // 最终网络错误回调
-      if (networkError && onNetworkError) {
-        try {
-          onNetworkError(error);
-        } catch { /* 回调失败忽略 */ }
-      }
+        if (needLogin && onNeedLogin) {
+          try {
+            onNeedLogin();
+          } catch {
+            // 回调失败不影响主流程
+          }
+        }
 
-      throw error;
+        if (networkError && attempt < retry) {
+          attempt += 1;
+          if (retryDelayMs > 0) {
+            await new Promise((resolve) => setTimeout(resolve, retryDelayMs));
+          }
+          continue;
+        }
+
+        if (networkError && onNetworkError) {
+          try {
+            onNetworkError(error);
+          } catch {
+            // 回调失败忽略
+          }
+        }
+
+        throw error;
+      }
+    }
+  };
+
+  if (!useStrategy) {
+    return executeWithRetry();
+  }
+
+  const now = Date.now();
+  if (!forceRefresh) {
+    if (throttleMs > 0) {
+      const lastInvokeAt = getLastInvokeAt(requestKey);
+      if (typeof lastInvokeAt === 'number' && now - lastInvokeAt < throttleMs) {
+        const inflightRequest = getInflightRequest<T>(requestKey);
+        if (inflightRequest) return inflightRequest;
+        const cachedInThrottle = getValidCachedResponse<T>(requestKey, now);
+        if (cachedInThrottle) return cachedInThrottle;
+      }
+    }
+
+    const cached = getValidCachedResponse<T>(requestKey, now);
+    if (cached) return cached;
+
+    if (dedup) {
+      const inflightRequest = getInflightRequest<T>(requestKey);
+      if (inflightRequest) return inflightRequest;
     }
   }
+
+  if (throttleMs > 0) {
+    setLastInvokeAt(requestKey, now);
+  }
+
+  const requestPromise = executeWithRetry();
+  if (dedup) {
+    setInflightRequest(requestKey, requestPromise);
+    requestPromise.finally(() => {
+      clearInflightRequest(requestKey);
+    });
+  }
+
+  return requestPromise;
 }
 
 /**
@@ -128,9 +199,66 @@ export async function authedFetch<T = any>(
  */
 export async function publicFetch<T = any>(
   path: string,
-  config: ApiFetchConfig = {}
+  config: RequestConfig = {},
 ): Promise<ApiResponse<T>> {
-  return apiFetch<T>(path, { ...config, disableNeedLoginHandler: true });
+  const {
+    cacheTTL = 0,
+    dedup = false,
+    throttleMs = 0,
+    forceRefresh = false,
+    ...rest
+  } = config;
+  const method = (rest.method ?? 'GET').toUpperCase();
+  const strategy = { cacheTTL, dedup, throttleMs, forceRefresh };
+  const useStrategy = shouldUseRequestStrategy(method, strategy);
+  const requestKey = useStrategy ? buildRequestKey({ method, path }) : '';
+
+  const execute = async (): Promise<ApiResponse<T>> => {
+    const response = await apiFetch<T>(path, { ...rest, disableNeedLoginHandler: true });
+    if (useStrategy && cacheTTL > 0 && isCacheableResponse(response)) {
+      setCachedResponse(requestKey, response, cacheTTL);
+    }
+    return response;
+  };
+
+  if (!useStrategy) {
+    return execute();
+  }
+
+  const now = Date.now();
+  if (!forceRefresh) {
+    if (throttleMs > 0) {
+      const lastInvokeAt = getLastInvokeAt(requestKey);
+      if (typeof lastInvokeAt === 'number' && now - lastInvokeAt < throttleMs) {
+        const inflightRequest = getInflightRequest<T>(requestKey);
+        if (inflightRequest) return inflightRequest;
+        const cachedInThrottle = getValidCachedResponse<T>(requestKey, now);
+        if (cachedInThrottle) return cachedInThrottle;
+      }
+    }
+
+    const cached = getValidCachedResponse<T>(requestKey, now);
+    if (cached) return cached;
+
+    if (dedup) {
+      const inflightRequest = getInflightRequest<T>(requestKey);
+      if (inflightRequest) return inflightRequest;
+    }
+  }
+
+  if (throttleMs > 0) {
+    setLastInvokeAt(requestKey, now);
+  }
+
+  const requestPromise = execute();
+  if (dedup) {
+    setInflightRequest(requestKey, requestPromise);
+    requestPromise.finally(() => {
+      clearInflightRequest(requestKey);
+    });
+  }
+
+  return requestPromise;
 }
 
 // ============================================================
@@ -163,10 +291,17 @@ export const apiClient = {
   getToken: getStoredToken,
   /** 检查是否有 Token */
   hasToken,
+  /** 清空请求缓存 */
+  clearRequestCache,
+  /** 失效指定请求缓存 */
+  invalidateRequestCache,
 };
 
 // 默认导出
 export default authedFetch;
+
+export { clearRequestCache, invalidateRequestCache } from './request-cache';
+export type { InvalidateRequestCacheOptions, RequestStrategyConfig } from './request-cache';
 
 // 重导出类型
 export type { ApiResponse, ApiFetchConfig } from './networking';

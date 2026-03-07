@@ -114,6 +114,14 @@ const fixTailwindV4Compat = () => {
       if (logicalStartEnd[prop]) {
         decl.before({ prop: logicalStartEnd[prop], value: decl.value, important: decl.important });
       }
+
+      // 5. dvh/svh/lvh → 在前面插入 vh 兜底（Chrome < 102 不支持动态视口单位）
+      if (value && /\d(dvh|svh|lvh)\b/.test(value)) {
+        const vhFallback = value.replace(/(\d*\.?\d+)(dvh|svh|lvh)/g, '$1vh');
+        if (vhFallback !== value) {
+          decl.before({ prop, value: vhFallback, important: decl.important });
+        }
+      }
     },
   };
 };

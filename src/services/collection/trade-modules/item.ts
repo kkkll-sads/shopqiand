@@ -1,6 +1,6 @@
 import type { ApiResponse } from '../../networking'
 import { API_ENDPOINTS } from '../../config'
-import { authedFetch } from '../../client'
+import { authedFetch, type RequestStrategyConfig } from '../../client'
 
 /**
  * 藏品商品基本信息接口
@@ -127,6 +127,7 @@ export interface FetchCollectionItemsBySessionParams {
 export async function fetchCollectionItemsBySession(
   sessionId: number | string,
   params: FetchCollectionItemsBySessionParams = {},
+  strategy?: RequestStrategyConfig,
 ): Promise<ApiResponse<CollectionItemListData>> {
   const search = new URLSearchParams()
   search.set('session_id', String(sessionId))
@@ -137,5 +138,10 @@ export async function fetchCollectionItemsBySession(
   search.set('limit', String(limit))
 
   const path = `${API_ENDPOINTS.collectionItem.bySession}?${search.toString()}`
-  return authedFetch<CollectionItemListData>(path, { method: 'GET' })
+  return authedFetch<CollectionItemListData>(path, {
+    method: 'GET',
+    cacheTTL: strategy?.cacheTTL ?? 60000,
+    dedup: strategy?.dedup ?? true,
+    forceRefresh: strategy?.forceRefresh ?? false,
+  })
 }

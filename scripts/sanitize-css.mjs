@@ -50,6 +50,37 @@ for (const file of cssFiles) {
     }
   });
 
+  // 展平 Tailwind v4 渐变变量链，修复低版本 Android WebView 渐变不渲染
+  // Tailwind v4: --tw-gradient-stops: var(--tw-gradient-via-stops, var(...), ...)
+  // 旧 WebView 无法解析多层嵌套 var()，去除 var(--tw-gradient-via-stops, ...) 外壳
+  const viaStopsRe = /var\(\s*--tw-gradient-via-stops\s*,\s*/;
+
+  const flattenViaStopsWrapper = (value) => {
+    const match = value.match(viaStopsRe);
+    if (!match) return null;
+
+    const startIdx = match.index + match[0].length;
+    let depth = 1;
+    let endIdx = startIdx;
+    for (let i = startIdx; i < value.length; i++) {
+      if (value[i] === '(') depth++;
+      if (value[i] === ')') depth--;
+      if (depth === 0) {
+        endIdx = i;
+        break;
+      }
+    }
+    return value.substring(startIdx, endIdx).trim();
+  };
+
+  root.walkDecls(/^--tw-gradient-(stops|via-stops)$/, (decl) => {
+    const flattened = flattenViaStopsWrapper(decl.value);
+    if (flattened) {
+      decl.value = flattened;
+      changed = true;
+    }
+  });
+
   if (changed) {
     const output = root.toString();
     writeFileSync(file, output, 'utf8');

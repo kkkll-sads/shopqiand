@@ -8,6 +8,7 @@ import type { UserInfo, LoginSuccessPayload } from '@/types';
 import { STORAGE_KEYS as GLOBAL_STORAGE_KEYS } from '@/constants/storageKeys';
 import { useAppStore } from './appStore';
 import { errorLog } from '@/utils/logger';
+import { clearRequestCache } from '@/services/request-cache';
 
 // 存储键名常量
 const STORAGE_KEYS = {
@@ -86,6 +87,7 @@ export const useAuthStore = create<AuthState>()(
           appStore.setExtraUnreadCount(0);
           appStore.setPopupQueue([]);
           appStore.setShowPopupAnnouncement(false);
+          clearRequestCache();
 
           // 清空 localStorage 中的业务缓存
           const cacheKeysToRemove = [

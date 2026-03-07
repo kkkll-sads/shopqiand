@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   fetchProfile,
   normalizeAssetUrl,
@@ -38,6 +38,7 @@ const Profile: React.FC<{ unreadCount?: number }> = ({ unreadCount: propUnreadCo
   const [userInfo, setUserInfo] = useState<UserInfo | null>(storedUser);
   const [orderStats, setOrderStats] = useState<ShopOrderStatistics | null>(null);
   const [hasSignedToday, setHasSignedToday] = useState<boolean>(false);
+  const lastSignInStatusFetchRef = useRef(0);
 
   const loadMachine = useStateMachine<LoadingState, LoadingEvent>({
     initial: LoadingState.IDLE,
@@ -139,6 +140,11 @@ const Profile: React.FC<{ unreadCount?: number }> = ({ unreadCount: propUnreadCo
     loadSignInStatus();
 
     const handleFocus = () => {
+      const now = Date.now();
+      if (now - lastSignInStatusFetchRef.current < 3000) {
+        return;
+      }
+      lastSignInStatusFetchRef.current = now;
       loadSignInStatus();
     };
     window.addEventListener('focus', handleFocus);

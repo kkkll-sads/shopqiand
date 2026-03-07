@@ -211,6 +211,20 @@ export function useSignInPage(): UseSignInPageResult {
       const latestToken = getStoredToken();
       if (latestToken) {
         try {
+          const refreshedInfoRes = await fetchSignInInfo(latestToken, {
+            forceRefresh: true,
+          });
+          const refreshedInfoData = extractData(refreshedInfoRes) as {
+            total_reward?: number;
+            today_signed?: boolean;
+            calendar?: { signed_dates?: string[] };
+          } | null;
+          if (refreshedInfoData) {
+            setBalance(refreshedInfoData.total_reward || 0);
+            setHasSignedIn(refreshedInfoData.today_signed || false);
+            setSignedInDates(parseSignedDates(refreshedInfoData.calendar?.signed_dates));
+          }
+
           const progressRes = await fetchSignInProgress(latestToken);
           const refreshedProgressData = extractData(progressRes) as SignInProgressData | null;
           if (refreshedProgressData) {

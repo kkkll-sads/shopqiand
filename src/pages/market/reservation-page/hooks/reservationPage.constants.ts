@@ -16,8 +16,9 @@ export const getProductPackageId = (product: Product): number | string | undefin
   (product as any).packageId ?? (product as any).package_id
 
 export const getInitialZoneMaxPrice = (product: Product): number => {
-  if (globalThis.__preloadedReservationData?.zoneMaxPrice) {
-    return globalThis.__preloadedReservationData.zoneMaxPrice
+  const preloaded = (window as any).__preloadedReservationData
+  if (preloaded?.zoneMaxPrice) {
+    return preloaded.zoneMaxPrice
   }
 
   const priceZone = (product as any).priceZone || (product as any).price_zone

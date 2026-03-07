@@ -92,8 +92,7 @@
 }
 
 /* 锁定 Tailwind 调色板为 sRGB，避免部分 WebView 在 lab 颜色空间下出现偏色 */
-:root,
-:host {
+:root {
   --color-red-50: #fef2f2;
   --color-red-100: #ffe2e2;
   --color-red-200: #ffcaca;

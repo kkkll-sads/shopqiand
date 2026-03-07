@@ -1,6 +1,11 @@
 import type { ApiResponse } from '../networking';
 import { API_ENDPOINTS } from '../config';
-import { authedFetch, getStoredToken } from '../client';
+import {
+  authedFetch,
+  getStoredToken,
+  invalidateRequestCache,
+  type RequestStrategyConfig,
+} from '../client';
 import { fetchDefaultAddress } from '../user/address';
 import { fetchShopProductDetail } from './product';
 import { bizLog, debugLog, warnLog, errorLog } from '@/utils/logger';
@@ -44,6 +49,10 @@ const fetchOrderListByPath = async (
   return authedFetch<ShopOrderListData>(path, { method: 'GET', token });
 };
 
+const isRequestSuccess = (response?: ApiResponse): boolean => {
+  return response?.code === 0 || response?.code === 1 || typeof response?.code === 'undefined';
+};
+
 export async function fetchPendingPayOrders(
   params: FetchShopOrderParams = {}
 ): Promise<ApiResponse<ShopOrderListData>> {
@@ -77,11 +86,21 @@ const submitOrderAction = async (
   const payload = new FormData();
   payload.append(fieldName, String(params.id));
 
-  return authedFetch(endpoint, {
+  const response = await authedFetch(endpoint, {
     method: 'POST',
     body: payload,
     token,
   });
+
+  if (isRequestSuccess(response)) {
+    invalidateRequestCache({
+      method: 'GET',
+      exactPath: API_ENDPOINTS.shopOrder.statistics,
+      token,
+    });
+  }
+
+  return response;
 };
 
 export async function confirmOrder(params: OrderActionParams): Promise<ApiResponse> {
@@ -101,12 +120,16 @@ export async function cancelOrder(params: OrderActionParams): Promise<ApiRespons
 }
 
 export async function fetchShopOrderStatistics(
-  token?: string
+  token?: string,
+  strategy?: RequestStrategyConfig
 ): Promise<ApiResponse<ShopOrderStatistics>> {
   const t = token ?? getStoredToken();
   return authedFetch<ShopOrderStatistics>(API_ENDPOINTS.shopOrder.statistics, {
     method: 'GET',
     token: t,
+    cacheTTL: strategy?.cacheTTL ?? 15000,
+    dedup: strategy?.dedup ?? true,
+    forceRefresh: strategy?.forceRefresh ?? false,
   });
 }
 
@@ -190,6 +213,14 @@ export async function createOrder(params: CreateOrderParams): Promise<ApiRespons
       token,
     });
 
+    if (isRequestSuccess(data)) {
+      invalidateRequestCache({
+        method: 'GET',
+        exactPath: API_ENDPOINTS.shopOrder.statistics,
+        token,
+      });
+    }
+
     debugLog('api.shop.createOrder.raw', data);
     bizLog('order.create', {
       code: data.code,
@@ -271,6 +302,14 @@ export async function buyShopOrder(params: BuyShopOrderParams): Promise<ApiRespo
       body: JSON.stringify(requestBody),
       token,
     });
+
+    if (isRequestSuccess(data)) {
+      invalidateRequestCache({
+        method: 'GET',
+        exactPath: API_ENDPOINTS.shopOrder.statistics,
+        token,
+      });
+    }
 
     debugLog('api.shop.buy.raw', data);
     bizLog('order.buy', {

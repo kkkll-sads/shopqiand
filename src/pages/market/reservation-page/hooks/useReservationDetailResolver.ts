@@ -23,14 +23,15 @@ interface SessionDetailWithZones {
 }
 
 export function useReservationDetailResolver(product: Product): ReservationDetailResolverResult {
+  const preloaded = (window as any).__preloadedReservationData
   const [sessionId, setSessionId] = useState<number | string | undefined>(
-    globalThis.__preloadedReservationData?.sessionId ?? product.sessionId,
+    preloaded?.sessionId ?? product.sessionId,
   )
   const [zoneId, setZoneId] = useState<number | string | undefined>(
-    globalThis.__preloadedReservationData?.zoneId ?? product.zoneId,
+    preloaded?.zoneId ?? product.zoneId,
   )
   const [packageId, setPackageId] = useState<number | string | undefined>(
-    globalThis.__preloadedReservationData?.packageId ?? getProductPackageId(product),
+    preloaded?.packageId ?? getProductPackageId(product),
   )
 
   const [, setSessionTitle] = useState<string | undefined>()
@@ -39,7 +40,7 @@ export function useReservationDetailResolver(product: Product): ReservationDetai
 
   const [zoneMaxPrice, setZoneMaxPrice] = useState<number>(() => getInitialZoneMaxPrice(product))
   const [hasUpdatedZoneMaxPrice, setHasUpdatedZoneMaxPrice] = useState<boolean>(
-    globalThis.__preloadedReservationData?.zoneMaxPrice !== undefined,
+    preloaded?.zoneMaxPrice !== undefined,
   )
   const [triedFillFromDetail, setTriedFillFromDetail] = useState(false)
 

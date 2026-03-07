@@ -1,6 +1,6 @@
 import type { ApiResponse } from '../networking';
 import { API_ENDPOINTS } from '../config';
-import { authedFetch } from '../client';
+import { authedFetch, invalidateRequestCache, type RequestStrategyConfig } from '../client';
 import { debugLog, errorLog } from '@/utils/logger';
 
 // -----------------------------------------------------------------------------
@@ -166,7 +166,10 @@ export async function fetchSignInRules(): Promise<ApiResponse<SignInRulesData>> 
 /**
  * 获取签到信息
  */
-export async function fetchSignInInfo(token: string): Promise<ApiResponse<SignInInfoData>> {
+export async function fetchSignInInfo(
+  token: string,
+  strategy?: RequestStrategyConfig
+): Promise<ApiResponse<SignInInfoData>> {
   if (!token) {
     throw new Error('未找到用户登录信息，请先登录后再查看签到信息');
   }
@@ -175,6 +178,9 @@ export async function fetchSignInInfo(token: string): Promise<ApiResponse<SignIn
     const data = await authedFetch<SignInInfoData>(API_ENDPOINTS.signIn.info, {
       method: 'GET',
       token,
+      cacheTTL: strategy?.cacheTTL ?? 15000,
+      dedup: strategy?.dedup ?? true,
+      forceRefresh: strategy?.forceRefresh ?? false,
     });
     debugLog('api.signIn.info.raw', data);
     return data;
@@ -198,6 +204,13 @@ export async function doSignIn(token: string): Promise<ApiResponse<SignInDoData>
       body: JSON.stringify({}),
       token,
     });
+    if (data?.code === 0 || data?.code === 1 || typeof data?.code === 'undefined') {
+      invalidateRequestCache({
+        method: 'GET',
+        exactPath: API_ENDPOINTS.signIn.info,
+        token,
+      });
+    }
     debugLog('api.signIn.do.raw', data);
     return data;
   } catch (error: any) {

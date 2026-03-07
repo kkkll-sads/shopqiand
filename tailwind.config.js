@@ -58,7 +58,6 @@ export default {
         'safe-left': 'env(safe-area-inset-left)',
         'safe-right': 'env(safe-area-inset-right)',
       },
-      // 动态视口高度
       height: {
         'screen-dynamic': '100dvh',
         'screen-small': '100svh',

@@ -2,7 +2,7 @@ import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 
 const distAssetsDir = join(process.cwd(), 'dist', 'assets');
-const MAX_TOTAL_CSS_BYTES = 200_000;
+const MAX_TOTAL_CSS_BYTES = 210_000;
 
 const checks = [
   {
@@ -24,6 +24,12 @@ const checks = [
     name: 'CSS_PROPERTY_AT_RULE',
     pattern: /@property\s+--/i,
     message: 'Found @property at-rule in bundle CSS; can break/slow parsing on older Android WebView.',
+  },
+  {
+    name: 'NESTED_GRADIENT_VAR_CHAIN',
+    pattern: /--tw-gradient-stops\s*:\s*var\(\s*--tw-gradient-via-stops\s*,/,
+    message:
+      'Found nested var(--tw-gradient-via-stops,...) in --tw-gradient-stops; gradients will fail on Android WebView < Chrome 80.',
   },
 ];
 

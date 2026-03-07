@@ -35,7 +35,7 @@ export default defineConfig(({ mode }) => {
     server: {
       port: 5657,
       host: '0.0.0.0',
-      allowedHosts: ['shu.gckot.cn', 'wap.dfahwk.cn', 'shu.fhsyi.cn', 'wap.bskhu.cn'],
+      allowedHosts: [ 'wap.dfahwk.cn', 'shu.fhsyi.cn', 'wap.bskhu.cn','shu.svrczgg.cn'  ],
       // 配置 history API fallback，支持单页应用路由
       historyApiFallback: true,
       // 配置代理解决 CORS 问题
@@ -79,8 +79,14 @@ export default defineConfig(({ mode }) => {
       legacy({
         targets: ['> 0.5%', 'last 2 versions', 'not dead', 'Android >= 5', 'iOS >= 10'],
         additionalLegacyPolyfills: ['regenerator-runtime/runtime'],
-        // 现代浏览器走 modern bundle，不再注入额外现代 polyfills，降低首屏 JS 体积
-        modernPolyfills: false,
+        modernPolyfills: [
+          'es.promise.all-settled',
+          'es.global-this',
+          'es.object.from-entries',
+          'es.array.flat',
+          'es.array.flat-map',
+          'es.string.match-all',
+        ],
       }),
     ],
     define: {

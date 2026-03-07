@@ -15,3 +15,4 @@ export * from './shop';
 export * from './questionnaire';
 export * from './activity';
 export * from './activeRank';
+export * from './client';

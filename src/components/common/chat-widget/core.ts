@@ -1,25 +1,100 @@
 import { debugLog, warnLog, errorLog } from '@/utils/logger';
+import { fetchChatConfig } from '@/services/common';
+import { isSuccess } from '@/utils/apiHelpers';
 import type { WidgetLoadState } from './types';
 
-export const CHANNEL_ID = '040a7b31e2734c1f8a33f71c7dfe8e5c';
-
-const CHAT_PAGE_BASE_URLS = [
-  `https://www.axd01kp.cfd/chat/index?channelId=${CHANNEL_ID}`,
-  `https://cdn.bot05pi.cfd/chat/index?channelId=${CHANNEL_ID}`,
+// ========================================
+// 硬编码兜底值（后端不可用时使用）
+// ========================================
+const FALLBACK_CHANNEL_ID = '040a7b31e2734c1f8a33f71c7dfe8e5c';
+const FALLBACK_CHAT_URLS = [
+  'https://www.axd01kp.cfd/chat/index',
+  'https://cdn.bot05pi.cfd/chat/index',
 ];
+const FALLBACK_WIDGET_SCRIPT_URL = 'https://chat.bskhu.cn/chat/widget.js';
+
+// ========================================
+// 动态配置（后端获取后覆盖）
+// ========================================
+let chatConfig = {
+  channelId: FALLBACK_CHANNEL_ID,
+  chatUrls: [...FALLBACK_CHAT_URLS],
+  widgetScriptUrl: FALLBACK_WIDGET_SCRIPT_URL,
+};
+
+let configLoaded = false;
+
+/**
+ * 从后端获取客服配置，覆盖硬编码兜底值。
+ * 应在 App 启动时调用（非阻塞 fire-and-forget）。
+ */
+export const initChatConfig = async (): Promise<void> => {
+  if (configLoaded) return;
+
+  try {
+    const res = await fetchChatConfig();
+    if (isSuccess(res) && res.data) {
+      const { channel_id, chat_url, chat_backup_url, widget_script_url } = res.data;
+
+      if (channel_id) {
+        chatConfig.channelId = channel_id;
+      }
+
+      const urls: string[] = [];
+      if (chat_url) urls.push(chat_url);
+      if (chat_backup_url) urls.push(chat_backup_url);
+      if (urls.length > 0) {
+        chatConfig.chatUrls = urls;
+      }
+
+      if (widget_script_url) {
+        chatConfig.widgetScriptUrl = widget_script_url;
+      }
+
+      // 同步写入 window，供 ChatWidget 初始化时使用
+      if (typeof window !== 'undefined') {
+        window.CHAT_CHANNEL_ID = chatConfig.channelId;
+        window.CHAT_BASE_URLS = chatConfig.chatUrls.map(
+          (url) => `${url}${url.includes('?') ? '&' : '?'}channelId=${chatConfig.channelId}`,
+        );
+        if (widget_script_url) {
+          window.CHAT_WIDGET_SCRIPT_URL = widget_script_url;
+        }
+      }
+
+      configLoaded = true;
+      debugLog('ChatWidget', '客服配置已从后端加载', chatConfig);
+    } else {
+      warnLog('ChatWidget', '后端客服配置接口返回失败，使用兜底值');
+    }
+  } catch (error) {
+    warnLog('ChatWidget', '获取客服配置失败，使用兜底值', error);
+  }
+};
+
+/** 获取当前生效的 CHANNEL_ID */
+export const getChannelId = (): string => chatConfig.channelId;
 
 let widgetLoadState: WidgetLoadState = 'idle';
 
 const getChatPageFallbackUrls = (): string[] => {
   if (typeof window === 'undefined') return [];
 
+  const channelId = chatConfig.channelId;
+
+  // 优先使用 window 上的动态 URL（可能由 initChatConfig 或外部注入）
   const dynamicUrls = Array.isArray(window.CHAT_BASE_URLS)
     ? window.CHAT_BASE_URLS
     : [window.CHAT_BASE_URL, window.CHAT_BACKUP_BASE_URL];
 
+  // 用 chatConfig.chatUrls 构建带 channelId 的完整 URL
+  const configUrls = chatConfig.chatUrls.map(
+    (url) => `${url}${url.includes('?') ? '&' : '?'}channelId=${channelId}`,
+  );
+
   return Array.from(
     new Set(
-      [...dynamicUrls, ...CHAT_PAGE_BASE_URLS]
+      [...dynamicUrls, ...configUrls]
         .filter((url): url is string => Boolean(url))
         .map((url) => url.trim())
         .filter(Boolean),
@@ -71,7 +146,11 @@ export const loadChatWidgetScript = (retryCount: number = 0): Promise<void> => {
       return;
     }
 
-    const existingScript = document.querySelector('script[src*="chat.bskhu.cn"]');
+    // 使用动态脚本 URL
+    const scriptUrl = window.CHAT_WIDGET_SCRIPT_URL || chatConfig.widgetScriptUrl;
+    const scriptSelector = `script[src="${scriptUrl}"]`;
+
+    const existingScript = document.querySelector(scriptSelector);
     if (existingScript) {
       debugLog('ChatWidget', '等待已存在的脚本加载完成');
 
@@ -98,11 +177,11 @@ export const loadChatWidgetScript = (retryCount: number = 0): Promise<void> => {
       return;
     }
 
-    debugLog('ChatWidget', `开始加载客服脚本 (尝试 ${retryCount + 1}/${maxRetries + 1})`);
+    debugLog('ChatWidget', `开始加载客服脚本 (尝试 ${retryCount + 1}/${maxRetries + 1})`, scriptUrl);
     widgetLoadState = 'loading';
 
     const script = document.createElement('script');
-    script.src = 'https://chat.bskhu.cn/chat/widget.js';
+    script.src = scriptUrl;
     script.async = true;
 
     script.onload = () => {

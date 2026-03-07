@@ -125,6 +125,8 @@ export const API_ENDPOINTS = {
         dict: '/Common/dict',
         /** 获取推广奖励配置 */
         rewardConfig: '/Common/rewardConfig',
+        /** 获取客服配置（公开接口） */
+        chatConfig: '/Common/chatConfig',
     },
     /** CMS 配置 */
     cms: {

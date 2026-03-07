@@ -28,6 +28,8 @@ declare global {
     CHAT_BASE_URL?: string;
     CHAT_BACKUP_BASE_URL?: string;
     CHAT_BASE_URLS?: string[];
+    CHAT_CHANNEL_ID?: string;
+    CHAT_WIDGET_SCRIPT_URL?: string;
     ChatWidget?: {
       init: (config: ChatWidgetConfig) => void;
       open: () => void;

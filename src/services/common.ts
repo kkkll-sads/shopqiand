@@ -281,3 +281,31 @@ export async function fetchRewardConfig(): Promise<ApiResponse<RewardConfigData>
         method: 'GET',
     });
 }
+
+// ========================================
+// 客服配置
+// ========================================
+
+/**
+ * 客服配置数据
+ */
+export interface ChatConfigData {
+    /** 客服渠道 ID */
+    channel_id: string;
+    /** 客服页面主链接（不含 ?channelId=） */
+    chat_url: string;
+    /** 备用客服页面链接 */
+    chat_backup_url?: string;
+    /** 客服 JS 插件地址 */
+    widget_script_url?: string;
+}
+
+/**
+ * 获取客服配置（公开接口，无需登录）
+ * API: GET /api/Common/chatConfig
+ */
+export async function fetchChatConfig(): Promise<ApiResponse<ChatConfigData>> {
+    return apiFetch<ChatConfigData>(API_ENDPOINTS.common.chatConfig, {
+        method: 'GET',
+    });
+}

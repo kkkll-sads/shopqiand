@@ -7,10 +7,12 @@ import { Outlet, useLocation, useNavigate, Navigate } from 'react-router-dom';
 import BottomNav from '@/layouts/BottomNav';
 import ScrollToTop from '@/components/common/ScrollToTop';
 import { ChatWidget, DraggableChatButton, PullToRefresh } from '@/components/common';
+import { initChatConfig } from '@/components/common/chat-widget/core';
 import PopupAnnouncementModal from '@/components/common/PopupAnnouncementModal';
 import { useAuthStore } from '@/stores/authStore';
 import { useAppStore } from '@/stores/appStore';
 import { fetchAnnouncements } from '@/services/cms';
+import { fetchBanners } from '@/services/cms';
 import type { AnnouncementItem } from '@/services/cms';
 import { extractData } from '@/utils/apiHelpers';
 import { errorLog } from '@/utils/logger';
@@ -68,6 +70,11 @@ const MainLayout: React.FC = () => {
 
   // 拉取弹窗公告（进入主布局时）
   useEffect(() => {
+    // 非阻塞拉取客服配置（在 ChatWidget 初始化前尽早执行）
+    void initChatConfig();
+    // 启动阶段预取首页轮播，后续首页进入可直接命中内存缓存
+    void fetchBanners({ page: 1, limit: 10 }).catch(() => undefined);
+
     const loadPopupAnnouncements = async () => {
       try {
         const response = await fetchAnnouncements({

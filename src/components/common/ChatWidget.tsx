@@ -6,7 +6,7 @@
 import React, { useEffect } from 'react';
 import { debugLog, errorLog } from '@/utils/logger';
 import {
-  CHANNEL_ID,
+  getChannelId,
   closeChatWidget as closeChatWidgetCore,
   isChatWidgetOpen as isChatWidgetOpenCore,
   loadChatWidgetScript,
@@ -34,7 +34,7 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({
         if (!mounted) return;
 
         window.ChatWidget.init({
-          channelId: CHANNEL_ID,
+          channelId: getChannelId(),
           useCustomButton,
           autoOpen,
           userInfo,

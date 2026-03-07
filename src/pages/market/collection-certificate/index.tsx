@@ -276,10 +276,10 @@ const CollectionCertificate: React.FC<CollectionCertificateProps> = ({
       }
 
       if (zoneMaxPrice) {
-        if (!globalThis.__preloadedReservationData) {
-          globalThis.__preloadedReservationData = {};
+        if (!(window as any).__preloadedReservationData) {
+          (window as any).__preloadedReservationData = {};
         }
-        globalThis.__preloadedReservationData.zoneMaxPrice = zoneMaxPrice;
+        (window as any).__preloadedReservationData.zoneMaxPrice = zoneMaxPrice;
       }
     }
 

@@ -1,6 +1,6 @@
 import type { ApiResponse } from '../networking';
 import { API_ENDPOINTS } from '../config';
-import { authedFetch } from '../client';
+import { authedFetch, type RequestStrategyConfig } from '../client';
 
 export interface CollectionSessionItem {
   id: number;
@@ -12,9 +12,14 @@ export interface CollectionSessionItem {
   [key: string]: any;
 }
 
-export async function fetchCollectionSessions(): Promise<ApiResponse<{ list: CollectionSessionItem[] }>> {
+export async function fetchCollectionSessions(
+  strategy?: RequestStrategyConfig
+): Promise<ApiResponse<{ list: CollectionSessionItem[] }>> {
   return authedFetch<{ list: CollectionSessionItem[] }>(API_ENDPOINTS.collectionSession.index, {
     method: 'GET',
+    cacheTTL: strategy?.cacheTTL ?? 60000,
+    dedup: strategy?.dedup ?? true,
+    forceRefresh: strategy?.forceRefresh ?? false,
   });
 }
 

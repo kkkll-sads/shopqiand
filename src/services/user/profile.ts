@@ -1,6 +1,7 @@
 import type { ApiResponse } from '../networking';
 import { API_ENDPOINTS } from '../config';
 import { authedFetch, getStoredToken } from '../client';
+import type { RequestStrategyConfig } from '../client';
 import type { ProfileResponse } from '@/types';
 import { debugLog, errorLog } from '@/utils/logger';
 
@@ -8,11 +9,18 @@ import { debugLog, errorLog } from '@/utils/logger';
  * 获取个人中心信息
  * @param token 用户 Token
  */
-export async function fetchProfile(token: string): Promise<ApiResponse<ProfileResponse>> {
+export async function fetchProfile(
+  token: string,
+  strategy?: RequestStrategyConfig
+): Promise<ApiResponse<ProfileResponse>> {
   try {
     const data = await authedFetch<ProfileResponse>(API_ENDPOINTS.account.profile, {
       method: 'GET',
       token,
+      cacheTTL: strategy?.cacheTTL ?? 10000,
+      dedup: strategy?.dedup ?? true,
+      throttleMs: strategy?.throttleMs ?? 3000,
+      forceRefresh: strategy?.forceRefresh ?? false,
     });
     debugLog('api.user.profile.raw', data);
     return data;

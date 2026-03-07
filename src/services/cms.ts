@@ -1,8 +1,7 @@
 import { apiFetch } from './networking';
 import type { ApiResponse } from './networking';
 import { API_ENDPOINTS } from './config';
-import { NeedLoginError } from './networking';
-import { authedFetch } from './client';
+import { authedFetch, publicFetch, type RequestStrategyConfig } from './client';
 import { warnLog } from '@/utils/logger';
 
 // 通用单页内容类型
@@ -144,7 +143,10 @@ export interface FetchAnnouncementsParams {
     is_popup?: number;  // 是否弹窗：1=弹窗公告，0=普通公告
 }
 
-export async function fetchAnnouncements(params: FetchAnnouncementsParams = {}): Promise<ApiResponse<AnnouncementListData>> {
+export async function fetchAnnouncements(
+    params: FetchAnnouncementsParams = {},
+    strategy?: RequestStrategyConfig
+): Promise<ApiResponse<AnnouncementListData>> {
     const { page, limit, type = 'normal', title, is_popup } = params;
     const search = new URLSearchParams();
     if (page !== undefined) search.set('page', String(page));
@@ -154,8 +156,11 @@ export async function fetchAnnouncements(params: FetchAnnouncementsParams = {}):
     if (is_popup !== undefined) search.set('is_popup', String(is_popup));
 
     const path = `${API_ENDPOINTS.announcement.list}?${search.toString()}`;
-    return apiFetch<AnnouncementListData>(path, {
+    return publicFetch<AnnouncementListData>(path, {
         method: 'GET',
+        cacheTTL: strategy?.cacheTTL ?? 60000,
+        dedup: strategy?.dedup ?? true,
+        forceRefresh: strategy?.forceRefresh ?? false,
     });
 }
 
@@ -178,14 +183,20 @@ export interface FetchBannersParams {
     limit?: number;
 }
 
-export async function fetchBanners(params: FetchBannersParams = {}): Promise<ApiResponse<BannerListData>> {
+export async function fetchBanners(
+    params: FetchBannersParams = {},
+    strategy?: RequestStrategyConfig
+): Promise<ApiResponse<BannerListData>> {
     const search = new URLSearchParams();
     if (params.page !== undefined) search.set('page', String(params.page));
     if (params.limit !== undefined) search.set('limit', String(params.limit));
 
     const path = `${API_ENDPOINTS.banner.list}?${search.toString()}`;
-    return apiFetch<BannerListData>(path, {
+    return publicFetch<BannerListData>(path, {
         method: 'GET',
+        cacheTTL: strategy?.cacheTTL ?? 300000,
+        dedup: strategy?.dedup ?? true,
+        forceRefresh: strategy?.forceRefresh ?? false,
     });
 }
 

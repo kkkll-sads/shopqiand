@@ -22,13 +22,12 @@ export function useReservationUserInfo(preloadedUserInfo?: ReservationUserInfo |
       setAccountBalance(preloadedUserInfo.accountBalance)
     }
 
-    if (globalThis.__preloadedReservationData?.userInfo) {
-      debugLog('ReservationPage', '使用预加载的用户信息', globalThis.__preloadedReservationData.userInfo)
-      setAvailableHashrate(globalThis.__preloadedReservationData.userInfo.availableHashrate)
-      setAccountBalance(globalThis.__preloadedReservationData.userInfo.accountBalance)
-      if (globalThis.__preloadedReservationData) {
-        globalThis.__preloadedReservationData.userInfo = undefined
-      }
+    const preloaded = (window as any).__preloadedReservationData
+    if (preloaded?.userInfo) {
+      debugLog('ReservationPage', '使用预加载的用户信息', preloaded.userInfo)
+      setAvailableHashrate(preloaded.userInfo.availableHashrate)
+      setAccountBalance(preloaded.userInfo.accountBalance)
+      preloaded.userInfo = undefined
     }
 
     const loadUserInfo = async () => {

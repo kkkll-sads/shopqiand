@@ -81,6 +81,9 @@ const BalanceRecharge: React.FC<BalanceRechargeProps> = ({ initialAmount }) => {
     onError: () => {
       setViewState('input');
     },
+    onStart: () => {
+      setViewState('matching');
+    },
   });
 
   const { submitting, handleSubmitOrder } = useRechargeForm({

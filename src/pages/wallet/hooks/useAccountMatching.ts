@@ -1,7 +1,7 @@
 /**
  * useAccountMatching - 账户匹配逻辑 Hook
  */
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { CompanyAccountItem, submitRechargeOrder } from '@/services';
 import { useNotification } from '@/context/NotificationContext';
 import { isSuccess } from '@/utils/apiHelpers';
@@ -15,6 +15,7 @@ interface UseAccountMatchingParams {
   onMatched: (account: CompanyAccountItem) => void;
   onPaymentUrl: (url: string, orderId: string | null) => void;
   onError: () => void;
+  onStart?: () => void;
 }
 
 export function useAccountMatching({
@@ -24,6 +25,7 @@ export function useAccountMatching({
   onMatched,
   onPaymentUrl,
   onError,
+  onStart,
 }: UseAccountMatchingParams) {
   const { showToast } = useNotification();
   const { handleError } = useErrorHandler({ showToast: true, persist: false });
@@ -32,6 +34,7 @@ export function useAccountMatching({
   const [maxRetries] = useState(3);
   const [availableAccounts, setAvailableAccounts] = useState<CompanyAccountItem[]>([]);
   const [currentAccountIndex, setCurrentAccountIndex] = useState(0);
+  const isMatching = useRef(false);
 
   // Helper: Check if amount is within the range specified in remark
   const isAmountInRange = useCallback((amount: number, rangeStr: string): boolean => {
@@ -55,6 +58,7 @@ export function useAccountMatching({
     // 检查是否已尝试所有账户
     if (index >= accounts.length) {
       showToast('error', '通道不可用', '所有支付通道暂时无法使用，请稍后重试');
+      isMatching.current = false;
       onError();
       return;
     }
@@ -62,11 +66,13 @@ export function useAccountMatching({
     // 检查是否达到最大重试次数
     if (index >= maxRetries) {
       showToast('error', '重试失败', `已尝试 ${maxRetries} 个通道，请稍后重试或联系客服`);
+      isMatching.current = false;
       onError();
       return;
     }
 
     const selected = accounts[index];
+    isMatching.current = false;
     onMatched(selected);
 
     // 银行卡通道：直接显示收款账户信息页面
@@ -89,9 +95,11 @@ export function useAccountMatching({
         if (pay_url) {
           showToast('success', '订单创建成功', '正在加载支付页面...');
           const resolvedOrderId = order_id ?? order_no ?? null;
+          isMatching.current = false;
           onPaymentUrl(String(pay_url), resolvedOrderId === null ? null : String(resolvedOrderId));
         } else {
           // Fallback to manual view if no pay_url
+          isMatching.current = false;
           onMatched(selected);
         }
       } else {
@@ -123,6 +131,7 @@ export function useAccountMatching({
             customMessage: friendlyMessage,
             context: { amount: Number(amount), accountId: selected.id }
           });
+          isMatching.current = false;
           onError();
         }
       }
@@ -142,12 +151,14 @@ export function useAccountMatching({
           customMessage: '网络错误，请重试',
           context: { amount: Number(amount), accountId: selected.id }
         });
+        isMatching.current = false;
         onError();
       }
     }
   }, [amount, selectedMethod, maxRetries, showToast, handleError, onMatched, onPaymentUrl, onError]);
 
   const startMatching = useCallback(() => {
+    if (isMatching.current) return;
     const numAmount = Number(amount);
     if (!amount || isNaN(numAmount) || numAmount < 100) {
       showToast('warning', '输入有误', '最低申购金额为 100 元');
@@ -157,6 +168,9 @@ export function useAccountMatching({
       showToast('warning', '请选择', '请选择支付方式');
       return;
     }
+
+    isMatching.current = true;
+    onStart?.();
 
     setTimeout(async () => {
       // 筛选并排序账户
@@ -209,10 +223,11 @@ export function useAccountMatching({
         await trySubmitWithAccount(validAccounts, 0);
       } else {
         showToast('error', '匹配失败', '当前金额暂无匹配通道，请调整金额重试');
+        isMatching.current = false;
         onError();
       }
     }, 2500);
-  }, [amount, selectedMethod, allAccounts, isAmountInRange, trySubmitWithAccount, showToast, onError]);
+  }, [amount, selectedMethod, allAccounts, isAmountInRange, trySubmitWithAccount, showToast, onError, onStart]);
 
   return {
     startMatching,
