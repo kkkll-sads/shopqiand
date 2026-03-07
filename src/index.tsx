@@ -9,6 +9,7 @@ import { useAuthStore } from '@/stores/authStore';
 import { fetchProfile, fetchRealNameStatus } from '@/services';
 import { isSuccess } from '@/utils/apiHelpers';
 import { applyBackdropBlurCompatibilityClass } from '@/utils/backdropCompat';
+import { tryRecoverFromChunkLoad } from '@/utils/chunkLoadRecovery';
 import '@/styles/main.css';
 import '@/styles/notifications.css';
 
@@ -77,6 +78,34 @@ const AuthHandler: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   return <>{children}</>;
 };
 
+const ChunkLoadRecoveryHandler: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  useEffect(() => {
+    const handleWindowError = (event: ErrorEvent) => {
+      const recoveryStarted = tryRecoverFromChunkLoad(event.error ?? event.message);
+      if (recoveryStarted) {
+        event.preventDefault();
+      }
+    };
+
+    const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
+      const recoveryStarted = tryRecoverFromChunkLoad(event.reason);
+      if (recoveryStarted) {
+        event.preventDefault();
+      }
+    };
+
+    window.addEventListener('error', handleWindowError);
+    window.addEventListener('unhandledrejection', handleUnhandledRejection);
+
+    return () => {
+      window.removeEventListener('error', handleWindowError);
+      window.removeEventListener('unhandledrejection', handleUnhandledRejection);
+    };
+  }, []);
+
+  return <>{children}</>;
+};
+
 const rootElement = document.getElementById('root');
 if (!rootElement) {
   throw new Error("Could not find root element to mount to");
@@ -89,10 +118,12 @@ const root = ReactDOM.createRoot(rootElement);
 root.render(
   <React.StrictMode>
     <NotificationProvider>
-      <AuthHandler>
-        <GlobalNotificationSystem />
-        <RouterProvider router={router} />
-      </AuthHandler>
+      <ChunkLoadRecoveryHandler>
+        <AuthHandler>
+          <GlobalNotificationSystem />
+          <RouterProvider router={router} />
+        </AuthHandler>
+      </ChunkLoadRecoveryHandler>
     </NotificationProvider>
   </React.StrictMode>
 );

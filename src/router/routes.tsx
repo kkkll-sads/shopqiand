@@ -2,6 +2,7 @@ import type { ComponentType, LazyExoticComponent } from 'react';
 import { Navigate, type RouteObject } from 'react-router-dom';
 import { MainLayout, AuthLayout } from '../layouts';
 import LazyComponent from './LazyComponent';
+import RouteErrorElement from './RouteErrorElement';
 import * as pages from './lazy-pages';
 
 type LazyPage = LazyExoticComponent<ComponentType<any>>;
@@ -111,10 +112,12 @@ const mainLayoutRoutes: RouteObject[] = [
 export const routes: RouteObject[] = [
   {
     element: <AuthLayout />,
+    errorElement: <RouteErrorElement />,
     children: authRoutes,
   },
   {
     element: <MainLayout />,
+    errorElement: <RouteErrorElement />,
     children: mainLayoutRoutes,
   },
   {
