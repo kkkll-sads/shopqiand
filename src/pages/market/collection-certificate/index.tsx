@@ -31,18 +31,6 @@ import {
   getSessionInfo,
 } from './helpers';
 
-// 全局预加载数据存储
-declare global {
-  var __preloadedReservationData: {
-    userInfo?: { availableHashrate: number; accountBalance: number };
-    sessionDetail?: CollectionItemDetailData | null;
-    zoneMaxPrice?: number;
-    sessionId?: number | string;
-    zoneId?: number | string;
-    packageId?: number | string;
-  } | null;
-}
-
 interface CertificateDetailData extends CollectionItemDetailData {
   priceZone?: string;
   sessionId?: number | string;
@@ -276,10 +264,10 @@ const CollectionCertificate: React.FC<CollectionCertificateProps> = ({
       }
 
       if (zoneMaxPrice) {
-        if (!(window as any).__preloadedReservationData) {
-          (window as any).__preloadedReservationData = {};
+        if (!window.__preloadedReservationData) {
+          window.__preloadedReservationData = {};
         }
-        (window as any).__preloadedReservationData.zoneMaxPrice = zoneMaxPrice;
+        window.__preloadedReservationData.zoneMaxPrice = zoneMaxPrice;
       }
     }
 

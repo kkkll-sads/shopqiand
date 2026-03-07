@@ -1,16 +1,18 @@
-import React from 'react';
+import React from 'react'
 
 interface ReservationFooterActionProps {
-  userInfoLoading: boolean;
-  isHashrateSufficient: boolean;
-  isFundSufficient: boolean;
-  onClick: () => void;
+  userInfoLoading: boolean
+  isHashrateSufficient: boolean
+  isFundSufficient: boolean
+  fundActionText: string
+  onClick: () => void
 }
 
 const ReservationFooterAction: React.FC<ReservationFooterActionProps> = ({
   userInfoLoading,
   isHashrateSufficient,
   isFundSufficient,
+  fundActionText,
   onClick,
 }) => {
   return (
@@ -34,13 +36,13 @@ const ReservationFooterAction: React.FC<ReservationFooterActionProps> = ({
         ) : !isHashrateSufficient ? (
           '前往获取算力'
         ) : !isFundSufficient ? (
-          '前往充值专项金'
+          fundActionText
         ) : (
           '确认预约'
         )}
       </button>
     </div>
-  );
-};
+  )
+}
 
-export default ReservationFooterAction;
+export default ReservationFooterAction

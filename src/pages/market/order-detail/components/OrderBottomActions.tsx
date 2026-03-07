@@ -1,10 +1,10 @@
 import React from 'react';
 import { Star } from 'lucide-react';
-import { ShopOrderItem } from '@/services';
+import type { ShopOrderDetail } from '@/services';
 import { ShopOrderPayStatus, ShopOrderShippingStatus } from '@/constants/statusEnums';
 
 interface OrderBottomActionsProps {
-  order: ShopOrderItem;
+  order: ShopOrderDetail;
   onCancelOrder: (id: number) => void;
   onPayOrder: (id: number) => void;
   onConfirmReceipt: (id: number) => void;

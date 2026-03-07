@@ -13,15 +13,15 @@ export const fallbackProduct: Product = {
 export const baseHashrate = 5
 
 export const getProductPackageId = (product: Product): number | string | undefined =>
-  (product as any).packageId ?? (product as any).package_id
+  product.packageId ?? product.package_id
 
 export const getInitialZoneMaxPrice = (product: Product): number => {
-  const preloaded = (window as any).__preloadedReservationData
+  const preloaded = window.__preloadedReservationData
   if (preloaded?.zoneMaxPrice) {
     return preloaded.zoneMaxPrice
   }
 
-  const priceZone = (product as any).priceZone || (product as any).price_zone
+  const priceZone = product.priceZone ?? product.price_zone
   if (priceZone) {
     const parsedPrice = extractPriceFromZone(priceZone)
     if (parsedPrice > 0) {

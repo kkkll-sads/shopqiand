@@ -2,6 +2,27 @@ import type { ApiResponse } from '../../networking'
 import { API_ENDPOINTS } from '../../config'
 import { authedFetch, type RequestStrategyConfig } from '../../client'
 
+export interface CollectionItemSessionRef {
+  id?: number | string
+  session_id?: number | string
+  title?: string
+  name?: string
+  start_time?: string
+  end_time?: string
+}
+
+export interface CollectionItemZoneRef {
+  id?: number | string
+  name?: string
+  min_price?: number | string
+  max_price?: number | string
+}
+
+export interface CollectionItemPackageRef {
+  id?: number | string
+  name?: string
+}
+
 /**
  * 藏品商品基本信息接口
  */
@@ -16,8 +37,17 @@ export interface CollectionItem {
   artist?: string
   description?: string
   price_zone?: string
+  price_zone_id?: number | string
+  package_id?: number | string
   package_name?: string
-  [key: string]: any
+  zone_id?: number | string
+  official_stock?: number
+  consignment_count?: number
+  total_available?: number
+  price_range?: string
+  min_price?: number | string
+  max_price?: number | string
+  [key: string]: unknown
 }
 
 /**
@@ -37,7 +67,45 @@ export interface CollectionItemDetailData {
   tx_hash?: string
   asset_code?: string
   type?: string
-  [key: string]: any
+  session_name?: string
+  sessionName?: string
+  session_title?: string
+  session_start_time?: string
+  sessionStartTime?: string
+  session_end_time?: string
+  sessionEndTime?: string
+  core_enterprise?: string
+  coreEnterprise?: string
+  farmer_info?: string
+  farmerInfo?: string
+  farmer_count_text?: string
+  asset_status?: string
+  assetStatus?: string
+  status_text?: string
+  status?: string
+  session_id?: number | string
+  sessionId?: number | string
+  zone_id?: number | string
+  zoneId?: number | string
+  price_zone?: string
+  priceZone?: string
+  price_zone_id?: number | string
+  priceZoneId?: number | string
+  zone_max_price?: number | string
+  zoneMaxPrice?: number | string
+  max_price?: number | string
+  maxPrice?: number | string
+  package_id?: number | string
+  packageId?: number | string
+  session?: CollectionItemSessionRef
+  zone?: CollectionItemZoneRef
+  package?: CollectionItemPackageRef
+  reservation_rules?: {
+    min_qty?: number
+    max_qty?: number
+    max_extra_hashrate?: number
+  }
+  [key: string]: unknown
 }
 
 /**
@@ -97,7 +165,7 @@ export interface UserCollectionDetailData {
   rights_status: string
   appreciation_rate?: number
   is_old_asset_package?: boolean
-  [key: string]: any
+  [key: string]: unknown
 }
 
 /**

@@ -11,6 +11,7 @@ interface ReservationProductCardProps {
 const ReservationProductCard: React.FC<ReservationProductCardProps> = ({ product }) => {
   const { showToast } = useNotification();
   const assetCode = `37-DATA-2025-${String(product.id).padStart(4, '0')}`;
+  const displayPrice = product.priceZone ?? product.price_zone ?? product.price;
 
   const handleCopyAssetCode = async () => {
     await copyWithToast(assetCode, showToast, {
@@ -41,9 +42,7 @@ const ReservationProductCard: React.FC<ReservationProductCardProps> = ({ product
         </div>
         <div className="flex items-baseline gap-2">
           <span className="text-xs text-gray-500">起购价</span>
-          <span className="text-2xl font-bold text-red-600 font-mono">
-            ¥{(product as any).priceZone || product.price}
-          </span>
+          <span className="text-2xl font-bold text-red-600 font-mono">¥{displayPrice}</span>
         </div>
       </div>
     </div>

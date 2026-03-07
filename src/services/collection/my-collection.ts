@@ -3,36 +3,36 @@ import { API_ENDPOINTS } from '../config';
 import { authedFetch, getStoredToken } from '../client';
 
 export interface MyCollectionItem {
-  id: number; // 用户藏品ID
-  unique_id: string; // 唯一标识ID
-  title: string; // 藏品标题
-  image: string; // 藏品图片
-  asset_code: string; // 确权编号
-  hash: string; // 藏品唯一哈希标识
-  md5?: string; // MD5指纹 (兼容旧版)
-  fingerprint?: string; // 指纹(同MD5) (兼容旧版)
-  price: number; // 买入价格
-  buy_price?: number | string; // 买入成本价（优先使用）
-  market_price: number; // 当前市场价
-  transaction_count: number; // 交易次数
-  fail_count: number; // 流拍次数
-  consignment_status: number; // 寄售状态: 0=未寄售, 1=寄售中, 2=已售出
-  /** 增值比例，如 0.05 表示 5%（来自 userCollection/detail 接口） */
+  id: number; // 鐢ㄦ埛钘忓搧ID
+  unique_id: string; // 鍞竴鏍囪瘑ID
+  title: string; // 钘忓搧鏍囬
+  image: string; // 钘忓搧鍥剧墖
+  asset_code: string; // 纭潈缂栧彿
+  hash: string; // 钘忓搧鍞竴鍝堝笇鏍囪瘑
+  md5?: string; // MD5鎸囩汗 (鍏煎鏃х増)
+  fingerprint?: string; // 鎸囩汗(鍚孧D5) (鍏煎鏃х増)
+  price: number; // 涔板叆浠锋牸
+  buy_price?: number | string; // 涔板叆鎴愭湰浠凤紙浼樺厛浣跨敤锛?
+  market_price: number; // 褰撳墠甯傚満浠?
+  transaction_count: number; // 浜ゆ槗娆℃暟
+  fail_count: number; // 娴佹媿娆℃暟
+  consignment_status: number; // 瀵勫敭鐘舵€? 0=鏈瘎鍞? 1=瀵勫敭涓? 2=宸插敭鍑?
+  /** 澧炲€兼瘮渚嬶紝濡?0.05 琛ㄧず 5%锛堟潵鑷?userCollection/detail 鎺ュ彛锛?*/
   appreciation_rate?: number;
-  /** 是否旧资产包（来自 userCollection/detail 接口） */
+  /** 鏄惁鏃ц祫浜у寘锛堟潵鑷?userCollection/detail 鎺ュ彛锛?*/
   is_old_asset_package?: boolean;
 
   // New API Fields
-  session_id?: number; // 场次ID
-  session_title?: string; // 场次标题
-  session_start_time?: string; // 场次开始时间
-  session_end_time?: string; // 场次结束时间
-  zone_id?: number; // 价格区间ID
-  price_zone?: string; // 价格分区名称 (如 '1K区')
-  price_zone_text?: string; // 价格分区显示文本 (兼容旧版)
-  price_zone_calc?: number; // 是否由后端计算兜底 (0=数据库值/1=计算值)
-  mining_status?: number; // 矿机状态：0=否,1=是
-  mining_start_time?: string; // 矿机启动时间
+  session_id?: number; // 鍦烘ID
+  session_title?: string; // 鍦烘鏍囬
+  session_start_time?: string; // 鍦烘寮€濮嬫椂闂?
+  session_end_time?: string; // 鍦烘缁撴潫鏃堕棿
+  zone_id?: number; // 浠锋牸鍖洪棿ID
+  price_zone?: string; // 浠锋牸鍒嗗尯鍚嶇О (濡?'1K鍖?)
+  price_zone_text?: string; // 浠锋牸鍒嗗尯鏄剧ず鏂囨湰 (鍏煎鏃х増)
+  price_zone_calc?: number; // 鏄惁鐢卞悗绔绠楀厹搴?(0=鏁版嵁搴撳€?1=璁＄畻鍊?
+  mining_status?: number; // 鐭挎満鐘舵€侊細0=鍚?1=鏄?
+  mining_start_time?: string; // 鐭挎満鍚姩鏃堕棿
 
   // Specially for status=sold
   consignment_id?: number;
@@ -63,7 +63,7 @@ export interface MyCollectionItem {
 }
 
 /**
- * 通过确权编号或MD5指纹查询藏品
+ * 閫氳繃纭潈缂栧彿鎴朚D5鎸囩汗鏌ヨ钘忓搧
  * API: GET /api/collectionTrade/queryByCode
  */
 export interface QueryByCodeParams {
@@ -74,7 +74,7 @@ export interface CollectionHolder {
   user_id: number;
   username: string;
   nickname: string;
-  mobile: string; // 脱敏后的手机号
+  mobile: string; // 鑴辨晱鍚庣殑鎵嬫満鍙?
 }
 
 export interface CollectionItemDetail {
@@ -106,7 +106,7 @@ export async function queryCollectionByCode(
 }
 
 /**
- * 藏品订单明细项接口
+ * 钘忓搧璁㈠崟鏄庣粏椤规帴鍙?
  */
 export interface CollectionOrderItemDetail {
   id: number;
@@ -120,10 +120,36 @@ export interface CollectionOrderItemDetail {
 }
 
 /**
- * 藏品订单详情数据接口
+ * 钘忓搧璁㈠崟璇︽儏鏁版嵁鎺ュ彛
  * API: GET /api/collectionTrade/orderDetail
  */
-export interface CollectionOrderDetailData {
+export interface CollectionOrderPaymentSplitFields {
+  pay_balance_available?: number | string;
+  pay_balance_available_amount?: number | string;
+  pay_pending_activation_gold?: number | string;
+  pay_pending_activation_gold_amount?: number | string;
+  pay_score?: number | string;
+  pay_score_amount?: number | string;
+  pay_ratio?: number | string | Record<string, unknown>;
+  reservation_id?: number | string;
+  freeze_amount?: number | string;
+  freeze_total_amount?: number | string;
+  freeze_balance_available?: number | string;
+  freeze_balance_available_amount?: number | string;
+  freeze_pending_activation_gold?: number | string;
+  freeze_pending_activation_gold_amount?: number | string;
+  freeze_score_amount?: number | string;
+  refund_amount?: number | string;
+  refund_total_amount?: number | string;
+  refund_diff?: number | string;
+  refund_balance_available?: number | string;
+  refund_balance_available_amount?: number | string;
+  refund_pending_activation_gold?: number | string;
+  refund_pending_activation_gold_amount?: number | string;
+  refund_score_amount?: number | string;
+}
+
+export interface CollectionOrderDetailData extends CollectionOrderPaymentSplitFields {
   id: number;
   order_no: string;
   user_id: number;
@@ -144,7 +170,7 @@ export interface CollectionOrderDetailData {
 }
 
 /**
- * 获取藏品订单详情的参数接口
+ * 鑾峰彇钘忓搧璁㈠崟璇︽儏鐨勫弬鏁版帴鍙?
  */
 export interface GetCollectionOrderDetailParams {
   id?: number | string;
@@ -153,7 +179,7 @@ export interface GetCollectionOrderDetailParams {
 }
 
 /**
- * 获取藏品订单详情
+ * 鑾峰彇钘忓搧璁㈠崟璇︽儏
  * API: GET /api/collectionTrade/orderDetail
  */
 export async function getCollectionOrderDetail(
@@ -177,7 +203,7 @@ export async function getCollectionOrderDetail(
 }
 
 /**
- * 获取我的藏品
+ * 鑾峰彇鎴戠殑钘忓搧
  * API: GET /api/collectionTrade/myCollection
  */
 export async function getMyCollection(

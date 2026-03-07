@@ -1,8 +1,13 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { bidBuy } from '@/services'
+import {
+  bidBuy,
+  buildEstimatedReservationPaymentSummary,
+  fetchReservationPreview,
+  normalizeReservationPaymentSummary,
+} from '@/services'
 import { useNotification } from '@/context/NotificationContext'
-import { isSuccess, extractError } from '@/utils/apiHelpers'
+import { extractData, extractError, extractErrorFromException, isSuccess } from '@/utils/apiHelpers'
 import { errorLog } from '@/utils/logger'
 import { useAppStore } from '@/stores/appStore'
 import { baseHashrate, fallbackProduct, getProductPackageId } from './reservationPage.constants'
@@ -10,7 +15,19 @@ import type { UseReservationPageParams, UseReservationPageResult } from './reser
 import { useReservationDetailResolver } from './useReservationDetailResolver'
 import { useReservationUserInfo } from './useReservationUserInfo'
 
-export function useReservationPage({ product: propProduct, preloadedUserInfo }: UseReservationPageParams): UseReservationPageResult {
+const FREEZE_PREVIEW_ERROR = '获取冻结结构失败'
+const RESERVATION_SUCCESS = '预约成功'
+const RESERVATION_FAILURE = '预约失败'
+const ACTION_FAILURE = '操作失败'
+const NETWORK_RETRY_MESSAGE = '网络错误，请稍后重试'
+const FUND_RECHARGE_TEXT = '前往充值专项金'
+const FUND_TOP_UP_TEXT = '前往补足资金'
+const PREVIEW_LOG_MESSAGE = '获取预约预览失败'
+
+export function useReservationPage({
+  product: propProduct,
+  preloadedUserInfo,
+}: UseReservationPageParams): UseReservationPageResult {
   const navigate = useNavigate()
   const { showToast } = useNotification()
   const { selectedProduct } = useAppStore()
@@ -21,25 +38,146 @@ export function useReservationPage({ product: propProduct, preloadedUserInfo }: 
   const [quantity, setQuantity] = useState(1)
   const [showConfirmModal, setShowConfirmModal] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [paymentPreviewLoading, setPaymentPreviewLoading] = useState(false)
+  const [paymentPreviewError, setPaymentPreviewError] = useState<string | null>(null)
+  const [mixedPaymentRemainingTimes, setMixedPaymentRemainingTimes] = useState<number | null>(null)
 
-  const { sessionId, zoneId, packageId, zoneMaxPrice, fillSessionZoneFromDetail } = useReservationDetailResolver(product)
-  const { availableHashrate, accountBalance, userInfoLoading } = useReservationUserInfo(preloadedUserInfo)
+  const previewRequestIdRef = useRef(0)
+
+  const { sessionId, zoneId, packageId, zoneMaxPrice, fillSessionZoneFromDetail } =
+    useReservationDetailResolver(product)
+  const { availableHashrate, accountBalance, pendingActivationGold, userInfoLoading } =
+    useReservationUserInfo(preloadedUserInfo)
 
   const frozenAmount = zoneMaxPrice * quantity
   const totalRequiredHashrate = (baseHashrate + extraHashrate) * quantity
 
+  const buildPaymentSummaryFallbacks = useCallback(
+    (freezeAmount = frozenAmount) => ({
+      freezeAmount,
+      specialFundBalance: accountBalance,
+      pendingActivationGoldBalance: pendingActivationGold,
+    }),
+    [accountBalance, frozenAmount, pendingActivationGold],
+  )
+
+  const [paymentSummary, setPaymentSummary] = useState(() =>
+    buildEstimatedReservationPaymentSummary(buildPaymentSummaryFallbacks()),
+  )
+
   const isHashrateSufficient = availableHashrate >= totalRequiredHashrate
-  const isFundSufficient = accountBalance >= frozenAmount
+  const isFundSufficient = paymentSummary.canPay
 
   const maxExtraHashrate = Math.max(0, Math.floor(availableHashrate / quantity) - baseHashrate)
   const canIncreaseHashrate = extraHashrate < maxExtraHashrate
 
+  const ensureReservationIds = useCallback(async () => {
+    const finalSessionId = sessionId ?? product.sessionId ?? product.session_id
+    const finalZoneId = zoneId ?? product.zoneId ?? product.zone_id
+
+    let ensuredSessionId = finalSessionId
+    let ensuredZoneId = finalZoneId
+    let ensuredPackageId = packageId ?? getProductPackageId(product)
+
+    if (
+      !ensuredSessionId ||
+      Number(ensuredSessionId) <= 0 ||
+      !ensuredZoneId ||
+      Number(ensuredZoneId) <= 0 ||
+      !ensuredPackageId
+    ) {
+      const filled = await fillSessionZoneFromDetail()
+      ensuredSessionId = filled.sessionId
+      ensuredZoneId = filled.zoneId
+      if (filled.packageId) ensuredPackageId = filled.packageId
+    }
+
+    return {
+      sessionId: ensuredSessionId,
+      zoneId: ensuredZoneId,
+      packageId: ensuredPackageId,
+    }
+  }, [fillSessionZoneFromDetail, packageId, product, sessionId, zoneId])
+
+  useEffect(() => {
+    let cancelled = false
+    const requestId = previewRequestIdRef.current + 1
+    previewRequestIdRef.current = requestId
+
+    const fallbackSummary = buildEstimatedReservationPaymentSummary(buildPaymentSummaryFallbacks())
+
+    setPaymentSummary(fallbackSummary)
+    setPaymentPreviewLoading(true)
+    setPaymentPreviewError(null)
+
+    const timer = setTimeout(async () => {
+      try {
+        const ensured = await ensureReservationIds()
+        if (cancelled || requestId !== previewRequestIdRef.current) return
+
+        const response = await fetchReservationPreview({
+          session_id: ensured.sessionId,
+          zone_id: ensured.zoneId,
+          package_id: ensured.packageId,
+          extra_hashrate: extraHashrate,
+          quantity,
+        })
+
+        if (cancelled || requestId !== previewRequestIdRef.current) return
+
+        if (isSuccess(response)) {
+          const previewData = extractData(response)
+          setPaymentSummary(
+            normalizeReservationPaymentSummary(
+              previewData ?? {},
+              buildPaymentSummaryFallbacks(frozenAmount),
+            ),
+          )
+          setPaymentPreviewError(null)
+
+          const mixedInfo = previewData?.mixed_payment_info as Record<string, unknown> | undefined
+          const remaining =
+            Number(previewData?.mixed_payment_remaining_times) ||
+            Number(mixedInfo?.remaining_times) ||
+            null
+          setMixedPaymentRemainingTimes(remaining)
+        } else {
+          setPaymentSummary(fallbackSummary)
+          setPaymentPreviewError(extractError(response, FREEZE_PREVIEW_ERROR))
+        }
+      } catch (error: unknown) {
+        if (cancelled || requestId !== previewRequestIdRef.current) return
+
+        if (!(error instanceof Error && error.name === 'NeedLoginError')) {
+          errorLog('ReservationPage', PREVIEW_LOG_MESSAGE, error)
+          setPaymentPreviewError(extractErrorFromException(error, FREEZE_PREVIEW_ERROR))
+        }
+        setPaymentSummary(fallbackSummary)
+      } finally {
+        if (!cancelled && requestId === previewRequestIdRef.current) {
+          setPaymentPreviewLoading(false)
+        }
+      }
+    }, 150)
+
+    return () => {
+      cancelled = true
+      clearTimeout(timer)
+    }
+  }, [
+    buildPaymentSummaryFallbacks,
+    ensureReservationIds,
+    extraHashrate,
+    frozenAmount,
+    quantity,
+  ])
+
   const handleReservation = useCallback(() => {
-    if (!isHashrateSufficient || !isFundSufficient) {
+    if (paymentPreviewLoading || !isHashrateSufficient || !isFundSufficient) {
       return
     }
     setShowConfirmModal(true)
-  }, [isFundSufficient, isHashrateSufficient])
+  }, [isFundSufficient, isHashrateSufficient, paymentPreviewLoading])
 
   const handleRecharge = useCallback(() => {
     if (!isHashrateSufficient) {
@@ -56,49 +194,60 @@ export function useReservationPage({ product: propProduct, preloadedUserInfo }: 
     try {
       setLoading(true)
 
-      const finalSessionId = sessionId ?? product.sessionId
-      const finalZoneId = zoneId ?? product.zoneId
-
-      let ensuredSessionId = finalSessionId
-      let ensuredZoneId = finalZoneId
-      let ensuredPackageId = packageId ?? getProductPackageId(product)
-
-      if (
-        !ensuredSessionId ||
-        Number(ensuredSessionId) <= 0 ||
-        !ensuredZoneId ||
-        Number(ensuredZoneId) <= 0 ||
-        !ensuredPackageId
-      ) {
-        const filled = await fillSessionZoneFromDetail()
-        ensuredSessionId = filled.sessionId
-        ensuredZoneId = filled.zoneId
-        if (filled.packageId) ensuredPackageId = filled.packageId
-      }
+      const ensured = await ensureReservationIds()
 
       const response = await bidBuy({
-        session_id: ensuredSessionId,
-        zone_id: ensuredZoneId,
-        package_id: ensuredPackageId,
+        session_id: ensured.sessionId,
+        zone_id: ensured.zoneId,
+        package_id: ensured.packageId,
         extra_hashrate: extraHashrate,
         quantity,
       })
 
       if (isSuccess(response)) {
+        const responseData = extractData(response) ?? response.data ?? {}
+        const submittedFreezeAmount = Number(responseData?.freeze_amount) || frozenAmount
+        const submittedPaymentSummary = normalizeReservationPaymentSummary(
+          responseData,
+          buildPaymentSummaryFallbacks(submittedFreezeAmount),
+        )
+
         setShowConfirmModal(false)
-        showToast('success', '预约成功', response.msg || '预约成功')
-        navigate('/reservation-record', { replace: true })
+        showToast('success', RESERVATION_SUCCESS, response.msg || RESERVATION_SUCCESS)
+        navigate('/reservation-record', {
+          replace: true,
+          state: {
+            latestReservationSubmission: {
+              ...submittedPaymentSummary,
+              reservationId: responseData?.reservation_id,
+              zoneName: responseData?.zone_name,
+              packageName: responseData?.package_name,
+              quantity,
+              totalRequiredHashrate,
+              submittedAt: Date.now(),
+            },
+          },
+        })
       } else {
-        showToast('error', '预约失败', extractError(response, '预约失败'))
+        showToast('error', RESERVATION_FAILURE, extractError(response, RESERVATION_FAILURE))
       }
-    } catch (error: any) {
-      errorLog('ReservationPage', '操作失败', error)
-      if (error?.name === 'NeedLoginError') return
-      showToast('error', '操作失败', error?.msg || error?.message || '网络错误，请稍后重试')
+    } catch (error: unknown) {
+      errorLog('ReservationPage', ACTION_FAILURE, error)
+      if (error instanceof Error && error.name === 'NeedLoginError') return
+      showToast('error', ACTION_FAILURE, extractErrorFromException(error, NETWORK_RETRY_MESSAGE))
     } finally {
       setLoading(false)
     }
-  }, [extraHashrate, fillSessionZoneFromDetail, navigate, packageId, product, quantity, sessionId, showToast, zoneId])
+  }, [
+    buildPaymentSummaryFallbacks,
+    ensureReservationIds,
+    extraHashrate,
+    frozenAmount,
+    navigate,
+    quantity,
+    showToast,
+    totalRequiredHashrate,
+  ])
 
   const onDecreaseExtraHashrate = useCallback(() => {
     setExtraHashrate((prev) => Math.max(0, prev - 1))
@@ -115,8 +264,20 @@ export function useReservationPage({ product: propProduct, preloadedUserInfo }: 
   }, [])
 
   const onIncreaseQuantity = useCallback(() => {
-    setQuantity((prev) => Math.min(100, prev + 1))
-  }, [])
+    const maxByMixed = mixedPaymentRemainingTimes ?? 100
+    if (quantity >= maxByMixed) {
+      showToast('warning', '超出限制', `混合支付剩余可用次数为 ${maxByMixed} 次`)
+      return
+    }
+    setQuantity((prev) => Math.min(Math.min(100, maxByMixed), prev + 1))
+  }, [mixedPaymentRemainingTimes, quantity, showToast])
+
+  const fundActionText =
+    !isFundSufficient && (paymentSummary.isMixedPayment || pendingActivationGold > 0)
+      ? FUND_TOP_UP_TEXT
+      : FUND_RECHARGE_TEXT
+
+  const mixedPaymentAvailable = mixedPaymentRemainingTimes !== null && mixedPaymentRemainingTimes > 0
 
   return {
     product,
@@ -128,12 +289,19 @@ export function useReservationPage({ product: propProduct, preloadedUserInfo }: 
     totalRequiredHashrate,
     availableHashrate,
     accountBalance,
+    pendingActivationGold,
     userInfoLoading,
     loading,
     showConfirmModal,
     canIncreaseHashrate,
     isHashrateSufficient,
     isFundSufficient,
+    paymentSummary,
+    paymentPreviewLoading,
+    paymentPreviewError,
+    fundActionText,
+    mixedPaymentAvailable,
+    mixedPaymentRemainingTimes,
     setShowConfirmModal,
     onDecreaseExtraHashrate,
     onIncreaseExtraHashrate,

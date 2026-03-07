@@ -21,10 +21,16 @@ export interface Product {
   reservationStatus?: string;
   /** 场次ID (用于盲盒预约) */
   sessionId?: number | string;
+  /** 后端蛇形字段兼容 */
+  session_id?: number | string;
   /** 价格分区ID (用于盲盒预约) */
   zoneId?: number | string;
+  /** 后端蛇形字段兼容 */
+  zone_id?: number | string;
   /** 资产包ID (用于盲盒预约) */
   packageId?: number | string;
+  /** 后端蛇形字段兼容 */
+  package_id?: number | string;
   /** 消费金价格（整数） */
   score_price?: number;
   /** 绿色能量金额 */

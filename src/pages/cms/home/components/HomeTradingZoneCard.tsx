@@ -19,8 +19,8 @@ const HomeTradingZoneCard: React.FC<HomeTradingZoneCardProps> = ({ onClick }) =>
           <h2 className="text-xl font-bold text-white tracking-wide">交易专区</h2>
           <p className="text-white/80 text-xs mt-0.5">数据资产确权交易</p>
         </div>
-        <div className="w-10 h-10 rounded-full bg-white/20 backdrop-blur flex items-center justify-center">
-          <ChevronRight size={24} className="text-white" />
+        <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center shadow-sm">
+          <ChevronRight size={24} className="text-red-600" />
         </div>
       </div>
     </div>

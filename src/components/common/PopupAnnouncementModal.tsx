@@ -84,8 +84,8 @@ const PopupAnnouncementModal: React.FC<PopupAnnouncementModalProps> = ({
                         
                         {/* 标题行：图标 + 文字 */}
                         <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center shadow">
-                                <Megaphone size={20} className="text-white" />
+                            <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center shadow-sm">
+                                <Megaphone size={20} className="text-orange-500" />
                             </div>
                             <div>
                                 <h2 className="text-lg font-bold text-white">平台公告</h2>

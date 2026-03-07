@@ -1,4 +1,4 @@
-// 统一维护所有接口路径，更换接口只需改这里
+// 缁熶竴缁存姢鎵€鏈夋帴鍙ｈ矾寰勶紝鏇存崲鎺ュ彛鍙渶鏀硅繖閲?
 export const API_ENDPOINTS = {
     auth: {
         checkIn: '/User/checkIn',
@@ -7,50 +7,50 @@ export const API_ENDPOINTS = {
         profile: '/Account/profile',
         retrievePassword: '/Account/retrievePassword',
         cancelAccount: '/Account/cancelAccount',
-        /** 余额划转到服务费 */
+        /** 浣欓鍒掕浆鍒版湇鍔¤垂 */
         transferBalanceToServiceFee: '/Account/transferBalanceToServiceFee',
-        /** 服务费充值 */
+        /** 鏈嶅姟璐瑰厖鍊?*/
         rechargeServiceFee: '/Account/rechargeServiceFee',
-        /** 全部明细（统一入口；替代废弃的 balance / serviceFeeLog / integral / assetLog） */
+        /** 鍏ㄩ儴鏄庣粏锛堢粺涓€鍏ュ彛锛涙浛浠ｅ簾寮冪殑 balance / serviceFeeLog / integral / assetLog锛?*/
         allLog: '/Account/allLog',
-        /** 合并流水子明细 */
+        /** 鍚堝苟娴佹按瀛愭槑缁?*/
         allLogMergedItems: '/Account/allLogMergedItems',
-        /** 资金明细详情 */
+        /** 璧勯噾鏄庣粏璇︽儏 */
         moneyLogDetail: '/Account/moneyLogDetail',
-        /** 消费金兑换绿色算力 */
+        /** 娑堣垂閲戝厬鎹㈢豢鑹茬畻鍔?*/
         exchangeScoreToGreenPower: '/Account/exchangeScoreToGreenPower',
-        /** 检查旧资产解锁状态 */
+        /** 妫€鏌ユ棫璧勪骇瑙ｉ攣鐘舵€?*/
         checkOldAssetsUnlockStatus: '/Account/checkOldAssetsUnlockStatus',
-        /** 解锁旧资产 */
+        /** 瑙ｉ攣鏃ц祫浜?*/
         unlockOldAssets: '/Account/unlockOldAssets',
-        /** 成长权益信息 */
+        /** 鎴愰暱鏉冪泭淇℃伅 */
         growthRightsInfo: '/Account/growthRightsInfo',
-        /** 成长权益解锁藏品 */
+        /** 鎴愰暱鏉冪泭瑙ｉ攣钘忓搧 */
         unlockGrowthRightsAsset: '/Account/unlockGrowthRightsAsset',
-        /** 账户一览（余额、历史收益、藏品统计） */
+        /** 璐︽埛涓€瑙堬紙浣欓銆佸巻鍙叉敹鐩娿€佽棌鍝佺粺璁★級 */
         accountOverview: '/Account/accountOverview',
-        /** 获取算力兑换配置 */
+        /** 鑾峰彇绠楀姏鍏戞崲閰嶇疆 */
         exchangeConfig: '/Account/exchangeConfig',
     },
-    /** 内容资讯（替代废弃的 /api/home/newsList、newsDetail） */
+    /** 鍐呭璧勮锛堟浛浠ｅ簾寮冪殑 /api/home/newsList銆乶ewsDetail锛?*/
     contentNews: {
         index: '/ContentNews/index',
         detail: '/ContentNews/detail',
     },
-    /** 热门视频（替代废弃的 /api/home/videoList） */
+    /** 鐑棬瑙嗛锛堟浛浠ｅ簾寮冪殑 /api/home/videoList锛?*/
     contentHotVideo: {
         index: '/ContentHotVideo/index',
     },
     address: {
-        /** 收货地址列表 */
+        /** 鏀惰揣鍦板潃鍒楄〃 */
         list: '/shopAddress/index',
-        /** 新增收货地址 */
+        /** 鏂板鏀惰揣鍦板潃 */
         add: '/shopAddress/add',
-        /** 编辑收货地址 */
+        /** 缂栬緫鏀惰揣鍦板潃 */
         edit: '/shopAddress/edit',
-        /** 删除收货地址 */
+        /** 鍒犻櫎鏀惰揣鍦板潃 */
         delete: '/shopAddress/delete',
-        /** 获取默认收货地址 */
+        /** 鑾峰彇榛樿鏀惰揣鍦板潃 */
         getDefault: '/shopAddress/getDefault',
     },
     user: {
@@ -73,7 +73,7 @@ export const API_ENDPOINTS = {
     },
     yidun: {
         livePersonCheck: '/YidunOcr/livePersonCheck',
-        h5Recheck: '/YidunOcr/h5Recheck', // H5人脸核身校验接口
+        h5Recheck: '/YidunOcr/h5Recheck', // H5浜鸿劯鏍歌韩鏍￠獙鎺ュ彛
     },
     upload: {
         image: '/ajax/upload',
@@ -82,235 +82,243 @@ export const API_ENDPOINTS = {
         send: '/Sms/send',
     },
     announcement: {
-        /** 平台公告列表 */
+        /** 骞冲彴鍏憡鍒楄〃 */
         list: '/Announcement/index',
-        /** 标记公告已读 */
+        /** 鏍囪鍏憡宸茶 */
         markRead: '/Announcement/markRead',
     },
     activeRank: {
-        /** 团队贡献榜总览（活动信息 + top + 我的团队 + 更新时间） */
+        /** 鍥㈤槦璐＄尞姒滄€昏锛堟椿鍔ㄤ俊鎭?+ top + 鎴戠殑鍥㈤槦 + 鏇存柊鏃堕棿锛?*/
         overview: '/ActiveRank/overview',
-        /** 团队贡献榜 Top N */
+        /** 鍥㈤槦璐＄尞姒?Top N */
         top: '/ActiveRank/top',
-        /** 我的团队排名 */
+        /** 鎴戠殑鍥㈤槦鎺掑悕 */
         my: '/ActiveRank/my',
-        /** 团队贡献榜规则（公开） */
+        /** 鍥㈤槦璐＄尞姒滆鍒欙紙鍏紑锛?*/
         rules: '/ActiveRank/rules',
     },
     banner: {
-        /** 轮播图列表 */
+        /** 杞挱鍥惧垪琛?*/
         list: '/Banner/getBannerList',
     },
     recharge: {
-        /** 充值公司账户列表 */
+        /** 鍏呭€煎叕鍙歌处鎴峰垪琛?*/
         companyAccountList: '/Recharge/getCompanyAccountList',
-        /** 提交充值订单 */
+        /** 鎻愪氦鍏呭€艰鍗?*/
         submitOrder: '/Recharge/submitOrder',
-        /** 提交提现申请 */
+        /** 鎻愪氦鎻愮幇鐢宠 */
         submitWithdraw: '/Recharge/submitWithdraw',
-        /** 提交拓展提现申请 */
+        /** 鎻愪氦鎷撳睍鎻愮幇鐢宠 */
         submitStaticIncomeWithdraw: '/Recharge/submitStaticIncomeWithdraw',
-        /** 获取我的充值订单列表 */
+        /** 鑾峰彇鎴戠殑鍏呭€艰鍗曞垪琛?*/
         getMyOrderList: '/Recharge/getMyOrderList',
-        /** 获取我的提现记录列表 */
+        /** 鑾峰彇鎴戠殑鎻愮幇璁板綍鍒楄〃 */
         getMyWithdrawList: '/Recharge/getMyWithdrawList',
-        /** 获取充值订单详情 */
+        /** 鑾峰彇鍏呭€艰鍗曡鎯?*/
         detail: '/Recharge/detail',
-        // 更新订单备注/用户反馈
+        // 鏇存柊璁㈠崟澶囨敞/鐢ㄦ埛鍙嶉
         updateOrderRemark: '/Recharge/updateOrderRemark',
     },
     common: {
         page: '/Common/page',
-        /** 获取状态字典（增强版） */
+        /** 鑾峰彇鐘舵€佸瓧鍏革紙澧炲己鐗堬級 */
         dict: '/Common/dict',
-        /** 获取推广奖励配置 */
+        /** 鑾峰彇鎺ㄥ箍濂栧姳閰嶇疆 */
         rewardConfig: '/Common/rewardConfig',
-        /** 获取客服配置（公开接口） */
+        /** 鑾峰彇瀹㈡湇閰嶇疆锛堝叕寮€鎺ュ彛锛?*/
         chatConfig: '/Common/chatConfig',
     },
-    /** CMS 配置 */
+    /** CMS 閰嶇疆 */
     cms: {
-        /** 获取首页配置 */
+        /** 鑾峰彇棣栭〉閰嶇疆 */
         homeConfig: '/Cms/homeConfig',
     },
-    /** 商城配置（独立于 shopProduct） */
+    /** 鍟嗗煄閰嶇疆锛堢嫭绔嬩簬 shopProduct锛?*/
     shop: {
-        /** 获取商城配置 */
+        /** 鑾峰彇鍟嗗煄閰嶇疆 */
         config: '/Shop/config',
     },
-    /** 订单配置 */
+    /** 璁㈠崟閰嶇疆 */
     order: {
-        /** 获取订单分类配置 */
+        /** 鑾峰彇璁㈠崟鍒嗙被閰嶇疆 */
         categories: '/Order/categories',
     },
     help: {
-        /** 帮助中心 - 分类列表 */
+        /** 甯姪涓績 - 鍒嗙被鍒楄〃 */
         categories: '/Help/categories',
-        /** 帮助中心 - 问题列表 */
+        /** 甯姪涓績 - 闂鍒楄〃 */
         questions: '/Help/questions',
     },
     shopProduct: {
-        /** 商品列表 */
+        /** 鍟嗗搧鍒楄〃 */
         list: '/shopProduct/index',
-        /** 商品详情 */
+        /** 鍟嗗搧璇︽儏 */
         detail: '/shopProduct/detail',
-        /** 商品分类列表 */
+        /** 鍟嗗搧鍒嗙被鍒楄〃 */
         categories: '/shopProduct/categories',
-        /** 热销商品列表（按销量排序） */
+        /** 鐑攢鍟嗗搧鍒楄〃锛堟寜閿€閲忔帓搴忥級 */
         sales: '/shopProduct/sales',
-        /** 最新商品列表 */
+        /** 鏈€鏂板晢鍝佸垪琛?*/
         latest: '/shopProduct/latest',
-        /** 商品分享信息 */
+        /** 鍟嗗搧鍒嗕韩淇℃伅 */
         share: '/shopProduct/share',
-        /** 商品评价列表 */
+        /** 鍟嗗搧璇勪环鍒楄〃 */
         reviews: '/shopProduct/reviews',
-        /** 商品评价摘要 */
+        /** 鍟嗗搧璇勪环鎽樿 */
         reviewSummary: '/shopProduct/reviewSummary',
-        /** 提交商品评价 */
+        /** 鎻愪氦鍟嗗搧璇勪环 */
         submitReview: '/shopProduct/submitReview',
-        /** 点赞/取消点赞评价 */
+        /** 鐐硅禐/鍙栨秷鐐硅禐璇勪环 */
         likeReview: '/shopProduct/likeReview',
     },
     shopOrder: {
-        /** 创建订单 */
+        /** 鍒涘缓璁㈠崟 */
         create: '/shopOrder/create',
-        /** 购买商品（一步到位：创建订单并支付） */
+        /** 璐拱鍟嗗搧锛堜竴姝ュ埌浣嶏細鍒涘缓璁㈠崟骞舵敮浠橈級 */
         buy: '/shopOrder/buy',
-        /** 待付款订单列表 */
+        /** 寰呬粯娆捐鍗曞垪琛?*/
         pendingPay: '/shopOrder/pendingPay',
-        /** 待发货订单列表 */
+        /** 寰呭彂璐ц鍗曞垪琛?*/
         pendingShip: '/shopOrder/pendingShip',
-        /** 待确认收货订单列表 */
+        /** 寰呯‘璁ゆ敹璐ц鍗曞垪琛?*/
         pendingConfirm: '/shopOrder/pendingConfirm',
-        /** 已完成订单列表 */
+        /** 宸插畬鎴愯鍗曞垪琛?*/
         completed: '/shopOrder/completed',
-        /** 确认收货 */
+        /** 纭鏀惰揣 */
         confirm: '/shopOrder/confirm',
-        /** 支付订单 */
+        /** 鏀粯璁㈠崟 */
         pay: '/shopOrder/pay',
-        /** 订单详情 */
+        /** 璁㈠崟璇︽儏 */
         detail: '/shopOrder/detail',
-        /** 删除订单 */
+        /** 鍒犻櫎璁㈠崟 */
         delete: '/shopOrder/delete',
-        /** 取消订单 */
+        /** 鍙栨秷璁㈠崟 */
         cancel: '/shopOrder/cancel',
-        /** 订单统计 */
+        /** 璁㈠崟缁熻 */
         statistics: '/shopOrder/statistics',
     },
     collectionSession: {
-        /** 交易专场列表 */
+        /** 浜ゆ槗涓撳満鍒楄〃 */
         index: '/collectionSession/index',
-        /** 交易专场详情 */
+        /** 浜ゆ槗涓撳満璇︽儏 */
         detail: '/collectionSession/detail',
     },
     collectionItem: {
-        /** 交易商品列表 */
+        /** 浜ゆ槗鍟嗗搧鍒楄〃 */
         index: '/collectionItem/index',
-        /** 根据专场ID获取商品列表 */
+        /** 鏍规嵁涓撳満ID鑾峰彇鍟嗗搧鍒楄〃 */
         bySession: '/collectionItem/bySession',
-        /** 交易商品详情 */
+        /** 浜ゆ槗鍟嗗搧璇︽儏 */
         detail: '/collectionItem/detail',
-        /** 交易商品原始详情（下架也可查看） */
+        /** 浜ゆ槗鍟嗗搧鍘熷璇︽儏锛堜笅鏋朵篃鍙煡鐪嬶級 */
         originalDetail: '/collectionItem/originalDetail',
     },
     collectionTrade: {
-        /** 寄售交易区列表 */
+        /** 瀵勫敭浜ゆ槗鍖哄垪琛?*/
         tradeList: '/collectionTrade/tradeList',
-        /** 我的藏品列表 */
+        /** 鎴戠殑钘忓搧鍒楄〃 */
         myCollection: '/collectionTrade/myCollection',
-        /** 购买记录列表 */
+        /** 璐拱璁板綍鍒楄〃 */
         purchaseRecords: '/collectionTrade/purchaseRecords',
-        /** 订单详情 */
+        /** 璁㈠崟璇︽儏 */
         orderDetail: '/collectionTrade/orderDetail',
-        /** 转入挖矿/矿机 */
+        /** 杞叆鎸栫熆/鐭挎満 */
         toMining: '/collectionTrade/toMining',
-        /** 根据编码查询藏品 */
+        /** 鏍规嵁缂栫爜鏌ヨ钘忓搧 */
         queryByCode: '/collectionTrade/queryByCode',
-        /** 购买藏品 */
+        /** 璐拱钘忓搧 */
         buy: '/collectionTrade/buy',
-        /** 查询撮合池列表 */
+        /** 鏌ヨ鎾悎姹犲垪琛?*/
         matchingPool: '/collectionTrade/matchingPool',
-        /** 取消竞价（从撮合池移除） */
+        /** 鍙栨秷绔炰环锛堜粠鎾悎姹犵Щ闄わ級 */
         cancelBid: '/collectionTrade/cancelBid',
-        /** 提货订单列表（保留） */
+        /** 鎻愯揣璁㈠崟鍒楄〃锛堜繚鐣欙級 */
         deliveryList: '/collectionTrade/deliveryList',
-        /** 权益分割（保留） */
+        /** 鏉冪泭鍒嗗壊锛堜繚鐣欙級 */
         rightsDeliver: '/collectionTrade/rightsDeliver',
     },
     collectionConsignment: {
-        /** 申请寄售 */
+        /** 鐢宠瀵勫敭 */
         consign: '/collectionConsignment/consign',
-        /** 批量寄售 */
+        /** 鎵归噺瀵勫敭 */
         batchConsign: '/collectionConsignment/batchConsign',
-        /** 可批量寄售列表 */
+        /** 鍙壒閲忓瘎鍞垪琛?*/
         batchConsignableList: '/collectionConsignment/batchConsignableList',
-        /** 寄售检查 */
+        /** 瀵勫敭妫€鏌?*/
         consignmentCheck: '/collectionConsignment/consignmentCheck',
-        /** 我的寄售列表 */
+        /** 鎴戠殑瀵勫敭鍒楄〃 */
         myConsignmentList: '/collectionConsignment/myConsignmentList',
-        /** 寄售详情 */
+        /** 瀵勫敭璇︽儏 */
         consignmentDetail: '/collectionConsignment/consignmentDetail',
-        /** 取消寄售 */
+        /** 鍙栨秷瀵勫敭 */
         cancelConsignment: '/collectionConsignment/cancelConsignment',
-        /** 寄售商品列表 */
+        /** 瀵勫敭鍟嗗搧鍒楄〃 */
         consignmentList: '/collectionConsignment/consignmentList',
-        /** 申请提货 */
+        /** 鐢宠鎻愯揣 */
         deliver: '/collectionConsignment/deliver',
     },
     collectionReservation: {
-        /** 竞价购买藏品 */
+        /** 预约支付预览 */
+        previewBidBuy: '/collectionReservation/previewBidBuy',
+        /** @deprecated 兼容旧命名，主命名请使用 previewBidBuy */
+        bidBuyPreview: '/collectionReservation/bidBuyPreview',
+        /** @deprecated 兼容旧别名，主命名请使用 previewBidBuy */
+        preview: '/collectionReservation/preview',
+        /** 绔炰环璐拱钘忓搧 */
         bidBuy: '/collectionReservation/bidBuy',
-        /** 预约记录列表 */
+        /** 棰勭害璁板綍鍒楄〃 */
         reservations: '/collectionReservation/reservations',
-        /** 预约记录详情 */
+        /** 棰勭害璁板綍璇︽儏 */
         reservationDetail: '/collectionReservation/reservationDetail',
     },
     artist: {
-        /** 艺术家列表 */
+        /** 鑹烘湳瀹跺垪琛?*/
         index: '/artist/index',
-        /** 艺术家详情 */
+        /** 鑹烘湳瀹惰鎯?*/
         detail: '/artist/detail',
-        /** 艺术家作品详情 */
+        /** 鑹烘湳瀹朵綔鍝佽鎯?*/
         workDetail: '/artist/workDetail',
-        /** 全部艺术家作品列表 */
+        /** 鍏ㄩ儴鑹烘湳瀹朵綔鍝佸垪琛?*/
         allWorks: '/artist/allWorks',
     },
     signIn: {
-        /** 获取签到活动规则 */
+        /** 鑾峰彇绛惧埌娲诲姩瑙勫垯 */
         rules: '/SignIn/rules',
-        /** 获取签到信息 */
+        /** 鑾峰彇绛惧埌淇℃伅 */
         info: '/SignIn/info',
-        /** 执行签到 */
+        /** 鎵ц绛惧埌 */
         do: '/SignIn/do',
-        /** 获取签到记录 */
+        /** 鑾峰彇绛惧埌璁板綍 */
         records: '/SignIn/records',
-        /** 获取提现进度 */
+        /** 鑾峰彇鎻愮幇杩涘害 */
         progress: '/SignIn/progress',
     },
     userCollection: {
-        /** 用户藏品详情 */
+        /** 鐢ㄦ埛钘忓搧璇︽儏 */
         detail: '/userCollection/detail',
     },
     team: {
-        /** 获取团队概览 */
+        /** 鑾峰彇鍥㈤槦姒傝 */
         overview: '/Team/overview',
-        /** 获取推广卡信息 */
+        /** 鑾峰彇鎺ㄥ箍鍗′俊鎭?*/
         promotionCard: '/Team/promotionCard',
-        /** 获取团队成员列表 */
+        /** 鑾峰彇鍥㈤槦鎴愬憳鍒楄〃 */
         members: '/Team/members',
-        /** 获取好友/团队成员详情 */
+        /** 鑾峰彇濂藉弸/鍥㈤槦鎴愬憳璇︽儏 */
         memberDetail: '/Team/memberDetail',
     },
     app: {
-        /** 检查应用版本更新 */
+        /** 妫€鏌ュ簲鐢ㄧ増鏈洿鏂?*/
         checkUpdate: '/AppVersion/checkUpdate',
     },
     financeOrder: {
-        /** 余额划转到可用余额 */
+        /** 浣欓鍒掕浆鍒板彲鐢ㄤ綑棰?*/
         transferIncomeToPurchase: '/financeOrder/transferIncomeToPurchase',
     },
     liveVideo: {
-        /** 获取直播广告视频配置 */
+        /** 鑾峰彇鐩存挱骞垮憡瑙嗛閰嶇疆 */
         config: '/liveVideo/config',
     },
 } as const;
+
+

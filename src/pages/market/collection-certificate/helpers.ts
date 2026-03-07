@@ -64,7 +64,7 @@ export const getDisplayPrice = (
   fallbackPrice: number
 ) => {
   const actualPrice = Number(detailData?.price ?? fallbackPrice);
-  const pZone = detailData?.price_zone || (detailData as any)?.priceZone;
+  const pZone = detailData?.price_zone || detailData?.priceZone;
 
   if (!pZone) return actualPrice;
 

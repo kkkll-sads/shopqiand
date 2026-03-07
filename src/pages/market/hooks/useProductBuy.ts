@@ -1,6 +1,6 @@
 /**
  * useProductBuy - 商品购买逻辑 Hook
- * 
+ *
  * 购买流程：
  * 1. createOrder - 创建订单（返回待支付订单）
  * 2. 跳转收银台 - 用户确认支付
@@ -10,7 +10,7 @@ import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { createOrder } from '@/services';
 import { useNotification } from '@/context/NotificationContext';
-import { isSuccess } from '@/utils/apiHelpers';
+import { extractErrorFromException, isSuccess } from '@/utils/apiHelpers';
 import { useErrorHandler } from '@/hooks/useErrorHandler';
 import { useStateMachine } from '@/hooks/useStateMachine';
 import { FormEvent, FormState } from '@/types/states';
@@ -18,7 +18,7 @@ import { FormEvent, FormState } from '@/types/states';
 interface UseProductBuyParams {
   productId: string | number;
   productTitle: string;
-  isPhysical?: boolean;  // 是否为实物商品（传入可避免额外请求）
+  isPhysical?: boolean;
 }
 
 export function useProductBuy({ productId, productTitle, isPhysical }: UseProductBuyParams) {
@@ -85,21 +85,17 @@ export function useProductBuy({ productId, productTitle, isPhysical }: UseProduc
           if (skuId) {
             orderItem.sku_id = skuId;
           }
-          
-          // 第一步：创建订单（/api/shopOrder/create）
+
           const response = await createOrder({
             items: [orderItem],
-            pay_type: 'score', // 支付方式由系统自动计算
-            is_physical: isPhysical, // 传入是否实物商品，避免额外请求
+            pay_type: 'score',
+            is_physical: isPhysical,
           });
 
           if (isSuccess(response)) {
-            const data = response.data as any;
-            // createOrder 返回: order_no, order_id, total_amount, total_score, status, pay_type
-            const orderId = data?.order_id || data?.id;
+            const orderId = response.data?.order_id ?? response.data?.id;
 
             if (orderId) {
-              // 第二步：跳转收银台，用户确认后调用 /api/shopOrder/pay 完成支付
               navigate(`/cashier/${orderId}`);
             } else {
               showToast('success', '订单创建成功');
@@ -114,10 +110,10 @@ export function useProductBuy({ productId, productTitle, isPhysical }: UseProduc
             });
             buyMachine.send(FormEvent.SUBMIT_ERROR);
           }
-        } catch (err: any) {
-          handleBuyError(err, {
+        } catch (error: unknown) {
+          handleBuyError(error, {
             toastTitle: '订单创建失败',
-            customMessage: err.message || '系统错误',
+            customMessage: extractErrorFromException(error, '系统错误'),
             context: { productId }
           });
           buyMachine.send(FormEvent.SUBMIT_ERROR);

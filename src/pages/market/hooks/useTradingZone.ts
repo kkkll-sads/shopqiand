@@ -32,8 +32,8 @@ export interface TradingDisplayItem extends CollectionItem {
   official_stock?: number;
   consignment_count?: number;
   total_available?: number;
-  min_price?: number;
-  max_price?: number;
+  min_price?: number | string;
+  max_price?: number | string;
   price_range?: string;
   consignment_list?: Array<{
     consignment_id: number;

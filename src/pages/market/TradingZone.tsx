@@ -252,9 +252,9 @@ const TradingZone: React.FC<TradingZoneProps> = ({
           <button
             type="button"
             onClick={handleBack}
-            className="p-2.5 -ml-2 bg-white/20 backdrop-blur-sm hover:bg-white/30 rounded-full transition-all active:scale-95"
+            className="p-2.5 -ml-2 bg-white hover:bg-white shadow-lg rounded-full transition-all active:scale-95 flex items-center justify-center"
           >
-            <ArrowLeft size={22} className="text-white" />
+            <ArrowLeft size={22} className="text-red-600" />
           </button>
           <h1 className="font-bold text-xl text-white tracking-tight drop-shadow-sm">资产交易</h1>
         </div>

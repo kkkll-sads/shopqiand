@@ -20,10 +20,16 @@ import {
   payOrder,
   getOrderDetail,
   fetchProfile,
-  ShopOrderItem,
+  type ShopOrderDetail,
+  type ShopOrderPaymentType,
 } from '@/services';
 import { getStoredToken } from '@/services/client';
-import { isSuccess as checkApiSuccess, extractData, extractError } from '@/utils/apiHelpers';
+import {
+  isSuccess as checkApiSuccess,
+  extractData,
+  extractError,
+  extractErrorFromException,
+} from '@/utils/apiHelpers';
 import { CashierState, CashierEvent } from '@/types/states';
 
 /**
@@ -31,11 +37,11 @@ import { CashierState, CashierEvent } from '@/types/states';
  */
 interface CashierContext {
   /** 订单信息 */
-  order: ShopOrderItem | null;
+  order: ShopOrderDetail | null;
   /** 错误信息 */
   error: string | null;
   /** 支付方式 */
-  payType: 'money' | 'score' | 'combined';
+  payType: ShopOrderPaymentType;
   /** 用户余额信息 */
   userBalance: {
     score: number;
@@ -56,11 +62,11 @@ const CASHIER_TRANSITIONS: Record<CashierState, Partial<Record<CashierEvent, Cas
   },
   [CashierState.READY]: {
     [CashierEvent.PAY]: CashierState.PAYING,
-    [CashierEvent.CHANGE_PAY_TYPE]: CashierState.READY, // 切换支付方式保持READY状态
+    [CashierEvent.CHANGE_PAY_TYPE]: CashierState.READY,
   },
   [CashierState.PAYING]: {
     [CashierEvent.PAY_SUCCESS]: CashierState.SUCCESS,
-    [CashierEvent.PAY_ERROR]: CashierState.READY, // 支付失败返回READY状态
+    [CashierEvent.PAY_ERROR]: CashierState.READY,
   },
   [CashierState.SUCCESS]: {},
   [CashierState.ERROR]: {
@@ -72,47 +78,22 @@ const CASHIER_TRANSITIONS: Record<CashierState, Partial<Record<CashierEvent, Cas
  * Hook返回值
  */
 interface UseCashierReturn {
-  // 状态
   state: CashierState;
   context: CashierContext;
-
-  // 派生状态
   isLoading: boolean;
   isReady: boolean;
   isPaying: boolean;
   isSuccess: boolean;
   hasError: boolean;
-
-  // 方法
   loadData: () => Promise<void>;
   handlePay: () => Promise<void>;
   handleRetry: () => void;
-  setPayType: (payType: 'money' | 'score' | 'combined') => void;
+  setPayType: (payType: ShopOrderPaymentType) => void;
 }
 
-/**
- * useCashier Hook
- *
- * @param orderId - 订单ID
- * @returns Hook返回值
- *
- * @example
- * ```tsx
- * const { state, context, isLoading, handlePay } = useCashier(orderId);
- *
- * if (isLoading) return <LoadingSpinner />;
- *
- * return (
- *   <button onClick={handlePay} disabled={isPaying}>
- *     {isPaying ? '支付中...' : '确认支付'}
- *   </button>
- * );
- * ```
- */
 export function useCashier(orderId: string): UseCashierReturn {
   const { showToast } = useNotification();
 
-  // 初始化状态机
   const { state, context, send, setContext } = useStateMachine<
     CashierState,
     CashierEvent,
@@ -132,22 +113,17 @@ export function useCashier(orderId: string): UseCashierReturn {
     debug: process.env.NODE_ENV === 'development',
   });
 
-  /**
-   * 加载订单和用户信息
-   */
   const loadData = async () => {
     send(CashierEvent.LOAD);
 
     try {
       const token = getStoredToken() || '';
 
-      // 并行获取订单和用户信息
       const [orderRes, profileRes] = await Promise.all([
         getOrderDetail({ id: orderId, token }),
         fetchProfile(token),
       ]);
 
-      // 处理订单数据
       const orderData = extractData(orderRes);
       if (!orderData) {
         const errorMsg = extractError(orderRes, '无法加载订单信息');
@@ -157,14 +133,12 @@ export function useCashier(orderId: string): UseCashierReturn {
         return;
       }
 
-      // 处理用户信息
       const profileData = extractData(profileRes);
       const finalBalance = {
-        score: profileData?.userInfo?.score || 0,
-        balance_available: profileData?.userInfo?.money || '0.00',
+        score: Number(profileData?.userInfo?.score) || 0,
+        balance_available: String(profileData?.userInfo?.balance_available ?? profileData?.userInfo?.money ?? '0.00'),
       };
 
-      // 如果订单数据包含余额信息，优先使用
       if (orderData.score !== undefined && orderData.score !== null) {
         finalBalance.score = Number(orderData.score);
       }
@@ -172,30 +146,26 @@ export function useCashier(orderId: string): UseCashierReturn {
         finalBalance.balance_available = String(orderData.balance_available);
       }
 
-      // 更新上下文
       setContext({
         order: orderData,
         userBalance: finalBalance,
-        payType: (orderData.pay_type as 'money' | 'score' | 'combined') || 'money',
+        payType: orderData.pay_type || 'money',
         error: null,
       });
 
       send(CashierEvent.LOAD_SUCCESS);
-    } catch (error: any) {
+    } catch (error: unknown) {
       errorLog('useCashier', '加载收银台数据失败', error);
-      const errorMsg = error.message || '网络错误';
+      const errorMsg = extractErrorFromException(error, '网络错误');
       setContext({ error: errorMsg });
       send(CashierEvent.LOAD_ERROR);
       showToast('error', '加载失败', errorMsg);
     }
   };
 
-  /**
-   * 处理支付
-   */
   const handlePay = async () => {
     if (!send(CashierEvent.PAY)) {
-      return; // 状态转换失败，阻止支付
+      return;
     }
 
     try {
@@ -211,40 +181,31 @@ export function useCashier(orderId: string): UseCashierReturn {
         send(CashierEvent.PAY_ERROR);
         showToast('error', '支付失败', errorMsg);
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       errorLog('useCashier', '支付失败', error);
-      const errorMsg = error.message || '网络错误';
+      const errorMsg = extractErrorFromException(error, '网络错误');
       setContext({ error: errorMsg });
       send(CashierEvent.PAY_ERROR);
       showToast('error', '支付失败', errorMsg);
     }
   };
 
-  /**
-   * 重试加载
-   */
   const handleRetry = () => {
     send(CashierEvent.RETRY);
-    loadData();
+    void loadData();
   };
 
-  /**
-   * 切换支付方式
-   */
-  const setPayType = (payType: 'money' | 'score' | 'combined') => {
+  const setPayType = (payType: ShopOrderPaymentType) => {
     setContext({ payType });
     send(CashierEvent.CHANGE_PAY_TYPE);
   };
 
-  // 自动加载数据
   useEffect(() => {
     if (state === CashierState.IDLE) {
-      loadData();
+      void loadData();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [orderId]);
+  }, [orderId, state]);
 
-  // 派生状态
   const isLoading = state === CashierState.LOADING;
   const isReady = state === CashierState.READY;
   const isPaying = state === CashierState.PAYING;

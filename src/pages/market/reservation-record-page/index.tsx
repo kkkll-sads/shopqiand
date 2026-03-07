@@ -3,12 +3,13 @@
  * 已迁移: 使用 React Router 导航
  */
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { ChevronLeft, FileText, Sparkles } from 'lucide-react';
 import {
   fetchReservations,
   fetchCollectionSessions,
   ReservationItem,
+  ReservationPaymentSummary,
   ReservationStatus as ReservationStatusType,
 } from '@/services';
 import { SelectFilter, SortSelector } from '@/components/common';
@@ -32,11 +33,26 @@ interface ReservationRecordPageProps {
   sessionEndTime?: string;
 }
 
+interface LatestReservationSubmission extends ReservationPaymentSummary {
+  reservationId?: number;
+  zoneName?: string;
+  packageName?: string;
+  quantity: number;
+  totalRequiredHashrate: number;
+  submittedAt: number;
+}
+
+interface ReservationRecordLocationState {
+  latestReservationSubmission?: LatestReservationSubmission | null;
+}
+
 const PAGE_SIZE = 10;
 
 const ReservationRecordPage: React.FC<ReservationRecordPageProps> = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { listCaches, setListCache } = useAppStore();
+  const locationState = location.state as ReservationRecordLocationState | null;
 
   const restoredFromCacheRef = useRef(false);
   const scrollTopRef = useRef(0);
@@ -67,6 +83,9 @@ const ReservationRecordPage: React.FC<ReservationRecordPageProps> = () => {
   const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
   const [sessionOptions, setSessionOptions] = useState<SelectOption[]>([]);
   const [records, setRecords] = useState<ReservationItem[]>([]);
+  const [latestReservationSubmission, setLatestReservationSubmission] = useState<LatestReservationSubmission | null>(
+    () => locationState?.latestReservationSubmission ?? null
+  );
   const [error, setError] = useState<string | null>(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [page, setPage] = useState(1);
@@ -189,6 +208,12 @@ const ReservationRecordPage: React.FC<ReservationRecordPageProps> = () => {
     const token = getStoredToken();
     setIsLoggedIn(!!token);
   }, []);
+
+  useEffect(() => {
+    if (locationState?.latestReservationSubmission) {
+      setLatestReservationSubmission(locationState.latestReservationSubmission);
+    }
+  }, [locationState]);
 
   useEffect(() => {
     if (!isLoggedIn) return;
@@ -370,6 +395,8 @@ const ReservationRecordPage: React.FC<ReservationRecordPageProps> = () => {
         records={records}
         hasMore={hasMore}
         loadingMore={loadingMore}
+        latestReservationSubmission={latestReservationSubmission}
+        onDismissLatestSummary={() => setLatestReservationSubmission(null)}
         onRetry={() => loadRecords(1, false)}
         onLogin={() => navigate('/login')}
         onCardClick={(record) => navigate(`/reservation-record/${record.id}`)}

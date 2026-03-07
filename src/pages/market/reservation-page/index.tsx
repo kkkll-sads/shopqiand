@@ -1,6 +1,6 @@
 /**
  * ReservationPage - 预约页面
- * 已迁移: 使用 React Router 导航
+ * 已迁移：使用 React Router 导航
  */
 import React from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -12,10 +12,11 @@ import ReservationFundCard from './components/ReservationFundCard'
 import ReservationFooterAction from './components/ReservationFooterAction'
 import ReservationConfirmModal from './components/ReservationConfirmModal'
 import { useReservationPage } from './hooks/useReservationPage'
+import type { ReservationUserInfo } from './hooks/reservationPage.types'
 
 interface ReservationPageProps {
   product?: Product
-  preloadedUserInfo?: { availableHashrate: number; accountBalance: number } | null
+  preloadedUserInfo?: ReservationUserInfo | null
 }
 
 const ReservationPage: React.FC<ReservationPageProps> = ({ product: propProduct, preloadedUserInfo }) => {
@@ -31,12 +32,18 @@ const ReservationPage: React.FC<ReservationPageProps> = ({ product: propProduct,
     totalRequiredHashrate,
     availableHashrate,
     accountBalance,
+    pendingActivationGold,
     userInfoLoading,
     loading,
     showConfirmModal,
     canIncreaseHashrate,
     isHashrateSufficient,
     isFundSufficient,
+    paymentSummary,
+    paymentPreviewLoading,
+    paymentPreviewError,
+    fundActionText,
+    mixedPaymentAvailable,
     setShowConfirmModal,
     onDecreaseExtraHashrate,
     onIncreaseExtraHashrate,
@@ -46,6 +53,8 @@ const ReservationPage: React.FC<ReservationPageProps> = ({ product: propProduct,
     handleRecharge,
     confirmSubmit,
   } = useReservationPage({ product: propProduct, preloadedUserInfo })
+
+  const footerLoading = userInfoLoading || paymentPreviewLoading
 
   return (
     <div className="min-h-screen bg-gray-50 pb-20">
@@ -71,6 +80,7 @@ const ReservationPage: React.FC<ReservationPageProps> = ({ product: propProduct,
           userInfoLoading={userInfoLoading}
           availableHashrate={availableHashrate}
           isHashrateSufficient={isHashrateSufficient}
+          mixedPaymentAvailable={mixedPaymentAvailable}
           onDecreaseExtraHashrate={onDecreaseExtraHashrate}
           onIncreaseExtraHashrate={onIncreaseExtraHashrate}
           onDecreaseQuantity={onDecreaseQuantity}
@@ -81,14 +91,16 @@ const ReservationPage: React.FC<ReservationPageProps> = ({ product: propProduct,
           userInfoLoading={userInfoLoading}
           frozenAmount={frozenAmount}
           accountBalance={accountBalance}
+          pendingActivationGold={pendingActivationGold}
           isFundSufficient={isFundSufficient}
         />
       </div>
 
       <ReservationFooterAction
-        userInfoLoading={userInfoLoading}
+        userInfoLoading={footerLoading}
         isHashrateSufficient={isHashrateSufficient}
         isFundSufficient={isFundSufficient}
+        fundActionText={fundActionText}
         onClick={!isHashrateSufficient || !isFundSufficient ? handleRecharge : handleReservation}
       />
 
@@ -100,6 +112,8 @@ const ReservationPage: React.FC<ReservationPageProps> = ({ product: propProduct,
         totalRequiredHashrate={totalRequiredHashrate}
         quantity={quantity}
         frozenAmount={frozenAmount}
+        paymentSummary={paymentSummary}
+        paymentPreviewError={paymentPreviewError}
         onClose={() => setShowConfirmModal(false)}
         onConfirm={confirmSubmit}
       />

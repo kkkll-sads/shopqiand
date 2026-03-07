@@ -14,22 +14,33 @@ import type {
   BuyShopOrderParams,
   CreateOrderItem,
   CreateOrderParams,
+  CreateOrderResult,
   FetchShopOrderParams,
+  GetOrderDetailParams,
   OrderActionParams,
+  ShopOrderDetail,
   ShopOrderItem,
   ShopOrderListData,
+  ShopOrderPaymentSplitFields,
   ShopOrderStatistics,
 } from '../contracts/shop-order';
 export type {
   BuyShopOrderParams,
   CreateOrderItem,
   CreateOrderParams,
+  CreateOrderResult,
   FetchShopOrderParams,
+  GetOrderDetailParams,
   OrderActionParams,
+  ShopOrderDetail,
   ShopOrderItem,
   ShopOrderItemDetail,
   ShopOrderListData,
+  ShopOrderPaymentSplitFields,
+  ShopOrderPaymentType,
   ShopOrderStatistics,
+  ShopOrderStatus,
+  ShopOrderStep,
 } from '../contracts/shop-order';
 
 const buildOrderSearch = (params: FetchShopOrderParams = {}) => {
@@ -133,13 +144,10 @@ export async function fetchShopOrderStatistics(
   });
 }
 
-export async function getOrderDetail(params: {
-  id: number | string;
-  token?: string;
-}): Promise<ApiResponse<ShopOrderItem>> {
+export async function getOrderDetail(params: GetOrderDetailParams): Promise<ApiResponse<ShopOrderDetail>> {
   const token = params.token ?? getStoredToken();
   const path = `${API_ENDPOINTS.shopOrder.detail}?id=${params.id}`;
-  return authedFetch<ShopOrderItem>(path, { method: 'GET', token });
+  return authedFetch<ShopOrderDetail>(path, { method: 'GET', token });
 }
 
 const normalizeOrderItems = (items: CreateOrderItem[]) => {
@@ -170,7 +178,7 @@ const normalizeOrderItems = (items: CreateOrderItem[]) => {
   });
 };
 
-export async function createOrder(params: CreateOrderParams): Promise<ApiResponse> {
+export async function createOrder(params: CreateOrderParams): Promise<ApiResponse<CreateOrderResult>> {
   const token = params.token ?? getStoredToken();
 
   if (!token) {
@@ -207,7 +215,7 @@ export async function createOrder(params: CreateOrderParams): Promise<ApiRespons
   };
 
   try {
-    const data = await authedFetch(API_ENDPOINTS.shopOrder.create, {
+    const data = await authedFetch<CreateOrderResult>(API_ENDPOINTS.shopOrder.create, {
       method: 'POST',
       body: JSON.stringify(requestBody),
       token,
@@ -236,7 +244,7 @@ export async function createOrder(params: CreateOrderParams): Promise<ApiRespons
   }
 }
 
-export async function buyShopOrder(params: BuyShopOrderParams): Promise<ApiResponse> {
+export async function buyShopOrder(params: BuyShopOrderParams): Promise<ApiResponse<CreateOrderResult>> {
   const token = params.token ?? getStoredToken();
 
   if (!token) {
@@ -297,7 +305,7 @@ export async function buyShopOrder(params: BuyShopOrderParams): Promise<ApiRespo
   };
 
   try {
-    const data = await authedFetch(API_ENDPOINTS.shopOrder.buy, {
+    const data = await authedFetch<CreateOrderResult>(API_ENDPOINTS.shopOrder.buy, {
       method: 'POST',
       body: JSON.stringify(requestBody),
       token,

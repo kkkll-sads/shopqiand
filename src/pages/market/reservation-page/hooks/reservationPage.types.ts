@@ -1,9 +1,28 @@
 import { Product } from '@/types'
-import type { CollectionItemDetailData } from '@/services'
+import type {
+  CollectionItemDetailData,
+  ReservationPaymentSummary,
+  ReservationPreviewResult,
+} from '@/services'
 
 export interface ReservationUserInfo {
   availableHashrate: number
   accountBalance: number
+  pendingActivationGold?: number
+  pendingActivationGoldBalance?: number
+  pending_activation_gold?: number
+  confirm_rights_gold?: number
+  [key: string]: unknown
+}
+
+export interface PreloadedReservationData {
+  userInfo?: ReservationUserInfo
+  sessionDetail?: CollectionItemDetailData | null
+  zoneMaxPrice?: number
+  sessionId?: number | string
+  zoneId?: number | string
+  packageId?: number | string
+  paymentPreview?: ReservationPreviewResult | null
 }
 
 export interface ReservationSessionIds {
@@ -12,19 +31,10 @@ export interface ReservationSessionIds {
   packageId?: number | string
 }
 
-// 全局预加载数据存储
-// eslint-disable-next-line no-var
 declare global {
-  var __preloadedReservationData:
-    | {
-        userInfo?: ReservationUserInfo
-        sessionDetail?: CollectionItemDetailData | null
-        zoneMaxPrice?: number
-        sessionId?: number | string
-        zoneId?: number | string
-        packageId?: number | string
-      }
-    | null
+  interface Window {
+    __preloadedReservationData?: PreloadedReservationData | null
+  }
 }
 
 export interface UseReservationPageParams {
@@ -42,12 +52,19 @@ export interface UseReservationPageResult {
   totalRequiredHashrate: number
   availableHashrate: number
   accountBalance: number
+  pendingActivationGold: number
   userInfoLoading: boolean
   loading: boolean
   showConfirmModal: boolean
   canIncreaseHashrate: boolean
   isHashrateSufficient: boolean
   isFundSufficient: boolean
+  paymentSummary: ReservationPaymentSummary
+  paymentPreviewLoading: boolean
+  paymentPreviewError: string | null
+  fundActionText: string
+  mixedPaymentAvailable: boolean
+  mixedPaymentRemainingTimes: number | null
   setShowConfirmModal: (value: boolean) => void
   onDecreaseExtraHashrate: () => void
   onIncreaseExtraHashrate: () => void
