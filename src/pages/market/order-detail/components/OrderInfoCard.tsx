@@ -1,9 +1,13 @@
 import React from 'react';
-import { Calendar, Gift, Copy, Check } from 'lucide-react';
-import { ShopOrderItem } from '@/services';
+import { Calendar, Check, Copy, Gift } from 'lucide-react';
+import type { ShopOrderDetail } from '@/services';
+import MixedPaymentBadge from '@/pages/market/components/MixedPaymentBadge';
+import OrderPaymentDetailsSection from '@/pages/market/components/OrderPaymentDetailsSection';
+import type { OrderPaymentSummary } from '@/pages/market/utils/orderPayment';
 
 interface OrderInfoCardProps {
-  order: ShopOrderItem;
+  order: ShopOrderDetail;
+  paymentSummary: OrderPaymentSummary;
   copiedOrderNo: boolean;
   onCopyOrderNo: (text: string) => void;
   formatDateTime: (timestamp: number) => string;
@@ -11,73 +15,92 @@ interface OrderInfoCardProps {
 
 const OrderInfoCard: React.FC<OrderInfoCardProps> = ({
   order,
+  paymentSummary,
   copiedOrderNo,
   onCopyOrderNo,
   formatDateTime,
 }) => {
+  const payTypeFallback =
+    typeof order.pay_type_text === 'string' && order.pay_type_text.trim()
+      ? order.pay_type_text
+      : order.pay_type === 'money'
+        ? '余额支付'
+        : typeof order.pay_type === 'string'
+          ? order.pay_type
+          : null;
+  const hasPayType = Boolean(payTypeFallback || order.pay_type || paymentSummary.payTypeLabel);
+
   return (
-    <div className="bg-white/80 backdrop-blur-sm mx-4 rounded-2xl shadow-lg shadow-gray-200/50 border border-white p-5 mb-4">
-      <div className="flex items-center gap-2.5 mb-5">
-        <div className="w-8 h-8 rounded-lg bg-green-50 flex items-center justify-center">
-          <Calendar className="w-4 h-4 text-green-500" />
+    <div className="bg-white mx-4 rounded-xl shadow-sm border border-gray-100 p-4 mb-4">
+      <div className="flex items-center gap-2 mb-4">
+        <div className="w-6 h-6 rounded flex items-center justify-center bg-gray-50 border border-gray-100">
+          <Calendar className="w-3.5 h-3.5 text-gray-600" />
         </div>
-        <h2 className="font-semibold text-gray-900 text-base">订单信息</h2>
+        <h2 className="font-bold text-gray-900 text-sm">订单信息</h2>
       </div>
 
-      <div className="space-y-4">
-        <div className="flex justify-between items-center py-2">
-          <span className="text-sm text-gray-500">订单编号</span>
-          <div className="flex items-center gap-2">
-            <span className="text-gray-900 text-xs font-mono">{order.order_no || order.id}</span>
+      <div className="space-y-0 text-[13px]">
+        <div className="flex justify-between items-center py-2.5 border-t border-gray-50/50">
+          <span className="text-gray-500">订单编号</span>
+          <div className="flex items-center gap-1.5">
+            <span className="text-gray-900 font-mono tracking-tight">{order.order_no || order.id}</span>
             <button
               onClick={() => onCopyOrderNo(order.order_no || String(order.id))}
-              className="p-1.5 hover:bg-gray-50 rounded-lg transition-colors active:scale-95"
+              className="p-1 hover:bg-gray-50 rounded text-gray-400 hover:text-gray-600 transition-colors active:scale-95"
               aria-label="复制订单号"
             >
               {copiedOrderNo ? (
-                <Check className="w-4 h-4 text-green-600" />
+                <Check className="w-3.5 h-3.5 text-green-500" />
               ) : (
-                <Copy className="w-4 h-4 text-gray-400" />
+                <Copy className="w-3.5 h-3.5" />
               )}
             </button>
           </div>
         </div>
 
         {order.status_text && (
-          <div className="flex justify-between items-center py-2 border-t border-gray-50 pt-4">
-            <span className="text-sm text-gray-500">订单状态</span>
-            <span className="text-sm text-gray-900 font-medium">{order.status_text}</span>
+          <div className="flex justify-between items-center py-2.5 border-t border-gray-50/50">
+            <span className="text-gray-500">订单状态</span>
+            <span className="text-gray-900 font-medium">{order.status_text}</span>
           </div>
         )}
 
-        {order.pay_type_text && (
-          <div className="flex justify-between items-center py-2 border-t border-gray-50 pt-4">
-            <span className="text-sm text-gray-500">支付方式</span>
+        {hasPayType && (
+          <div className="flex justify-between items-center py-2.5 border-t border-gray-50/50">
+            <span className="text-gray-500">支付方式</span>
             <div className="flex items-center gap-1.5">
-              <Gift className="w-4 h-4 text-red-500" />
-              <span className="text-sm text-gray-900 font-medium">{order.pay_type_text}</span>
+              <Gift className="w-3.5 h-3.5 text-red-500" />
+              <MixedPaymentBadge
+                type={typeof order.pay_type === 'string' ? order.pay_type : undefined}
+                balanceAvailableAmount={paymentSummary.payBalanceAvailable}
+                pendingActivationGoldAmount={paymentSummary.payPendingActivationGold}
+                fallbackText={paymentSummary.payTypeLabel || payTypeFallback}
+                size="sm"
+              />
             </div>
           </div>
         )}
 
+        <OrderPaymentDetailsSection paymentSummary={paymentSummary} />
+
         {order.product_type_text && (
-          <div className="flex justify-between items-center py-2 border-t border-gray-50 pt-4">
-            <span className="text-sm text-gray-500">商品类型</span>
-            <span className="text-sm text-gray-900 font-medium">{order.product_type_text}</span>
+          <div className="flex justify-between items-center py-2.5 border-t border-gray-50/50">
+            <span className="text-gray-500">商品类型</span>
+            <span className="text-gray-900 font-medium">{order.product_type_text}</span>
           </div>
         )}
 
         {order.create_time > 0 && (
-          <div className="flex justify-between items-center py-2 border-t border-gray-50 pt-4">
-            <span className="text-sm text-gray-500">下单时间</span>
-            <span className="text-sm text-gray-900">{formatDateTime(order.create_time)}</span>
+          <div className="flex justify-between items-center py-2.5 border-t border-gray-50/50">
+            <span className="text-gray-500">下单时间</span>
+            <span className="text-gray-900 font-mono text-[12px]">{formatDateTime(order.create_time)}</span>
           </div>
         )}
 
         {order.remark && (
-          <div className="flex justify-between items-start py-2 pt-4 border-t border-gray-100">
-            <span className="text-sm text-gray-500 flex-shrink-0">备注</span>
-            <span className="text-sm text-gray-900 text-right max-w-[200px] leading-relaxed">
+          <div className="flex justify-between items-start py-2.5 border-t border-gray-50/50">
+            <span className="text-gray-500 flex-shrink-0 mt-0.5">备注</span>
+            <span className="text-gray-900 text-right max-w-[200px] leading-relaxed break-all">
               {order.remark}
             </span>
           </div>

@@ -11,7 +11,11 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Package } from 'lucide-react';
 import { LoadingSpinner } from '@/components/common';
-import { getCollectionOrderDetail, CollectionOrderDetailData } from '@/services/collection/my-collection';
+import {
+  fetchReservationDetail,
+  getCollectionOrderDetail,
+} from '@/services';
+import type { CollectionOrderDetailData, ReservationDetailData } from '@/services';
 import { isSuccess, extractData, extractError } from '@/utils/apiHelpers';
 import { formatTime } from '@/utils/format';
 import { getStoredToken } from '@/services/client';
@@ -24,6 +28,7 @@ import CollectionOrderHeroCard from './components/CollectionOrderHeroCard';
 import CollectionOrderInfoCard from './components/CollectionOrderInfoCard';
 import CollectionOrderItemsCard from './components/CollectionOrderItemsCard';
 import CollectionOrderTimelineCard from './components/CollectionOrderTimelineCard';
+import { buildOrderPaymentSummary, getReservationRecordId } from '@/pages/market/utils/orderPayment';
 import { buildOrderSteps, OrderActionType } from './types';
 
 const CollectionOrderDetail: React.FC = () => {
@@ -35,6 +40,7 @@ const CollectionOrderDetail: React.FC = () => {
 
   const [error, setError] = useState<string | null>(null);
   const [order, setOrder] = useState<CollectionOrderDetailData | null>(null);
+  const [reservationRecord, setReservationRecord] = useState<ReservationDetailData | null>(null);
   const [copiedOrderNo, setCopiedOrderNo] = useState(false);
 
   const loadMachine = useLoadingMachine();
@@ -43,6 +49,54 @@ const CollectionOrderDetail: React.FC = () => {
   useEffect(() => {
     void loadOrder();
   }, [id, orderNo]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadReservationSummary = async () => {
+      if (!order) {
+        setReservationRecord(null);
+        return;
+      }
+
+      const reservationId = getReservationRecordId(order);
+      const paymentSummary = buildOrderPaymentSummary(order);
+      if (!reservationId || paymentSummary.hasReservationSummary) {
+        setReservationRecord(null);
+        return;
+      }
+
+      try {
+        const token = getStoredToken();
+        if (!token) {
+          setReservationRecord(null);
+          return;
+        }
+
+        const response = await fetchReservationDetail(reservationId, token);
+        const data = extractData(response);
+        if (!cancelled && isSuccess(response) && data) {
+          setReservationRecord(data);
+          return;
+        }
+
+        if (!cancelled) {
+          setReservationRecord(null);
+        }
+      } catch (e: any) {
+        if (!cancelled) {
+          setReservationRecord(null);
+        }
+        errorLog('CollectionOrderDetail', '加载预约摘要失败', e);
+      }
+    };
+
+    void loadReservationSummary();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [order]);
 
   const loadOrder = async () => {
     const token = getStoredToken();
@@ -60,6 +114,7 @@ const CollectionOrderDetail: React.FC = () => {
 
     loadMachine.send(LoadingEvent.LOAD);
     setError(null);
+    setReservationRecord(null);
 
     try {
       const response = await getCollectionOrderDetail({
@@ -121,32 +176,29 @@ const CollectionOrderDetail: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-amber-50 flex flex-col items-center justify-center">
-        <div className="relative">
-          <div className="absolute inset-0 blur-3xl opacity-30 bg-gradient-to-r from-orange-500 to-amber-500 rounded-full" />
-          <LoadingSpinner text="加载中..." />
-        </div>
+      <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center">
+        <LoadingSpinner text="加载中..." />
       </div>
     );
   }
 
   if (error || !order) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-gray-100">
-        <header className="bg-white/80 backdrop-blur-sm border-b border-gray-100 px-4 py-3 flex items-center sticky top-0 z-10">
-          <button onClick={() => navigate(-1)} className="p-2 -ml-2 active:bg-gray-100 rounded-full transition-colors">
-            <ArrowLeft size={24} className="text-gray-700" />
+      <div className="min-h-screen bg-gray-50">
+        <header className="bg-white border-b border-gray-100 flex items-center h-14 px-4 sticky top-0 z-10">
+          <button onClick={() => navigate(-1)} className="p-2 -ml-2 active:bg-gray-50 rounded transition-colors text-gray-700">
+            <ArrowLeft size={20} />
           </button>
-          <h1 className="ml-2 text-lg font-bold text-gray-900">订单详情</h1>
+          <h1 className="flex-1 text-center pr-9 text-base font-bold text-gray-900">订单详情</h1>
         </header>
         <div className="flex flex-col items-center justify-center py-20 px-6">
-          <div className="w-20 h-20 bg-red-50 rounded-full flex items-center justify-center mb-4">
-            <Package size={40} className="text-red-400" />
+          <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+            <Package size={32} className="text-gray-400" />
           </div>
-          <p className="text-gray-500 text-center">{error || '订单不存在'}</p>
+          <p className="text-gray-500 text-sm text-center">{error || '订单不存在'}</p>
           <button
             onClick={() => navigate(-1)}
-            className="mt-6 px-6 py-2.5 bg-gradient-to-r from-orange-500 to-amber-500 text-white rounded-full text-sm font-medium shadow-lg active:scale-95 transition-transform"
+            className="mt-6 px-8 py-2 bg-gray-900 text-white rounded-full text-sm font-medium active:scale-95 transition-transform"
           >
             返回
           </button>
@@ -157,29 +209,30 @@ const CollectionOrderDetail: React.FC = () => {
 
   const orderSteps = buildOrderSteps(order);
   const statusText = order.status_text || order.status || '';
+  const paymentSummary = buildOrderPaymentSummary(order, reservationRecord);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50/50 via-white to-amber-50/30 max-w-[480px] mx-auto pb-safe">
-      <div className="absolute top-0 left-0 right-0 h-64 bg-gradient-to-br from-orange-500 via-amber-500 to-yellow-500 opacity-95" />
-      <div className="absolute top-0 left-0 right-0 h-64 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-white/20 via-transparent to-transparent" />
+    <div className="min-h-screen bg-gray-50 max-w-[480px] mx-auto pb-safe">
+      <div className="absolute top-0 left-0 right-0 h-48 bg-gradient-to-br from-red-500 to-red-600" />
 
-      <header className="relative z-20 px-4 py-3 flex items-center sticky top-0">
+      <header className="relative z-20 px-4 h-14 flex items-center sticky top-0">
         <button
           onClick={() => navigate(-1)}
-          className="p-2.5 -ml-2 bg-white/20 backdrop-blur-sm hover:bg-white/30 rounded-full transition-all active:scale-95"
+          className="p-2 -ml-2 text-white active:bg-white/10 rounded transition-colors"
         >
-          <ArrowLeft size={22} className="text-white" />
+          <ArrowLeft size={20} />
         </button>
-        <h1 className="ml-3 text-lg font-bold text-white drop-shadow-sm">订单详情</h1>
+        <h1 className="flex-1 text-center pr-8 text-base font-bold text-white">订单详情</h1>
       </header>
 
       <CollectionOrderHeroCard order={order} />
 
-      <div className="relative z-10 space-y-4 mt-6 pb-safe">
+      <div className="relative z-10 space-y-3 mt-4 pb-safe">
         <CollectionOrderTimelineCard orderSteps={orderSteps} formatDateTime={formatDateTime} />
 
         <CollectionOrderInfoCard
           order={order}
+          paymentSummary={paymentSummary}
           copiedOrderNo={copiedOrderNo}
           onCopyOrderNo={handleCopyOrderNo}
           formatDateTime={formatDateTime}

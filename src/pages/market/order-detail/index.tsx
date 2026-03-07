@@ -2,18 +2,21 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Package } from 'lucide-react';
 import {
+  fetchReservationDetail,
   getOrderDetail,
-  ShopOrderItem,
   confirmOrder,
   normalizeAssetUrl,
   payOrder,
   cancelOrder,
 } from '@/services';
+import type { ReservationDetailData, ShopOrderDetail } from '@/services';
 import { getStoredToken } from '@/services/client';
 import { useNotification } from '@/context/NotificationContext';
-import { isSuccess, extractError } from '@/utils/apiHelpers';
+import { isSuccess, extractData, extractError } from '@/utils/apiHelpers';
 import { useErrorHandler, useLoadingMachine, LoadingEvent, LoadingState } from '@/hooks';
 import { copyToClipboard } from '@/utils/clipboard';
+import { errorLog } from '@/utils/logger';
+import { buildOrderPaymentSummary, getReservationRecordId } from '@/pages/market/utils/orderPayment';
 import OrderStatusProgress from './components/OrderStatusProgress';
 import OrderLogisticsCard from './components/OrderLogisticsCard';
 import OrderRecipientCard from './components/OrderRecipientCard';
@@ -30,7 +33,8 @@ const OrderDetail: React.FC = () => {
   const { errorMessage, hasError, handleError } = useErrorHandler();
   const { handleError: handleOperationError } = useErrorHandler({ showToast: true, persist: false });
 
-  const [order, setOrder] = useState<ShopOrderItem | null>(null);
+  const [order, setOrder] = useState<ShopOrderDetail | null>(null);
+  const [reservationRecord, setReservationRecord] = useState<ReservationDetailData | null>(null);
   const { state: loadState, send: sendLoadEvent } = useLoadingMachine();
   const loading = loadState === LoadingState.LOADING;
 
@@ -43,6 +47,7 @@ const OrderDetail: React.FC = () => {
       const response = await getOrderDetail({ id: orderId, token });
       if (isSuccess(response) && response.data) {
         setOrder(response.data);
+        setReservationRecord(null);
         sendLoadEvent(LoadingEvent.SUCCESS);
       } else {
         const errorMsg = extractError(response, '获取订单详情失败');
@@ -77,6 +82,54 @@ const OrderDetail: React.FC = () => {
   useEffect(() => {
     loadOrder();
   }, [loadOrder]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadReservationSummary = async () => {
+      if (!order) {
+        setReservationRecord(null);
+        return;
+      }
+
+      const reservationId = getReservationRecordId(order);
+      const paymentSummary = buildOrderPaymentSummary(order);
+      if (!reservationId || paymentSummary.hasReservationSummary) {
+        setReservationRecord(null);
+        return;
+      }
+
+      try {
+        const token = getStoredToken();
+        if (!token) {
+          setReservationRecord(null);
+          return;
+        }
+
+        const response = await fetchReservationDetail(reservationId, token);
+        const data = extractData(response);
+        if (!cancelled && isSuccess(response) && data) {
+          setReservationRecord(data);
+          return;
+        }
+
+        if (!cancelled) {
+          setReservationRecord(null);
+        }
+      } catch (error: unknown) {
+        if (!cancelled) {
+          setReservationRecord(null);
+        }
+        errorLog('OrderDetail', '加载预约摘要失败', error);
+      }
+    };
+
+    void loadReservationSummary();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [order]);
 
   const handlePayOrder = (id: number) => {
     const targetId = String(id).trim();
@@ -255,6 +308,7 @@ const OrderDetail: React.FC = () => {
   ];
 
   const currentStep = orderSteps.filter((step) => step.active).length;
+  const paymentSummary = buildOrderPaymentSummary(order, reservationRecord);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-red-50/50 via-white to-gray-50/30 max-w-[480px] mx-auto pb-safe">
@@ -298,10 +352,18 @@ const OrderDetail: React.FC = () => {
           items={order.items}
           totalAmount={order.total_amount}
           totalScore={order.total_score}
+          payBalanceAvailable={order.pay_balance_available ?? order.pay_balance_available_amount}
+          payPendingActivationGold={
+            order.pay_pending_activation_gold
+            ?? order.pay_pending_activation_gold_amount
+            ?? order.pay_score
+            ?? order.pay_score_amount
+          }
         />
 
         <OrderInfoCard
           order={order}
+          paymentSummary={paymentSummary}
           copiedOrderNo={copiedOrderNo}
           onCopyOrderNo={handleCopyOrderNo}
           formatDateTime={formatDateTime}
