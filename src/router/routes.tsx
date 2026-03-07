@@ -111,18 +111,21 @@ const mainLayoutRoutes: RouteObject[] = [
 
 export const routes: RouteObject[] = [
   {
-    element: <AuthLayout />,
     errorElement: <RouteErrorElement />,
-    children: authRoutes,
-  },
-  {
-    element: <MainLayout />,
-    errorElement: <RouteErrorElement />,
-    children: mainLayoutRoutes,
-  },
-  {
-    path: '*',
-    element: <Navigate to="/" replace />,
+    children: [
+      {
+        element: <AuthLayout />,
+        children: authRoutes,
+      },
+      {
+        element: <MainLayout />,
+        children: mainLayoutRoutes,
+      },
+      {
+        path: '*',
+        element: <Navigate to="/" replace />,
+      },
+    ],
   },
 ];
 

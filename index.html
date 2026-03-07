@@ -5,6 +5,9 @@
   <meta charset="UTF-8" />
   <meta name="viewport"
     content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
   <title>数权中心</title>
   <script>
     /* 兼容低版本 WebView：globalThis polyfill (Chrome < 71) */
@@ -25,6 +28,106 @@
         );
       };
     }
+    (function() {
+      var RECOVERY_KEY = 'shopqiand:chunk-load-recovery';
+      var RECOVERY_QUERY_KEY = '__app_reload__';
+      var RECOVERY_TTL_MS = 60000;
+      var CHUNK_MARKERS = [
+        'failed to fetch dynamically imported module',
+        'error loading dynamically imported module',
+        'importing a module script failed',
+        'loading chunk',
+        'chunkloaderror',
+        'module script failed'
+      ];
+
+      function getMessage(payload) {
+        if (!payload) return '';
+        if (typeof payload === 'string') return payload;
+        if (payload instanceof Error) return [payload.name, payload.message].filter(Boolean).join(': ');
+        if (typeof payload.message === 'string') return payload.message;
+        if (typeof payload.reason === 'string') return payload.reason;
+        if (payload.reason) return getMessage(payload.reason);
+        if (typeof payload.filename === 'string') return payload.filename;
+        if (payload.target && typeof payload.target.src === 'string') return payload.target.src;
+        return '';
+      }
+
+      function normalizeHref(rawHref) {
+        var url = new URL(rawHref, window.location.origin);
+        url.searchParams.delete(RECOVERY_QUERY_KEY);
+        return url.pathname + url.search + url.hash;
+      }
+
+      function readRecoveryState() {
+        try {
+          var raw = sessionStorage.getItem(RECOVERY_KEY);
+          if (!raw) return null;
+
+          var parsed = JSON.parse(raw);
+          if (!parsed || typeof parsed.href !== 'string' || typeof parsed.at !== 'number') {
+            sessionStorage.removeItem(RECOVERY_KEY);
+            return null;
+          }
+
+          if (Date.now() - parsed.at > RECOVERY_TTL_MS) {
+            sessionStorage.removeItem(RECOVERY_KEY);
+            return null;
+          }
+
+          return parsed;
+        } catch (error) {
+          sessionStorage.removeItem(RECOVERY_KEY);
+          return null;
+        }
+      }
+
+      function isChunkLoadError(payload) {
+        var message = getMessage(payload).toLowerCase();
+        return CHUNK_MARKERS.some(function(marker) {
+          return message.indexOf(marker) !== -1;
+        });
+      }
+
+      function hasRecentRecoveryAttempt() {
+        var state = readRecoveryState();
+        if (!state) return false;
+        return state.href === normalizeHref(window.location.href);
+      }
+
+      function recoverIfNeeded(payload) {
+        if (!isChunkLoadError(payload) || hasRecentRecoveryAttempt()) {
+          return false;
+        }
+
+        sessionStorage.setItem(RECOVERY_KEY, JSON.stringify({
+          href: normalizeHref(window.location.href),
+          at: Date.now()
+        }));
+
+        var url = new URL(window.location.href);
+        url.searchParams.set(RECOVERY_QUERY_KEY, String(Date.now()));
+        window.location.replace(url.toString());
+        return true;
+      }
+
+      window.__SHOPQIAND_CHUNK_RECOVERY__ = {
+        recoverIfNeeded: recoverIfNeeded
+      };
+
+      window.addEventListener('error', function(event) {
+        if (recoverIfNeeded(event.error || event.message || event)) {
+          event.preventDefault();
+          return true;
+        }
+      }, true);
+
+      window.addEventListener('unhandledrejection', function(event) {
+        if (recoverIfNeeded(event.reason || event)) {
+          event.preventDefault();
+        }
+      });
+    })();
   </script>
   <style>
     /* Hide scrollbar globally for a native app feel */

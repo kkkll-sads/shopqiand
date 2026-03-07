@@ -7,6 +7,9 @@
   <meta charset="UTF-8" />
   <meta name="viewport"
     content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
   <title>数权中心</title>
   <script>
     /* 兼容低版本 WebView：globalThis polyfill (Chrome < 71) */
@@ -27,18 +30,119 @@
         );
       };
     }
+    (function() {
+      var RECOVERY_KEY = 'shopqiand:chunk-load-recovery';
+      var RECOVERY_QUERY_KEY = '__app_reload__';
+      var RECOVERY_TTL_MS = 60000;
+      var CHUNK_MARKERS = [
+        'failed to fetch dynamically imported module',
+        'error loading dynamically imported module',
+        'importing a module script failed',
+        'loading chunk',
+        'chunkloaderror',
+        'module script failed'
+      ];
+
+      function getMessage(payload) {
+        if (!payload) return '';
+        if (typeof payload === 'string') return payload;
+        if (payload instanceof Error) return [payload.name, payload.message].filter(Boolean).join(': ');
+        if (typeof payload.message === 'string') return payload.message;
+        if (typeof payload.reason === 'string') return payload.reason;
+        if (payload.reason) return getMessage(payload.reason);
+        if (typeof payload.filename === 'string') return payload.filename;
+        if (payload.target && typeof payload.target.src === 'string') return payload.target.src;
+        return '';
+      }
+
+      function normalizeHref(rawHref) {
+        var url = new URL(rawHref, window.location.origin);
+        url.searchParams.delete(RECOVERY_QUERY_KEY);
+        return url.pathname + url.search + url.hash;
+      }
+
+      function readRecoveryState() {
+        try {
+          var raw = sessionStorage.getItem(RECOVERY_KEY);
+          if (!raw) return null;
+
+          var parsed = JSON.parse(raw);
+          if (!parsed || typeof parsed.href !== 'string' || typeof parsed.at !== 'number') {
+            sessionStorage.removeItem(RECOVERY_KEY);
+            return null;
+          }
+
+          if (Date.now() - parsed.at > RECOVERY_TTL_MS) {
+            sessionStorage.removeItem(RECOVERY_KEY);
+            return null;
+          }
+
+          return parsed;
+        } catch (error) {
+          sessionStorage.removeItem(RECOVERY_KEY);
+          return null;
+        }
+      }
+
+      function isChunkLoadError(payload) {
+        var message = getMessage(payload).toLowerCase();
+        return CHUNK_MARKERS.some(function(marker) {
+          return message.indexOf(marker) !== -1;
+        });
+      }
+
+      function hasRecentRecoveryAttempt() {
+        var state = readRecoveryState();
+        if (!state) return false;
+        return state.href === normalizeHref(window.location.href);
+      }
+
+      function recoverIfNeeded(payload) {
+        if (!isChunkLoadError(payload) || hasRecentRecoveryAttempt()) {
+          return false;
+        }
+
+        sessionStorage.setItem(RECOVERY_KEY, JSON.stringify({
+          href: normalizeHref(window.location.href),
+          at: Date.now()
+        }));
+
+        var url = new URL(window.location.href);
+        url.searchParams.set(RECOVERY_QUERY_KEY, String(Date.now()));
+        window.location.replace(url.toString());
+        return true;
+      }
+
+      window.__SHOPQIAND_CHUNK_RECOVERY__ = {
+        recoverIfNeeded: recoverIfNeeded
+      };
+
+      window.addEventListener('error', function(event) {
+        if (recoverIfNeeded(event.error || event.message || event)) {
+          event.preventDefault();
+          return true;
+        }
+      }, true);
+
+      window.addEventListener('unhandledrejection', function(event) {
+        if (recoverIfNeeded(event.reason || event)) {
+          event.preventDefault();
+        }
+      });
+    })();
   </script>
   <style>::-webkit-scrollbar{display:none;width:0!important;height:0!important}*{scrollbar-width:none;-ms-overflow-style:none}body{-webkit-tap-highlight-color:transparent;overscroll-behavior-y:none;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;background-color:#f3f4f6;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica Neue,Arial,Noto Sans,sans-serif,Apple Color Emoji,Segoe UI Emoji,Segoe UI Symbol,Noto Color Emoji!important}input,textarea,[contenteditable=true]{-webkit-user-select:text;user-select:text;-webkit-touch-callout:default}body.certificate-page{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;touch-action:pan-x pan-y;-ms-touch-action:pan-x pan-y}body.certificate-page *{touch-action:manipulation}body.certificate-page html{-webkit-text-size-adjust:100%;-moz-text-size-adjust:100%;text-size-adjust:100%}body.certificate-page input,body.certificate-page textarea{-webkit-user-select:text;user-select:text}.pb-safe{padding-bottom:constant(safe-area-inset-bottom);padding-bottom:env(safe-area-inset-bottom)}</style>
-  <script type="module" crossorigin src="/assets/index-ChKg8wtg.js"></script>
+  <script type="module" crossorigin src="/assets/index-BJkvtufY.js"></script>
   <link rel="modulepreload" crossorigin href="/assets/vendor-D_9m6sOW.js">
-  <link rel="modulepreload" crossorigin href="/assets/react-vendor-Bfcp33qJ.js">
-  <link rel="stylesheet" crossorigin href="/assets/index-BTypmL8w.css">
+  <link rel="modulepreload" crossorigin href="/assets/state-vendor-B4qtn465.js">
+  <link rel="modulepreload" crossorigin href="/assets/react-vendor-BLWJPKVh.js">
+  <link rel="stylesheet" crossorigin href="/assets/index-D-eOm6Ax.css">
   <script type="module">import.meta.url;import("_").catch(()=>1);(async function*(){})().next();if(location.protocol!="file:"){window.__vite_is_modern_browser=true}</script>
   <script type="module">!function(){if(window.__vite_is_modern_browser)return;console.warn("vite: loading legacy chunks, syntax error above and the same error below should be ignored");var e=document.getElementById("vite-legacy-polyfill"),n=document.createElement("script");n.src=e.src,n.onload=function(){System.import(document.getElementById('vite-legacy-entry').getAttribute('data-src'))},document.body.appendChild(n)}();</script>
 </head>
 
 <body>
-  <div id="root"></div>
+  <div id="root"></div>
   <script>
     // 全局错误处理：捕获 browser API 未定义的错误（通常来自浏览器扩展或第三方脚本）
     window.addEventListener('error', function(event) {
@@ -161,8 +265,8 @@
     }, false);
   </script>
   <script nomodule>!function(){var e=document,t=e.createElement("script");if(!("noModule"in t)&&"onbeforeload"in t){var n=!1;e.addEventListener("beforeload",(function(e){if(e.target===t)n=!0;else if(!e.target.hasAttribute("nomodule")||!n)return;e.preventDefault()}),!0),t.type="module",t.src=".",e.head.appendChild(t),t.remove()}}();</script>
-  <script nomodule crossorigin id="vite-legacy-polyfill" src="/assets/polyfills-legacy-Dp6VIfLi.js"></script>
-  <script nomodule crossorigin id="vite-legacy-entry" data-src="/assets/index-legacy-5FVNqInR.js">System.import(document.getElementById('vite-legacy-entry').getAttribute('data-src'))</script>
+  <script nomodule crossorigin id="vite-legacy-polyfill" src="/assets/polyfills-legacy-Df1HIm4V.js"></script>
+  <script nomodule crossorigin id="vite-legacy-entry" data-src="/assets/index-legacy-BqiUokKk.js">System.import(document.getElementById('vite-legacy-entry').getAttribute('data-src'))</script>
 </body>
 
 </html>
