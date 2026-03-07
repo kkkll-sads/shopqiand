@@ -48,7 +48,15 @@ const RouteErrorElement = () => {
     [error, routeError]
   );
   const [isRecovering, setIsRecovering] = useState(false);
+  const [showFallbackButtons, setShowFallbackButtons] = useState(false);
   const hasRetried = hasRecentChunkLoadRecoveryAttempt();
+
+  // 如果自动恢复超过 3 秒仍未完成，显示手动操作按钮
+  useEffect(() => {
+    if (!isRecovering) return;
+    const timer = setTimeout(() => setShowFallbackButtons(true), 3000);
+    return () => clearTimeout(timer);
+  }, [isRecovering]);
 
   useEffect(() => {
     if (!chunkError) return;
@@ -97,7 +105,7 @@ const RouteErrorElement = () => {
             )}
           </div>
 
-          {!isRecovering && hasRetried && (
+          {(showFallbackButtons || (!isRecovering && hasRetried)) && (
             <div className="mt-6 flex gap-3">
               <button
                 onClick={() => window.location.reload()}

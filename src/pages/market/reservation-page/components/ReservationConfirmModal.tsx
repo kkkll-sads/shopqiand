@@ -26,7 +26,7 @@ const TEXT = {
   cancel: '取消',
   confirm: '确认提交',
   specialFund: '专项金',
-  pendingActivationGold: '算力',
+  pendingActivationGold: '待激活确权金',
   buildHashrateText: (base: number, extra: number) =>
     `基础 ${base} + 加注 ${extra}`,
 } as const;

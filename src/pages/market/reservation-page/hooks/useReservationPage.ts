@@ -115,6 +115,19 @@ export function useReservationPage({
         const ensured = await ensureReservationIds()
         if (cancelled || requestId !== previewRequestIdRef.current) return
 
+        // 关键 ID 缺失时直接使用兜底数据，避免抛出异常
+        if (
+          !ensured.sessionId ||
+          !ensured.zoneId ||
+          !ensured.packageId ||
+          Number(ensured.sessionId) <= 0 ||
+          Number(ensured.zoneId) <= 0
+        ) {
+          setPaymentSummary(fallbackSummary)
+          setPaymentPreviewLoading(false)
+          return
+        }
+
         const response = await fetchReservationPreview({
           session_id: ensured.sessionId,
           zone_id: ensured.zoneId,
