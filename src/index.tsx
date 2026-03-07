@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import ReactDOM from 'react-dom/client';
 import { RouterProvider } from 'react-router-dom';
 import router from '@/router';
+import { ErrorBoundary } from '@/components/common';
 import { NotificationProvider } from '@/context/NotificationContext';
 import { GlobalNotificationSystem } from '@/components/common/GlobalNotificationSystem';
 import { setNeedLoginHandler, clearNeedLoginHandler } from '@/services/needLoginHandler';
@@ -10,69 +11,88 @@ import { fetchProfile, fetchRealNameStatus } from '@/services';
 import { isSuccess } from '@/utils/apiHelpers';
 import { applyBackdropBlurCompatibilityClass } from '@/utils/backdropCompat';
 import { tryRecoverFromChunkLoad } from '@/utils/chunkLoadRecovery';
+import { startupDiagnostics } from '@/utils/startupDiagnostics';
 import '@/styles/main.css';
 import '@/styles/notifications.css';
 
-// 全局认证处理组件
 const AuthHandler: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const logout = useAuthStore((state) => state.logout);
   const { isLoggedIn, token, login } = useAuthStore();
 
   useEffect(() => {
+    startupDiagnostics.mark('auth', 'register need-login handler');
+
     const handleNeedLogin = () => {
-      console.log('[AuthHandler] 处理 NeedLoginError，执行登出');
+      startupDiagnostics.warn('auth', 'need-login handler triggered');
       logout();
-      // 使用 router.navigate 跳转到登录页
       router.navigate('/login', { replace: true });
     };
 
     setNeedLoginHandler(handleNeedLogin);
-    return () => clearNeedLoginHandler();
+    return () => {
+      startupDiagnostics.mark('auth', 'clear need-login handler');
+      clearNeedLoginHandler();
+    };
   }, [logout]);
 
-  // 应用启动时，如果已登录则刷新用户信息和实名状态
   useEffect(() => {
     const refreshUserInfo = async () => {
-      if (!isLoggedIn || !token) return;
-      
+      if (!isLoggedIn || !token) {
+        startupDiagnostics.mark('auth', 'skip profile refresh', {
+          isLoggedIn,
+          hasToken: Boolean(token),
+        });
+        return;
+      }
+
       const { updateRealNameStatus } = useAuthStore.getState();
-      
+
       try {
-        console.log('[AuthHandler] 刷新用户信息...');
-        
-        // 并行获取用户信息和实名状态
+        startupDiagnostics.mark('auth', 'refresh profile start');
+
         const [profileRes, realNameRes] = await Promise.all([
           fetchProfile(token),
           fetchRealNameStatus(token),
         ]);
-        
-        // 处理用户信息
+
         if (isSuccess(profileRes) && profileRes.data?.userInfo) {
-          const userInfo = {
-            ...profileRes.data.userInfo,
+          login({
             token,
-          };
-          console.log('[AuthHandler] 用户信息刷新成功');
-          login({ token, userInfo });
+            userInfo: {
+              ...profileRes.data.userInfo,
+              token,
+            },
+          });
+
+          startupDiagnostics.mark('auth', 'profile refresh success');
+        } else {
+          startupDiagnostics.warn('auth', 'profile refresh returned unexpected payload', {
+            code: profileRes?.code,
+            msg: profileRes?.msg,
+          });
         }
-        
-        // 处理实名状态（独立接口，确保准确）
+
         if (isSuccess(realNameRes) && realNameRes.data) {
           const realNameStatus = realNameRes.data.real_name_status || 0;
           const realName = realNameRes.data.real_name || '';
-          console.log('[AuthHandler] 实名状态刷新成功', {
-            real_name_status: realNameStatus,
-            real_name: realName,
-            isRealNameVerified: realNameStatus === 2,
-          });
           updateRealNameStatus(realNameStatus, realName);
+
+          startupDiagnostics.mark('auth', 'real-name refresh success', {
+            realNameStatus,
+            hasRealName: Boolean(realName),
+          });
+        } else {
+          startupDiagnostics.warn('auth', 'real-name refresh returned unexpected payload', {
+            code: realNameRes?.code,
+            msg: realNameRes?.msg,
+          });
         }
-      } catch (e) {
-        console.warn('[AuthHandler] 刷新用户信息失败:', e);
+      } catch (error: unknown) {
+        startupDiagnostics.warn('auth', 'refresh profile failed', error);
       }
     };
 
-    refreshUserInfo();
+    void refreshUserInfo();
   }, [isLoggedIn, token, login]);
 
   return <>{children}</>;
@@ -80,9 +100,14 @@ const AuthHandler: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
 const ChunkLoadRecoveryHandler: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   useEffect(() => {
+    startupDiagnostics.mark('runtime', 'register chunk recovery listeners');
+
     const handleWindowError = (event: ErrorEvent) => {
-      const recoveryStarted = tryRecoverFromChunkLoad(event.error ?? event.message);
+      const payload = event.error ?? event.message;
+      const recoveryStarted = tryRecoverFromChunkLoad(payload);
       if (recoveryStarted) {
+        startupDiagnostics.error('runtime.chunk', 'chunk-load recovery triggered', payload);
+        startupDiagnostics.show('chunk-load-recovery');
         event.preventDefault();
       }
     };
@@ -90,6 +115,12 @@ const ChunkLoadRecoveryHandler: React.FC<{ children: React.ReactNode }> = ({ chi
     const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
       const recoveryStarted = tryRecoverFromChunkLoad(event.reason);
       if (recoveryStarted) {
+        startupDiagnostics.error(
+          'runtime.chunk',
+          'chunk-load recovery triggered from unhandled rejection',
+          event.reason,
+        );
+        startupDiagnostics.show('chunk-load-recovery');
         event.preventDefault();
       }
     };
@@ -106,24 +137,58 @@ const ChunkLoadRecoveryHandler: React.FC<{ children: React.ReactNode }> = ({ chi
   return <>{children}</>;
 };
 
+const StartupReadyReporter: React.FC = () => {
+  useEffect(() => {
+    startupDiagnostics.ready({
+      href: window.location.href,
+      pathname: window.location.pathname,
+    });
+  }, []);
+
+  return null;
+};
+
+startupDiagnostics.mark('bootstrap', 'index module evaluated', {
+  href: window.location.href,
+  userAgent: navigator.userAgent,
+});
+
 const rootElement = document.getElementById('root');
 if (!rootElement) {
-  throw new Error("Could not find root element to mount to");
+  const error = new Error('Could not find root element to mount to');
+  startupDiagnostics.fatal('bootstrap', error);
+  startupDiagnostics.show('missing-root-element');
+  throw error;
 }
 
-// 启动时根据设备能力切换 backdrop 兼容模式，避免低端机样式异常
-applyBackdropBlurCompatibilityClass();
+startupDiagnostics.mark('bootstrap', 'root element located');
+
+const backdropCompatResult = applyBackdropBlurCompatibilityClass();
+startupDiagnostics.mark('bootstrap', 'backdrop compatibility applied', backdropCompatResult);
 
 const root = ReactDOM.createRoot(rootElement);
+startupDiagnostics.mark('bootstrap', 'react root created');
+
+startupDiagnostics.mark('bootstrap', 'react render start');
 root.render(
   <React.StrictMode>
     <NotificationProvider>
-      <ChunkLoadRecoveryHandler>
-        <AuthHandler>
-          <GlobalNotificationSystem />
-          <RouterProvider router={router} />
-        </AuthHandler>
-      </ChunkLoadRecoveryHandler>
+      <ErrorBoundary
+        onError={(error, errorInfo) => {
+          startupDiagnostics.fatal('react.error_boundary', error, {
+            componentStack: errorInfo.componentStack,
+          });
+          startupDiagnostics.show('react-error-boundary');
+        }}
+      >
+        <ChunkLoadRecoveryHandler>
+          <AuthHandler>
+            <StartupReadyReporter />
+            <GlobalNotificationSystem />
+            <RouterProvider router={router} />
+          </AuthHandler>
+        </ChunkLoadRecoveryHandler>
+      </ErrorBoundary>
     </NotificationProvider>
-  </React.StrictMode>
+  </React.StrictMode>,
 );

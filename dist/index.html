@@ -12,6 +12,610 @@
   <meta http-equiv="Expires" content="0" />
   <title>数权中心</title>
   <script>
+    (function () {
+      var STORAGE_KEY = 'shopqiand:startup-diag';
+      var MAX_ENTRIES = 80;
+      var STARTUP_TIMEOUT_MS = 12000;
+      var RECENT_FAILURE_TTL_MS = 5 * 60 * 1000;
+      var OVERLAY_ID = 'shopqiand-startup-diag';
+      var STYLE_ID = 'shopqiand-startup-diag-style';
+      var state = {
+        sessionId: String(Date.now()) + '-' + Math.random().toString(36).slice(2, 8),
+        startedAt: Date.now(),
+        ready: false,
+        entries: [],
+        overlayVisible: false,
+        overlayReason: '',
+        pendingReason: '',
+        timeoutId: 0,
+        previousFailure: null,
+        forceVisible: /(?:\?|&)startupDiag=1(?:&|$)/.test(window.location.search),
+      };
+
+      function safeReadStorage() {
+        try {
+          return window.localStorage.getItem(STORAGE_KEY);
+        } catch (error) {
+          return null;
+        }
+      }
+
+      function safeWriteStorage(payload) {
+        try {
+          window.localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+          return true;
+        } catch (error) {
+          return false;
+        }
+      }
+
+      function safeRemoveStorage() {
+        try {
+          window.localStorage.removeItem(STORAGE_KEY);
+        } catch (error) {
+          return;
+        }
+      }
+
+      function trimEntries(entries) {
+        if (!entries || !entries.length) {
+          return [];
+        }
+
+        return entries.slice(entries.length > MAX_ENTRIES ? entries.length - MAX_ENTRIES : 0);
+      }
+
+      function summarize(value) {
+        if (value === undefined) return '';
+        if (value === null) return 'null';
+        if (typeof value === 'string') return value;
+        if (typeof value === 'number' || typeof value === 'boolean') return String(value);
+        if (value instanceof Error) {
+          return [value.name, value.message, value.stack].filter(Boolean).join('\n');
+        }
+
+        try {
+          return JSON.stringify(value, null, 2);
+        } catch (error) {
+          try {
+            return String(value);
+          } catch (stringError) {
+            return '[unserializable]';
+          }
+        }
+      }
+
+      function normalizeError(error) {
+        if (!error) {
+          return { name: '', message: '', stack: '' };
+        }
+
+        if (error instanceof Error) {
+          return {
+            name: error.name || 'Error',
+            message: error.message || String(error),
+            stack: error.stack || '',
+          };
+        }
+
+        if (typeof error === 'string') {
+          return { name: '', message: error, stack: '' };
+        }
+
+        if (typeof error === 'object') {
+          return {
+            name: typeof error.name === 'string' ? error.name : '',
+            message:
+              typeof error.message === 'string'
+                ? error.message
+                : typeof error.reason === 'string'
+                  ? error.reason
+                  : summarize(error),
+            stack: typeof error.stack === 'string' ? error.stack : '',
+          };
+        }
+
+        return { name: '', message: String(error), stack: '' };
+      }
+
+      function extractTargetInfo(target) {
+        if (!target || !target.tagName) {
+          return null;
+        }
+
+        var info = {
+          tagName: String(target.tagName).toLowerCase(),
+        };
+
+        if (typeof target.src === 'string' && target.src) {
+          info.src = target.src;
+        }
+
+        if (typeof target.href === 'string' && target.href) {
+          info.href = target.href;
+        }
+
+        if (typeof target.currentSrc === 'string' && target.currentSrc) {
+          info.currentSrc = target.currentSrc;
+        }
+
+        return info;
+      }
+
+      function persist(status) {
+        safeWriteStorage({
+          status: status,
+          ready: state.ready,
+          sessionId: state.sessionId,
+          startedAt: state.startedAt,
+          updatedAt: Date.now(),
+          href: window.location.href,
+          userAgent: navigator.userAgent || '',
+          entries: trimEntries(state.entries),
+        });
+      }
+
+      function buildDetails(details, fallbackStack) {
+        var parts = [];
+        var detailsText = summarize(details);
+        if (detailsText) {
+          parts.push(detailsText);
+        }
+
+        if (fallbackStack && detailsText.indexOf(fallbackStack) === -1) {
+          parts.push(fallbackStack);
+        }
+
+        return parts.join('\n');
+      }
+
+      function push(level, source, message, details) {
+        var entry = {
+          at: Date.now(),
+          sinceMs: Date.now() - state.startedAt,
+          level: level,
+          source: source,
+          message: String(message || ''),
+          details: summarize(details),
+        };
+
+        state.entries.push(entry);
+        if (state.entries.length > MAX_ENTRIES) {
+          state.entries.shift();
+        }
+
+        persist(state.ready ? 'ready' : 'running');
+        updateOverlay();
+        return entry;
+      }
+
+      function formatEntry(entry, index) {
+        var prefix = index + 1 < 10 ? '0' + (index + 1) : String(index + 1);
+        var line =
+          prefix +
+          '. +' +
+          entry.sinceMs +
+          'ms [' +
+          entry.level +
+          '] ' +
+          entry.source +
+          ' - ' +
+          entry.message;
+
+        if (entry.details) {
+          line += '\n' + entry.details;
+        }
+
+        return line;
+      }
+
+      function buildExportText() {
+        var lines = [];
+        lines.push('Startup Diagnostics');
+        lines.push('sessionId: ' + state.sessionId);
+        lines.push('ready: ' + (state.ready ? 'yes' : 'no'));
+        lines.push('reason: ' + (state.overlayReason || 'n/a'));
+        lines.push('href: ' + window.location.href);
+        lines.push('userAgent: ' + (navigator.userAgent || 'unknown'));
+        lines.push('');
+        lines.push('Current Session');
+
+        for (var i = 0; i < state.entries.length; i += 1) {
+          lines.push(formatEntry(state.entries[i], i));
+        }
+
+        if (state.previousFailure) {
+          lines.push('');
+          lines.push('Previous Failed Session');
+          lines.push('status: ' + (state.previousFailure.status || 'unknown'));
+          lines.push('updatedAt: ' + state.previousFailure.updatedAt);
+          lines.push('href: ' + (state.previousFailure.href || ''));
+          lines.push('userAgent: ' + (state.previousFailure.userAgent || ''));
+
+          var previousEntries = state.previousFailure.entries || [];
+          for (var j = 0; j < previousEntries.length; j += 1) {
+            lines.push(formatEntry(previousEntries[j], j));
+          }
+        }
+
+        return lines.join('\n');
+      }
+
+      function ensureStyle() {
+        if (document.getElementById(STYLE_ID)) {
+          return;
+        }
+
+        var style = document.createElement('style');
+        style.id = STYLE_ID;
+        style.textContent =
+          '#' +
+          OVERLAY_ID +
+          '{position:fixed;inset:0;z-index:2147483647;display:none;align-items:flex-start;justify-content:center;padding:12px;background:rgba(9,12,20,.92);color:#e5eefc;font-family:ui-monospace,SFMono-Regular,Consolas,monospace;}' +
+          '#' +
+          OVERLAY_ID +
+          ' .panel{width:100%;max-width:720px;max-height:calc(100vh - 24px);display:flex;flex-direction:column;border:1px solid rgba(148,163,184,.35);border-radius:14px;background:#111827;box-shadow:0 24px 60px rgba(0,0,0,.45);overflow:hidden;}' +
+          '#' +
+          OVERLAY_ID +
+          ' .header{padding:12px 14px;border-bottom:1px solid rgba(148,163,184,.2);font-size:14px;font-weight:700;}' +
+          '#' +
+          OVERLAY_ID +
+          ' .meta{padding:10px 14px;border-bottom:1px solid rgba(148,163,184,.12);font-size:11px;line-height:1.5;white-space:pre-wrap;color:#cbd5e1;word-break:break-word;}' +
+          '#' +
+          OVERLAY_ID +
+          ' .content{margin:0;padding:12px 14px;overflow:auto;font-size:11px;line-height:1.55;white-space:pre-wrap;word-break:break-word;flex:1;background:#020617;}' +
+          '#' +
+          OVERLAY_ID +
+          ' .actions{display:flex;gap:8px;flex-wrap:wrap;padding:12px 14px;border-top:1px solid rgba(148,163,184,.12);background:#0f172a;}' +
+          '#' +
+          OVERLAY_ID +
+          ' button{appearance:none;border:1px solid rgba(148,163,184,.28);background:#1e293b;color:#f8fafc;border-radius:999px;padding:8px 12px;font-size:12px;line-height:1;}' +
+          '#' +
+          OVERLAY_ID +
+          ' button.primary{background:#dc2626;border-color:#ef4444;}';
+
+        (document.head || document.documentElement).appendChild(style);
+      }
+
+      function ensureOverlay() {
+        var overlay = document.getElementById(OVERLAY_ID);
+        if (overlay) {
+          return overlay;
+        }
+
+        if (!document.body) {
+          return null;
+        }
+
+        ensureStyle();
+
+        overlay = document.createElement('div');
+        overlay.id = OVERLAY_ID;
+        overlay.innerHTML =
+          '<div class="panel">' +
+          '<div class="header" id="' +
+          OVERLAY_ID +
+          '-title">Startup Diagnostics</div>' +
+          '<div class="meta" id="' +
+          OVERLAY_ID +
+          '-meta"></div>' +
+          '<pre class="content" id="' +
+          OVERLAY_ID +
+          '-content"></pre>' +
+          '<div class="actions">' +
+          '<button class="primary" id="' +
+          OVERLAY_ID +
+          '-reload" type="button">Reload</button>' +
+          '<button id="' +
+          OVERLAY_ID +
+          '-copy" type="button">Copy Logs</button>' +
+          '<button id="' +
+          OVERLAY_ID +
+          '-clear" type="button">Clear</button>' +
+          '<button id="' +
+          OVERLAY_ID +
+          '-close" type="button">Close</button>' +
+          '</div>' +
+          '</div>';
+
+        document.body.appendChild(overlay);
+
+        document.getElementById(OVERLAY_ID + '-reload').onclick = function () {
+          window.location.reload();
+        };
+
+        document.getElementById(OVERLAY_ID + '-copy').onclick = function () {
+          var text = buildExportText();
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text).catch(function () {
+              window.prompt('Copy startup logs', text);
+            });
+            return;
+          }
+
+          window.prompt('Copy startup logs', text);
+        };
+
+        document.getElementById(OVERLAY_ID + '-clear').onclick = function () {
+          state.entries = [];
+          state.previousFailure = null;
+          safeRemoveStorage();
+          updateOverlay();
+        };
+
+        document.getElementById(OVERLAY_ID + '-close').onclick = function () {
+          hideOverlay();
+        };
+
+        return overlay;
+      }
+
+      function updateOverlay() {
+        if (!state.overlayVisible) {
+          return;
+        }
+
+        var overlay = ensureOverlay();
+        if (!overlay) {
+          return;
+        }
+
+        var title = document.getElementById(OVERLAY_ID + '-title');
+        var meta = document.getElementById(OVERLAY_ID + '-meta');
+        var content = document.getElementById(OVERLAY_ID + '-content');
+        if (!title || !meta || !content) {
+          return;
+        }
+
+        title.textContent = 'Startup Diagnostics - ' + (state.overlayReason || 'active');
+        meta.textContent = [
+          'sessionId: ' + state.sessionId,
+          'ready: ' + (state.ready ? 'yes' : 'no'),
+          'href: ' + window.location.href,
+          'userAgent: ' + (navigator.userAgent || 'unknown'),
+        ].join('\n');
+        content.textContent = buildExportText();
+      }
+
+      function showOverlay(reason) {
+        state.overlayVisible = true;
+        state.overlayReason = reason || state.overlayReason || 'startup';
+
+        var overlay = ensureOverlay();
+        if (!overlay) {
+          state.pendingReason = state.overlayReason;
+          return;
+        }
+
+        overlay.style.display = 'flex';
+        updateOverlay();
+      }
+
+      function hideOverlay() {
+        state.overlayVisible = false;
+        var overlay = document.getElementById(OVERLAY_ID);
+        if (overlay) {
+          overlay.style.display = 'none';
+        }
+      }
+
+      function readPreviousFailure() {
+        var raw = safeReadStorage();
+        if (!raw) {
+          return null;
+        }
+
+        try {
+          var parsed = JSON.parse(raw);
+          if (!parsed || parsed.status === 'ready') {
+            return null;
+          }
+
+          if (typeof parsed.updatedAt !== 'number') {
+            return null;
+          }
+
+          if (Date.now() - parsed.updatedAt > RECENT_FAILURE_TTL_MS) {
+            return null;
+          }
+
+          return parsed;
+        } catch (error) {
+          return null;
+        }
+      }
+
+      function markFailure(source, error, details, reason) {
+        var normalized = normalizeError(error);
+        push(
+          'error',
+          source,
+          normalized.message || 'startup failure',
+          buildDetails(details, normalized.stack),
+        );
+        persist('failed');
+        showOverlay(reason || source);
+      }
+
+      function handleStartupTimeout() {
+        if (state.ready) {
+          return;
+        }
+
+        push('error', 'boot', 'startup timeout', {
+          timeoutMs: STARTUP_TIMEOUT_MS,
+          readyState: document.readyState,
+        });
+        persist('timeout');
+        showOverlay('startup-timeout');
+      }
+
+      function installConsoleHooks() {
+        if (typeof console === 'undefined') {
+          return;
+        }
+
+        var originalWarn = console.warn;
+        if (typeof originalWarn === 'function') {
+          console.warn = function () {
+            var parts = [];
+            for (var i = 0; i < arguments.length; i += 1) {
+              parts.push(summarize(arguments[i]));
+            }
+            push('warn', 'console.warn', parts.join(' '));
+            return originalWarn.apply(console, arguments);
+          };
+        }
+
+        var originalError = console.error;
+        if (typeof originalError === 'function') {
+          console.error = function () {
+            var parts = [];
+            for (var i = 0; i < arguments.length; i += 1) {
+              parts.push(summarize(arguments[i]));
+            }
+            push('error', 'console.error', parts.join(' '));
+            return originalError.apply(console, arguments);
+          };
+        }
+      }
+
+      function handleWindowError(event) {
+        var targetInfo = extractTargetInfo(event.target);
+        if (targetInfo && (targetInfo.src || targetInfo.href || targetInfo.currentSrc)) {
+          push('error', 'window.error', 'resource load error', targetInfo);
+          if (!state.ready) {
+            persist('failed');
+            showOverlay('resource-load-error');
+          }
+          return;
+        }
+
+        if (!state.ready) {
+          markFailure(
+            'window.error',
+            event.error || event.message || 'window error',
+            {
+              filename: event.filename || '',
+              lineno: event.lineno || 0,
+              colno: event.colno || 0,
+            },
+            'window-error',
+          );
+          return;
+        }
+
+        var normalized = normalizeError(event.error || event.message || 'window error');
+        push('error', 'window.error', normalized.message || 'window error', {
+          filename: event.filename || '',
+          lineno: event.lineno || 0,
+          colno: event.colno || 0,
+          stack: normalized.stack || '',
+        });
+      }
+
+      function handleUnhandledRejection(event) {
+        if (!state.ready) {
+          markFailure(
+            'unhandledrejection',
+            event.reason || 'unhandled rejection',
+            null,
+            'unhandled-rejection',
+          );
+          return;
+        }
+
+        var normalized = normalizeError(event.reason || 'unhandled rejection');
+        push('error', 'unhandledrejection', normalized.message || 'unhandled rejection', normalized.stack);
+      }
+
+      state.previousFailure = readPreviousFailure();
+
+      window.__SHOPQIAND_STARTUP_DIAG__ = {
+        mark: function (source, message, details) {
+          push('info', source, message, details);
+        },
+        warn: function (source, message, details) {
+          push('warn', source, message, details);
+        },
+        error: function (source, message, details) {
+          push('error', source, message, details);
+        },
+        fatal: function (source, error, details) {
+          markFailure(source, error, details, 'fatal-error');
+        },
+        ready: function (meta) {
+          state.ready = true;
+          if (state.timeoutId) {
+            window.clearTimeout(state.timeoutId);
+            state.timeoutId = 0;
+          }
+          push('info', 'boot', 'startup ready', meta);
+          persist('ready');
+          if (state.forceVisible || state.overlayVisible) {
+            showOverlay(state.overlayReason || 'startup-ready');
+          }
+        },
+        show: function (reason) {
+          showOverlay(reason || 'manual');
+        },
+        hide: function () {
+          hideOverlay();
+        },
+        clear: function () {
+          state.entries = [];
+          state.previousFailure = null;
+          safeRemoveStorage();
+          updateOverlay();
+        },
+        getEntries: function () {
+          return trimEntries(state.entries);
+        },
+        exportText: function () {
+          return buildExportText();
+        },
+      };
+
+      push('info', 'boot', 'diagnostics initialized', {
+        href: window.location.href,
+        readyState: document.readyState,
+      });
+      push('info', 'boot', 'navigator', navigator.userAgent || 'unknown');
+
+      if (state.previousFailure) {
+        push('warn', 'boot', 'previous startup failure detected', {
+          status: state.previousFailure.status || 'unknown',
+          previousSessionId: state.previousFailure.sessionId || '',
+        });
+      }
+
+      installConsoleHooks();
+
+      document.addEventListener('readystatechange', function () {
+        push('info', 'document', 'readyState=' + document.readyState);
+      });
+
+      document.addEventListener('DOMContentLoaded', function () {
+        push('info', 'document', 'DOMContentLoaded');
+        if (state.pendingReason) {
+          showOverlay(state.pendingReason);
+          state.pendingReason = '';
+        } else if (state.forceVisible || state.previousFailure) {
+          showOverlay(state.previousFailure ? 'previous-failure' : 'forced');
+        }
+      });
+
+      window.addEventListener('load', function () {
+        push('info', 'window', 'load');
+      });
+
+      window.addEventListener('error', handleWindowError, true);
+      window.addEventListener('unhandledrejection', handleUnhandledRejection);
+
+      state.timeoutId = window.setTimeout(handleStartupTimeout, STARTUP_TIMEOUT_MS);
+    })();
+  </script>
+  <script>
     /* 兼容低版本 WebView：globalThis polyfill (Chrome < 71) */
     if (typeof globalThis === 'undefined') {
       if (typeof self !== 'undefined') { self.globalThis = self; }
@@ -132,7 +736,7 @@
     })();
   </script>
   <style>::-webkit-scrollbar{display:none;width:0!important;height:0!important}*{scrollbar-width:none;-ms-overflow-style:none}body{-webkit-tap-highlight-color:transparent;overscroll-behavior-y:none;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;background-color:#f3f4f6;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica Neue,Arial,Noto Sans,sans-serif,Apple Color Emoji,Segoe UI Emoji,Segoe UI Symbol,Noto Color Emoji!important}input,textarea,[contenteditable=true]{-webkit-user-select:text;user-select:text;-webkit-touch-callout:default}body.certificate-page{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;touch-action:pan-x pan-y;-ms-touch-action:pan-x pan-y}body.certificate-page *{touch-action:manipulation}body.certificate-page html{-webkit-text-size-adjust:100%;-moz-text-size-adjust:100%;text-size-adjust:100%}body.certificate-page input,body.certificate-page textarea{-webkit-user-select:text;user-select:text}.pb-safe{padding-bottom:constant(safe-area-inset-bottom);padding-bottom:env(safe-area-inset-bottom)}</style>
-  <script type="module" crossorigin src="/assets/index-BJkvtufY.js"></script>
+  <script type="module" crossorigin src="/assets/index-C3jEqlo3.js"></script>
   <link rel="modulepreload" crossorigin href="/assets/vendor-D_9m6sOW.js">
   <link rel="modulepreload" crossorigin href="/assets/state-vendor-B4qtn465.js">
   <link rel="modulepreload" crossorigin href="/assets/react-vendor-BLWJPKVh.js">
@@ -266,7 +870,7 @@
   </script>
   <script nomodule>!function(){var e=document,t=e.createElement("script");if(!("noModule"in t)&&"onbeforeload"in t){var n=!1;e.addEventListener("beforeload",(function(e){if(e.target===t)n=!0;else if(!e.target.hasAttribute("nomodule")||!n)return;e.preventDefault()}),!0),t.type="module",t.src=".",e.head.appendChild(t),t.remove()}}();</script>
   <script nomodule crossorigin id="vite-legacy-polyfill" src="/assets/polyfills-legacy-Df1HIm4V.js"></script>
-  <script nomodule crossorigin id="vite-legacy-entry" data-src="/assets/index-legacy-BqiUokKk.js">System.import(document.getElementById('vite-legacy-entry').getAttribute('data-src'))</script>
+  <script nomodule crossorigin id="vite-legacy-entry" data-src="/assets/index-legacy-83wNrdHI.js">System.import(document.getElementById('vite-legacy-entry').getAttribute('data-src'))</script>
 </body>
 
 </html>
