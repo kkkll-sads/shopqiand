@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { ChevronLeft, CheckCircle2, Circle, Minus, Plus, Trash2, Heart, Store, ChevronRight, WifiOff, RefreshCcw, ShoppingCart, ChevronDown } from 'lucide-react';
 import { Skeleton } from '../../components/ui/Skeleton';
 import { useAppNavigate } from '../../lib/navigation';
 import { PageHeader } from '../../components/layout/PageHeader';
+import { useRouteScrollRestoration } from '../../hooks/useRouteScrollRestoration';
 
 interface CartItem {
   id: string;
@@ -29,6 +30,7 @@ export const CartPage = () => {
   const [offline, setOffline] = useState(false);
   const [moduleError, setModuleError] = useState(false);
   const [emptyResult, setEmptyResult] = useState(false);
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
 
   const [cartData, setCartData] = useState<CartStore[]>([
     {
@@ -59,6 +61,13 @@ export const CartPage = () => {
     }, 300);
     return () => clearTimeout(timer);
   }, []);
+
+  useRouteScrollRestoration({
+    containerRef: scrollContainerRef,
+    namespace: `cart:${isEditMode ? 'edit' : 'default'}`,
+    restoreDeps: [cartData.length, emptyResult, isEditMode, loading, moduleError],
+    restoreWhen: !loading && !moduleError,
+  });
 
   const handleBack = () => {
     goBack();
@@ -427,7 +436,7 @@ export const CartPage = () => {
 
       {renderHeader()}
       
-      <div className="flex-1 overflow-y-auto no-scrollbar relative">
+      <div ref={scrollContainerRef} className="flex-1 overflow-y-auto no-scrollbar relative">
         {renderContent()}
       </div>
 

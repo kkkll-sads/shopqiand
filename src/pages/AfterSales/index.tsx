@@ -1,9 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { ChevronLeft, WifiOff, AlertCircle, Package, ChevronRight, Camera, CheckCircle2, Clock, HeadphonesIcon, FileText, RefreshCcw, Store } from 'lucide-react';
 import { useAppNavigate } from '../../lib/navigation';
 import { PageHeader } from '../../components/layout/PageHeader';
 import { ErrorState } from '../../components/ui/ErrorState';
 import { EmptyState } from '../../components/ui/EmptyState';
+import { useRouteScrollRestoration } from '../../hooks/useRouteScrollRestoration';
+import { useSessionState } from '../../hooks/useSessionState';
 
 interface AfterSalesItem {
   id: string;
@@ -60,16 +62,43 @@ export const AfterSalesPage = () => {
   const { goTo, goBack } = useAppNavigate();
 
   const [view, setView] = useState<'list' | 'entry' | 'apply' | 'detail'>('list');
-  const [activeTab, setActiveTab] = useState<'processing' | 'completed' | 'closed'>('processing');
+  const [activeTab, setActiveTab] = useSessionState<'processing' | 'completed' | 'closed'>(
+    'after-sales:tab',
+    'processing',
+  );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [offline, setOffline] = useState(false);
+  const listScrollContainerRef = useRef<HTMLDivElement | null>(null);
+  const listScrollTopRef = useRef(0);
   
   const [selectedService, setSelectedService] = useState<'退货退款' | '仅退款' | '换货' | null>(null);
 
   useEffect(() => {
     fetchData();
   }, [view, activeTab]);
+
+  useEffect(() => {
+    if (view !== 'list' || listScrollTopRef.current <= 0 || !listScrollContainerRef.current) {
+      return;
+    }
+
+    const frameId = window.requestAnimationFrame(() => {
+      if (listScrollContainerRef.current) {
+        listScrollContainerRef.current.scrollTop = listScrollTopRef.current;
+      }
+    });
+
+    return () => window.cancelAnimationFrame(frameId);
+  }, [view]);
+
+  useRouteScrollRestoration({
+    containerRef: listScrollContainerRef,
+    enabled: view === 'list',
+    namespace: `after-sales:${activeTab}`,
+    restoreDeps: [activeTab, error, loading, view],
+    restoreWhen: view === 'list' && !loading && !error,
+  });
 
   const fetchData = () => {
     setLoading(true);
@@ -181,7 +210,14 @@ export const AfterSalesPage = () => {
           ))}
         </div>
 
-        <div className="flex-1 overflow-y-auto no-scrollbar">
+        <div
+          ref={listScrollContainerRef}
+          className="flex-1 overflow-y-auto no-scrollbar"
+          onScroll={() => {
+            listScrollTopRef.current =
+              listScrollContainerRef.current?.scrollTop ?? listScrollTopRef.current;
+          }}
+        >
           {loading ? renderSkeleton() : error ? renderError() : filteredList.length === 0 ? renderEmpty() : (
             <div className="p-3 space-y-3">
               {filteredList.map(item => (
@@ -213,7 +249,11 @@ export const AfterSalesPage = () => {
                       )}
                     </div>
                     <button 
-                      onClick={() => setView('detail')}
+                      onClick={() => {
+                        listScrollTopRef.current =
+                          listScrollContainerRef.current?.scrollTop ?? listScrollTopRef.current;
+                        setView('detail');
+                      }}
                       className="px-4 py-1.5 rounded-full border border-border-main text-sm text-text-main active:bg-gray-50 dark:bg-gray-800 transition-colors"
                     >
                       查看详情

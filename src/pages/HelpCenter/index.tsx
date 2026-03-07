@@ -1,7 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { ChevronLeft, HeadphonesIcon, Clock, ChevronDown, ChevronUp, FileText, MessageSquare, AlertCircle, WifiOff, RefreshCcw, ExternalLink, HelpCircle } from 'lucide-react';
 import { useAppNavigate } from '../../lib/navigation';
 import { PageHeader } from '../../components/layout/PageHeader';
+import { useRouteScrollRestoration } from '../../hooks/useRouteScrollRestoration';
+import { useSessionState } from '../../hooks/useSessionState';
 
 export const HelpCenterPage = () => {
   const { goTo, goBack } = useAppNavigate();
@@ -9,7 +11,8 @@ export const HelpCenterPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [offline, setOffline] = useState(!navigator.onLine);
-  const [expandedFaq, setExpandedFaq] = useState<string | null>(null);
+  const [expandedFaq, setExpandedFaq] = useSessionState<string | null>('help-center:expanded-faq', null);
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     const handleOnline = () => setOffline(false);
@@ -41,6 +44,13 @@ export const HelpCenterPage = () => {
   useEffect(() => {
     fetchData();
   }, [offline]);
+
+  useRouteScrollRestoration({
+    containerRef: scrollContainerRef,
+    namespace: 'help-center-page',
+    restoreDeps: [error, expandedFaq, loading],
+    restoreWhen: !error && !loading,
+  });
 
   const handleBack = () => {
     goBack();
@@ -95,7 +105,7 @@ export const HelpCenterPage = () => {
       )}
 
       {/* Main Content */}
-      <div className="flex-1 overflow-y-auto p-4 relative">
+      <div ref={scrollContainerRef} className="flex-1 overflow-y-auto p-4 relative">
         {error ? (
           // Error State
           <div className="absolute inset-0 flex flex-col items-center justify-center px-6">

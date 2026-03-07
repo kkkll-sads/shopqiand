@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { ChevronLeft, WifiOff, AlertCircle, Edit, MapPin, Check } from 'lucide-react';
 import { useAppNavigate } from '../../lib/navigation';
 import { PageHeader } from '../../components/layout/PageHeader';
 import { ErrorState } from '../../components/ui/ErrorState';
 import { EmptyState } from '../../components/ui/EmptyState';
+import { useRouteScrollRestoration } from '../../hooks/useRouteScrollRestoration';
 
 interface Address {
   id: string;
@@ -42,6 +43,8 @@ export const AddressPage = () => {
   const [offline, setOffline] = useState(false);
   const [addresses, setAddresses] = useState<Address[]>([]);
   const [editingAddress, setEditingAddress] = useState<Address | null>(null);
+  const listScrollContainerRef = useRef<HTMLDivElement | null>(null);
+  const listScrollTopRef = useRef(0);
 
   // Form State
   const [formData, setFormData] = useState<Partial<Address>>({});
@@ -52,6 +55,28 @@ export const AddressPage = () => {
       fetchData();
     }
   }, [view]);
+
+  useEffect(() => {
+    if (view !== 'list' || listScrollTopRef.current <= 0 || !listScrollContainerRef.current) {
+      return;
+    }
+
+    const frameId = window.requestAnimationFrame(() => {
+      if (listScrollContainerRef.current) {
+        listScrollContainerRef.current.scrollTop = listScrollTopRef.current;
+      }
+    });
+
+    return () => window.cancelAnimationFrame(frameId);
+  }, [view]);
+
+  useRouteScrollRestoration({
+    containerRef: listScrollContainerRef,
+    enabled: view === 'list',
+    namespace: 'address-page',
+    restoreDeps: [addresses.length, error, loading, view],
+    restoreWhen: view === 'list' && !loading && !error,
+  });
 
   const fetchData = () => {
     setLoading(true);
@@ -78,12 +103,14 @@ export const AddressPage = () => {
   };
 
   const handleEdit = (addr: Address) => {
+    listScrollTopRef.current = listScrollContainerRef.current?.scrollTop ?? listScrollTopRef.current;
     setEditingAddress(addr);
     setFormData(addr);
     setView('edit');
   };
 
   const handleAdd = () => {
+    listScrollTopRef.current = listScrollContainerRef.current?.scrollTop ?? listScrollTopRef.current;
     setEditingAddress(null);
     setFormData({ isDefault: false });
     setView('edit');
@@ -174,7 +201,13 @@ export const AddressPage = () => {
 
     return (
       <div className="flex-1 flex flex-col relative h-full">
-        <div className="flex-1 overflow-y-auto no-scrollbar p-4 space-y-3 pb-24">
+        <div
+          ref={listScrollContainerRef}
+          className="flex-1 overflow-y-auto no-scrollbar p-4 space-y-3 pb-24"
+          onScroll={() => {
+            listScrollTopRef.current = listScrollContainerRef.current?.scrollTop ?? listScrollTopRef.current;
+          }}
+        >
           {addresses.length === 0 ? renderEmpty() : (
             addresses.map((addr) => (
               <div key={addr.id} className="bg-white dark:bg-gray-900 rounded-xl p-4 flex items-center shadow-sm active:bg-gray-50 dark:bg-gray-800 transition-colors">

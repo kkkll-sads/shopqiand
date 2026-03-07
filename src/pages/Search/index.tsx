@@ -9,6 +9,7 @@ import { Skeleton } from '../../components/ui/Skeleton';
 import { buildShopProductSearchResultPath } from '../../features/shop-product/utils';
 import { useNetworkStatus } from '../../hooks/useNetworkStatus';
 import { useRequest } from '../../hooks/useRequest';
+import { useRouteScrollRestoration } from '../../hooks/useRouteScrollRestoration';
 import { useAppNavigate } from '../../lib/navigation';
 
 const SEARCH_HISTORY_STORAGE_KEY = 'shop-product-search-history';
@@ -49,6 +50,7 @@ export const SearchPage = () => {
   const { goBack, goTo } = useAppNavigate();
   const { isOffline, refreshStatus } = useNetworkStatus();
   const inputRef = useRef<HTMLInputElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
 
   const [query, setQuery] = useState('');
   const [history, setHistory] = useState<string[]>(() => readSearchHistory());
@@ -75,6 +77,13 @@ export const SearchPage = () => {
     const names = latestRequest.data?.list.map((item) => item.name.trim()).filter(Boolean) ?? [];
     return names.filter((name, index, source) => source.indexOf(name) === index);
   }, [latestRequest.data]);
+
+  useRouteScrollRestoration({
+    containerRef: scrollContainerRef,
+    namespace: 'search-page',
+    restoreDeps: [history.length, hotKeywords.length, latestRequest.error, latestRequest.loading],
+    restoreWhen: !latestRequest.loading && !latestRequest.error,
+  });
 
   const suggestions = useMemo(() => {
     const keyword = query.trim().toLowerCase();
@@ -257,7 +266,7 @@ export const SearchPage = () => {
 
       {renderSuggestions()}
 
-      <div className="flex-1 overflow-y-auto p-4">
+      <div ref={scrollContainerRef} className="flex-1 overflow-y-auto p-4">
         {history.length > 0 && (
           <div className="mb-6">
             <div className="mb-3 flex items-center justify-between px-1">

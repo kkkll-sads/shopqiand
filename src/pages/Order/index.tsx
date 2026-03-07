@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { OfflineBanner } from '../../components/layout/OfflineBanner';
 import { ORDER_TABS } from '../../features/order/constants';
 import { CollectibleOrderDetail } from '../../features/order/components/CollectibleOrderDetail';
@@ -8,18 +8,24 @@ import { OrderStatusTabs } from '../../features/order/components/OrderStatusTabs
 import { OrderTypeSwitcher } from '../../features/order/components/OrderTypeSwitcher';
 import type { OrderType, SelectedOrder } from '../../features/order/types';
 import { useNetworkStatus } from '../../hooks/useNetworkStatus';
+import { useRouteScrollRestoration } from '../../hooks/useRouteScrollRestoration';
+import { useSessionState } from '../../hooks/useSessionState';
 import { useAppNavigate } from '../../lib/navigation';
 
 export const OrderPage = () => {
   const { goTo } = useAppNavigate();
   const { isOffline, refreshStatus } = useNetworkStatus();
-  const [orderType, setOrderType] = useState<OrderType>('mall');
-  const [mallTab, setMallTab] = useState(ORDER_TABS.mall[0]);
-  const [collectibleTab, setCollectibleTab] = useState(ORDER_TABS.collectible[0]);
+  const [orderType, setOrderType] = useSessionState<OrderType>('order-page:type', 'mall');
+  const [mallTab, setMallTab] = useSessionState('order-page:mall-tab', ORDER_TABS.mall[0]);
+  const [collectibleTab, setCollectibleTab] = useSessionState(
+    'order-page:collectible-tab',
+    ORDER_TABS.collectible[0],
+  );
   const [selectedOrder, setSelectedOrder] = useState<SelectedOrder | null>(null);
   const [loading, setLoading] = useState(true);
   const [moduleError, setModuleError] = useState(false);
   const [emptyList, setEmptyList] = useState(false);
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     setLoading(true);
@@ -31,6 +37,13 @@ export const OrderPage = () => {
   }, [orderType, mallTab, collectibleTab]);
 
   const activeTab = orderType === 'mall' ? mallTab : collectibleTab;
+
+  useRouteScrollRestoration({
+    containerRef: scrollContainerRef,
+    namespace: 'order-page',
+    restoreDeps: [activeTab, emptyList, loading, moduleError, orderType],
+    restoreWhen: !loading && !selectedOrder,
+  });
 
   const handleTabChange = (tab: string) => {
     if (orderType === 'mall') {
@@ -54,7 +67,7 @@ export const OrderPage = () => {
       <OrderTypeSwitcher orderType={orderType} onChange={setOrderType} />
       <OrderStatusTabs tabs={ORDER_TABS[orderType]} activeTab={activeTab} onChange={handleTabChange} />
 
-      <div className="flex-1 overflow-y-auto no-scrollbar p-4 pb-4">
+      <div ref={scrollContainerRef} className="flex-1 overflow-y-auto no-scrollbar p-4 pb-4">
         <OrderListContent
           orderType={orderType}
           loading={loading}

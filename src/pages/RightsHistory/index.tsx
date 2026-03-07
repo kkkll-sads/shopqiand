@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { ChevronLeft, FileText, Filter } from 'lucide-react';
 import { Card } from '../../components/ui/Card';
+import { useRouteScrollRestoration } from '../../hooks/useRouteScrollRestoration';
 import { useAppNavigate } from '../../lib/navigation';
 import { PageHeader } from '../../components/layout/PageHeader';
 
@@ -27,6 +28,7 @@ const STATUS_MAP = {
 export function RightsHistoryPage() {
   const { goBack } = useAppNavigate();
   const [isLoading, setIsLoading] = useState(true);
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -38,6 +40,13 @@ export function RightsHistoryPage() {
   const handleGoBack = () => {
     goBack();
   };
+
+  useRouteScrollRestoration({
+    containerRef: scrollContainerRef,
+    namespace: 'rights-history-page',
+    restoreDeps: [isLoading],
+    restoreWhen: !isLoading,
+  });
 
   if (isLoading) {
     return (
@@ -67,7 +76,7 @@ export function RightsHistoryPage() {
         </button>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 space-y-3 pb-8">
+      <div ref={scrollContainerRef} className="flex-1 overflow-y-auto p-4 space-y-3 pb-8">
         {MOCK_HISTORY.length > 0 ? (
           MOCK_HISTORY.map((record) => {
             const statusInfo = STATUS_MAP[record.status as keyof typeof STATUS_MAP];

@@ -23,6 +23,8 @@ import {
 import { useInfiniteScroll } from '../../hooks/useInfiniteScroll';
 import { useNetworkStatus } from '../../hooks/useNetworkStatus';
 import { useRequest } from '../../hooks/useRequest';
+import { useRouteScrollRestoration } from '../../hooks/useRouteScrollRestoration';
+import { useSessionState } from '../../hooks/useSessionState';
 import { useAppNavigate } from '../../lib/navigation';
 
 const EMPTY_CATEGORY_LIST = {
@@ -53,7 +55,7 @@ function mergeProducts(previous: ShopProductItem[], next: ShopProductItem[]) {
 export const CategoryPage = () => {
   const { goBack, goTo } = useAppNavigate();
   const { isOffline, refreshStatus } = useNetworkStatus();
-  const [activeCategory, setActiveCategory] = useState('');
+  const [activeCategory, setActiveCategory] = useSessionState('category-page:active-category', '');
   const [products, setProducts] = useState<ShopProductItem[]>([]);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(false);
@@ -80,7 +82,11 @@ export const CategoryPage = () => {
   );
 
   useEffect(() => {
-    if (!activeCategory && categoryItems.length > 0) {
+    if (categoryItems.length === 0) {
+      return;
+    }
+
+    if (!activeCategory || !categoryItems.some((item) => item.name === activeCategory)) {
       setActiveCategory(categoryItems[0].name);
     }
   }, [activeCategory, categoryItems]);
@@ -184,6 +190,13 @@ export const CategoryPage = () => {
   const hasError =
     (!loadingCategories && categoriesRequest.error && categoryItems.length === 0) ||
     (!loadingProducts && productsRequest.error && products.length === 0);
+
+  useRouteScrollRestoration({
+    containerRef: productListRef,
+    namespace: 'category-page',
+    restoreDeps: [activeCategory, hasMore, products.length, productsRequest.loading],
+    restoreWhen: !loadingProducts && !hasError,
+  });
 
   const renderLoadMoreFooter = () => {
     if (products.length === 0) {

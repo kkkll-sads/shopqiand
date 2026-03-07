@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { 
   ChevronLeft, Search, Copy, QrCode, UserPlus, 
   Users, ShieldCheck, ShieldAlert, ChevronRight, 
@@ -6,6 +6,8 @@ import {
 } from 'lucide-react';
 import { Card } from '../../components/ui/Card';
 import { Skeleton } from '../../components/ui/Skeleton';
+import { useRouteScrollRestoration } from '../../hooks/useRouteScrollRestoration';
+import { useSessionState } from '../../hooks/useSessionState';
 import { useAppNavigate } from '../../lib/navigation';
 import { PageHeader } from '../../components/layout/PageHeader';
 
@@ -16,9 +18,10 @@ export const FriendsPage = () => {
   const [offline, setOffline] = useState(false);
   const [moduleError, setModuleError] = useState(false);
   
-  const [searchQuery, setSearchQuery] = useState('');
-  const [activeFilter, setActiveFilter] = useState('all');
+  const [searchQuery, setSearchQuery] = useSessionState('friends-page:search', '');
+  const [activeFilter, setActiveFilter] = useSessionState('friends-page:filter', 'all');
   const [showRulesModal, setShowRulesModal] = useState(false);
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
 
   const MOCK_FRIENDS = [
     { id: '1', uid: '88492019', nickname: '张三', phone: '138****1234', avatar: 'https://picsum.photos/seed/f1/100/100', regTime: '2026-02-28 10:20', activeTime: '刚刚', status: 'verified' },
@@ -63,6 +66,13 @@ export const FriendsPage = () => {
     if (activeFilter === 'active') return friend.activeTime.includes('刚刚') || friend.activeTime.includes('小时');
     
     return true;
+  });
+
+  useRouteScrollRestoration({
+    containerRef: scrollContainerRef,
+    namespace: `friends-page:${activeFilter}`,
+    restoreDeps: [activeFilter, loading, searchQuery, filteredFriends.length],
+    restoreWhen: !loading && !moduleError,
   });
 
   const renderHeader = () => (
@@ -119,7 +129,7 @@ export const FriendsPage = () => {
 
       {renderHeader()}
 
-      <div className="flex-1 overflow-y-auto no-scrollbar pb-6">
+      <div ref={scrollContainerRef} className="flex-1 overflow-y-auto no-scrollbar pb-6">
         <div className="px-4 py-4">
           
           {/* Stats Overview */}

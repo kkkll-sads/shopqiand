@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Bell,
   Copy,
@@ -36,6 +36,7 @@ import { Skeleton } from '../../components/ui/Skeleton';
 import { useAuthSession } from '../../hooks/useAuthSession';
 import { useNetworkStatus } from '../../hooks/useNetworkStatus';
 import { useRequest } from '../../hooks/useRequest';
+import { useRouteScrollRestoration } from '../../hooks/useRouteScrollRestoration';
 import { CURRENT_APP_VERSION, formatVersionLabel } from '../../lib/appVersion';
 import { useAppNavigate } from '../../lib/navigation';
 
@@ -102,6 +103,7 @@ export const UserPage = () => {
   const [loading, setLoading] = useState(true);
   const [showLogoutSheet, setShowLogoutSheet] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
 
   const isLoggedIn = isAuthenticated;
   const {
@@ -194,6 +196,13 @@ export const UserPage = () => {
 
     return () => window.clearTimeout(timer);
   }, [isLoggedIn]);
+
+  useRouteScrollRestoration({
+    containerRef: scrollContainerRef,
+    namespace: 'user-page',
+    restoreDeps: [isHeaderLoading, isLoggedIn, loading],
+    restoreWhen: !loading && !isHeaderLoading,
+  });
 
   const handleCopy = async (text: string) => {
     if (!text || text === '--') {
@@ -355,7 +364,7 @@ export const UserPage = () => {
     <div className="relative flex flex-1 flex-col overflow-hidden bg-bg-base">
       {isOffline && <OfflineBanner onAction={refreshStatus} className="absolute top-0 right-0 left-0 z-50" />}
 
-      <div className="flex-1 overflow-y-auto no-scrollbar pb-4">
+      <div ref={scrollContainerRef} className="flex-1 overflow-y-auto no-scrollbar pb-4">
         {renderHeader()}
 
         <div className="relative z-10 -mt-2 space-y-4 px-4">

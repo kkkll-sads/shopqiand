@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { ChevronLeft, Headset, WifiOff, RefreshCcw, FileX, ArrowRight, Clock, Image as ImageIcon } from 'lucide-react';
 import { useAppNavigate } from '../../lib/navigation';
 import { PageHeader } from '../../components/layout/PageHeader';
 import { ErrorState } from '../../components/ui/ErrorState';
 import { EmptyState } from '../../components/ui/EmptyState';
+import { useRouteScrollRestoration } from '../../hooks/useRouteScrollRestoration';
 
 interface Session {
   id: string;
@@ -25,6 +26,7 @@ export const TradingZonePage = () => {
   const [offline, setOffline] = useState(false);
   const [empty, setEmpty] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
 
   const mockSessions: Session[] = [
     {
@@ -65,6 +67,13 @@ export const TradingZonePage = () => {
   useEffect(() => {
     fetchData();
   }, []);
+
+  useRouteScrollRestoration({
+    containerRef: scrollContainerRef,
+    namespace: 'trading-zone',
+    restoreDeps: [empty, error, loading],
+    restoreWhen: !loading && !error && !empty,
+  });
 
   const fetchData = () => {
     setLoading(true);
@@ -268,6 +277,7 @@ export const TradingZonePage = () => {
       {renderHeader()}
       
       <div 
+        ref={scrollContainerRef}
         className="flex-1 overflow-y-auto no-scrollbar relative"
         onScroll={(e) => {
           if (e.currentTarget.scrollTop < -50 && !refreshing && !loading) {

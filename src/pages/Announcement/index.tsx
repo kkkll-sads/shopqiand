@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { announcementApi, type AnnouncementItem } from '../../api';
 import { getErrorMessage } from '../../api/core/errors';
 import { OfflineBanner } from '../../components/layout/OfflineBanner';
@@ -7,12 +7,15 @@ import { EmptyState } from '../../components/ui/EmptyState';
 import { ErrorState } from '../../components/ui/ErrorState';
 import { useNetworkStatus } from '../../hooks/useNetworkStatus';
 import { useRequest } from '../../hooks/useRequest';
+import { useRouteScrollRestoration } from '../../hooks/useRouteScrollRestoration';
+import { useViewScrollSnapshot } from '../../hooks/useViewScrollSnapshot';
 import { useAppNavigate } from '../../lib/navigation';
 
 export const AnnouncementPage = () => {
   const { goBack } = useAppNavigate();
   const { isOffline } = useNetworkStatus();
   const [selectedAnnouncement, setSelectedAnnouncement] = useState<AnnouncementItem | null>(null);
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
 
   const {
     data: announcements = [],
@@ -34,6 +37,19 @@ export const AnnouncementPage = () => {
   const retry = () => {
     void reload().catch(() => undefined);
   };
+
+  useRouteScrollRestoration({
+    containerRef: scrollContainerRef,
+    enabled: !selectedAnnouncement,
+    namespace: 'announcement-page',
+    restoreDeps: [loading, sortedAnnouncements.length],
+    restoreWhen: !selectedAnnouncement && !loading && !error,
+  });
+
+  useViewScrollSnapshot({
+    active: !selectedAnnouncement,
+    containerRef: scrollContainerRef,
+  });
 
   const handleBack = () => {
     if (selectedAnnouncement) {
@@ -149,7 +165,7 @@ export const AnnouncementPage = () => {
         backButtonClassName="text-gray-900 dark:text-gray-100"
       />
 
-      <div className="relative flex-1 overflow-y-auto no-scrollbar">
+      <div ref={scrollContainerRef} className="relative flex-1 overflow-y-auto no-scrollbar">
         {selectedAnnouncement ? renderDetail() : renderList()}
       </div>
     </div>

@@ -1,9 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { ChevronLeft, WifiOff, AlertCircle, Info, X, Ticket } from 'lucide-react';
 import { useAppNavigate } from '../../lib/navigation';
 import { PageHeader } from '../../components/layout/PageHeader';
 import { ErrorState } from '../../components/ui/ErrorState';
 import { EmptyState } from '../../components/ui/EmptyState';
+import { useRouteScrollRestoration } from '../../hooks/useRouteScrollRestoration';
+import { useSessionState } from '../../hooks/useSessionState';
 
 interface Coupon {
   id: string;
@@ -68,16 +70,28 @@ const MOCK_COUPONS: Coupon[] = [
 export const CouponPage = () => {
   const { goTo, goBack } = useAppNavigate();
 
-  const [activeTab, setActiveTab] = useState<'available' | 'received' | 'expired'>('available');
+  const [activeTab, setActiveTab] = useSessionState<'available' | 'received' | 'expired'>(
+    'coupon:tab',
+    'available',
+  );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [offline, setOffline] = useState(false);
   const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [selectedCoupon, setSelectedCoupon] = useState<Coupon | null>(null);
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     fetchData();
   }, [activeTab]);
+
+  useRouteScrollRestoration({
+    containerRef: scrollContainerRef,
+    enabled: !selectedCoupon,
+    namespace: `coupon:${activeTab}`,
+    restoreDeps: [activeTab, coupons.length, error, loading],
+    restoreWhen: !loading && !error && !selectedCoupon,
+  });
 
   const fetchData = () => {
     setLoading(true);
@@ -328,7 +342,7 @@ export const CouponPage = () => {
 
       {renderHeader()}
       
-      <div className="flex-1 overflow-y-auto no-scrollbar">
+      <div ref={scrollContainerRef} className="flex-1 overflow-y-auto no-scrollbar">
         {renderContent()}
       </div>
 

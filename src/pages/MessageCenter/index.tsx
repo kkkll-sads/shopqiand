@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef } from 'react';
 import { CheckCircle2 } from 'lucide-react';
 import { getErrorMessage } from '../../api/core/errors';
 import { messageApi, type MessageItem, type MessageTab } from '../../api/modules/message';
@@ -8,6 +8,8 @@ import { EmptyState } from '../../components/ui/EmptyState';
 import { ErrorState } from '../../components/ui/ErrorState';
 import { useNetworkStatus } from '../../hooks/useNetworkStatus';
 import { useRequest } from '../../hooks/useRequest';
+import { useRouteScrollRestoration } from '../../hooks/useRouteScrollRestoration';
+import { useSessionState } from '../../hooks/useSessionState';
 import { useAppNavigate } from '../../lib/navigation';
 
 const tabs: Array<{ id: MessageTab; label: string }> = [
@@ -18,8 +20,9 @@ const tabs: Array<{ id: MessageTab; label: string }> = [
 
 export const MessageCenterPage = () => {
   const { goBack } = useAppNavigate();
-  const [activeTab, setActiveTab] = useState<MessageTab>('system');
+  const [activeTab, setActiveTab] = useSessionState<MessageTab>('message-center:tab', 'system');
   const { isOffline } = useNetworkStatus();
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
 
   const {
     data: messages = [],
@@ -33,6 +36,13 @@ export const MessageCenterPage = () => {
   });
 
   const hasUnread = useMemo(() => messages.some((message) => !message.isRead), [messages]);
+
+  useRouteScrollRestoration({
+    containerRef: scrollContainerRef,
+    namespace: `message-center:${activeTab}`,
+    restoreDeps: [activeTab, loading, messages.length],
+    restoreWhen: !loading && !error,
+  });
 
   const retry = () => {
     void reload().catch(() => undefined);
@@ -175,7 +185,9 @@ export const MessageCenterPage = () => {
       />
       {renderTabs()}
 
-      <div className="relative flex-1 overflow-y-auto no-scrollbar">{renderContent()}</div>
+      <div ref={scrollContainerRef} className="relative flex-1 overflow-y-auto no-scrollbar">
+        {renderContent()}
+      </div>
     </div>
   );
 };

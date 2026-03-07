@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ChevronLeft,
   ChevronRight,
@@ -17,6 +17,9 @@ import { Skeleton } from '../../components/ui/Skeleton';
 import { useAuthSession } from '../../hooks/useAuthSession';
 import { useNetworkStatus } from '../../hooks/useNetworkStatus';
 import { useRequest } from '../../hooks/useRequest';
+import { useRouteScrollRestoration } from '../../hooks/useRouteScrollRestoration';
+import { useSessionState } from '../../hooks/useSessionState';
+import { useViewScrollSnapshot } from '../../hooks/useViewScrollSnapshot';
 import { useAppNavigate } from '../../lib/navigation';
 
 type BillingFilterKey = 'all' | 'income' | 'expense' | 'score';
@@ -149,8 +152,9 @@ export const BillingPage = () => {
   const { isAuthenticated } = useAuthSession();
   const { isOffline, refreshStatus } = useNetworkStatus();
   const { showToast } = useFeedback();
-  const [activeFilter, setActiveFilter] = useState<BillingFilterKey>('all');
+  const [activeFilter, setActiveFilter] = useSessionState<BillingFilterKey>('billing-page:filter', 'all');
   const [selectedLog, setSelectedLog] = useState<AccountLogItem | null>(null);
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
 
   const {
     data: logList,
@@ -215,6 +219,20 @@ export const BillingPage = () => {
     () => (selectedDetail ? buildBreakdownEntries(selectedDetail) : []),
     [selectedDetail],
   );
+
+  useRouteScrollRestoration({
+    containerRef: scrollContainerRef,
+    enabled: isAuthenticated && !selectedLog,
+    namespace: 'billing-page',
+    restoreDeps: [activeFilter, isAuthenticated, logListLoading, logs.length],
+    restoreWhen: isAuthenticated && !selectedLog && !logListLoading,
+  });
+
+  useViewScrollSnapshot({
+    active: !selectedLog,
+    containerRef: scrollContainerRef,
+    enabled: isAuthenticated,
+  });
 
   const handleReload = () => {
     refreshStatus();
@@ -508,7 +526,7 @@ export const BillingPage = () => {
     return (
       <div className="flex h-full flex-1 flex-col bg-red-50/30">
         {renderHeader()}
-        <div className="flex-1 overflow-y-auto no-scrollbar px-4">
+        <div ref={scrollContainerRef} className="flex-1 overflow-y-auto no-scrollbar px-4">
           <EmptyState
             message="登录后查看账单明细"
             actionText="去登录"
@@ -527,7 +545,7 @@ export const BillingPage = () => {
       {renderHeader()}
       {renderTabs()}
 
-      <div className="flex-1 overflow-y-auto no-scrollbar">
+      <div ref={scrollContainerRef} className="flex-1 overflow-y-auto no-scrollbar">
         {selectedLog ? renderDetail() : renderLogList()}
       </div>
 

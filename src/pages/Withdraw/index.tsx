@@ -1,5 +1,5 @@
 import type { ChangeEvent } from 'react';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { LucideIcon } from 'lucide-react';
 import {
   AlertCircle,
@@ -25,6 +25,7 @@ import { Skeleton } from '../../components/ui/Skeleton';
 import { useAuthSession } from '../../hooks/useAuthSession';
 import { useNetworkStatus } from '../../hooks/useNetworkStatus';
 import { useRequest } from '../../hooks/useRequest';
+import { useRouteScrollRestoration } from '../../hooks/useRouteScrollRestoration';
 import { useAppNavigate } from '../../lib/navigation';
 
 const MIN_WITHDRAW_AMOUNT = 10;
@@ -102,6 +103,7 @@ export const WithdrawPage = () => {
   const [showMethodModal, setShowMethodModal] = useState(false);
   const [showRulesModal, setShowRulesModal] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
 
   const {
     data: accountOverview,
@@ -172,6 +174,14 @@ export const WithdrawPage = () => {
     Boolean(selectedMethod) &&
     isAmountValid &&
     payPassword.trim().length > 0;
+
+  useRouteScrollRestoration({
+    containerRef: scrollContainerRef,
+    enabled: isAuthenticated && !hasBlockingError,
+    namespace: 'withdraw-page',
+    restoreDeps: [isAuthenticated, hasBlockingError, isLoading, selectedMethodId],
+    restoreWhen: isAuthenticated && !hasBlockingError && !isLoading,
+  });
 
   const handleAmountChange = (value: string) => {
     if (value === '' || /^\d*\.?\d{0,2}$/.test(value)) {
@@ -254,7 +264,7 @@ export const WithdrawPage = () => {
     return (
       <div className="flex h-full flex-1 flex-col bg-red-50/30">
         {renderHeader()}
-        <div className="flex-1 overflow-y-auto no-scrollbar px-4 pb-10">
+        <div ref={scrollContainerRef} className="flex-1 overflow-y-auto no-scrollbar px-4 pb-10">
           <EmptyState
             message="登录后才能发起提现申请"
             actionText="去登录"
@@ -270,7 +280,7 @@ export const WithdrawPage = () => {
     return (
       <div className="flex h-full flex-1 flex-col bg-red-50/30">
         {renderHeader()}
-        <div className="flex-1 overflow-y-auto no-scrollbar">
+        <div ref={scrollContainerRef} className="flex-1 overflow-y-auto no-scrollbar">
           <ErrorState
             message={getErrorMessage(accountOverviewError || paymentAccountsError)}
             onRetry={handleReload}
@@ -299,7 +309,7 @@ export const WithdrawPage = () => {
 
       {renderHeader()}
 
-      <div className="flex-1 overflow-y-auto no-scrollbar pb-[112px]">
+      <div ref={scrollContainerRef} className="flex-1 overflow-y-auto no-scrollbar pb-[112px]">
         <div className="space-y-3 px-4 py-4">
           <Card className="relative overflow-hidden p-4">
             <div className="pointer-events-none absolute top-0 right-0 h-24 w-24 rounded-bl-full bg-gradient-to-bl from-primary-start/5 to-transparent" />

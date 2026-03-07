@@ -37,6 +37,7 @@ import { Skeleton } from '../../components/ui/Skeleton';
 import { useAuthSession } from '../../hooks/useAuthSession';
 import { useNetworkStatus } from '../../hooks/useNetworkStatus';
 import { useRequest } from '../../hooks/useRequest';
+import { useRouteScrollRestoration } from '../../hooks/useRouteScrollRestoration';
 import { useAppNavigate } from '../../lib/navigation';
 
 const QUICK_AMOUNTS = [500, 1000, 2000, 5000, 10000];
@@ -130,6 +131,7 @@ export function RechargePage() {
   const { isOffline, refreshStatus } = useNetworkStatus();
   const { showToast } = useFeedback();
   const screenshotInputRef = useRef<HTMLInputElement | null>(null);
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
 
   const [showBalance, setShowBalance] = useState(true);
   const [amount, setAmount] = useState('');
@@ -214,6 +216,14 @@ export function RechargePage() {
     Boolean(selectedAccount) &&
     numAmount > 0 &&
     Boolean(paymentScreenshot);
+
+  useRouteScrollRestoration({
+    containerRef: scrollContainerRef,
+    enabled: isAuthenticated && !hasBlockingError,
+    namespace: 'recharge-page',
+    restoreDeps: [isAuthenticated, hasBlockingError, mainLoading, recentOrders?.list.length ?? 0],
+    restoreWhen: isAuthenticated && !hasBlockingError && !mainLoading,
+  });
 
   const handleReload = () => {
     refreshStatus();
@@ -346,7 +356,7 @@ export function RechargePage() {
     return (
       <div className="flex h-full flex-1 flex-col bg-red-50/30">
         {renderHeader()}
-        <div className="flex-1 overflow-y-auto no-scrollbar px-4">
+        <div ref={scrollContainerRef} className="flex-1 overflow-y-auto no-scrollbar px-4">
           <EmptyState
             message="登录后才能发起充值申请"
             actionText="去登录"
@@ -362,7 +372,7 @@ export function RechargePage() {
     return (
       <div className="flex h-full flex-1 flex-col bg-red-50/30">
         {renderHeader()}
-        <div className="flex-1 overflow-y-auto no-scrollbar">
+        <div ref={scrollContainerRef} className="flex-1 overflow-y-auto no-scrollbar">
           <ErrorState
             message={getErrorMessage(profileError || companyAccountsError)}
             onRetry={handleReload}
@@ -378,7 +388,7 @@ export function RechargePage() {
 
       {renderHeader()}
 
-      <div className="flex-1 overflow-y-auto no-scrollbar pb-[112px]">
+      <div ref={scrollContainerRef} className="flex-1 overflow-y-auto no-scrollbar pb-[112px]">
         <div className="space-y-3 px-4 py-4">
           <Card className="relative overflow-hidden p-4">
             <div className="pointer-events-none absolute top-0 right-0 h-24 w-24 rounded-bl-full bg-gradient-to-bl from-primary-start/5 to-transparent" />

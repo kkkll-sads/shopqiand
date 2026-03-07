@@ -1,9 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { ChevronLeft, MessageCircleQuestion, RefreshCcw, WifiOff } from 'lucide-react';
 import { useAppNavigate } from '../../lib/navigation';
 import { PageHeader } from '../../components/layout/PageHeader';
 import { ErrorState } from '../../components/ui/ErrorState';
 import { EmptyState } from '../../components/ui/EmptyState';
+import { useRouteScrollRestoration } from '../../hooks/useRouteScrollRestoration';
+import { useSessionState } from '../../hooks/useSessionState';
 
 export const ProductQAPage = () => {
   const { goTo, goBack } = useAppNavigate();
@@ -13,7 +15,11 @@ export const ProductQAPage = () => {
   const [offline, setOffline] = useState(!navigator.onLine);
   const [empty, setEmpty] = useState(false);
   
-  const [activeFilter, setActiveFilter] = useState<'latest' | 'hottest'>('hottest');
+  const [activeFilter, setActiveFilter] = useSessionState<'latest' | 'hottest'>(
+    'product-qa:filter',
+    'hottest',
+  );
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
 
   const mockData = [
     {
@@ -60,6 +66,13 @@ export const ProductQAPage = () => {
       window.removeEventListener('offline', handleOffline);
     };
   }, [activeFilter]);
+
+  useRouteScrollRestoration({
+    containerRef: scrollContainerRef,
+    namespace: `product-qa:${activeFilter}`,
+    restoreDeps: [activeFilter, error, loading],
+    restoreWhen: !loading && !error,
+  });
 
   const fetchData = () => {
     setLoading(true);
@@ -180,7 +193,7 @@ export const ProductQAPage = () => {
       {renderHeader()}
       {renderFilters()}
       
-      <div className="flex-1 overflow-y-auto no-scrollbar relative">
+      <div ref={scrollContainerRef} className="flex-1 overflow-y-auto no-scrollbar relative">
         {renderContent()}
       </div>
 

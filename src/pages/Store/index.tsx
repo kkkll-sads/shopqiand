@@ -32,6 +32,7 @@ import {
 import { useInfiniteScroll } from '../../hooks/useInfiniteScroll';
 import { useNetworkStatus } from '../../hooks/useNetworkStatus';
 import { useRequest } from '../../hooks/useRequest';
+import { useRouteScrollRestoration } from '../../hooks/useRouteScrollRestoration';
 import { useAppNavigate } from '../../lib/navigation';
 
 const KING_KONG_ITEMS = [
@@ -192,6 +193,20 @@ export const StorePage = () => {
   });
 
   const hotProducts = salesRequest.data?.list ?? [];
+
+  useRouteScrollRestoration({
+    containerRef: scrollContainerRef,
+    namespace: 'store-page',
+    restoreDeps: [
+      salesRequest.loading,
+      latestRequest.loading,
+      hotProducts.length,
+      latestProducts.length,
+      hasMoreLatest,
+    ],
+    restoreWhen: !salesRequest.loading && !latestRequest.loading,
+  });
+
   const isLoading = salesRequest.loading || latestRequest.loading;
   const hasBlockingError =
     !isLoading &&

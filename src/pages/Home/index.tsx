@@ -1,8 +1,44 @@
-import React, { useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { useAppNavigate } from '../../lib/navigation';
-import { Search, Headset, ChevronRight, Store, ShieldCheck, FileText, Volume2, Wallet, Package, Truck, Plus, ShoppingCart, WifiOff, RefreshCcw, FileX, ArrowRight } from 'lucide-react';
-import { Card } from '../../components/ui/Card';
+import { Search, Headset, Store, ShieldCheck, FileText, Volume2, Wallet, Package, Truck, ShoppingCart, WifiOff, RefreshCcw, FileX, ArrowRight } from 'lucide-react';
 import { Skeleton } from '../../components/ui/Skeleton';
+import { useRouteScrollRestoration } from '../../hooks/useRouteScrollRestoration';
+
+const HOME_BANNERS = [
+  {
+    id: 'store-hot',
+    title: '精选商城限时上新',
+    description: '数码好物、热销 SKU 与自营专区快速直达。',
+    eyebrow: 'HOT DROP',
+    route: 'store',
+    cta: '去逛商城',
+    icon: Store,
+    gradientClassName: 'from-[#171717] via-[#2D1B69] to-[#FF4B2B]',
+    accentClassName: 'bg-[#FFD84D] text-[#2B1600]',
+  },
+  {
+    id: 'trade-zone',
+    title: '交易专区场次开放中',
+    description: '查看当前可参与场次、额度与倒计时信息。',
+    eyebrow: 'LIVE ACCESS',
+    route: 'trading_zone',
+    cta: '进入专区',
+    icon: Wallet,
+    gradientClassName: 'from-[#B71C1C] via-[#D32F2F] to-[#FF7A18]',
+    accentClassName: 'bg-white/20 text-white',
+  },
+  {
+    id: 'shield-entry',
+    title: '实名认证与权益中心',
+    description: '资料提交、实名状态和权益服务入口集中管理。',
+    eyebrow: 'ACCOUNT',
+    route: 'shield',
+    cta: '立即查看',
+    icon: ShieldCheck,
+    gradientClassName: 'from-[#0F766E] via-[#0D9488] to-[#38BDF8]',
+    accentClassName: 'bg-white/20 text-white',
+  },
+] as const;
 
 export const HomePage = () => {
   const { goTo } = useAppNavigate();
@@ -10,6 +46,8 @@ export const HomePage = () => {
   const [offline, setOffline] = useState(false);
   const [error, setError] = useState(false);
   const [emptyFeed, setEmptyFeed] = useState(false);
+  const [activeBannerIndex, setActiveBannerIndex] = useState(0);
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -17,6 +55,21 @@ export const HomePage = () => {
     }, 300);
     return () => clearTimeout(timer);
   }, []);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setActiveBannerIndex((current) => (current + 1) % HOME_BANNERS.length);
+    }, 4000);
+
+    return () => window.clearInterval(timer);
+  }, []);
+
+  useRouteScrollRestoration({
+    containerRef: scrollContainerRef,
+    namespace: 'home-page',
+    restoreDeps: [emptyFeed, error, loading],
+    restoreWhen: !error && !loading,
+  });
 
   const renderHeader = () => (
     <div className="sticky top-0 z-40 bg-white dark:bg-gray-900/90 dark:bg-gray-900/90 backdrop-blur-md px-4 py-2 flex items-center space-x-3 border-b border-gray-100 dark:border-gray-800">
@@ -56,9 +109,82 @@ export const HomePage = () => {
     }
 
     return (
-      <div className="flex-1 overflow-y-auto no-scrollbar pb-4">
+      <div ref={scrollContainerRef} className="flex-1 overflow-y-auto no-scrollbar pb-4">
+        <div className="mx-4 mt-4 mb-4">
+          <div className="relative overflow-hidden rounded-[24px] shadow-[0_18px_45px_rgba(15,23,42,0.14)]">
+            <div
+              className="flex transition-transform duration-500 ease-out"
+              style={{ transform: `translateX(-${activeBannerIndex * 100}%)` }}
+            >
+              {HOME_BANNERS.map((banner) => {
+                const Icon = banner.icon;
+
+                return (
+                  <button
+                    key={banner.id}
+                    type="button"
+                    className={`relative min-h-[168px] w-full shrink-0 overflow-hidden bg-gradient-to-r px-5 py-5 text-left ${banner.gradientClassName}`}
+                    onClick={() => goTo(banner.route)}
+                    aria-label={banner.title}
+                  >
+                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.24),transparent_34%),radial-gradient(circle_at_bottom_left,rgba(255,255,255,0.18),transparent_32%)]" />
+                    <div className="absolute -right-6 top-4 h-24 w-24 rounded-full border border-white/20" />
+                    <div className="absolute right-10 bottom-[-30px] h-28 w-28 rounded-full bg-white/10 blur-2xl" />
+
+                    <div className="relative z-10 flex h-full items-start justify-between gap-4">
+                      <div className="max-w-[72%]">
+                        <span className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold tracking-[0.16em] ${banner.accentClassName}`}>
+                          {banner.eyebrow}
+                        </span>
+                        <h3 className="mt-3 text-[24px] font-bold leading-tight text-white">
+                          {banner.title}
+                        </h3>
+                        <p className="mt-2 text-[13px] leading-6 text-white/88">
+                          {banner.description}
+                        </p>
+                        <span className="mt-4 inline-flex items-center rounded-full border border-white/25 bg-white/12 px-3 py-1.5 text-[12px] font-medium text-white backdrop-blur-sm">
+                          {banner.cta}
+                          <ArrowRight size={14} className="ml-1.5" />
+                        </span>
+                      </div>
+
+                      <div className="relative mt-1 flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-white/20 bg-white/12 text-white shadow-[0_10px_28px_rgba(15,23,42,0.2)] backdrop-blur-sm">
+                        <Icon size={24} strokeWidth={1.8} />
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="pointer-events-none absolute inset-x-0 bottom-4 z-20 flex items-center justify-between px-4">
+              <div className="pointer-events-auto flex items-center gap-2">
+                {HOME_BANNERS.map((banner, index) => {
+                  const isActive = index === activeBannerIndex;
+
+                  return (
+                    <button
+                      key={banner.id}
+                      type="button"
+                      aria-label={`切换到第 ${index + 1} 张轮播`}
+                      onClick={() => setActiveBannerIndex(index)}
+                      className={`h-2.5 rounded-full transition-all ${
+                        isActive ? 'w-6 bg-white' : 'w-2.5 bg-white/45'
+                      }`}
+                    />
+                  );
+                })}
+              </div>
+
+              <div className="rounded-full border border-white/20 bg-black/15 px-2.5 py-1 text-[11px] font-medium tracking-[0.18em] text-white backdrop-blur-sm">
+                {String(activeBannerIndex + 1).padStart(2, '0')} / {String(HOME_BANNERS.length).padStart(2, '0')}
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Quick Entry */}
-        <div className="grid grid-cols-5 gap-2 px-4 mt-4 mb-4">
+        <div className="grid grid-cols-5 gap-2 px-4 mb-4">
           <div 
             className="flex flex-col items-center cursor-pointer active:opacity-70"
             onClick={() => goTo('store')}

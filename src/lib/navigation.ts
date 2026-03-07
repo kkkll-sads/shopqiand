@@ -108,6 +108,19 @@ export function isTabPage(pathname: string): boolean {
 export function useAppNavigate() {
   const navigate = useNavigate();
 
+  const canGoBack = useCallback(() => {
+    if (typeof window === 'undefined') {
+      return false;
+    }
+
+    const historyState = window.history.state as { idx?: number } | null;
+    if (typeof historyState?.idx === 'number') {
+      return historyState.idx > 0;
+    }
+
+    return window.history.length > 1;
+  }, []);
+
   /** 
    * 跳转到指定页面
    * @param viewId - 旧版 view ID 或 URL 路径
@@ -129,5 +142,15 @@ export function useAppNavigate() {
     navigate(-1);
   }, [navigate]);
 
-  return useMemo(() => ({ goTo, goBack, navigate }), [goTo, goBack, navigate]);
+  const goBackOr = useCallback((fallbackViewId: string) => {
+    if (canGoBack()) {
+      navigate(-1);
+      return;
+    }
+
+    const fallbackPath = VIEW_TO_PATH[fallbackViewId];
+    navigate(fallbackPath ?? fallbackViewId);
+  }, [canGoBack, navigate]);
+
+  return useMemo(() => ({ goTo, goBack, goBackOr, navigate }), [goTo, goBack, goBackOr, navigate]);
 }

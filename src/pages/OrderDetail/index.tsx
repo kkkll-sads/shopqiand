@@ -5,7 +5,7 @@ import { PageHeader } from '../../components/layout/PageHeader';
 import { ErrorState } from '../../components/ui/ErrorState';
 
 export const OrderDetailPage = () => {
-  const { goTo, goBack } = useAppNavigate();
+  const { goBackOr } = useAppNavigate();
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -74,7 +74,7 @@ export const OrderDetailPage = () => {
   };
 
   const handleBack = () => {
-    goTo('order');
+    goBackOr('order');
   };
 
   const handleCopy = (text: string) => {

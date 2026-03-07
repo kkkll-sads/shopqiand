@@ -1,7 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { ChevronLeft, FileText, Info, AlertCircle, CheckCircle2, Clock, XCircle, Upload, X, ChevronRight, Check } from 'lucide-react';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
+import { useRouteScrollRestoration } from '../../hooks/useRouteScrollRestoration';
+import { useSessionState } from '../../hooks/useSessionState';
 import { useAppNavigate } from '../../lib/navigation';
 import { PageHeader } from '../../components/layout/PageHeader';
 
@@ -71,7 +73,11 @@ export function RightsPage() {
   const { goTo, goBack } = useAppNavigate();
   const [isLoading, setIsLoading] = useState(true);
   const [data, setData] = useState(MOCK_DATA);
-  const [activeTab, setActiveTab] = useState<'apply' | 'unlock' | 'growth'>('apply');
+  const [activeTab, setActiveTab] = useSessionState<'apply' | 'unlock' | 'growth'>(
+    'rights-page:tab',
+    'apply',
+  );
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   
   // Form State
   const [voucherType, setVoucherType] = useState('screenshot');
@@ -87,6 +93,13 @@ export function RightsPage() {
     }, 300);
     return () => clearTimeout(timer);
   }, []);
+
+  useRouteScrollRestoration({
+    containerRef: scrollContainerRef,
+    namespace: `rights-page:${activeTab}`,
+    restoreDeps: [activeTab, isLoading],
+    restoreWhen: !isLoading,
+  });
 
   const handleGoBack = () => {
     goBack();
@@ -247,7 +260,7 @@ export function RightsPage() {
         </button>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 space-y-4 pb-24">
+      <div ref={scrollContainerRef} className="flex-1 overflow-y-auto p-4 space-y-4 pb-24">
         
         {activeTab === 'apply' && (
           <div className="animate-in fade-in duration-300 space-y-4">

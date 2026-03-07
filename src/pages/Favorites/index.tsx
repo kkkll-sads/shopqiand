@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { ChevronLeft, WifiOff, AlertCircle, ShoppingCart, CheckCircle2, Circle, Trash2, HeartOff, RefreshCcw } from 'lucide-react';
 import { useAppNavigate } from '../../lib/navigation';
 import { PageHeader } from '../../components/layout/PageHeader';
 import { ErrorState } from '../../components/ui/ErrorState';
 import { EmptyState } from '../../components/ui/EmptyState';
+import { useRouteScrollRestoration } from '../../hooks/useRouteScrollRestoration';
 
 export const FavoritesPage = () => {
   const { goTo, goBack } = useAppNavigate();
@@ -15,6 +16,7 @@ export const FavoritesPage = () => {
   
   const [isEditing, setIsEditing] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
 
   // Mock Data
   const [products, setProducts] = useState([
@@ -38,6 +40,13 @@ export const FavoritesPage = () => {
       window.removeEventListener('offline', handleOffline);
     };
   }, []);
+
+  useRouteScrollRestoration({
+    containerRef: scrollContainerRef,
+    namespace: 'favorites-page',
+    restoreDeps: [empty, error, loading, products.length],
+    restoreWhen: !loading && !error && !empty,
+  });
 
   const fetchData = () => {
     setLoading(true);
@@ -214,7 +223,7 @@ export const FavoritesPage = () => {
 
       {renderHeader()}
       
-      <div className="flex-1 overflow-y-auto no-scrollbar relative">
+      <div ref={scrollContainerRef} className="flex-1 overflow-y-auto no-scrollbar relative">
         {renderContent()}
       </div>
 

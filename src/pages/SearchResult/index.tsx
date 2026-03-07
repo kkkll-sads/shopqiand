@@ -29,6 +29,8 @@ import {
 import { useInfiniteScroll } from '../../hooks/useInfiniteScroll';
 import { useNetworkStatus } from '../../hooks/useNetworkStatus';
 import { useRequest } from '../../hooks/useRequest';
+import { useRouteScrollRestoration } from '../../hooks/useRouteScrollRestoration';
+import { useSessionState } from '../../hooks/useSessionState';
 import { useAppNavigate } from '../../lib/navigation';
 
 const EMPTY_CATEGORY_LIST = {
@@ -74,14 +76,24 @@ export const SearchResultPage = () => {
   const { isOffline, refreshStatus } = useNetworkStatus();
 
   const keyword = searchParams.get('keyword')?.trim() ?? '';
+  const sessionKeyPrefix = keyword ? `search-result:${keyword}` : 'search-result:empty';
 
-  const [isGrid, setIsGrid] = useState(true);
+  const [isGrid, setIsGrid] = useSessionState(`${sessionKeyPrefix}:is-grid`, true);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-  const [sortMode, setSortMode] = useState<SearchSortMode>('default');
-  const [priceOrder, setPriceOrder] = useState<'asc' | 'desc'>('asc');
-  const [selectedCategory, setSelectedCategory] = useState('');
-  const [minPrice, setMinPrice] = useState('');
-  const [maxPrice, setMaxPrice] = useState('');
+  const [sortMode, setSortMode] = useSessionState<SearchSortMode>(
+    `${sessionKeyPrefix}:sort-mode`,
+    'default',
+  );
+  const [priceOrder, setPriceOrder] = useSessionState<'asc' | 'desc'>(
+    `${sessionKeyPrefix}:price-order`,
+    'asc',
+  );
+  const [selectedCategory, setSelectedCategory] = useSessionState(
+    `${sessionKeyPrefix}:selected-category`,
+    '',
+  );
+  const [minPrice, setMinPrice] = useSessionState(`${sessionKeyPrefix}:min-price`, '');
+  const [maxPrice, setMaxPrice] = useSessionState(`${sessionKeyPrefix}:max-price`, '');
   const [products, setProducts] = useState<ShopProductItem[]>([]);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(false);
@@ -94,14 +106,6 @@ export const SearchResultPage = () => {
   const pageRef = useRef(1);
   const productsRef = useRef<ShopProductItem[]>([]);
   const queryVersionRef = useRef(0);
-
-  useEffect(() => {
-    setSortMode('default');
-    setPriceOrder('asc');
-    setSelectedCategory('');
-    setMinPrice('');
-    setMaxPrice('');
-  }, [keyword]);
 
   const categoriesRequest = useRequest(
     (signal) => shopProductApi.categories(signal),
@@ -241,6 +245,13 @@ export const SearchResultPage = () => {
     onLoadMore: loadMore,
     rootRef: listContainerRef,
     targetRef: loadMoreTriggerRef,
+  });
+
+  useRouteScrollRestoration({
+    containerRef: listContainerRef,
+    namespace: 'search-result-page',
+    restoreDeps: [hasMore, keyword, resultRequest.loading, visibleProducts.length],
+    restoreWhen: !resultRequest.loading && Boolean(keyword),
   });
 
   useEffect(() => {

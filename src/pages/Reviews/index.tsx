@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { MessageCircle, RefreshCcw, Star, ThumbsUp, X } from 'lucide-react';
 import { useParams } from 'react-router-dom';
 import {
@@ -20,6 +20,8 @@ import {
 } from '../../features/shop-product/utils';
 import { useNetworkStatus } from '../../hooks/useNetworkStatus';
 import { useRequest } from '../../hooks/useRequest';
+import { useRouteScrollRestoration } from '../../hooks/useRouteScrollRestoration';
+import { useSessionState } from '../../hooks/useSessionState';
 import { useAppNavigate } from '../../lib/navigation';
 
 const EMPTY_SUMMARY: ShopProductReviewSummary = {
@@ -77,12 +79,16 @@ export function ReviewsPage() {
   const routeProductId = Number(params.id);
   const hasValidProductId = Number.isFinite(routeProductId) && routeProductId > 0;
 
-  const [activeFilter, setActiveFilter] = useState<ReviewFilter>('all');
+  const [activeFilter, setActiveFilter] = useSessionState<ReviewFilter>(
+    `reviews:${hasValidProductId ? routeProductId : 'invalid'}:filter`,
+    'all',
+  );
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [reviews, setReviews] = useState<ShopProductReview[]>([]);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
 
   const summaryRequest = useRequest(
     (signal) =>
@@ -131,6 +137,14 @@ export function ReviewsPage() {
     ],
     [summaryRequest.data],
   );
+
+  useRouteScrollRestoration({
+    containerRef: scrollContainerRef,
+    enabled: !previewImage,
+    namespace: `reviews:${hasValidProductId ? routeProductId : 'invalid'}:${activeFilter}`,
+    restoreDeps: [activeFilter, hasMore, listRequest.loading, reviews.length],
+    restoreWhen: !previewImage && !listRequest.loading,
+  });
 
   const loadMore = async () => {
     if (!hasValidProductId || loadingMore || !hasMore) {
@@ -390,7 +404,9 @@ export function ReviewsPage() {
         backButtonClassName="rounded-full text-text-main active:bg-border-light"
       />
 
-      <div className="flex-1 overflow-y-auto">{renderContent()}</div>
+      <div ref={scrollContainerRef} className="flex-1 overflow-y-auto">
+        {renderContent()}
+      </div>
 
       {previewImage && (
         <div className="fixed inset-0 z-50 flex flex-col bg-black">
