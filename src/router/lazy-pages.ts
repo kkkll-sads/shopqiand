@@ -76,3 +76,4 @@ export const MoneyLogDetail = lazy(() => import('@/pages/wallet/MoneyLogDetail')
 export const OrderFundDetail = lazy(() => import('@/pages/wallet/OrderFundDetail'));
 export const RechargeOrderList = lazy(() => import('@/pages/wallet/RechargeOrderList'));
 export const WithdrawOrderList = lazy(() => import('@/pages/wallet/WithdrawOrderList'));
+export const MyCardPacks = lazy(() => import('@/pages/wallet/MyCardPacks'));

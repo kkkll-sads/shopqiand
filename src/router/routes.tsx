@@ -95,6 +95,7 @@ const walletRoutes: RouteObject[] = [
   lazyRoute('/order-fund/:id', pages.OrderFundDetail),
   lazyRoute('/recharge-orders', pages.RechargeOrderList),
   lazyRoute('/withdraw-orders', pages.WithdrawOrderList),
+  lazyRoute('/my-card-packs', pages.MyCardPacks),
 ];
 
 const mainLayoutRoutes: RouteObject[] = [

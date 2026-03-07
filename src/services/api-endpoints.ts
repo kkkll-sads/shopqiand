@@ -319,6 +319,17 @@ export const API_ENDPOINTS = {
         /** 鑾峰彇鐩存挱骞垮憡瑙嗛閰嶇疆 */
         config: '/liveVideo/config',
     },
+    /** 权益卡 */
+    membershipCard: {
+        /** 获取可购买的权益卡产品列表 */
+        products: '/membershipCard/products',
+        /** 购买权益卡 */
+        buy: '/membershipCard/buy',
+        /** 我的权益卡列表 */
+        myCards: '/membershipCard/myCards',
+        /** 寄售前预览可抵扣金额 */
+        previewDeduction: '/membershipCard/previewDeduction',
+    },
 } as const;
 
 

@@ -18,6 +18,7 @@ import {
   HeadphonesIcon,
   Newspaper,
   Gift,
+  Layers,
 } from 'lucide-react';
 import type { NavigateFunction } from 'react-router-dom';
 import type { ShopOrderStatistics } from '@/services';
@@ -102,6 +103,13 @@ export const buildRightsManagement = (navigate: NavigateFunction): ProfileSectio
       iconColorClass: 'text-indigo-600',
       iconBgClass: 'bg-indigo-50',
       action: () => navigate('/my-collection'),
+    },
+    {
+      label: '我的卡包',
+      icon: Layers,
+      iconColorClass: 'text-orange-600',
+      iconBgClass: 'bg-orange-50',
+      action: () => navigate('/my-card-packs'),
     },
     {
       label: '藏品订单',
