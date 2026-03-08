@@ -8,7 +8,6 @@ import {
   buildShopProductDescription,
   buildShopProductServiceItems,
   getShopProductBadges,
-  getShopProductPriceCaption,
   getShopProductPrimaryPrice,
   resolveShopProductImageUrl,
 } from '../../shop-product/utils';
@@ -70,16 +69,13 @@ export const ProductOverviewSection = ({
               <div className="text-2xl font-bold leading-tight text-primary-start">
                 {product ? getShopProductPrimaryPrice(product) : '价格待定'}
               </div>
-              {product && getShopProductPriceCaption(product) && (
-                <div className="mt-1 text-sm text-text-sub">{getShopProductPriceCaption(product)}</div>
-              )}
             </div>
             <div className="text-sm text-text-sub">库存 {product?.stock ?? 0}</div>
           </div>
 
           <div className="mb-3 flex flex-wrap gap-1.5">
             {(product ? getShopProductBadges(product) : []).map((badge) => (
-              <Badge key={badge} variant="primary">
+              <Badge key={badge} variant={badge === '消费金' ? 'score' : 'primary'}>
                 {badge}
               </Badge>
             ))}
@@ -103,9 +99,11 @@ export const ProductOverviewSection = ({
           <h1 className="mb-2 line-clamp-2 text-xl font-bold leading-snug text-text-main">
             {product?.name || '商品详情'}
           </h1>
-          <p className="mb-3 text-base text-text-sub">
-            {buildShopProductDescription(product)}
-          </p>
+          {buildShopProductDescription(product) && (
+            <p className="mb-3 text-base text-text-sub">
+              {buildShopProductDescription(product)}
+            </p>
+          )}
           <div className="flex items-center space-x-4 text-s text-text-aux">
             <span>销量 {product?.sales ?? 0}</span>
             <span>库存 {product?.stock ?? 0}</span>
@@ -124,7 +122,7 @@ export const ProductOverviewSection = ({
         </Card>
       ) : (
         <Card
-          className="m-4 flex items-center justify-between p-4 transition-colors active:bg-bg-base"
+          className="m-4 flex cursor-pointer items-center justify-between p-4 transition-colors active:bg-bg-base"
           onClick={() => onOpenSku('select')}
         >
           <div className="flex items-center">
@@ -150,7 +148,7 @@ export const ProductOverviewSection = ({
         </Card>
       ) : (
         <Card
-          className="m-4 p-4 transition-colors active:bg-bg-base"
+          className="m-4 cursor-pointer p-4 transition-colors active:bg-bg-base"
           onClick={onOpenServiceDescription}
         >
           <div className="flex items-start justify-between">

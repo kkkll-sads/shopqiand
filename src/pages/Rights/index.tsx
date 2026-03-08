@@ -1,11 +1,17 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { ChevronLeft, FileText, Info, AlertCircle, CheckCircle2, Clock, XCircle, Upload, X, ChevronRight, Check } from 'lucide-react';
+import { ChevronLeft, FileText, Info, AlertCircle, CheckCircle2, Clock, XCircle, Upload, X, ChevronRight } from 'lucide-react';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
+import { ErrorState } from '../../components/ui/ErrorState';
+import { UnlockPanel } from '../../features/rights/UnlockPanel';
+import { GrowthRightsContent } from '../GrowthRights';
+import { getErrorMessage } from '../../api/core/errors';
 import { useRouteScrollRestoration } from '../../hooks/useRouteScrollRestoration';
 import { useSessionState } from '../../hooks/useSessionState';
+import { useOldAssetsUnlock } from '../../hooks/useOldAssetsUnlock';
 import { useAppNavigate } from '../../lib/navigation';
 import { PageHeader } from '../../components/layout/PageHeader';
+import { useFeedback } from '../../components/ui/FeedbackProvider';
 
 // Mock Data
 const MOCK_DATA = {
@@ -25,35 +31,9 @@ const MOCK_DATA = {
     required_gold: 10000,
     current_gold: 4500,
     can_unlock: false,
-    unlocked_count: 2,
-    available_quota: 50000,
+    unlocked_count: 0,
+    available_quota: 0,
   },
-  growth: {
-    growth_days: 15,
-    stage: 2,
-    stages: ['启航', '进阶', '卓越', '巅峰'],
-    today_trade_count: 3,
-    financing: { ratio: '1.5%', rules: '每日收益结算' },
-    cycle: '30天/周期',
-    profit_distribution: { score_percent: 30, balance_percent: 70 },
-    calendar: {
-      year: 2026,
-      month: 2,
-      records: [
-        { day: 1, count: 2 }, { day: 2, count: 5 }, { day: 3, count: 1 }, 
-        { day: 5, count: 3 }, { day: 8, count: 2 }, { day: 9, count: 4 }, 
-        { day: 10, count: 1 }, { day: 14, count: 2 }, { day: 15, count: 6 }, 
-        { day: 16, count: 1 }, { day: 20, count: 3 }, { day: 21, count: 2 }, 
-        { day: 22, count: 1 }, { day: 25, count: 4 }, { day: 26, count: 2 }, 
-        { day: 27, count: 1 }, { day: 28, count: 3 }
-      ]
-    },
-    daily_growth_logs: [
-      { id: 'l1', text: '完成每日签到', time: '今天 08:00' },
-      { id: 'l2', text: '交易达标奖励', time: '昨天 15:30' },
-      { id: 'l3', text: '解锁新阶段', time: '3天前' },
-    ]
-  }
 };
 
 const VOUCHER_TYPES = {
@@ -70,6 +50,7 @@ const STATUS_MAP = {
 };
 
 export function RightsPage() {
+  const { showToast } = useFeedback();
   const { goTo, goBack } = useAppNavigate();
   const [isLoading, setIsLoading] = useState(true);
   const [data, setData] = useState(MOCK_DATA);
@@ -85,6 +66,20 @@ export function RightsPage() {
   const [remark, setRemark] = useState('');
   const [images, setImages] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const {
+    unlockStatus,
+    statusError: unlockStatusError,
+    reloadStatus: reloadUnlockStatus,
+    unlock: doUnlock,
+  } = useOldAssetsUnlock();
+  const [unlockLoading, setUnlockLoading] = useState(false);
+
+  useEffect(() => {
+    if (activeTab === 'unlock') {
+      void reloadUnlockStatus().catch(() => undefined);
+    }
+  }, [activeTab, reloadUnlockStatus]);
 
   useEffect(() => {
     // Simulate loading
@@ -128,68 +123,24 @@ export function RightsPage() {
       setAmount('');
       setRemark('');
       setImages([]);
-      // Show success toast (mock)
-      alert('提交成功');
+      showToast({ message: '提交成功', type: 'success' });
     }, 300);
   };
 
   const isFormDisabled = data.pending_count > 0;
   const isSubmitDisabled = isFormDisabled || !amount || Number(amount) <= 0 || images.length === 0;
 
-  const renderCalendar = () => {
-    const { year, month, records } = data.growth.calendar;
-    const daysInMonth = new Date(year, month, 0).getDate();
-    const firstDay = new Date(year, month - 1, 1).getDay(); // 0 is Sunday
-    
-    const days = [];
-    for (let i = 0; i < firstDay; i++) {
-      days.push(<div key={`empty-${i}`} className="w-9 h-12" />);
+  const handleUnlock = async () => {
+    if (!unlockStatus.canUnlock || unlockLoading) return;
+    setUnlockLoading(true);
+    try {
+      await doUnlock();
+      showToast({ message: '解锁成功', type: 'success' });
+    } catch (err) {
+      showToast({ message: getErrorMessage(err) || '解锁失败，请稍后重试', type: 'error' });
+    } finally {
+      setUnlockLoading(false);
     }
-    for (let i = 1; i <= daysInMonth; i++) {
-      const record = records.find(r => r.day === i);
-      const isActive = !!record;
-      days.push(
-        <div key={i} className="flex flex-col items-center justify-start w-9 h-12">
-          <div 
-            className={`w-7 h-7 rounded-full flex items-center justify-center text-base ${
-              isActive 
-                ? 'bg-red-500 text-white font-medium shadow-sm shadow-red-500/30' 
-                : 'text-text-main hover:bg-gray-100 dark:hover:bg-gray-800'
-            }`}
-          >
-            {i}
-          </div>
-          <div className="h-4 flex items-center justify-center mt-0.5">
-            {isActive && (
-              <span className="text-2xs text-red-500 font-medium scale-90 whitespace-nowrap">
-                {record.count}次
-              </span>
-            )}
-          </div>
-        </div>
-      );
-    }
-
-    return (
-      <div className="mb-5">
-        <div className="flex justify-between items-center mb-3">
-          <h3 className="text-base font-medium text-text-main">成长日历</h3>
-          <span className="text-sm text-text-sub">{year}年{month}月</span>
-        </div>
-        <div className="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-3">
-          <div className="grid grid-cols-7 gap-y-2 mb-2">
-            {['日', '一', '二', '三', '四', '五', '六'].map(day => (
-              <div key={day} className="text-center text-sm text-text-sub font-medium">
-                {day}
-              </div>
-            ))}
-          </div>
-          <div className="grid grid-cols-7 gap-y-2 place-items-center">
-            {days}
-          </div>
-        </div>
-      </div>
-    );
   };
 
   if (isLoading) {
@@ -230,7 +181,7 @@ export function RightsPage() {
       </div>
 
       {/* Global Tabs */}
-      <div className="flex px-4 bg-white dark:bg-bg-card border-b border-border-light sticky top-12 z-10 pt-2">
+      <div className="flex px-4 bg-white dark:bg-bg-card border-b border-border-light sticky top-12 z-10">
         <button
           className={`flex-1 pb-3 text-lg font-bold relative transition-colors ${activeTab === 'apply' ? 'text-text-main' : 'text-text-sub'}`}
           onClick={() => setActiveTab('apply')}
@@ -260,8 +211,7 @@ export function RightsPage() {
         </button>
       </div>
 
-      <div ref={scrollContainerRef} className="flex-1 overflow-y-auto p-4 space-y-4 pb-24">
-        
+      <div ref={scrollContainerRef} className="flex-1 overflow-y-auto px-4 pt-4 pb-24 space-y-4">
         {activeTab === 'apply' && (
           <div className="animate-in fade-in duration-300 space-y-4">
             {/* ReviewStatsSummary + ClaimSteps */}
@@ -461,7 +411,7 @@ export function RightsPage() {
                       <div className="text-sm text-text-sub">{record.time}</div>
                     </div>
                     <div className="text-xl font-bold text-red-500">
-                      ¥{record.amount.toLocaleString()}
+                      ¥{record.amount.toLocaleString('zh-CN', { useGrouping: false })}
                     </div>
                   </div>
                 );
@@ -479,155 +429,28 @@ export function RightsPage() {
 
         {activeTab === 'unlock' && (
           <div className="animate-in fade-in duration-300">
-            <Card className="p-4 bg-white dark:bg-bg-card border border-border-light shadow-sm rounded-2xl">
-              <div className="space-y-3 mb-5">
-                {data.unlock.conditions.map(cond => (
-                  <div key={cond.id} className="flex items-center gap-2">
-                    {cond.met ? (
-                      <CheckCircle2 size={16} className="text-green-500 shrink-0" />
-                    ) : (
-                      <div className="w-4 h-4 rounded-full bg-gray-200 dark:bg-gray-700 shrink-0" />
-                    )}
-                    <span className={`text-base ${cond.met ? 'text-text-main' : 'text-text-sub'}`}>
-                      {cond.text}
-                    </span>
-                  </div>
-                ))}
-              </div>
-
-              <div className="mb-5">
-                <div className="flex justify-between text-sm mb-1.5">
-                  <span className="text-text-sub">解锁进度</span>
-                  <span className="font-medium text-text-main">
-                    {data.unlock.current_gold.toLocaleString()} / {data.unlock.required_gold.toLocaleString()}
-                  </span>
-                </div>
-                <div className="h-2 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
-                  <div 
-                    className="h-full bg-gradient-to-r from-orange-400 to-red-500 rounded-full transition-all duration-500"
-                    style={{ width: `${Math.min(100, (data.unlock.current_gold / data.unlock.required_gold) * 100)}%` }}
-                  />
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between mb-4 text-sm text-text-sub bg-gray-50 dark:bg-gray-800/50 p-2 rounded-lg">
-                <div>已解锁: <span className="text-text-main font-medium">{data.unlock.unlocked_count}</span> 次</div>
-                <div>可用额度: <span className="text-text-main font-medium">¥{data.unlock.available_quota.toLocaleString()}</span></div>
-              </div>
-
-              <Button
-                className={`w-full h-12 rounded-xl text-xl font-medium ${
-                  data.unlock.can_unlock
-                    ? 'bg-gradient-to-r from-brand-start to-brand-end text-white shadow-lg shadow-red-500/30 active:scale-[0.98]'
-                    : 'bg-gray-200 dark:bg-gray-800 text-gray-400 dark:text-gray-500 cursor-not-allowed'
-                }`}
-                disabled={!data.unlock.can_unlock}
-              >
-                {data.unlock.can_unlock ? '立即解锁' : '暂不满足解锁条件'}
-              </Button>
-            </Card>
+            {unlockStatusError ? (
+              <ErrorState
+                message={getErrorMessage(unlockStatusError)}
+                onRetry={() => void reloadUnlockStatus().catch(() => undefined)}
+              />
+            ) : (
+              <UnlockPanel
+                unlockStatus={unlockStatus}
+                unlockLoading={unlockLoading}
+                onUnlock={handleUnlock}
+              />
+            )}
           </div>
         )}
 
         {activeTab === 'growth' && (
-          <div className="animate-in fade-in duration-300">
-            <Card className="p-4 bg-white dark:bg-bg-card border border-border-light shadow-sm rounded-2xl">
-              <div className="grid grid-cols-2 gap-3 mb-5">
-                <div className="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
-                  <div className="text-sm text-text-sub mb-1">累计成长</div>
-                  <div className="text-4xl font-bold text-text-main">
-                    {data.growth.growth_days} <span className="text-sm font-normal text-text-sub">天</span>
-                  </div>
-                </div>
-                <div className="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
-                  <div className="text-sm text-text-sub mb-1">今日交易</div>
-                  <div className="text-4xl font-bold text-text-main">
-                    {data.growth.today_trade_count} <span className="text-sm font-normal text-text-sub">次</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="mb-5">
-                <div className="flex justify-between items-center mb-2">
-                  <span className="text-base font-medium text-text-main">当前阶段: {data.growth.stages[data.growth.stage - 1]}</span>
-                  <span className="text-sm text-red-500 bg-red-50 dark:bg-red-500/10 px-2 py-0.5 rounded">
-                    Lv.{data.growth.stage}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center relative">
-                  <div className="absolute top-1/2 left-0 right-0 h-[2px] bg-gray-100 dark:bg-gray-800 -translate-y-1/2 z-0" />
-                  <div 
-                    className="absolute top-1/2 left-0 h-[2px] bg-red-500 -translate-y-1/2 z-0 transition-all duration-500" 
-                    style={{ width: `${((data.growth.stage - 1) / (data.growth.stages.length - 1)) * 100}%` }}
-                  />
-                  {data.growth.stages.map((s, i) => {
-                    const isPassed = i < data.growth.stage;
-                    const isCurrent = i === data.growth.stage - 1;
-                    return (
-                      <div key={i} className="relative z-10 flex flex-col items-center gap-1">
-                        <div className={`w-4 h-4 rounded-full flex items-center justify-center border-2 ${
-                          isPassed ? 'bg-red-500 border-red-500' : 
-                          isCurrent ? 'bg-white dark:bg-bg-card border-red-500' : 
-                          'bg-white dark:bg-bg-card border-gray-200 dark:border-gray-700'
-                        }`}>
-                          {isPassed && <Check size={10} className="text-white" />}
-                        </div>
-                        <span className={`text-xs ${isCurrent || isPassed ? 'text-text-main font-medium' : 'text-text-sub'}`}>
-                          {s}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-
-              <div className="space-y-2 mb-5">
-                <div className="flex justify-between items-center p-2.5 bg-gray-50 dark:bg-gray-800/50 rounded-lg text-base">
-                  <span className="text-text-sub">理财比例</span>
-                  <span className="font-medium text-text-main">{data.growth.financing.ratio} ({data.growth.financing.rules})</span>
-                </div>
-                <div className="flex justify-between items-center p-2.5 bg-gray-50 dark:bg-gray-800/50 rounded-lg text-base">
-                  <span className="text-text-sub">解锁周期</span>
-                  <span className="font-medium text-text-main">{data.growth.cycle}</span>
-                </div>
-                <div className="flex justify-between items-center p-2.5 bg-gray-50 dark:bg-gray-800/50 rounded-lg text-base">
-                  <span className="text-text-sub">收益分配</span>
-                  <span className="font-medium text-text-main">
-                    积分 {data.growth.profit_distribution.score_percent}% / 余额 {data.growth.profit_distribution.balance_percent}%
-                  </span>
-                </div>
-              </div>
-
-              {renderCalendar()}
-
-              <div className="mb-5">
-                <h3 className="text-base font-medium text-text-main mb-2">最近动态</h3>
-                {data.growth.daily_growth_logs.length > 0 ? (
-                  <div className="space-y-2">
-                    {data.growth.daily_growth_logs.map(log => (
-                      <div key={log.id} className="flex items-center gap-2 text-sm">
-                        <div className="w-1.5 h-1.5 rounded-full bg-red-400 shrink-0" />
-                        <span className="text-text-main flex-1 truncate">{log.text}</span>
-                        <span className="text-text-sub shrink-0">{log.time}</span>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-sm text-text-sub text-center py-2">暂无动态</div>
-                )}
-              </div>
-
-              <Button
-                className="w-full h-12 rounded-xl text-xl font-medium bg-gray-200 dark:bg-gray-800 text-gray-400 dark:text-gray-500 cursor-not-allowed"
-                disabled={true}
-              >
-                条件未满足，暂不可解锁
-              </Button>
-            </Card>
+          <div className="animate-in fade-in duration-300 -m-4">
+            <GrowthRightsContent />
           </div>
         )}
 
-      </div>
+        </div>
     </div>
   );
 }

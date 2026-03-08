@@ -59,6 +59,7 @@ export const SearchPage = () => {
   const latestRequest = useRequest(
     (signal) => shopProductApi.latest({ limit: 10, page: 1 }, signal),
     {
+      cacheKey: 'search:latest',
       initialData: {
         limit: 10,
         list: [],

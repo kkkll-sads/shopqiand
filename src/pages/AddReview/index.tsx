@@ -1,19 +1,21 @@
 import { useCallback, useEffect, useRef, useState, type ChangeEvent } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router-dom';
 import {
   AlertCircle,
   Camera,
-  ChevronLeft,
   Loader2,
-  Package,
   Star,
-  WifiOff,
   X,
 } from 'lucide-react';
 import { getErrorMessage } from '../../api/core/errors';
+import { shopProductApi } from '../../api/modules/shopProduct';
+import { shopOrderApi, type ShopOrderDetailResponse } from '../../api/modules/shopOrder';
 import { resolveUploadUrl, uploadApi, type UploadedFile } from '../../api/modules/upload';
+import { resolveShopProductImageUrl } from '../../features/shop-product/utils';
 import { Card } from '../../components/ui/Card';
+import { Skeleton } from '../../components/ui/Skeleton';
 import { useFeedback } from '../../components/ui/FeedbackProvider';
+import { PageHeader } from '../../components/layout/PageHeader';
 import { useAppNavigate } from '../../lib/navigation';
 
 const QUICK_TAGS = ['质量好', '物流快', '服务好', '包装扎实', '正品', '性价比高', '外观不错'];
@@ -32,7 +34,9 @@ interface UploadImage {
 export default function AddReviewPage() {
   const { goBack } = useAppNavigate();
   const { showToast } = useFeedback();
-  const { id: productId } = useParams();
+  const { orderId } = useParams();
+  const [searchParams] = useSearchParams();
+  const productIdParam = searchParams.get('product_id');
 
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
   const [rating, setRating] = useState(0);
@@ -40,22 +44,41 @@ export default function AddReviewPage() {
   const [content, setContent] = useState('');
   const [isAnonymous, setIsAnonymous] = useState(false);
   const [images, setImages] = useState<UploadImage[]>([]);
+  const [submitting, setSubmitting] = useState(false);
+  const [orderDetail, setOrderDetail] = useState<ShopOrderDetailResponse | null>(null);
+  const [loadingOrder, setLoadingOrder] = useState(true);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const imagesRef = useRef<UploadImage[]>([]);
 
+  const numOrderId = orderId ? parseInt(orderId, 10) : 0;
+  const numProductId = productIdParam ? parseInt(productIdParam, 10) : 0;
+
   useEffect(() => {
     const handleOnline = () => setIsOffline(false);
     const handleOffline = () => setIsOffline(true);
-
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
-
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
   }, []);
+
+  useEffect(() => {
+    if (!numOrderId) {
+      setLoadingOrder(false);
+      return;
+    }
+    let cancelled = false;
+    setLoadingOrder(true);
+    shopOrderApi.detail(numOrderId).then((data) => {
+      if (!cancelled) setOrderDetail(data);
+    }).catch(() => {}).finally(() => {
+      if (!cancelled) setLoadingOrder(false);
+    });
+    return () => { cancelled = true; };
+  }, [numOrderId]);
 
   useEffect(() => {
     imagesRef.current = images;
@@ -64,54 +87,39 @@ export default function AddReviewPage() {
   useEffect(() => {
     return () => {
       imagesRef.current.forEach((image) => {
-        if (image.url.startsWith('blob:')) {
-          URL.revokeObjectURL(image.url);
-        }
+        if (image.url.startsWith('blob:')) URL.revokeObjectURL(image.url);
       });
     };
   }, []);
 
+  const targetItem = orderDetail?.items?.find((i) => i.product_id === numProductId) ?? orderDetail?.items?.[0];
+  const thumbnail = targetItem?.product_thumbnail
+    ? resolveShopProductImageUrl(targetItem.product_thumbnail)
+    : '';
+  const productName = targetItem?.product_name || '待评价商品';
+  const finalProductId = targetItem?.product_id ?? numProductId;
+
   const revokePreviewUrl = (url: string) => {
-    if (url.startsWith('blob:')) {
-      URL.revokeObjectURL(url);
-    }
+    if (url.startsWith('blob:')) URL.revokeObjectURL(url);
   };
 
   const uploadSingleImage = useCallback(async (image: UploadImage) => {
     try {
-      const uploaded = await uploadApi.upload({
-        file: image.file,
-        topic: 'review',
-      });
-
+      const uploaded = await uploadApi.upload({ file: image.file, topic: 'review' });
       const nextUrl = uploaded.url ? resolveUploadUrl(uploaded.url) : image.url;
-
       setImages((prev) =>
         prev.map((item) =>
           item.id === image.id
-            ? {
-                ...item,
-                errorMessage: undefined,
-                status: 'success',
-                uploaded,
-                url: nextUrl,
-              }
+            ? { ...item, errorMessage: undefined, status: 'success', uploaded, url: nextUrl }
             : item,
         ),
       );
-
-      if (nextUrl !== image.url) {
-        revokePreviewUrl(image.url);
-      }
+      if (nextUrl !== image.url) revokePreviewUrl(image.url);
     } catch (error) {
       setImages((prev) =>
         prev.map((item) =>
           item.id === image.id
-            ? {
-                ...item,
-                errorMessage: getErrorMessage(error),
-                status: 'error',
-              }
+            ? { ...item, errorMessage: getErrorMessage(error), status: 'error' }
             : item,
         ),
       );
@@ -126,10 +134,7 @@ export default function AddReviewPage() {
 
   const handleImageUpload = (event: ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
-    if (!files?.length) {
-      return;
-    }
-
+    if (!files?.length) return;
     const nextImages = Array.from<File>(files)
       .slice(0, 9 - images.length)
       .map((file) => ({
@@ -138,91 +143,106 @@ export default function AddReviewPage() {
         status: 'uploading' as ImageStatus,
         url: URL.createObjectURL(file),
       }));
-
     setImages((prev) => [...prev, ...nextImages]);
-    nextImages.forEach((image) => {
-      void uploadSingleImage(image);
-    });
-
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
+    nextImages.forEach((image) => { void uploadSingleImage(image); });
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   const removeImage = (id: string) => {
     setImages((prev) => {
       const target = prev.find((item) => item.id === id);
-      if (target) {
-        revokePreviewUrl(target.url);
-      }
-
+      if (target) revokePreviewUrl(target.url);
       return prev.filter((item) => item.id !== id);
     });
   };
 
   const retryUpload = (id: string) => {
     const target = images.find((item) => item.id === id);
-    if (!target) {
-      return;
-    }
-
+    if (!target) return;
     setImages((prev) =>
       prev.map((item) =>
         item.id === id ? { ...item, errorMessage: undefined, status: 'uploading' } : item,
       ),
     );
-
-    void uploadSingleImage({
-      ...target,
-      errorMessage: undefined,
-      status: 'uploading',
-    });
+    void uploadSingleImage({ ...target, errorMessage: undefined, status: 'uploading' });
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (rating === 0) {
       showToast({ message: '请先选择星级评分', type: 'warning' });
       return;
     }
+    if (!numOrderId || !finalProductId) {
+      showToast({ message: '缺少订单或商品信息', type: 'error' });
+      return;
+    }
+    const hasUploading = images.some((img) => img.status === 'uploading');
+    if (hasUploading) {
+      showToast({ message: '图片上传中，请稍候', type: 'warning' });
+      return;
+    }
 
-    showToast({
-      message: '评价提交接口暂未接入，已移除本地假提交成功逻辑',
-      type: 'info',
-      duration: 2600,
-    });
+    const successImages = images
+      .filter((img) => img.status === 'success' && img.uploaded?.url)
+      .map((img) => img.uploaded!.url);
+
+    const tagText = selectedTags.length > 0 ? selectedTags.join('，') : '';
+    const fullContent = [tagText, content].filter(Boolean).join('\n');
+
+    setSubmitting(true);
+    try {
+      await shopProductApi.submitReview({
+        order_id: numOrderId,
+        product_id: finalProductId,
+        rating,
+        content: fullContent || undefined,
+        images: successImages.length > 0 ? JSON.stringify(successImages) : undefined,
+        is_anonymous: isAnonymous ? 1 : 0,
+      });
+      showToast({ message: '评价提交成功！感谢您的评价', type: 'success' });
+      goBack();
+    } catch (error) {
+      showToast({ message: getErrorMessage(error) || '评价提交失败，请重试', type: 'error' });
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
     <div className="min-h-screen bg-bg-sub flex flex-col pb-24">
-      <div className="sticky top-0 z-50 border-b border-border-light bg-white dark:bg-gray-900">
-        <div className="flex h-11 items-center justify-between px-4">
-          <button onClick={goBack} className="p-1 -ml-1 active:opacity-70">
-            <ChevronLeft size={24} className="text-text-main" />
-          </button>
-          <h1 className="text-2xl font-medium text-text-main">发表评价</h1>
-          <div className="w-8" />
-        </div>
-        {isOffline && (
-          <div className="flex items-center justify-center bg-red-50 px-4 py-2 text-sm text-primary-start">
-            <WifiOff size={14} className="mr-1" />
-            网络连接已断开，请检查网络设置
-          </div>
-        )}
-      </div>
+      <PageHeader title="发表评价" onBack={goBack} offline={isOffline} />
 
       <div className="space-y-3 p-4">
+        {/* 商品信息卡片 */}
         <Card className="flex items-center space-x-3 p-3">
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded bg-bg-sub text-text-sub">
-            <Package size={20} />
-          </div>
-          <div className="min-w-0 flex-1">
-            <h3 className="truncate text-md text-text-main">待评价商品</h3>
-            <p className="mt-1 text-sm text-text-sub">
-              {productId ? `商品ID: ${productId}` : '商品信息未通过接口返回'}
-            </p>
-          </div>
+          {loadingOrder ? (
+            <>
+              <Skeleton className="w-12 h-12 rounded shrink-0" />
+              <div className="flex-1 space-y-2">
+                <Skeleton className="w-3/4 h-4" />
+                <Skeleton className="w-1/2 h-3" />
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="w-12 h-12 shrink-0 rounded bg-bg-sub overflow-hidden border border-border-light">
+                {thumbnail ? (
+                  <img src={thumbnail} alt={productName} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-text-aux text-xs">商品</div>
+                )}
+              </div>
+              <div className="min-w-0 flex-1">
+                <h3 className="truncate text-md text-text-main">{productName}</h3>
+                <p className="mt-0.5 text-sm text-text-sub">
+                  订单号 {orderDetail?.order_no || orderId}
+                </p>
+              </div>
+            </>
+          )}
         </Card>
 
+        {/* 评分 */}
         <Card className="flex flex-col items-center p-5">
           <div className="mb-4 flex items-center space-x-4">
             <span className="text-lg font-medium text-text-main">商品评分</span>
@@ -268,6 +288,7 @@ export default function AddReviewPage() {
           )}
         </Card>
 
+        {/* 评价内容 + 图片 */}
         <Card className="p-4">
           <textarea
             value={content}
@@ -284,27 +305,22 @@ export default function AddReviewPage() {
                 className="relative aspect-square overflow-hidden rounded-lg border border-border-light bg-bg-sub"
               >
                 <img src={image.url} alt="Upload" className="h-full w-full object-cover" />
-
                 <button
                   onClick={() => removeImage(image.id)}
                   className="absolute top-1 right-1 flex h-5 w-5 items-center justify-center rounded-full bg-black/50 text-white"
                 >
                   <X size={12} />
                 </button>
-
                 {image.status === 'uploading' && (
                   <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/40 text-white">
                     <Loader2 size={20} className="mb-1 animate-spin" />
                     <span className="text-xs">上传中</span>
                   </div>
                 )}
-
                 {image.status === 'error' && (
                   <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/60 text-white">
                     <AlertCircle size={20} className="mb-1 text-red-400" />
-                    <span className="mb-1 px-2 text-center text-xs">
-                      {image.errorMessage || '上传失败'}
-                    </span>
+                    <span className="mb-1 px-2 text-center text-xs">{image.errorMessage || '上传失败'}</span>
                     <button
                       onClick={() => retryUpload(image.id)}
                       className="rounded bg-white px-2 py-0.5 text-xs text-gray-900"
@@ -315,7 +331,6 @@ export default function AddReviewPage() {
                 )}
               </div>
             ))}
-
             {images.length < 9 && (
               <button
                 onClick={() => fileInputRef.current?.click()}
@@ -352,17 +367,25 @@ export default function AddReviewPage() {
         </Card>
       </div>
 
+      {/* 底部提交按钮 */}
       <div className="fixed right-0 bottom-0 left-0 border-t border-border-light bg-white p-2 pb-safe dark:bg-gray-900">
         <button
           onClick={handleSubmit}
-          disabled={rating === 0}
+          disabled={rating === 0 || submitting}
           className={`flex h-10 w-full items-center justify-center rounded-full text-lg font-medium transition-all ${
-            rating === 0
+            rating === 0 || submitting
               ? 'cursor-not-allowed bg-bg-sub text-text-sub'
               : 'bg-gradient-to-r from-primary-start to-primary-end text-white active:opacity-90'
           }`}
         >
-          提交评价
+          {submitting ? (
+            <>
+              <Loader2 size={18} className="mr-2 animate-spin" />
+              提交中...
+            </>
+          ) : (
+            '提交评价'
+          )}
         </button>
       </div>
     </div>

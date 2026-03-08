@@ -100,7 +100,7 @@ export const RegisterPage = () => {
   };
 
   return (
-    <div className="relative flex h-full flex-1 flex-col overflow-y-auto bg-[#FFF8F8] no-scrollbar">
+    <div className="relative flex h-full flex-1 flex-col overflow-y-auto bg-bg-base no-scrollbar">
       <div className="relative z-10 flex flex-1 flex-col overflow-y-auto px-4 pb-8 pt-12 no-scrollbar">
         <div className="absolute left-4 right-4 top-4 z-20 flex justify-between">
           <button
@@ -132,12 +132,12 @@ export const RegisterPage = () => {
 
         <div className="mb-10 mt-16">
           <h1 className="mb-2 text-[28px] font-bold text-text-main">Welcome!</h1>
-          <p className="text-[18px] text-text-sub">完成注册后即可进入会员中心</p>
+          <p className="text-[18px] text-text-sub">欢迎注册树交所</p>
         </div>
 
         <div className="mb-4 space-y-4">
           <Input
-            placeholder="请输入邀请码（按后台配置选填）"
+            placeholder="请输入邀请码"
             value={inviteCode}
             onChange={(event) => setInviteCode(event.target.value)}
           />
@@ -199,9 +199,7 @@ export const RegisterPage = () => {
           </div>
         </div>
 
-        <div className="mb-4 rounded-[20px] bg-bg-card/70 px-4 py-3 text-[12px] leading-5 text-text-sub shadow-soft">
-          邀请码仅在后台开启邀请码注册时必填，短信验证码将发送到当前手机号。
-        </div>
+
 
         <Button className="mb-4" disabled={submitting} onClick={handleSubmit}>
           {submitting ? '注册中...' : '注册'}

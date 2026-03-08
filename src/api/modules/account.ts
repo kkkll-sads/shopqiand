@@ -443,7 +443,93 @@ function normalizeMoneyLogDetail(payload: AccountMoneyLogDetailRaw): AccountMone
   };
 }
 
+/* ==================== 成长权益信息 ==================== */
+
+/** 当前成长阶段（API 返回 snake_case） */
+export interface GrowthRightsStageRaw {
+  key?: string;
+  label?: string;
+  rights_status?: string;
+  min_days?: number | null;
+  max_days?: number | null;
+}
+
+/** 配资规则项 */
+export interface GrowthRightsFinancingRuleRaw {
+  min_days?: number;
+  max_days?: number | null;
+  ratio?: string;
+}
+
+/** 配资规则与当前比例 */
+export interface GrowthRightsFinancingRaw {
+  ratio?: string;
+  rules?: GrowthRightsFinancingRuleRaw[];
+}
+
+/** 成长周期模式进度（如每日1次/每日3次） */
+export interface GrowthRightsModeProgressItemRaw {
+  label?: string;
+  growth_days?: number;
+  required_days?: number;
+  summary?: { remaining_days_in_cycle?: number };
+}
+
+/** 成长周期与可解锁额度 */
+export interface GrowthRightsCycleRaw {
+  active_mode?: string;
+  cycle_days?: number;
+  completed_cycles?: number;
+  next_cycle_in_days?: number;
+  remaining_days_in_cycle?: number;
+  unlock_amount_per_cycle?: number;
+  unlockable_amount?: number;
+  mode_progress?: Record<string, GrowthRightsModeProgressItemRaw>;
+}
+
+/** 成长明细日志（按天） */
+export interface GrowthRightsDailyLogRaw {
+  date?: string;
+  trade_count?: number;
+  counted?: boolean;
+  reason?: string;
+  is_activity_bonus?: boolean;
+}
+
+/** 成长权益信息 API 返回的 data 结构（snake_case） */
+export interface GrowthRightsInfoRaw {
+  growth_days?: number;
+  effective_trade_days?: number;
+  today_trade_count?: number;
+  total_trade_count?: number;
+  pending_activation_gold?: number | string;
+  stage?: GrowthRightsStageRaw;
+  stages?: GrowthRightsStageRaw[];
+  financing?: GrowthRightsFinancingRaw;
+  cycle?: GrowthRightsCycleRaw;
+  profit_distribution?: Record<string, unknown>;
+  daily_growth_logs?: GrowthRightsDailyLogRaw[];
+  growth_start_date?: string;
+  /** 部分后端可能返回的扩展状态 */
+  status?: {
+    can_activate?: boolean;
+    can_unlock_package?: boolean;
+    financing_enabled?: boolean;
+    is_accelerated_mode?: boolean;
+  };
+}
+
 export const accountApi = {
+  async getGrowthRightsInfo(
+    options: AccountRequestOptions = {},
+  ): Promise<GrowthRightsInfoRaw> {
+    const payload = await http.get<GrowthRightsInfoRaw>('/api/Account/growthRightsInfo', {
+      headers: createApiHeaders(options),
+      signal: options.signal,
+    });
+    return payload;
+  },
+
   async getAccountOverview(options: AccountRequestOptions = {}): Promise<AccountOverview> {
     const payload = await http.get<AccountOverviewRaw>('/api/Account/accountOverview', {
       headers: createApiHeaders(options),
@@ -506,5 +592,128 @@ export const accountApi = {
     });
 
     return normalizeMoneyLogDetail(payload);
+  },
+};
+
+/* ==================== 旧资产解锁 ==================== */
+
+export interface OldAssetsUnlockConditionsRaw {
+  has_transaction?: boolean;
+  transaction_count?: number;
+  direct_referrals_count?: number;
+  qualified_referrals?: number;
+  is_qualified?: boolean;
+  messages?: string[];
+}
+
+export interface OldAssetsUnlockStatusRaw {
+  unlock_status?: number;
+  unlock_conditions?: OldAssetsUnlockConditionsRaw;
+  required_gold?: number;
+  current_gold?: number;
+  can_unlock?: boolean;
+  required_transactions?: number;
+  required_referrals?: number;
+  reward_value?: number;
+}
+
+export interface OldAssetsUnlockResultRaw {
+  unlock_status?: number;
+  consumed_gold?: number;
+  reward_equity_package?: number;
+  reward_consignment_coupon?: number;
+  unlock_conditions?: OldAssetsUnlockConditionsRaw;
+}
+
+export const oldAssetsApi = {
+  /**
+   * 检查旧资产解锁状态
+   * GET /api/Account/checkOldAssetsUnlockStatus
+   */
+  async checkStatus(
+    options: AccountRequestOptions = {},
+  ): Promise<OldAssetsUnlockStatusRaw> {
+    const payload = await http.get<OldAssetsUnlockStatusRaw>(
+      '/api/Account/checkOldAssetsUnlockStatus',
+      {
+        headers: createApiHeaders(options),
+        signal: options.signal,
+      },
+    );
+    return payload;
+  },
+
+  /**
+   * 确认解锁旧资产
+   * POST /api/Account/unlockOldAssets
+   */
+  async unlock(options: AccountRequestOptions = {}): Promise<OldAssetsUnlockResultRaw> {
+    const payload = await http.post<OldAssetsUnlockResultRaw>(
+      '/api/Account/unlockOldAssets',
+      undefined,
+      {
+        headers: createApiHeaders(options),
+        signal: options.signal,
+      },
+    );
+    return payload;
+  },
+};
+
+/* ==================== 成长权益解锁藏品 ==================== */
+
+export interface UnlockGrowthRightsAssetResultRaw {
+  unlock_count?: number | string;
+  consumed_gold?: number | string;
+  reward_item_id?: number | string;
+  reward_item_title?: string;
+  reward_item_price?: number | string;
+  reward_consignment_coupon?: number | string;
+  claimed_cycles?: number | string;
+  remaining_claimable_cycles?: number | string;
+}
+
+export interface UnlockGrowthRightsAssetResult {
+  unlockCount: number;
+  consumedGold: number;
+  rewardItemId: number;
+  rewardItemTitle: string;
+  rewardItemPrice: number;
+  rewardConsignmentCoupon: number;
+  claimedCycles: number;
+  remainingClaimableCycles: number;
+}
+
+function normalizeUnlockGrowthRightsAssetResult(
+  payload: UnlockGrowthRightsAssetResultRaw,
+): UnlockGrowthRightsAssetResult {
+  return {
+    unlockCount: readNumber(payload.unlock_count),
+    consumedGold: readNumber(payload.consumed_gold),
+    rewardItemId: readNumber(payload.reward_item_id),
+    rewardItemTitle: readString(payload.reward_item_title, ''),
+    rewardItemPrice: readNumber(payload.reward_item_price),
+    rewardConsignmentCoupon: readNumber(payload.reward_consignment_coupon),
+    claimedCycles: readNumber(payload.claimed_cycles),
+    remainingClaimableCycles: readNumber(payload.remaining_claimable_cycles),
+  };
+}
+
+/**
+ * 成长权益解锁藏品
+ * POST /api/Account/unlockGrowthRightsAsset
+ * 请求头：ba-token, ba-user-token（由 createApiHeaders 注入）
+ */
+export const growthRightsAssetApi = {
+  async unlock(options: AccountRequestOptions = {}): Promise<UnlockGrowthRightsAssetResult> {
+    const payload = await http.post<UnlockGrowthRightsAssetResultRaw>(
+      '/api/Account/unlockGrowthRightsAsset',
+      undefined,
+      {
+        headers: createApiHeaders(options),
+        signal: options.signal,
+      },
+    );
+    return normalizeUnlockGrowthRightsAssetResult(payload ?? {});
   },
 };

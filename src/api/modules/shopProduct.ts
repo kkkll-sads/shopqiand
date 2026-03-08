@@ -138,6 +138,20 @@ export interface ShopProductReviewQuery {
   product_id: number;
 }
 
+export interface SubmitReviewPayload {
+  order_id: number;
+  product_id: number;
+  rating: number;
+  content?: string;
+  images?: string;
+  video?: string;
+  is_anonymous?: 0 | 1;
+}
+
+export interface SubmitReviewResult {
+  review_id?: number;
+}
+
 export const shopProductApi = {
   categories(signal?: AbortSignal) {
     return http.get<{ list: string[] }>('/api/shopProduct/categories', { signal });
@@ -177,5 +191,12 @@ export const shopProductApi = {
       query: query as QueryParams,
       signal,
     });
+  },
+  submitReview(payload: SubmitReviewPayload, signal?: AbortSignal) {
+    return http.post<SubmitReviewResult, SubmitReviewPayload>(
+      '/api/shopProduct/submitReview',
+      payload,
+      { signal },
+    );
   },
 };

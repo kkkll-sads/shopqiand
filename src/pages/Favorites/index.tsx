@@ -2,12 +2,14 @@ import React, { useRef, useState, useEffect } from 'react';
 import { ChevronLeft, WifiOff, AlertCircle, ShoppingCart, CheckCircle2, Circle, Trash2, HeartOff, RefreshCcw } from 'lucide-react';
 import { useAppNavigate } from '../../lib/navigation';
 import { PageHeader } from '../../components/layout/PageHeader';
+import { useFeedback } from '../../components/ui/FeedbackProvider';
 import { ErrorState } from '../../components/ui/ErrorState';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { useRouteScrollRestoration } from '../../hooks/useRouteScrollRestoration';
 
 export const FavoritesPage = () => {
   const { goTo, goBack } = useAppNavigate();
+  const { showToast } = useFeedback();
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -178,9 +180,6 @@ export const FavoritesPage = () => {
             {/* Details */}
             <div className="flex-1 flex flex-col h-28 py-0.5 justify-between min-w-0">
               <div className="text-md text-gray-900 dark:text-gray-100 line-clamp-2 leading-snug font-medium">
-                {item.isSelfOperated && (
-                  <span className="inline-block bg-brand-start text-white text-xs px-1 rounded-sm mr-1.5 align-middle leading-tight font-normal">自营</span>
-                )}
                 <span className="align-middle">{item.title}</span>
               </div>
               
@@ -195,7 +194,7 @@ export const FavoritesPage = () => {
                     className="w-7 h-7 rounded-full bg-brand-start flex items-center justify-center text-white active:opacity-80 shrink-0"
                     onClick={(e) => {
                       e.stopPropagation();
-                      alert('已加入购物车');
+                      showToast({ message: '已加入购物车', type: 'success' });
                     }}
                   >
                     <ShoppingCart size={14} />

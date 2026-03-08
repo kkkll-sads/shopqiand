@@ -24,17 +24,21 @@ function formatDecimalAmount(value: number) {
   return new Intl.NumberFormat('zh-CN', {
     maximumFractionDigits: 2,
     minimumFractionDigits: Number.isInteger(value) ? 0 : 2,
+    useGrouping: false,
   }).format(value);
 }
 
 function formatIntegerAmount(value: number) {
   return new Intl.NumberFormat('zh-CN', {
     maximumFractionDigits: 0,
+    useGrouping: false,
   }).format(value);
 }
 
 function withApiBase(pathname: string) {
-  return new URL(pathname.replace(/^\/+/, ''), `${apiConfig.baseURL}/`).toString();
+  /* baseURL 为空时使用当前页面 origin，资源路径会通过代理访问后端 */
+  const base = apiConfig.baseURL || window.location.origin;
+  return new URL(pathname.replace(/^\/+/, ''), `${base}/`).toString();
 }
 
 function readStringList(source: unknown): string[] {
@@ -76,11 +80,31 @@ export function resolveShopProductImageUrl(url?: string | null) {
   return withApiBase(nextUrl);
 }
 
+/**
+ * 商城统一使用 score_price 作为余额/消费金字段；
+ * 部分商品为混合支付（score_price + 可用余额 balance_available_amount）。
+ */
 export function getShopProductPrimaryPrice(product: ProductPriceSource) {
   const price = toFiniteNumber(product.price);
   const greenPowerAmount = toFiniteNumber(product.green_power_amount);
   const balanceAvailableAmount = toFiniteNumber(product.balance_available_amount);
   const scorePrice = toFiniteNumber(product.score_price);
+
+  // 混合支付：同时展示人民币 + 消费金两个金额
+  if (product.purchase_type === 'both' && price > 0 && scorePrice > 0) {
+    return `¥${formatDecimalAmount(price)} + ${formatIntegerAmount(scorePrice)}`;
+  }
+  if (product.purchase_type === 'both' && price > 0) {
+    return `¥${formatDecimalAmount(price)}`;
+  }
+  if (product.purchase_type === 'both' && scorePrice > 0) {
+    return formatIntegerAmount(scorePrice);
+  }
+
+  // 纯消费金：仅显示金额数字
+  if (product.purchase_type === 'score' && scorePrice > 0) {
+    return formatIntegerAmount(scorePrice);
+  }
 
   if (price > 0) {
     return `¥${formatDecimalAmount(price)}`;
@@ -95,16 +119,19 @@ export function getShopProductPrimaryPrice(product: ProductPriceSource) {
   }
 
   if (scorePrice > 0) {
-    return `消费金 ${formatIntegerAmount(scorePrice)}`;
+    return formatIntegerAmount(scorePrice);
   }
 
   if (product.purchase_type === 'score') {
-    return '消费金待定';
+    return '待定';
   }
 
   return '价格待定';
 }
 
+/**
+ * 余额统一使用 score_price；混合支付时展示 score_price + 可用余额。
+ */
 export function getShopProductPriceCaption(product: ProductPriceSource) {
   const scorePrice = toFiniteNumber(product.score_price);
   const price = toFiniteNumber(product.price);
@@ -112,16 +139,18 @@ export function getShopProductPriceCaption(product: ProductPriceSource) {
   const balanceAvailableAmount = toFiniteNumber(product.balance_available_amount);
   const captions: string[] = [];
 
-  if (scorePrice > 0 && price > 0) {
+  // 消费金/余额统一使用 score_price
+  if (scorePrice > 0) {
     captions.push(`消费金 ${formatIntegerAmount(scorePrice)}`);
   }
 
-  if (greenPowerAmount > 0 && price > 0) {
-    captions.push(`绿色算力 ${formatDecimalAmount(greenPowerAmount)}`);
+  // 混合支付：可用余额
+  if (product.purchase_type === 'both' && balanceAvailableAmount > 0) {
+    captions.push(`可用余额 ${formatDecimalAmount(balanceAvailableAmount)}`);
   }
 
-  if (balanceAvailableAmount > 0 && price > 0) {
-    captions.push(`余额 ${formatDecimalAmount(balanceAvailableAmount)}`);
+  if (greenPowerAmount > 0 && (price > 0 || scorePrice > 0)) {
+    captions.push(`绿色算力 ${formatDecimalAmount(greenPowerAmount)}`);
   }
 
   return captions.join(' + ');
@@ -129,28 +158,19 @@ export function getShopProductPriceCaption(product: ProductPriceSource) {
 
 export function getShopProductPurchaseTag(product: ProductPriceSource) {
   if (product.purchase_type === 'score') {
-    return '消费金兑换';
+    return '消费金';
   }
 
   if (product.purchase_type === 'both') {
-    return '组合支付';
+    return '混合支付';
   }
 
   return '现金购买';
 }
 
 export function getShopProductBadges(product: ShopProductItem) {
-  const badges = [getShopProductPurchaseTag(product)];
-
-  if (product.is_physical === '1') {
-    badges.push('实物商品');
-  }
-
-  if (product.stock > 0) {
-    badges.push('有货');
-  }
-
-  return badges;
+  const tag = getShopProductPurchaseTag(product);
+  return tag ? [tag] : [];
 }
 
 export function formatShopProductSales(value?: number | null) {
@@ -209,13 +229,43 @@ export function buildShopProductSelectedSummary(
   return summary.join(' / ');
 }
 
+/**
+ * 根据当前选中的规格选项解析出对应的 SKU ID，供加入购物车等接口使用。
+ * 多规格商品必填 sku_id，无规格或单 SKU 时可能无 id，返回 undefined。
+ */
+export function getSelectedSkuId(
+  product: ShopProductDetail | null | undefined,
+  optionGroups: ShopProductOptionGroup[],
+  selectedOptions: Record<string, string>,
+): number | undefined {
+  if (!product?.skus?.length || !optionGroups.length) {
+    return undefined;
+  }
+
+  const selectedValues = optionGroups
+    .map((g) => selectedOptions[g.name]?.trim())
+    .filter(Boolean);
+
+  if (selectedValues.length !== optionGroups.length) {
+    return undefined;
+  }
+
+  const sku = product.skus.find((s) => {
+    const specValues = readStringList(s.spec_values);
+    if (specValues.length !== selectedValues.length) return false;
+    return selectedValues.every((v, i) => specValues[i] === v);
+  });
+
+  return sku?.id != null && Number.isFinite(sku.id) ? sku.id : undefined;
+}
+
 export function buildShopProductDescription(product: ShopProductDetail | null | undefined) {
   const description = product?.description?.trim();
   if (description) {
     return description.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
   }
 
-  return '暂无商品描述';
+  return '';
 }
 
 export function buildShopProductSpecs(product: ShopProductDetail | null | undefined) {

@@ -4,6 +4,7 @@ import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { useAppNavigate } from '../../lib/navigation';
 import { PageHeader } from '../../components/layout/PageHeader';
+import { useFeedback } from '../../components/ui/FeedbackProvider';
 
 // Mock Data
 const MOCK_DATA = {
@@ -28,6 +29,7 @@ const MOCK_DATA = {
 
 export function RightsTransferPage() {
   const { goBack } = useAppNavigate();
+  const { showToast } = useFeedback();
   const [isLoading, setIsLoading] = useState(true);
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
   const [error, setError] = useState<string | null>(null);
@@ -61,7 +63,7 @@ export function RightsTransferPage() {
   };
 
   const handleGoHistory = () => {
-    alert('跳转到划转记录');
+    showToast({ message: '跳转到划转记录', type: 'info' });
   };
 
   const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -80,7 +82,7 @@ export function RightsTransferPage() {
     setIsSubmitting(true);
     setTimeout(() => {
       setIsSubmitting(false);
-      alert(`成功划转 ¥${amount} 至 ${selectedTarget?.name}`);
+      showToast({ message: `成功划转 ¥${amount} 至 ${selectedTarget?.name}`, type: 'success' });
       setAmount('');
       handleGoBack();
     }, 300);

@@ -1,43 +1,58 @@
-import React, { useState, useEffect } from 'react';
-import { ChevronLeft, WifiOff, AlertCircle, ChevronRight, LogOut } from 'lucide-react';
+import React, { useState, useCallback } from 'react';
+import { ChevronLeft, WifiOff, ChevronRight, LogOut } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAppNavigate } from '../../lib/navigation';
-import { PageHeader } from '../../components/layout/PageHeader';
+import { useFeedback } from '../../components/ui/FeedbackProvider';
 import { ErrorState } from '../../components/ui/ErrorState';
 import { CURRENT_APP_VERSION, formatVersionLabel } from '../../lib/appVersion';
+import { clearAuthSession } from '../../lib/auth';
 
 export const SettingsPage = () => {
   const { goTo, goBack } = useAppNavigate();
+  const { showToast } = useFeedback();
 
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
   const [offline, setOffline] = useState(false);
   
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const { theme, setTheme } = useTheme();
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
-  const [cacheSize, setCacheSize] = useState('12.5MB');
-
-  useEffect(() => {
-    fetchData();
-  }, []);
-
-  const fetchData = () => {
-    setLoading(true);
-    setError(false);
-    setTimeout(() => {
-      setLoading(false);
-    }, 300);
-  };
+  const [cacheSize, setCacheSize] = useState(() => {
+    try {
+      let total = 0;
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key) total += (localStorage.getItem(key) ?? '').length;
+      }
+      return total > 1024 * 1024
+        ? `${(total / (1024 * 1024)).toFixed(1)}MB`
+        : `${(total / 1024).toFixed(1)}KB`;
+    } catch {
+      return '0KB';
+    }
+  });
 
   const handleBack = () => {
     goBack();
   };
 
-  const clearCache = () => {
-    alert('缓存清理成功');
-    setCacheSize('0.0MB');
-  };
+  const clearCache = useCallback(() => {
+    try {
+      const keysToKeep = ['member_auth_session', 'access_token', 'ba-token', 'ba-user-token', 'app-theme'];
+      const keysToRemove: string[] = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && !keysToKeep.includes(key)) keysToRemove.push(key);
+      }
+      keysToRemove.forEach(k => localStorage.removeItem(k));
+      sessionStorage.clear();
+    } catch {
+      // ignore
+    }
+    setCacheSize('0KB');
+    showToast({ message: '缓存清理成功', type: 'success' });
+  }, [showToast]);
 
   const renderHeader = () => (
     <div className="bg-white dark:bg-gray-900 z-40 relative shrink-0 border-b border-gray-100 dark:border-gray-800">
@@ -75,7 +90,7 @@ export const SettingsPage = () => {
   );
 
   const renderError = () => (
-    <ErrorState onRetry={fetchData} />
+    <ErrorState onRetry={() => { setError(false); setLoading(false); }} />
   );
 
   const renderContent = () => {
@@ -206,6 +221,7 @@ export const SettingsPage = () => {
                 className="flex-1 h-[44px] rounded-full bg-gradient-to-r from-brand-start to-brand-end text-white text-lg font-medium shadow-sm active:opacity-80 transition-opacity"
                 onClick={() => {
                   setShowLogoutModal(false);
+                  clearAuthSession();
                   goTo('login');
                 }}
               >

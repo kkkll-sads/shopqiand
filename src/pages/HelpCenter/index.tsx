@@ -1,9 +1,9 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { ChevronLeft, HeadphonesIcon, Clock, ChevronDown, ChevronUp, FileText, MessageSquare, AlertCircle, WifiOff, RefreshCcw, ExternalLink, HelpCircle } from 'lucide-react';
 import { useAppNavigate } from '../../lib/navigation';
-import { PageHeader } from '../../components/layout/PageHeader';
 import { useRouteScrollRestoration } from '../../hooks/useRouteScrollRestoration';
 import { useSessionState } from '../../hooks/useSessionState';
+import { helpApi, type HelpCategory, type HelpQuestion } from '../../api';
 
 export const HelpCenterPage = () => {
   const { goTo, goBack } = useAppNavigate();
@@ -11,7 +11,10 @@ export const HelpCenterPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [offline, setOffline] = useState(!navigator.onLine);
-  const [expandedFaq, setExpandedFaq] = useSessionState<string | null>('help-center:expanded-faq', null);
+  const [categories, setCategories] = useState<HelpCategory[]>([]);
+  const [questions, setQuestions] = useState<HelpQuestion[]>([]);
+  const [activeCategory, setActiveCategory] = useSessionState<number | null>('help-center:active-cat', null);
+  const [expandedFaq, setExpandedFaq] = useSessionState<number | null>('help-center:expanded-faq', null);
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -25,25 +28,44 @@ export const HelpCenterPage = () => {
     };
   }, []);
 
-  const fetchData = () => {
+  const fetchData = async () => {
     if (offline) return;
     setLoading(true);
     setError(false);
-    
-    // Simulate API call
-    setTimeout(() => {
-      if (Math.random() > 0.9) {
-        setError(true);
-      } else {
-        setError(false);
+
+    try {
+      const catData = await helpApi.getCategories();
+      const cats = catData.list ?? [];
+      setCategories(cats);
+
+      if (cats.length > 0) {
+        const firstCatId = activeCategory ?? cats[0].id;
+        if (!activeCategory) setActiveCategory(firstCatId);
+        const qData = await helpApi.getQuestions({ category_id: firstCatId });
+        setQuestions(qData.list ?? []);
       }
+    } catch {
+      setError(true);
+    } finally {
       setLoading(false);
-    }, 300);
+    }
   };
 
   useEffect(() => {
-    fetchData();
+    void fetchData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [offline]);
+
+  const handleCategoryChange = async (catId: number) => {
+    setActiveCategory(catId);
+    setExpandedFaq(null);
+    try {
+      const qData = await helpApi.getQuestions({ category_id: catId });
+      setQuestions(qData.list ?? []);
+    } catch {
+      setQuestions([]);
+    }
+  };
 
   useRouteScrollRestoration({
     containerRef: scrollContainerRef,
@@ -52,40 +74,23 @@ export const HelpCenterPage = () => {
     restoreWhen: !error && !loading,
   });
 
-  const handleBack = () => {
-    goBack();
-  };
-
-  const handleOpenCS = () => {
-    // In a real app, this would open a specific CS WebView
-    goTo('live_webview');
-  };
-
-  const handleNavigate = (view: string) => {
-    goTo(view);
-  };
-
-  const toggleFaq = (id: string) => {
+  const toggleFaq = (id: number) => {
     setExpandedFaq(prev => prev === id ? null : id);
   };
 
-  const faqs = [
-    { id: 'account', title: '登录与账号', content: '如果您忘记密码，可以在登录页面点击“忘记密码”进行重置。如需修改绑定手机号，请前往“设置-账号安全”进行修改。' },
-    { id: 'finance', title: '充值与提现', content: '充值一般实时到账，如遇网络延迟请耐心等待5-10分钟。提现申请提交后，预计在1-3个工作日内处理完毕，具体到账时间以银行通知为准。' },
-    { id: 'order', title: '订单相关', content: '您可以在“我的订单”中查看所有订单状态。未发货订单支持申请取消，已发货订单请在收到商品后申请退货退款。' },
-    { id: 'rights', title: '确权问题', content: '确权申请提交后，平台将在24小时内完成审核。审核通过后，相应的权益将发放至您的账户。' },
-    { id: 'aftersales', title: '售后服务', content: '商品签收后7天内支持无理由退货，15天内支持换货。请确保商品完好、配件齐全。' }
-  ];
+  const handleOpenCS = () => {
+    goTo('live_webview');
+  };
 
   return (
     <div className="flex-1 flex flex-col bg-bg-hover dark:bg-bg-base h-full overflow-hidden">
       {/* Header */}
       <div className="flex items-center justify-between px-4 h-12 bg-white dark:bg-bg-card shrink-0 relative z-10">
-        <button onClick={handleBack} className="p-2 -ml-2 text-text-main dark:text-text-main active:opacity-70">
+        <button onClick={() => goBack()} className="p-2 -ml-2 text-text-main dark:text-text-main active:opacity-70">
           <ChevronLeft size={24} />
         </button>
         <span className="text-2xl font-medium text-text-main dark:text-text-main">客服与帮助</span>
-        <div className="w-10"></div> {/* Placeholder for balance */}
+        <div className="w-10" />
       </div>
 
       {/* Offline Banner */}
@@ -95,10 +100,7 @@ export const HelpCenterPage = () => {
             <WifiOff size={16} className="mr-2" />
             <span className="text-base">网络不稳定，请检查网络设置</span>
           </div>
-          <button 
-            onClick={fetchData}
-            className="text-base text-brand-start dark:text-brand-start px-2 py-1 active:opacity-70"
-          >
+          <button onClick={() => fetchData()} className="text-base text-brand-start dark:text-brand-start px-2 py-1 active:opacity-70">
             刷新
           </button>
         </div>
@@ -107,15 +109,12 @@ export const HelpCenterPage = () => {
       {/* Main Content */}
       <div ref={scrollContainerRef} className="flex-1 overflow-y-auto p-4 relative">
         {error ? (
-          // Error State
           <div className="absolute inset-0 flex flex-col items-center justify-center px-6">
             <AlertCircle size={64} className="text-text-aux dark:text-text-sub mb-4" />
             <h3 className="text-3xl font-medium text-text-main dark:text-text-main mb-2">加载失败</h3>
-            <p className="text-md text-text-sub dark:text-text-aux text-center mb-8">
-              网络不稳定或服务器繁忙，请稍后再试
-            </p>
-            <button 
-              onClick={fetchData}
+            <p className="text-md text-text-sub dark:text-text-aux text-center mb-8">网络不稳定或服务器繁忙，请稍后再试</p>
+            <button
+              onClick={() => fetchData()}
               className="w-[160px] h-[44px] rounded-3xl bg-gradient-to-r from-brand-start to-brand-end text-white font-medium text-lg active:opacity-80 flex items-center justify-center"
             >
               <RefreshCcw size={18} className="mr-2" />
@@ -123,9 +122,7 @@ export const HelpCenterPage = () => {
             </button>
           </div>
         ) : loading ? (
-          // Skeleton State
           <div className="space-y-4">
-            {/* CS Card Skeleton */}
             <div className="bg-white dark:bg-bg-card rounded-2xl p-4 shadow-sm">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center">
@@ -138,8 +135,6 @@ export const HelpCenterPage = () => {
               </div>
               <div className="w-full h-10 bg-bg-hover dark:bg-bg-hover rounded-2xl animate-pulse" />
             </div>
-
-            {/* FAQ Skeleton */}
             <div className="bg-white dark:bg-bg-card rounded-2xl p-4 shadow-sm">
               <div className="w-20 h-5 bg-bg-hover dark:bg-bg-hover rounded animate-pulse mb-4" />
               {[1, 2, 3, 4].map(i => (
@@ -150,7 +145,6 @@ export const HelpCenterPage = () => {
             </div>
           </div>
         ) : (
-          // Content
           <div className="space-y-4 pb-8">
             {/* Online CS Card */}
             <div className="bg-white dark:bg-bg-card rounded-2xl p-5 shadow-sm">
@@ -168,7 +162,7 @@ export const HelpCenterPage = () => {
                   </div>
                 </div>
               </div>
-              <button 
+              <button
                 onClick={handleOpenCS}
                 className="w-full h-[44px] rounded-3xl bg-gradient-to-r from-brand-start to-brand-end text-white font-medium text-lg active:opacity-80 flex items-center justify-center shadow-[0_4px_12px_rgba(226,35,26,0.2)]"
               >
@@ -181,23 +175,23 @@ export const HelpCenterPage = () => {
             <div className="bg-white dark:bg-bg-card rounded-2xl p-4 shadow-sm">
               <h3 className="text-lg font-medium text-text-main dark:text-text-main mb-4 px-1">自助服务</h3>
               <div className="grid grid-cols-3 gap-2">
-                <div 
+                <div
                   className="flex flex-col items-center justify-center py-3 active:bg-bg-hover dark:active:bg-[#2A2A2A] rounded-xl"
-                  onClick={() => handleNavigate('announcement')}
+                  onClick={() => goTo('announcement')}
                 >
                   <FileText size={24} className="text-text-sub dark:text-text-aux mb-2" />
                   <span className="text-base text-text-main dark:text-text-main">公告中心</span>
                 </div>
-                <div 
+                <div
                   className="flex flex-col items-center justify-center py-3 active:bg-bg-hover dark:active:bg-[#2A2A2A] rounded-xl"
-                  onClick={() => handleNavigate('message_center')}
+                  onClick={() => goTo('message_center')}
                 >
                   <MessageSquare size={24} className="text-text-sub dark:text-text-aux mb-2" />
                   <span className="text-base text-text-main dark:text-text-main">消息中心</span>
                 </div>
-                <div 
+                <div
                   className="flex flex-col items-center justify-center py-3 active:bg-bg-hover dark:active:bg-[#2A2A2A] rounded-xl"
-                  onClick={() => handleNavigate('feedback')}
+                  onClick={() => goTo('announcement')}
                 >
                   <HelpCircle size={24} className="text-text-sub dark:text-text-aux mb-2" />
                   <span className="text-base text-text-main dark:text-text-main">问题反馈</span>
@@ -205,35 +199,58 @@ export const HelpCenterPage = () => {
               </div>
             </div>
 
-            {/* FAQ Card */}
+            {/* FAQ Card with Dynamic Categories */}
             <div className="bg-white dark:bg-bg-card rounded-2xl p-4 shadow-sm">
               <h3 className="text-lg font-medium text-text-main dark:text-text-main mb-2 px-1">常见问题</h3>
+
+              {/* Category Tabs */}
+              {categories.length > 1 && (
+                <div className="flex overflow-x-auto no-scrollbar gap-2 mb-3 px-1">
+                  {categories.map(cat => (
+                    <button
+                      key={cat.id}
+                      onClick={() => handleCategoryChange(cat.id)}
+                      className={`whitespace-nowrap px-3 py-1 rounded-full text-sm transition-colors shrink-0 ${
+                        activeCategory === cat.id
+                          ? 'bg-red-50 text-brand-start font-medium border border-brand-start/30'
+                          : 'bg-bg-hover text-text-sub border border-transparent'
+                      }`}
+                    >
+                      {cat.name}
+                    </button>
+                  ))}
+                </div>
+              )}
+
               <div className="flex flex-col">
-                {faqs.map((faq, index) => (
-                  <div 
-                    key={faq.id} 
-                    className={`border-b border-border-light dark:border-border-light last:border-0 overflow-hidden transition-all duration-300 ${expandedFaq === faq.id ? 'bg-bg-hover dark:bg-bg-hover -mx-4 px-4' : ''}`}
-                  >
-                    <div 
-                      className="flex items-center justify-between py-4 active:opacity-70 cursor-pointer"
-                      onClick={() => toggleFaq(faq.id)}
+                {questions.length === 0 ? (
+                  <div className="py-8 text-center text-text-aux text-sm">暂无常见问题</div>
+                ) : (
+                  questions.map(faq => (
+                    <div
+                      key={faq.id}
+                      className={`border-b border-border-light dark:border-border-light last:border-0 overflow-hidden transition-all duration-300 ${expandedFaq === faq.id ? 'bg-bg-hover dark:bg-bg-hover -mx-4 px-4' : ''}`}
                     >
-                      <span className={`text-md ${expandedFaq === faq.id ? 'text-brand-start dark:text-brand-start font-medium' : 'text-text-main dark:text-text-main'}`}>
-                        {faq.title}
-                      </span>
-                      {expandedFaq === faq.id ? (
-                        <ChevronUp size={18} className="text-brand-start dark:text-brand-start" />
-                      ) : (
-                        <ChevronDown size={18} className="text-text-aux dark:text-text-sub" />
-                      )}
+                      <div
+                        className="flex items-center justify-between py-4 active:opacity-70 cursor-pointer"
+                        onClick={() => toggleFaq(faq.id)}
+                      >
+                        <span className={`text-md ${expandedFaq === faq.id ? 'text-brand-start dark:text-brand-start font-medium' : 'text-text-main dark:text-text-main'}`}>
+                          {faq.title}
+                        </span>
+                        {expandedFaq === faq.id ? (
+                          <ChevronUp size={18} className="text-brand-start dark:text-brand-start shrink-0 ml-2" />
+                        ) : (
+                          <ChevronDown size={18} className="text-text-aux dark:text-text-sub shrink-0 ml-2" />
+                        )}
+                      </div>
+                      <div
+                        className={`text-base text-text-sub dark:text-text-aux leading-relaxed transition-all duration-300 ease-in-out ${expandedFaq === faq.id ? 'max-h-[500px] pb-4 opacity-100' : 'max-h-0 opacity-0'}`}
+                        dangerouslySetInnerHTML={{ __html: faq.content }}
+                      />
                     </div>
-                    <div 
-                      className={`text-base text-text-sub dark:text-text-aux leading-relaxed transition-all duration-300 ease-in-out ${expandedFaq === faq.id ? 'max-h-[200px] pb-4 opacity-100' : 'max-h-0 opacity-0'}`}
-                    >
-                      {faq.content}
-                    </div>
-                  </div>
-                ))}
+                  ))
+                )}
               </div>
             </div>
 

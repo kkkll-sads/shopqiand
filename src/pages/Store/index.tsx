@@ -3,6 +3,7 @@ import {
   Award,
   CheckCircle2,
   ChevronRight,
+  Clock3,
   FileText,
   Flame,
   Gift,
@@ -15,17 +16,17 @@ import {
   Ticket,
   Zap,
 } from 'lucide-react';
-import { shopProductApi, type ShopProductItem } from '../../api';
+import { flashSaleApi, shopProductApi, type FlashSaleProduct, type ShopProductItem } from '../../api';
+import { resolveUploadUrl } from '../../api/modules/upload';
 import { OfflineBanner } from '../../components/layout/OfflineBanner';
 import { Card } from '../../components/ui/Card';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { ErrorState } from '../../components/ui/ErrorState';
 import { Skeleton } from '../../components/ui/Skeleton';
+import { PullToRefreshContainer } from '../../components/ui/PullToRefreshContainer';
 import {
   buildShopProductPath,
   formatShopProductSales,
-  getShopProductBadges,
-  getShopProductPriceCaption,
   getShopProductPrimaryPrice,
   resolveShopProductImageUrl,
 } from '../../features/shop-product/utils';
@@ -37,7 +38,7 @@ import { useAppNavigate } from '../../lib/navigation';
 
 const KING_KONG_ITEMS = [
   { icon: Grid, label: '全部分类', target: 'category' },
-  { icon: Zap, label: '限时秒杀', target: 'store' },
+  { icon: Zap, label: '限时秒杀', target: 'flash_sale' },
   { icon: Ticket, label: '领券中心', target: 'coupon' },
   { icon: Gift, label: '新人专享', target: 'store' },
   { icon: Flame, label: '热卖排行', target: 'store' },
@@ -46,9 +47,10 @@ const KING_KONG_ITEMS = [
   { icon: MapPin, label: '地址/客服', target: 'help_center' },
 ];
 
-const SALES_LIST_INITIAL_DATA = {
+const FLASH_SALE_LIST_INITIAL_DATA = {
   limit: 6,
-  list: [] as ShopProductItem[],
+  list: [] as FlashSaleProduct[],
+  activity: null,
   page: 1,
   total: 0,
 };
@@ -72,6 +74,20 @@ function mergeProducts(previous: ShopProductItem[], next: ShopProductItem[]) {
   }
 
   return Array.from(productMap.values());
+}
+
+function formatCountdown(seconds: number) {
+  if (seconds <= 0) {
+    return '00:00:00';
+  }
+
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  const remainingSeconds = seconds % 60;
+
+  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(
+    remainingSeconds,
+  ).padStart(2, '0')}`;
 }
 
 function HorizontalProductSkeleton() {
@@ -113,6 +129,7 @@ export const StorePage = () => {
   const { isOffline, refreshStatus } = useNetworkStatus();
 
   const [latestProducts, setLatestProducts] = useState<ShopProductItem[]>([]);
+  const [flashSaleCountdown, setFlashSaleCountdown] = useState(0);
   const [hasMoreLatest, setHasMoreLatest] = useState(false);
   const [loadingMoreLatest, setLoadingMoreLatest] = useState(false);
   const [loadMoreLatestError, setLoadMoreLatestError] = useState<Error | null>(null);
@@ -123,16 +140,26 @@ export const StorePage = () => {
   const latestProductsRef = useRef<ShopProductItem[]>([]);
   const latestLoadingMoreRef = useRef(false);
 
-  const salesRequest = useRequest(
+  const flashSaleRequest = useRequest(
+    (signal) => flashSaleApi.getProducts({ limit: 6, page: 1 }, signal),
+    {
+      cacheKey: 'store:flash-sale',
+      initialData: FLASH_SALE_LIST_INITIAL_DATA,
+    },
+  );
+
+  const hotSaleRequest = useRequest(
     (signal) => shopProductApi.sales({ limit: 6, page: 1 }, signal),
     {
-      initialData: SALES_LIST_INITIAL_DATA,
+      cacheKey: 'store:hot-sale',
+      initialData: LATEST_LIST_INITIAL_DATA,
     },
   );
 
   const latestRequest = useRequest(
     (signal) => shopProductApi.latest({ limit: 10, page: 1 }, signal),
     {
+      cacheKey: 'store:latest',
       initialData: LATEST_LIST_INITIAL_DATA,
     },
   );
@@ -147,6 +174,24 @@ export const StorePage = () => {
     setLoadingMoreLatest(false);
     setLoadMoreLatestError(null);
   }, [latestRequest.data]);
+
+  useEffect(() => {
+    const activity = flashSaleRequest.data?.activity;
+    if (!activity) {
+      setFlashSaleCountdown(0);
+      return;
+    }
+
+    const updateCountdown = () => {
+      const now = Math.floor(Date.now() / 1000);
+      setFlashSaleCountdown(Math.max(activity.end_time - now, 0));
+    };
+
+    updateCountdown();
+    const timer = window.setInterval(updateCountdown, 1000);
+
+    return () => window.clearInterval(timer);
+  }, [flashSaleRequest.data?.activity]);
 
   const loadMoreLatest = useCallback(async () => {
     if (latestLoadingMoreRef.current || !hasMoreLatest) {
@@ -192,31 +237,35 @@ export const StorePage = () => {
     targetRef: latestLoadMoreTriggerRef,
   });
 
-  const hotProducts = salesRequest.data?.list ?? [];
+  const flashSaleProducts = flashSaleRequest.data?.list ?? [];
+  const flashSaleActivity = flashSaleRequest.data?.activity;
+  const hotSaleProducts = hotSaleRequest.data?.list ?? [];
 
   useRouteScrollRestoration({
     containerRef: scrollContainerRef,
     namespace: 'store-page',
     restoreDeps: [
-      salesRequest.loading,
+      flashSaleRequest.loading,
+      hotSaleRequest.loading,
       latestRequest.loading,
-      hotProducts.length,
+      flashSaleProducts.length,
+      hotSaleProducts.length,
       latestProducts.length,
       hasMoreLatest,
     ],
-    restoreWhen: !salesRequest.loading && !latestRequest.loading,
+    restoreWhen: !flashSaleRequest.loading && !hotSaleRequest.loading && !latestRequest.loading,
   });
 
-  const isLoading = salesRequest.loading || latestRequest.loading;
+  const isLoading = flashSaleRequest.loading || latestRequest.loading;
   const hasBlockingError =
     !isLoading &&
-    hotProducts.length === 0 &&
+    flashSaleProducts.length === 0 &&
     latestProducts.length === 0 &&
-    Boolean(salesRequest.error || latestRequest.error);
+    Boolean(flashSaleRequest.error || latestRequest.error);
   const isEmpty =
     !isLoading &&
     !hasBlockingError &&
-    hotProducts.length === 0 &&
+    flashSaleProducts.length === 0 &&
     latestProducts.length === 0;
 
   const reloadAll = () => {
@@ -227,7 +276,11 @@ export const StorePage = () => {
     setHasMoreLatest(false);
     setLoadingMoreLatest(false);
     setLoadMoreLatestError(null);
-    void Promise.allSettled([salesRequest.reload(), latestRequest.reload()]);
+    return Promise.allSettled([
+      flashSaleRequest.reload(),
+      hotSaleRequest.reload(),
+      latestRequest.reload(),
+    ]);
   };
 
   const serviceHighlights = useMemo(
@@ -303,6 +356,7 @@ export const StorePage = () => {
         </div>
       </div>
 
+      <PullToRefreshContainer onRefresh={reloadAll} disabled={isOffline}>
       <div ref={scrollContainerRef} className="flex-1 overflow-y-auto pb-4">
         <div className="grid grid-cols-4 gap-y-4 px-4 pb-1 pt-4">
           {KING_KONG_ITEMS.map((item) => {
@@ -388,64 +442,129 @@ export const StorePage = () => {
         ) : (
           <>
             <div className="mb-4 px-4">
-              <div className="mb-3 flex items-center justify-between">
-                <div className="flex items-center">
-                  <h3 className="mr-2 text-xl font-bold text-text-main">热卖排行</h3>
-                  <div className="flex items-center space-x-1 text-xs font-mono">
-                    <span className="rounded bg-primary-start px-1.5 py-0.5 text-white">
-                      实时榜
-                    </span>
-                    <span className="font-bold text-primary-start">销量优先</span>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  className="flex items-center text-sm text-text-aux"
-                  onClick={() => goTo('search')}
-                >
-                  更多
-                  <ChevronRight size={12} />
-                </button>
-              </div>
-
-              {salesRequest.loading ? (
-                <HorizontalProductSkeleton />
-              ) : hotProducts.length === 0 ? (
-                <Card className="rounded-xl border border-border-light p-6">
-                  <EmptyState message="当前没有热卖商品" />
-                </Card>
-              ) : (
-                <div className="flex space-x-3 overflow-x-auto pb-2">
-                  {hotProducts.map((item) => (
+              {flashSaleActivity ? (
+                <>
+                  <div className="mb-3 flex items-center justify-between">
+                    <div className="flex items-center">
+                      <h3 className="mr-2 text-xl font-bold text-text-main">限时秒杀</h3>
+                      <div className="flex items-center space-x-1 text-xs font-mono">
+                        {flashSaleCountdown > 0 ? (
+                          <>
+                            <span className="rounded bg-primary-start px-1.5 py-0.5 text-white">
+                              进行中
+                            </span>
+                            <span className="inline-flex items-center font-bold text-primary-start">
+                              <Clock3 size={12} className="mr-1" />
+                              {formatCountdown(flashSaleCountdown)}
+                            </span>
+                          </>
+                        ) : (
+                          <span className="rounded bg-primary-start px-1.5 py-0.5 text-white">
+                            限量抢购
+                          </span>
+                        )}
+                      </div>
+                    </div>
                     <button
-                      key={item.id}
                       type="button"
-                      className="flex w-[100px] shrink-0 flex-col text-left active:opacity-70"
-                      onClick={() => goTo(buildShopProductPath(item.id))}
+                      className="flex items-center text-sm text-text-aux"
+                      onClick={() => goTo('flash_sale')}
                     >
-                      <div className="mb-2 aspect-square overflow-hidden rounded-xl border border-border-light bg-bg-card shadow-sm">
-                        <img
-                          src={resolveShopProductImageUrl(item.thumbnail)}
-                          alt={item.name}
-                          className="h-full w-full object-cover"
-                          referrerPolicy="no-referrer"
-                        />
-                      </div>
-                      <div className="mb-1 line-clamp-1 text-sm text-text-main">{item.name}</div>
-                      <div className="mb-1 text-lg font-bold leading-none text-primary-start">
-                        {getShopProductPrimaryPrice(item)}
-                      </div>
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="line-clamp-1 text-xs text-text-aux">
-                          {getShopProductPriceCaption(item) || item.category}
-                        </span>
-                        <span className="shrink-0 text-xs text-text-aux">
-                          已售{formatShopProductSales(item.sales)}
-                        </span>
-                      </div>
+                      更多
+                      <ChevronRight size={12} />
                     </button>
-                  ))}
-                </div>
+                  </div>
+
+                  {flashSaleRequest.loading ? (
+                    <HorizontalProductSkeleton />
+                  ) : flashSaleProducts.length === 0 ? (
+                    <Card className="rounded-xl border border-border-light p-6">
+                      <EmptyState message="当前没有秒杀商品" />
+                    </Card>
+                  ) : (
+                    <div className="flex space-x-3 overflow-x-auto pb-2">
+                      {flashSaleProducts.map((item) => (
+                        <button
+                          key={item.flash_sale_product_id}
+                          type="button"
+                          className="flex w-[100px] shrink-0 flex-col text-left active:opacity-70"
+                          onClick={() => goTo(buildShopProductPath(item.product_id))}
+                        >
+                          <div className="mb-2 aspect-square overflow-hidden rounded-xl border border-border-light bg-bg-card shadow-sm">
+                            <img
+                              src={resolveUploadUrl(item.thumbnail)}
+                              alt={item.product_name}
+                              className="h-full w-full object-cover"
+                              referrerPolicy="no-referrer"
+                            />
+                          </div>
+                          <div className="mb-1 line-clamp-1 text-sm text-text-main">{item.product_name}</div>
+                          <div className="mb-1 text-lg font-bold leading-none text-primary-start">
+                            ¥{item.flash_price}
+                          </div>
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="line-clamp-1 text-xs text-text-aux">
+                              {item.limit_per_user > 0 ? `限购${item.limit_per_user}件` : '秒杀专享价'}
+                            </span>
+                            <span className="shrink-0 text-xs text-text-aux line-through">
+                              ¥{item.original_price}
+                            </span>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </>
+              ) : (
+                <>
+                  <div className="mb-3 flex items-center justify-between">
+                    <div className="flex items-center">
+                      <h3 className="mr-2 text-xl font-bold text-text-main">热卖排行</h3>
+                      <div className="flex items-center space-x-1 text-xs font-mono">
+                        <span className="rounded bg-rose-500 px-1.5 py-0.5 text-white">
+                          🔥 爆款推荐
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {hotSaleRequest.loading ? (
+                    <HorizontalProductSkeleton />
+                  ) : hotSaleProducts.length === 0 ? (
+                    <Card className="rounded-xl border border-border-light p-6">
+                      <EmptyState message="当前没有热卖商品" />
+                    </Card>
+                  ) : (
+                    <div className="flex space-x-3 overflow-x-auto pb-2">
+                      {hotSaleProducts.map((item) => (
+                        <button
+                          key={item.id}
+                          type="button"
+                          className="flex w-[100px] shrink-0 flex-col text-left active:opacity-70"
+                          onClick={() => goTo(buildShopProductPath(item.id))}
+                        >
+                          <div className="mb-2 aspect-square overflow-hidden rounded-xl border border-border-light bg-bg-card shadow-sm">
+                            <img
+                              src={resolveShopProductImageUrl(item.thumbnail)}
+                              alt={item.name}
+                              className="h-full w-full object-cover"
+                              referrerPolicy="no-referrer"
+                            />
+                          </div>
+                          <div className="mb-1 line-clamp-1 text-sm text-text-main">{item.name}</div>
+                          <div className="mb-1 text-lg font-bold leading-none text-primary-start">
+                            {getShopProductPrimaryPrice(item)}
+                          </div>
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="line-clamp-1 text-xs text-text-aux whitespace-nowrap">
+                              已售{formatShopProductSales(item.sales)}
+                            </span>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </>
               )}
             </div>
 
@@ -477,43 +596,41 @@ export const StorePage = () => {
                 <>
                   <div className="grid grid-cols-2 gap-3">
                     {latestProducts.map((item) => (
-                      <button
+                      <div
                         key={item.id}
-                        type="button"
-                        className="flex flex-col overflow-hidden rounded-2xl border border-border-light bg-bg-card text-left shadow-soft active:opacity-70"
+                        role="button"
+                        tabIndex={0}
+                        className="flex flex-col overflow-hidden rounded-2xl border border-border-light bg-bg-card text-left shadow-soft active:opacity-70 cursor-pointer"
                         onClick={() => goTo(buildShopProductPath(item.id))}
                       >
-                        <img
-                          src={resolveShopProductImageUrl(item.thumbnail)}
-                          alt={item.name}
-                          className="aspect-square w-full object-cover"
-                          referrerPolicy="no-referrer"
-                        />
+                        <div className="relative">
+                          <img
+                            src={resolveShopProductImageUrl(item.thumbnail)}
+                            alt={item.name}
+                            className="aspect-square w-full object-cover"
+                            referrerPolicy="no-referrer"
+                          />
+                          {(item.purchase_type === 'score' || item.purchase_type === 'both') && (
+                            <span className={`absolute bottom-0 left-0 rounded-tr px-1 py-0.5 text-[9px] font-medium leading-none text-white ${
+                              item.purchase_type === 'score' ? 'bg-amber-500' : 'bg-gradient-to-r from-amber-500 to-primary-start'
+                            }`}>
+                              {item.purchase_type === 'score' ? '消费金' : '混合支付'}
+                            </span>
+                          )}
+                        </div>
                         <div className="flex flex-1 flex-col p-3">
                           <div className="mb-2 line-clamp-2 text-base leading-tight text-text-main">
-                            <span className="mr-1 inline-block rounded bg-primary-start px-1 py-0.5 text-xs font-medium text-white">
-                              自营
-                            </span>
                             {item.name}
                           </div>
-                          <div className="mb-auto flex flex-wrap gap-1 pb-2">
-                            {getShopProductBadges(item).map((badge) => (
-                              <span
-                                key={`${item.id}-${badge}`}
-                                className="rounded border border-primary-start/30 px-1 py-0.5 text-xs text-primary-start"
-                              >
-                                {badge}
-                              </span>
-                            ))}
-                          </div>
-                          <div className="mt-1 flex items-end justify-between">
-                            <div className="flex flex-col">
-                              <div className="mb-1 text-xl font-bold leading-none text-primary-start">
-                                {getShopProductPrimaryPrice(item)}
-                              </div>
-                              <div className="line-clamp-1 text-xs text-text-aux">
-                                {getShopProductPriceCaption(item) ||
-                                  `已售${formatShopProductSales(item.sales)}`}
+                          <div className="mt-auto flex items-end justify-between">
+                            <div>
+                              <div className="flex items-center">
+                                <span className="text-xl font-bold leading-none text-primary-start">
+                                  {getShopProductPrimaryPrice(item)}
+                                </span>
+                                <span className="ml-2 text-xs text-text-aux whitespace-nowrap shrink-0">
+                                  已售{formatShopProductSales(item.sales)}
+                                </span>
                               </div>
                             </div>
                             <button
@@ -529,7 +646,7 @@ export const StorePage = () => {
                             </button>
                           </div>
                         </div>
-                      </button>
+                      </div>
                     ))}
                   </div>
                   {renderLatestFooter()}
@@ -539,6 +656,7 @@ export const StorePage = () => {
           </>
         )}
       </div>
+      </PullToRefreshContainer>
     </div>
   );
 };

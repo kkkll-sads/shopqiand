@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  ChevronLeft,
   ChevronRight,
   Copy,
   FileText,
@@ -13,13 +12,16 @@ import { Card } from '../../components/ui/Card';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { ErrorState } from '../../components/ui/ErrorState';
 import { useFeedback } from '../../components/ui/FeedbackProvider';
+import { PageHeader } from '../../components/layout/PageHeader';
 import { Skeleton } from '../../components/ui/Skeleton';
+import { PullToRefreshContainer } from '../../components/ui/PullToRefreshContainer';
 import { useAuthSession } from '../../hooks/useAuthSession';
 import { useNetworkStatus } from '../../hooks/useNetworkStatus';
 import { useRequest } from '../../hooks/useRequest';
 import { useRouteScrollRestoration } from '../../hooks/useRouteScrollRestoration';
 import { useSessionState } from '../../hooks/useSessionState';
 import { useViewScrollSnapshot } from '../../hooks/useViewScrollSnapshot';
+import { copyToClipboard } from '../../lib/clipboard';
 import { useAppNavigate } from '../../lib/navigation';
 
 type BillingFilterKey = 'all' | 'income' | 'expense' | 'score';
@@ -61,6 +63,7 @@ function formatMoney(value: number | string | undefined, fractionDigits = 2) {
   return nextValue.toLocaleString('zh-CN', {
     maximumFractionDigits: fractionDigits,
     minimumFractionDigits: fractionDigits,
+    useGrouping: false,
   });
 }
 
@@ -259,21 +262,15 @@ export const BillingPage = () => {
       return;
     }
 
-    try {
-      await navigator.clipboard.writeText(nextValue);
-      showToast({ message: successMessage, type: 'success' });
-    } catch {
-      showToast({ message: '复制失败，请稍后重试', type: 'error' });
-    }
+    const ok = await copyToClipboard(nextValue);
+    showToast({ message: ok ? successMessage : '复制失败，请稍后重试', type: ok ? 'success' : 'error' });
   };
 
   const renderHeader = () => (
-    <div className="sticky top-0 z-40 bg-bg-base/90 backdrop-blur-md">
-      <div className="flex h-12 items-center justify-between px-4">
-        <button onClick={handleBack} className="p-1 -ml-1 text-text-main active:opacity-70">
-          <ChevronLeft size={24} />
-        </button>
-        <h1 className="text-2xl font-medium text-text-main">{selectedLog ? '账单详情' : '账单明细'}</h1>
+    <PageHeader
+      title={selectedLog ? '账单详情' : '账单明细'}
+      onBack={handleBack}
+      rightAction={
         <button
           type="button"
           className="flex items-center text-sm text-text-sub active:opacity-70"
@@ -282,8 +279,8 @@ export const BillingPage = () => {
           <FileText size={16} className="mr-1" />
           充值
         </button>
-      </div>
-    </div>
+      }
+    />
   );
 
   const renderTabs = () => {
@@ -545,9 +542,17 @@ export const BillingPage = () => {
       {renderHeader()}
       {renderTabs()}
 
+      <PullToRefreshContainer
+        onRefresh={() => selectedLog
+          ? (reloadDetail().catch(() => undefined) as Promise<unknown>)
+          : (reloadLogList().catch(() => undefined) as Promise<unknown>)
+        }
+        disabled={isOffline}
+      >
       <div ref={scrollContainerRef} className="flex-1 overflow-y-auto no-scrollbar">
         {selectedLog ? renderDetail() : renderLogList()}
       </div>
+      </PullToRefreshContainer>
 
       {detailLoading && selectedDetail ? (
         <div className="pointer-events-none absolute right-4 bottom-4 flex items-center rounded-full bg-gray-900/85 px-3 py-2 text-sm text-white shadow-sm">

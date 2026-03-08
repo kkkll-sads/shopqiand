@@ -1,9 +1,11 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ChevronLeft, CheckCircle2, Circle, Minus, Plus, Trash2, Heart, Store, ChevronRight, WifiOff, RefreshCcw, ShoppingCart, ChevronDown } from 'lucide-react';
 import { Skeleton } from '../../components/ui/Skeleton';
 import { useAppNavigate } from '../../lib/navigation';
 import { PageHeader } from '../../components/layout/PageHeader';
 import { useRouteScrollRestoration } from '../../hooks/useRouteScrollRestoration';
+import { useRequest } from '../../hooks/useRequest';
+import { shopCartApi, type ShopCartListItem } from '../../api/modules/shopCart';
 
 interface CartItem {
   id: string;
@@ -12,6 +14,8 @@ interface CartItem {
   price: number;
   quantity: number;
   image: string;
+  /** 是否为积分价商品 */
+  isScorePrice: boolean;
 }
 
 interface CartStore {
@@ -22,51 +26,83 @@ interface CartStore {
   items: CartItem[];
 }
 
+function mapCartListToStores(list: ShopCartListItem[]): CartStore[] {
+  if (!list || list.length === 0) return [];
+  const items: CartItem[] = list.map((row) => {
+    // score_price 代表积分价（整数），不需要除以 100
+    const isScorePrice = row.score_price != null && row.score_price > 0;
+    const price = isScorePrice ? row.score_price! : (row.flash_price ?? row.price ?? row.original_price ?? 0);
+    const sku = row.source === 'flash_sale' ? '限时秒杀' : '普通';
+    return {
+      id: String(row.id),
+      title: row.product_name,
+      sku,
+      price,
+      quantity: row.quantity,
+      image: row.product_thumbnail || '',
+      isScorePrice,
+    };
+  });
+  const hasFlashSale = list.some((r) => r.source === 'flash_sale');
+  return [
+    {
+      storeId: 'default',
+      storeName: '树交所自营',
+      isSelf: true,
+      ...(hasFlashSale ? { promotion: { text: '满299减50', action: '去凑单' } as const } : {}),
+      items,
+    },
+  ];
+}
+
 export const CartPage = () => {
-  const { goTo, goBack } = useAppNavigate();
+  const { goTo, goBack, navigate } = useAppNavigate();
 
   const [isEditMode, setIsEditMode] = useState(false);
-  const [loading, setLoading] = useState(true);
   const [offline, setOffline] = useState(false);
-  const [moduleError, setModuleError] = useState(false);
   const [emptyResult, setEmptyResult] = useState(false);
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
 
-  const [cartData, setCartData] = useState<CartStore[]>([
-    {
-      storeId: 's1',
-      storeName: '树交所自营',
-      isSelf: true,
-      promotion: { text: '满299减50', action: '去凑单' },
-      items: [
-        { id: 'p1', title: 'Apple iPhone 15 Pro (A3104) 256GB 蓝色钛金属 支持移动联通电信5G 双卡双待手机', sku: '蓝色钛金属, 256GB', price: 7999.00, quantity: 1, image: 'https://picsum.photos/seed/iphone/200/200' },
-        { id: 'p2', title: '华为 HUAWEI Mate 60 Pro 12GB+512GB 雅川青 卫星通话 鸿蒙智能手机', sku: '雅川青, 12GB+512GB', price: 6999.00, quantity: 1, image: 'https://picsum.photos/seed/mate60/200/200' }
-      ]
-    },
-    {
-      storeId: 's2',
-      storeName: '大疆官方旗舰店',
-      isSelf: false,
-      items: [
-        { id: 'p3', title: '大疆 DJI Mini 4 Pro 迷你航拍机 航拍无人机 智能跟随 避障', sku: '标准版', price: 4788.00, quantity: 1, image: 'https://picsum.photos/seed/dji/200/200' }
-      ]
-    }
-  ]);
+  const { data: listResponse, loading, error: requestError, reload: refetch } = useRequest(
+    (signal) => shopCartApi.list(signal),
+    { cacheKey: 'cart-list', cache: false }
+  );
 
-  const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set(['p1', 'p2', 'p3']));
+  const rawList = listResponse?.list;
+  const list = useMemo(() => rawList ?? [], [rawList]);
+  const [cartData, setCartData] = useState<CartStore[]>([]);
+  const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set<string>());
+  const hasInitedSelection = useRef(false);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setLoading(false);
-    }, 300);
-    return () => clearTimeout(timer);
-  }, []);
+    const stores = mapCartListToStores(list);
+    setCartData(stores);
+  }, [list]);
+
+  // 分离 selection 的初始化逻辑，避免被 list 的新数组引用和 cartData 的死循环触发
+  useEffect(() => {
+    if (cartData.length > 0 && !hasInitedSelection.current) {
+      const ids = cartData.flatMap((s) => s.items.map((i) => i.id));
+      setSelectedItems(new Set(ids));
+      hasInitedSelection.current = true;
+    }
+  }, [cartData]);
+
+  useEffect(() => {
+    // 列表清空时重置选中初始化标记
+    if (list.length === 0) {
+      hasInitedSelection.current = false;
+    }
+  }, [list.length]);
+
+  const moduleError = !!requestError;
+  const loadingState = loading;
 
   useRouteScrollRestoration({
     containerRef: scrollContainerRef,
     namespace: `cart:${isEditMode ? 'edit' : 'default'}`,
-    restoreDeps: [cartData.length, emptyResult, isEditMode, loading, moduleError],
-    restoreWhen: !loading && !moduleError,
+    restoreDeps: [cartData.length, emptyResult, isEditMode, loadingState, moduleError],
+    restoreWhen: !loadingState && !moduleError,
   });
 
   const handleBack = () => {
@@ -144,6 +180,8 @@ export const CartPage = () => {
 
   const allItemIds = cartData.flatMap(store => store.items.map(item => item.id));
   const isAllSelected = selectedItems.size === allItemIds.length && allItemIds.length > 0;
+  /** 当前选中的商品是否全部为积分价商品 */
+  const allScorePrice = cartData.every(store => store.items.every(item => item.isScorePrice));
 
   const calculateTotal = () => {
     let total = 0;
@@ -223,7 +261,7 @@ export const CartPage = () => {
           <RefreshCcw size={32} className="text-text-aux mb-3" />
           <p className="text-md text-text-sub mb-4">加载失败，请检查网络</p>
           <button 
-            onClick={() => { setLoading(true); setModuleError(false); }} 
+            onClick={() => refetch()} 
             className="px-6 py-2 border border-border-light rounded-full text-base text-text-main bg-white dark:bg-gray-900 shadow-sm active:bg-bg-base"
           >
             重试
@@ -250,7 +288,7 @@ export const CartPage = () => {
       );
     }
 
-    if (loading) {
+    if (loadingState) {
       return renderSkeleton();
     }
 
@@ -316,7 +354,6 @@ export const CartPage = () => {
                       <div className="flex-1 flex flex-col justify-between min-w-0">
                         <div>
                           <h3 className="text-base text-text-main font-medium line-clamp-2 leading-snug mb-1">
-                            {store.isSelf && <span className="inline-block bg-primary-start text-white text-xs px-1 rounded-sm mr-1 leading-tight align-middle">自营</span>}
                             <span className="align-middle">{item.title}</span>
                           </h3>
                           <div className="inline-flex items-center bg-bg-base px-2 py-0.5 rounded mb-2 max-w-full">
@@ -327,9 +364,18 @@ export const CartPage = () => {
                         
                         <div className="flex items-center justify-between">
                           <div className="text-primary-start font-bold leading-none">
-                            <span className="text-s">¥</span>
-                            <span className="text-xl">{item.price.toFixed(2).split('.')[0]}</span>
-                            <span className="text-s">.{item.price.toFixed(2).split('.')[1]}</span>
+                            {item.isScorePrice ? (
+                              <>
+                                <span className="text-xl">{item.price}</span>
+                                <span className="text-s ml-0.5">消费金</span>
+                              </>
+                            ) : (
+                              <>
+                                <span className="text-s">¥</span>
+                                <span className="text-xl">{item.price.toFixed(2).split('.')[0]}</span>
+                                <span className="text-s">.{item.price.toFixed(2).split('.')[1]}</span>
+                              </>
+                            )}
                           </div>
                           
                           {isEditMode ? (
@@ -410,16 +456,30 @@ export const CartPage = () => {
               <div className="flex items-baseline">
                 <span className="text-sm text-text-main mr-1">合计:</span>
                 <span className="text-primary-start font-bold">
-                  <span className="text-sm">¥</span>
-                  <span className="text-3xl">{calculateTotal().toFixed(2).split('.')[0]}</span>
-                  <span className="text-sm">.{calculateTotal().toFixed(2).split('.')[1]}</span>
+                  {allScorePrice ? (
+                    <>
+                      <span className="text-3xl">{calculateTotal()}</span>
+                      <span className="text-sm ml-0.5">消费金</span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="text-sm">¥</span>
+                      <span className="text-3xl">{calculateTotal().toFixed(2).split('.')[0]}</span>
+                      <span className="text-sm">.{calculateTotal().toFixed(2).split('.')[1]}</span>
+                    </>
+                  )}
                 </span>
               </div>
-              <span className="text-xs text-text-aux">已优惠 ¥50.00</span>
             </div>
             <button 
               disabled={selectedItems.size === 0}
-              onClick={() => goTo('checkout')}
+              onClick={() => {
+                const cartItemIds = Array.from(selectedItems)
+                  .map((id) => Number(id))
+                  .filter((n) => Number.isFinite(n));
+                if (cartItemIds.length === 0) return;
+                navigate('/checkout', { state: { cartItemIds } });
+              }}
               className="h-10 px-6 rounded-full bg-gradient-to-r from-primary-start to-primary-end text-white text-md font-medium shadow-sm active:opacity-80 disabled:opacity-50 disabled:from-text-aux disabled:to-text-sub"
             >
               去结算({selectedItems.size})

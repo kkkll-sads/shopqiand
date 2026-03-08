@@ -22,7 +22,9 @@ export const AnnouncementPage = () => {
     error,
     loading,
     reload,
-  } = useRequest((signal) => announcementApi.list(signal));
+  } = useRequest((signal) => announcementApi.list(signal), {
+    cacheKey: 'announcement:list',
+  });
 
   const sortedAnnouncements = useMemo(() => {
     return [...announcements].sort((left, right) => {

@@ -7,7 +7,7 @@
  */
 
 import React, { lazy, Suspense } from 'react';
-import { createHashRouter } from 'react-router-dom';
+import { createHashRouter, useRouteError } from 'react-router-dom';
 import { AppLayout } from '../components/layout/AppLayout';
 
 // ========== 首屏 Tab 页 - 同步导入 ==========
@@ -45,6 +45,10 @@ const FriendsPage = lazy(() => import('../pages/Friends').then(m => ({ default: 
 const TradingZonePage = lazy(() => import('../pages/TradingZone').then(m => ({ default: m.TradingZonePage })));
 const TradingDetailPage = lazy(() => import('../pages/TradingDetail').then(m => ({ default: m.TradingDetailPage })));
 const PreOrderPage = lazy(() => import('../pages/PreOrder').then(m => ({ default: m.PreOrderPage })));
+const ReservationsPage = lazy(() => import('../pages/Reservations').then(m => ({ default: m.ReservationsPage })));
+const ReservationDetailPage = lazy(() => import('../pages/ReservationDetail').then(m => ({ default: m.ReservationDetailPage })));
+const ItemDetailPage = lazy(() => import('../pages/ItemDetail').then(m => ({ default: m.ItemDetailPage })));
+const FlashSalePage = lazy(() => import('../pages/FlashSale').then(m => ({ default: m.FlashSalePage })));
 const RightsHistoryPage = lazy(() => import('../pages/RightsHistory').then(m => ({ default: m.RightsHistoryPage })));
 const RechargePage = lazy(() => import('../pages/Recharge').then(m => ({ default: m.RechargePage })));
 const TransferPage = lazy(() => import('../pages/Transfer').then(m => ({ default: m.TransferPage })));
@@ -60,6 +64,8 @@ const LoginPage = lazy(() => import('../pages/Login').then(m => ({ default: m.Lo
 const RegisterPage = lazy(() => import('../pages/Register').then(m => ({ default: m.RegisterPage })));
 const ForgotPasswordPage = lazy(() => import('../pages/ForgotPassword').then(m => ({ default: m.ForgotPasswordPage })));
 const DesignSystemPage = lazy(() => import('../pages/DesignSystem').then(m => ({ default: m.DesignSystemPage })));
+const SignInPage = lazy(() => import('../pages/SignIn').then(m => ({ default: m.SignInPage })));
+const NotFoundPage = lazy(() => import('../pages/NotFound').then(m => ({ default: m.NotFoundPage })));
 
 /**
  * 页面加载过渡动画 - Suspense fallback
@@ -78,6 +84,54 @@ const Lazy = ({ children }: { children: React.ReactNode }) => (
 );
 
 /**
+ * 根错误边界组件，专用于捕获类似“重新构建后分包文件丢失”或 React 内部抛错
+ */
+const RootErrorBoundary = () => {
+  const error = useRouteError() as Error;
+
+  // 如果判断是资源加载失败（Chunk Load Error 或网络问题）
+  const isChunkLoadFailed = error?.message && 
+    (error.message.includes('Failed to fetch dynamically imported module') || 
+     error.message.includes('Importing a module script failed'));
+
+  if (isChunkLoadFailed) {
+    // 按需进行强制自动重新刷新（利用 sessionStorage 防止无限重刷）
+    const reloadKey = 'app_reload_count';
+    const reloadCount = parseInt(sessionStorage.getItem(reloadKey) || '0', 10);
+    
+    if (reloadCount < 2) {
+      sessionStorage.setItem(reloadKey, String(reloadCount + 1));
+      window.location.reload();
+      return <PageFallback />;
+    }
+  }
+
+  // 其他错误渲染一个 500 / 全局错误页面提示
+  return (
+    <div className="flex-1 flex flex-col items-center justify-center bg-bg-base relative overflow-hidden h-full min-h-screen text-center p-6">
+      <div className="text-red-500/20 mb-6">
+        <svg className="w-32 h-32 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+        </svg>
+      </div>
+      <h2 className="text-2xl font-bold text-text-main mb-3">糟糕，出了点问题</h2>
+      <p className="text-text-sub text-base mb-2">系统发生了一个意外错误，或许是正在发布新版本。</p>
+      <p className="text-xs text-text-aux mb-8 break-all max-w-full hidden md:block">{error?.message}</p>
+      
+      <button
+        onClick={() => {
+          sessionStorage.removeItem('app_reload_count');
+          window.location.href = '/';
+        }}
+        className="px-8 py-3 rounded-full bg-gradient-to-r from-primary-start to-primary-end text-white font-medium shadow-sm active:opacity-80"
+      >
+        刷新页面并返回首页
+      </button>
+    </div>
+  );
+};
+
+/**
  * 应用路由配置
  * 使用 createHashRouter（Hash 模式），因为项目部署为纯静态文件，
  * Hash 路由不需要服务端配置。
@@ -86,6 +140,7 @@ export const router = createHashRouter([
   {
     path: '/',
     element: <AppLayout />,
+    errorElement: <RootErrorBoundary />,
     children: [
       // ========== 底部 Tab 页（同步加载） ==========
       { index: true, element: <HomePage /> },
@@ -99,6 +154,7 @@ export const router = createHashRouter([
       { path: 'product/:id/qa', element: <Lazy><ProductQAPage /></Lazy> },
       { path: 'product/:id/reviews', element: <Lazy><ReviewsPage /></Lazy> },
       { path: 'product/:id/review/new', element: <Lazy><AddReviewPage /></Lazy> },
+      { path: 'order/:orderId/review', element: <Lazy><AddReviewPage /></Lazy> },
       { path: 'category', element: <Lazy><CategoryPage /></Lazy> },
       { path: 'search', element: <Lazy><SearchPage /></Lazy> },
       { path: 'search/result', element: <Lazy><SearchResultPage /></Lazy> },
@@ -118,7 +174,11 @@ export const router = createHashRouter([
       // ========== 交易区 ==========
       { path: 'trading', element: <Lazy><TradingZonePage /></Lazy> },
       { path: 'trading/detail/:id', element: <Lazy><TradingDetailPage /></Lazy> },
+      { path: 'trading/detail/:sessionId/items/:packageId', element: <Lazy><ItemDetailPage /></Lazy> },
       { path: 'trading/pre-order/:id', element: <Lazy><PreOrderPage /></Lazy> },
+      { path: 'reservations', element: <Lazy><ReservationsPage /></Lazy> },
+      { path: 'reservation_detail/:id', element: <Lazy><ReservationDetailPage /></Lazy> },
+      { path: 'flash-sale', element: <Lazy><FlashSalePage /></Lazy> },
 
       // ========== 用户资产 ==========
       { path: 'coupon', element: <Lazy><CouponPage /></Lazy> },
@@ -139,6 +199,9 @@ export const router = createHashRouter([
       { path: 'security', element: <Lazy><SecurityPage /></Lazy> },
       { path: 'auth/real-name', element: <Lazy><RealNameAuthPage /></Lazy> },
 
+      // ========== 签到 ==========
+      { path: 'sign-in', element: <Lazy><SignInPage /></Lazy> },
+
       // ========== 信息页面 ==========
       { path: 'announcement', element: <Lazy><AnnouncementPage /></Lazy> },
       { path: 'help', element: <Lazy><HelpCenterPage /></Lazy> },
@@ -155,6 +218,18 @@ export const router = createHashRouter([
 
       // ========== 开发工具 ==========
       { path: 'design', element: <Lazy><DesignSystemPage /></Lazy> },
+
+      // ========== 404 兜底 ==========
+      { path: '*', element: <Lazy><NotFoundPage /></Lazy> },
     ],
   },
-]);
+], {
+  /* 启用 React Router v7 future flags，消除控制台迁移警告 */
+  future: {
+    v7_fetcherPersist: true,
+    v7_normalizeFormMethod: true,
+    v7_partialHydration: true,
+    v7_relativeSplatPath: true,
+    v7_skipActionErrorRevalidation: true,
+  },
+});

@@ -4,7 +4,6 @@ import type { LucideIcon } from 'lucide-react';
 import {
   AlertCircle,
   CheckCircle2,
-  ChevronLeft,
   ChevronRight,
   FileText,
   Info,
@@ -22,6 +21,7 @@ import { ErrorState } from '../../components/ui/ErrorState';
 import { useFeedback } from '../../components/ui/FeedbackProvider';
 import { Input } from '../../components/ui/Input';
 import { Skeleton } from '../../components/ui/Skeleton';
+import { PageHeader } from '../../components/layout/PageHeader';
 import { useAuthSession } from '../../hooks/useAuthSession';
 import { useNetworkStatus } from '../../hooks/useNetworkStatus';
 import { useRequest } from '../../hooks/useRequest';
@@ -41,6 +41,7 @@ function formatMoney(value: number | string | undefined, fractionDigits = 2) {
   return nextValue.toLocaleString('zh-CN', {
     maximumFractionDigits: fractionDigits,
     minimumFractionDigits: fractionDigits,
+    useGrouping: false,
   });
 }
 
@@ -244,20 +245,18 @@ export const WithdrawPage = () => {
   };
 
   const renderHeader = () => (
-    <div className="sticky top-0 z-40 bg-bg-base/90 backdrop-blur-md">
-      <div className="flex h-12 items-center justify-between px-4">
-        <button onClick={goBack} className="p-1 -ml-1 text-text-main active:opacity-70">
-          <ChevronLeft size={24} />
-        </button>
-        <h1 className="text-2xl font-medium text-text-main">收益提现</h1>
+    <PageHeader
+      title="收益提现"
+      onBack={goBack}
+      rightAction={
         <button
           className="p-1 -mr-1 text-text-main active:opacity-70"
           onClick={() => goTo('billing')}
         >
           <FileText size={20} />
         </button>
-      </div>
-    </div>
+      }
+    />
   );
 
   if (!isAuthenticated) {

@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { ChevronLeft, MessageCircleQuestion, RefreshCcw, WifiOff } from 'lucide-react';
 import { useAppNavigate } from '../../lib/navigation';
 import { PageHeader } from '../../components/layout/PageHeader';
+import { useFeedback } from '../../components/ui/FeedbackProvider';
 import { ErrorState } from '../../components/ui/ErrorState';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { useRouteScrollRestoration } from '../../hooks/useRouteScrollRestoration';
@@ -9,6 +10,7 @@ import { useSessionState } from '../../hooks/useSessionState';
 
 export const ProductQAPage = () => {
   const { goTo, goBack } = useAppNavigate();
+  const { showToast } = useFeedback();
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -202,7 +204,7 @@ export const ProductQAPage = () => {
         <div className="absolute bottom-0 left-0 right-0 bg-white dark:bg-gray-900 border-t border-gray-100 dark:border-gray-800 px-4 py-3 pb-safe z-40">
           <button 
             className="w-full h-[40px] rounded-full bg-gradient-to-r from-brand-start to-brand-end text-white text-lg font-medium active:opacity-80 transition-opacity shadow-sm"
-            onClick={() => alert('提问功能开发中')}
+            onClick={() => showToast({ message: '提问功能开发中', type: 'info' })}
           >
             向已买过的人提问
           </button>

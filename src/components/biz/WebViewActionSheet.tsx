@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { RefreshCcw, Copy, ExternalLink, Headset, Trash2 } from 'lucide-react';
+import { copyToClipboard } from '../../lib/clipboard';
 import { ActionSheet, ActionSheetGroup } from '../ui/ActionSheet';
 
 interface WebViewActionSheetProps {
@@ -33,9 +34,9 @@ export const WebViewActionSheet: React.FC<WebViewActionSheetProps> = ({
     }, 1500);
   };
 
-  const handleCopy = () => {
-    navigator.clipboard.writeText(url);
-    showToast('已复制');
+  const handleCopy = async () => {
+    const ok = await copyToClipboard(url);
+    showToast(ok ? '已复制' : '复制失败');
   };
 
   const groups: ActionSheetGroup[] = [

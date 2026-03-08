@@ -1,19 +1,40 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { ChevronLeft, WifiOff, CheckCircle2, AlertCircle, Copy, HeadphonesIcon } from 'lucide-react';
 import { useAppNavigate } from '../../lib/navigation';
-import { PageHeader } from '../../components/layout/PageHeader';
+import { copyToClipboard } from '../../lib/clipboard';
+import { useFeedback } from '../../components/ui/FeedbackProvider';
 
 export const PaymentResultPage = () => {
+  const [searchParams] = useSearchParams();
   const { goTo, goBack } = useAppNavigate();
+  const { showToast } = useFeedback();
 
   const [offline, setOffline] = useState(false);
-  const [status, setStatus] = useState<'success' | 'failure'>('success');
 
-  const orderInfo = {
-    orderNo: '1234567890123456',
-    amount: 7939.00,
-    errorMessage: 'ERR_INSUFFICIENT_BALANCE: 您的银行卡余额不足或已被限制交易，请检查后重试。',
-  };
+  const orderInfo = useMemo(() => {
+    const statusParam = searchParams.get('status');
+    const orderNo = searchParams.get('order_no') ?? '';
+    const amountParam = searchParams.get('amount');
+    const totalScoreParam = searchParams.get('total_score');
+    const errorMsg = searchParams.get('error') ?? '';
+
+    const status: 'success' | 'failure' =
+      statusParam === 'success' ? 'success' : statusParam === 'failure' ? 'failure' : 'success';
+
+    const amount = amountParam ? Number(amountParam) : 0;
+    const totalScore = totalScoreParam ? Number(totalScoreParam) : 0;
+    const payType = searchParams.get('pay_type') ?? '';
+
+    return {
+      status,
+      orderNo,
+      amount: Number.isFinite(amount) ? amount : 0,
+      totalScore: Number.isFinite(totalScore) ? totalScore : 0,
+      payType,
+      errorMessage: errorMsg || '支付失败，请稍后重试或联系客服。',
+    };
+  }, [searchParams]);
 
   const handleBack = () => {
     // Usually goes back to home or order list
@@ -21,8 +42,10 @@ export const PaymentResultPage = () => {
   };
 
   const handleCopy = (text: string) => {
-    // In a real app, use navigator.clipboard.writeText
-    alert('已复制到剪贴板');
+    if (!text) return;
+    copyToClipboard(text).then((ok) => {
+      showToast({ message: ok ? '已复制' : '复制失败，请长按手动复制', type: ok ? 'success' : 'error' });
+    });
   };
 
   const renderHeader = () => (
@@ -54,15 +77,36 @@ export const PaymentResultPage = () => {
         <CheckCircle2 size={48} className="text-success" />
       </div>
       <h2 className="text-4xl font-bold text-text-main mb-2">支付成功</h2>
-      <div className="text-6xl font-bold text-text-main mb-1 flex items-baseline">
-        <span className="text-3xl mr-1">¥</span>
-        {orderInfo.amount.toFixed(2)}
-      </div>
+      {(orderInfo.payType === 'combined' || orderInfo.payType === 'both') && orderInfo.totalScore > 0 ? (
+        <div className="mb-4 flex flex-col items-center gap-1">
+          <div className="text-primary-start font-bold flex items-baseline">
+            <span className="text-2xl mr-0.5">¥</span>
+            <span className="text-5xl leading-none">{(orderInfo.amount || 0).toFixed(2).split('.')[0]}</span>
+            <span className="text-2xl">.{(orderInfo.amount || 0).toFixed(2).split('.')[1]}</span>
+          </div>
+          <div className="text-orange-500 font-bold flex items-baseline">
+            <span className="text-3xl leading-none">+{orderInfo.totalScore}</span>
+            <span className="text-lg ml-1">消费金</span>
+          </div>
+        </div>
+      ) : orderInfo.payType === 'score' ? (
+        <div className="text-6xl font-bold text-text-main mb-1 flex items-baseline">
+          <span>{orderInfo.amount > 0 ? orderInfo.amount : 0}</span>
+          <span className="text-2xl ml-1">消费金</span>
+        </div>
+      ) : (
+        <div className="text-6xl font-bold text-text-main mb-1 flex items-baseline">
+          <span className="text-3xl mr-1">¥</span>
+          {orderInfo.amount > 0 ? orderInfo.amount.toFixed(2) : '0.00'}
+        </div>
+      )}
       <div className="flex items-center text-base text-text-sub mb-10">
-        <span className="mr-2">订单号：{orderInfo.orderNo}</span>
-        <button onClick={() => handleCopy(orderInfo.orderNo)} className="active:opacity-70">
-          <Copy size={14} />
-        </button>
+        <span className="mr-2">订单号：{orderInfo.orderNo || '--'}</span>
+        {orderInfo.orderNo ? (
+          <button onClick={() => handleCopy(orderInfo.orderNo)} className="active:opacity-70">
+            <Copy size={14} />
+          </button>
+        ) : null}
       </div>
 
       <div className="w-full flex space-x-4">
@@ -129,12 +173,9 @@ export const PaymentResultPage = () => {
 
   return (
     <div className="flex-1 flex flex-col bg-white dark:bg-gray-900 relative h-full overflow-hidden">
-      
-
       {renderHeader()}
-      
       <div className="flex-1 overflow-y-auto no-scrollbar">
-        {status === 'success' ? renderSuccess() : renderFailure()}
+        {orderInfo.status === 'success' ? renderSuccess() : renderFailure()}
       </div>
     </div>
   );

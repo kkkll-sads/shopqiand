@@ -96,6 +96,7 @@ export function ReviewsPage() {
         ? shopProductApi.reviewSummary(routeProductId, signal)
         : Promise.resolve(EMPTY_SUMMARY),
     {
+      cacheKey: `reviews:summary:${routeProductId}`,
       deps: [hasValidProductId, routeProductId],
       initialData: EMPTY_SUMMARY,
       keepPreviousData: true,
@@ -116,6 +117,7 @@ export function ReviewsPage() {
           )
         : Promise.resolve(EMPTY_REVIEW_LIST),
     {
+      cacheKey: `reviews:list:${routeProductId}:${activeFilter}`,
       deps: [activeFilter, hasValidProductId, routeProductId],
       initialData: EMPTY_REVIEW_LIST,
       keepPreviousData: true,

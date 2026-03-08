@@ -1,6 +1,10 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
+import { shopOrderApi, type ShopOrderListItem } from '../../api';
+import { collectionTradeApi, type CollectionBuyOrder, type CollectionSellOrder } from '../../api';
+import { getErrorMessage } from '../../api/core/errors';
 import { OfflineBanner } from '../../components/layout/OfflineBanner';
-import { ORDER_TABS } from '../../features/order/constants';
+import { useFeedback } from '../../components/ui/FeedbackProvider';
+import { ORDER_TABS, MALL_TAB_TO_STATUS } from '../../features/order/constants';
 import { CollectibleOrderDetail } from '../../features/order/components/CollectibleOrderDetail';
 import { OrderHeader } from '../../features/order/components/OrderHeader';
 import { OrderListContent } from '../../features/order/components/OrderListContent';
@@ -8,12 +12,15 @@ import { OrderStatusTabs } from '../../features/order/components/OrderStatusTabs
 import { OrderTypeSwitcher } from '../../features/order/components/OrderTypeSwitcher';
 import type { OrderType, SelectedOrder } from '../../features/order/types';
 import { useNetworkStatus } from '../../hooks/useNetworkStatus';
+import { useRequest } from '../../hooks/useRequest';
 import { useRouteScrollRestoration } from '../../hooks/useRouteScrollRestoration';
 import { useSessionState } from '../../hooks/useSessionState';
+import { copyToClipboard } from '../../lib/clipboard';
 import { useAppNavigate } from '../../lib/navigation';
 
 export const OrderPage = () => {
-  const { goTo } = useAppNavigate();
+  const { goTo, navigate } = useAppNavigate();
+  const { showToast } = useFeedback();
   const { isOffline, refreshStatus } = useNetworkStatus();
   const [orderType, setOrderType] = useSessionState<OrderType>('order-page:type', 'mall');
   const [mallTab, setMallTab] = useSessionState('order-page:mall-tab', ORDER_TABS.mall[0]);
@@ -22,21 +29,89 @@ export const OrderPage = () => {
     ORDER_TABS.collectible[0],
   );
   const [selectedOrder, setSelectedOrder] = useState<SelectedOrder | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [moduleError, setModuleError] = useState(false);
-  const [emptyList, setEmptyList] = useState(false);
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
 
-  useEffect(() => {
-    setLoading(true);
-    const timer = window.setTimeout(() => {
-      setLoading(false);
-    }, 300);
+  // 确保 collectibleTab 始终是有效的 Tab 名称（旧值可能已不存在）
+  const validCollectibleTab = ORDER_TABS.collectible.includes(collectibleTab)
+    ? collectibleTab
+    : ORDER_TABS.collectible[0];
 
-    return () => window.clearTimeout(timer);
-  }, [orderType, mallTab, collectibleTab]);
+  /* ========== 商城订单数据 ========== */
+  const mallStatus = MALL_TAB_TO_STATUS[mallTab] ?? '';
+  const isPendingPayTab = mallTab === '待付款';
+  const isPendingShipTab = mallTab === '待发货';
+  const isPendingConfirmTab = mallTab === '待收货';
+  const emptyMallData = { list: [] as ShopOrderListItem[], total: 0, page: 1, limit: 10, balance_available: '', score: '' };
+  const mallOrdersRequest = useRequest(
+    (signal) => {
+      if (orderType !== 'mall') return Promise.resolve(emptyMallData);
+      if (isPendingPayTab) return shopOrderApi.pendingPay({ page: 1, limit: 10 }, signal);
+      if (isPendingShipTab) return shopOrderApi.pendingShip({ page: 1, limit: 10 }, signal);
+      if (isPendingConfirmTab) return shopOrderApi.pendingConfirm({ page: 1, limit: 10 }, signal);
+      return shopOrderApi.myOrders(
+        { page: 1, limit: 10, ...(mallStatus ? { status: mallStatus } : {}) },
+        signal,
+      );
+    },
+    {
+      deps: [orderType, mallTab, mallStatus, isPendingPayTab, isPendingShipTab, isPendingConfirmTab],
+      initialData: emptyMallData,
+    },
+  );
 
-  const activeTab = orderType === 'mall' ? mallTab : collectibleTab;
+  const mallOrders: ShopOrderListItem[] = mallOrdersRequest.data?.list ?? [];
+
+  /* ========== 藏品买入订单数据 ========== */
+  const isBuyTab = validCollectibleTab === '买入订单';
+  const emptyBuyData = { list: [] as CollectionBuyOrder[], total: 0, page: 1, limit: 10 };
+  const buyOrdersRequest = useRequest(
+    (signal) => {
+      if (orderType !== 'collectible' || !isBuyTab) return Promise.resolve(emptyBuyData);
+      return collectionTradeApi.buyOrders({ page: 1, limit: 10 }, signal);
+    },
+    {
+      deps: [orderType, validCollectibleTab, isBuyTab],
+      initialData: emptyBuyData,
+    },
+  );
+
+  /* ========== 藏品卖出订单数据 ========== */
+  const isSellTab = validCollectibleTab === '卖出订单';
+  const emptySellData = { list: [] as CollectionSellOrder[], total: 0, page: 1, limit: 10 };
+  const sellOrdersRequest = useRequest(
+    (signal) => {
+      if (orderType !== 'collectible' || !isSellTab) return Promise.resolve(emptySellData);
+      return collectionTradeApi.sellOrders({ page: 1, limit: 10 }, signal);
+    },
+    {
+      deps: [orderType, validCollectibleTab, isSellTab],
+      initialData: emptySellData,
+    },
+  );
+
+  const buyOrders = buyOrdersRequest.data?.list ?? [];
+  const sellOrders = sellOrdersRequest.data?.list ?? [];
+
+  /* ========== 通用状态计算 ========== */
+  const loading = orderType === 'mall'
+    ? mallOrdersRequest.loading
+    : isBuyTab
+      ? buyOrdersRequest.loading
+      : sellOrdersRequest.loading;
+
+  const moduleError = orderType === 'mall'
+    ? Boolean(mallOrdersRequest.error)
+    : isBuyTab
+      ? Boolean(buyOrdersRequest.error)
+      : Boolean(sellOrdersRequest.error);
+
+  const emptyList = orderType === 'mall'
+    ? !mallOrdersRequest.loading && !mallOrdersRequest.error && mallOrders.length === 0
+    : isBuyTab
+      ? !buyOrdersRequest.loading && !buyOrdersRequest.error && buyOrders.length === 0
+      : !sellOrdersRequest.loading && !sellOrdersRequest.error && sellOrders.length === 0;
+
+  const activeTab = orderType === 'mall' ? mallTab : validCollectibleTab;
 
   useRouteScrollRestoration({
     containerRef: scrollContainerRef,
@@ -50,14 +125,73 @@ export const OrderPage = () => {
       setMallTab(tab);
       return;
     }
-
     setCollectibleTab(tab);
   };
 
-  const handleCopy = (text: string) => {
-    navigator.clipboard.writeText(text);
-    window.alert('订单号已复制');
+  const handleCopy = async (text: string) => {
+    const ok = await copyToClipboard(text);
+    showToast({ message: ok ? '订单号已复制' : '复制失败，请手动长按复制', type: ok ? 'success' : 'error' });
   };
+
+  const handleRetry = () => {
+    if (orderType === 'mall') {
+      void mallOrdersRequest.reload();
+    } else if (isBuyTab) {
+      void buyOrdersRequest.reload();
+    } else {
+      void sellOrdersRequest.reload();
+    }
+  };
+
+  const handleCancelOrder = useCallback(
+    async (orderId: number, cancelReason?: string) => {
+      if (!window.confirm('确定要取消该订单吗？')) return;
+      try {
+        const data = await shopOrderApi.cancel({ order_id: orderId, cancel_reason: cancelReason });
+        if (data?.need_review) {
+          showToast({ message: '取消申请已提交，请等待审核', type: 'success' });
+        } else {
+          showToast({ message: '订单已取消', type: 'success' });
+        }
+        void mallOrdersRequest.reload();
+      } catch (err) {
+        showToast({ message: getErrorMessage(err) || '取消订单失败', type: 'error' });
+      }
+    },
+    [showToast, mallOrdersRequest]
+  );
+
+  const handleRefundOrder = useCallback(
+    async (orderId: number) => {
+      if (!window.confirm('确定要申请退货吗？提交后将进入审核流程。')) return;
+      try {
+        const data = await shopOrderApi.cancel({ order_id: orderId, cancel_reason: '买家申请退货' });
+        if (data?.need_review) {
+          showToast({ message: '退货申请已提交，请等待审核', type: 'success' });
+        } else {
+          showToast({ message: '退货成功，款项将原路退回', type: 'success' });
+        }
+        void mallOrdersRequest.reload();
+      } catch (err) {
+        showToast({ message: getErrorMessage(err) || '申请退货失败', type: 'error' });
+      }
+    },
+    [showToast, mallOrdersRequest]
+  );
+
+  const handleConfirmOrder = useCallback(
+    async (orderId: number) => {
+      if (!window.confirm('确定已收到货物吗？')) return;
+      try {
+        await shopOrderApi.confirm(orderId);
+        showToast({ message: '确认收货成功', type: 'success' });
+        void mallOrdersRequest.reload();
+      } catch (err) {
+        showToast({ message: getErrorMessage(err) || '确认收货失败', type: 'error' });
+      }
+    },
+    [showToast, mallOrdersRequest]
+  );
 
   return (
     <div className="flex-1 flex flex-col bg-bg-base relative overflow-hidden">
@@ -73,21 +207,29 @@ export const OrderPage = () => {
           loading={loading}
           moduleError={moduleError}
           emptyList={emptyList}
-          onRetry={() => setModuleError(false)}
+          mallOrders={orderType === 'mall' ? mallOrders : undefined}
+          buyOrders={orderType === 'collectible' ? buyOrders : undefined}
+          sellOrders={orderType === 'collectible' ? sellOrders : undefined}
+          collectibleTab={validCollectibleTab}
+          onRetry={handleRetry}
           onOpenEmptyTarget={() => goTo(orderType === 'mall' ? 'store' : 'shield')}
           onCopy={handleCopy}
-          onOpenMallOrderDetail={() => goTo('order_detail')}
-          onOpenCollectibleDetail={id => setSelectedOrder({ type: 'collectible', id })}
+          onOpenMallOrderDetail={(orderId) => (orderId != null ? navigate(`/order/detail/${orderId}`) : goTo('order_detail'))}
+          onOpenCollectibleDetail={order => setSelectedOrder(order)}
           onOpenLogistics={() => goTo('logistics')}
           onOpenCashier={() => goTo('cashier')}
+          onCancelMallOrder={handleCancelOrder}
+          onConfirmMallOrder={handleConfirmOrder}
+          onReviewMallOrder={(orderId, productId) => navigate(`/order/${orderId}/review?product_id=${productId}`)}
+          onRefundMallOrder={handleRefundOrder}
         />
       </div>
 
       {selectedOrder && (
         <CollectibleOrderDetail
-          orderId={selectedOrder.id}
+          type={selectedOrder.type}
+          id={selectedOrder.id}
           onBack={() => setSelectedOrder(null)}
-          onCopy={handleCopy}
           onOpenHelp={() => goTo('help_center')}
         />
       )}

@@ -1,267 +1,365 @@
-import React, { useState, useEffect } from 'react';
-import { ChevronLeft, WifiOff, AlertCircle, MapPin, Truck, ChevronRight, Copy, CheckCircle2, Package } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useParams } from 'react-router-dom';
+import { ChevronLeft, WifiOff, MapPin, Truck, ChevronRight, Copy, Package, Clock, CreditCard, CheckCircle2, XCircle, ShoppingBag, RotateCcw } from 'lucide-react';
+import { copyToClipboard } from '../../lib/clipboard';
 import { useAppNavigate } from '../../lib/navigation';
-import { PageHeader } from '../../components/layout/PageHeader';
 import { ErrorState } from '../../components/ui/ErrorState';
+import { shopOrderApi } from '../../api/modules/shopOrder';
+import type { ShopOrderDetailResponse, ShopOrderItemDetail } from '../../api/modules/shopOrder';
+import { getErrorMessage } from '../../api/core/errors';
+import { useFeedback } from '../../components/ui/FeedbackProvider';
+import { buildShopProductPath, resolveShopProductImageUrl } from '../../features/shop-product/utils';
+
+function formatTime(ts: number): string {
+  if (!ts) return '--';
+  const d = new Date(ts * 1000);
+  const pad = (n: number) => n.toString().padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function formatItemPrice(item: ShopOrderItemDetail, payType: string): string {
+  const price = Number(item.price) || 0;
+  const scorePrice = Number(item.score_price) || 0;
+  if (payType === 'combined' && price > 0 && scorePrice > 0) {
+    return `¥${price.toFixed(2)} + ${scorePrice}消费金`;
+  }
+  if (payType === 'score' || (scorePrice > 0 && price <= 0)) {
+    return `${scorePrice}消费金`;
+  }
+  return price > 0 ? `¥${price.toFixed(2)}` : '—';
+}
+
+function formatTotalAmount(order: ShopOrderDetailResponse): string {
+  if (order.pay_type === 'score') {
+    return `${order.total_score}消费金`;
+  }
+  if (order.pay_type === 'combined') {
+    const parts: string[] = [];
+    if (order.total_amount > 0) parts.push(`¥${Number(order.total_amount).toFixed(2)}`);
+    if (order.total_score > 0) parts.push(`${order.total_score}消费金`);
+    return parts.join(' + ') || '—';
+  }
+  return order.total_amount > 0 ? `¥${Number(order.total_amount).toFixed(2)}` : '—';
+}
+
+const STATUS_CONFIG: Record<string, { icon: typeof Package; gradient: string; bgColor: string }> = {
+  pending: { icon: Clock, gradient: 'from-amber-500 to-orange-500', bgColor: 'bg-amber-50' },
+  paid: { icon: CreditCard, gradient: 'from-blue-500 to-indigo-500', bgColor: 'bg-blue-50' },
+  shipped: { icon: Truck, gradient: 'from-cyan-500 to-blue-500', bgColor: 'bg-cyan-50' },
+  completed: { icon: CheckCircle2, gradient: 'from-emerald-500 to-green-500', bgColor: 'bg-emerald-50' },
+  cancelled: { icon: XCircle, gradient: 'from-gray-400 to-gray-500', bgColor: 'bg-gray-50' },
+  refunded: { icon: RotateCcw, gradient: 'from-gray-400 to-gray-500', bgColor: 'bg-gray-50' },
+};
+
+function getActiveSteps(status: string): number {
+  const map: Record<string, number> = { pending: 1, paid: 2, shipped: 3, completed: 4 };
+  return map[status] ?? 0;
+}
 
 export const OrderDetailPage = () => {
-  const { goBackOr } = useAppNavigate();
+  const { id } = useParams<{ id: string }>();
+  const orderId = id ? parseInt(id, 10) : 0;
+  const { goBackOr, navigate } = useAppNavigate();
+  const { showToast, showLoading, hideLoading } = useFeedback();
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [offline, setOffline] = useState(!navigator.onLine);
-  const [empty, setEmpty] = useState(false); // Not really used for order detail unless not found
-
-  const mockOrder = {
-    id: '28394018239',
-    status: 'shipped', // pending_payment, processing, shipped, completed, cancelled
-    statusText: '卖家已发货',
-    statusDesc: '您的订单已由京东物流揽收，正在运往目的地',
-    createTime: '2023-10-25 10:00:00',
-    payTime: '2023-10-25 10:05:00',
-    shipTime: '2023-10-25 14:30:00',
-    address: {
-      name: '张三',
-      phone: '138****1234',
-      detail: '北京市朝阳区建国路88号SOHO现代城A座1001室'
-    },
-    logistics: {
-      company: '京东物流',
-      trackingNo: 'JDVA1234567890',
-      latestStatus: '【北京市】您的快件已到达【北京朝阳营业部】，准备分配派件员',
-      time: '2023-10-26 08:30:00'
-    },
-    products: [
-      {
-        id: 'p1',
-        title: 'Apple iPhone 15 Pro (A3104) 256GB 蓝色钛金属 支持移动联通电信5G 双卡双待手机',
-        image: 'https://picsum.photos/seed/iphone/200/200',
-        price: '7999.00',
-        quantity: 1,
-        sku: '蓝色钛金属, 256GB',
-        isSelfOperated: true
-      }
-    ],
-    fees: {
-      total: '7999.00',
-      shipping: '0.00',
-      discount: '-100.00',
-      actualPay: '7899.00'
-    }
-  };
+  const [order, setOrder] = useState<ShopOrderDetailResponse | null>(null);
+  const [confirming, setConfirming] = useState(false);
 
   useEffect(() => {
     const handleOnline = () => setOffline(false);
     const handleOffline = () => setOffline(true);
-
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
-
-    fetchData();
-
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
   }, []);
 
-  const fetchData = () => {
+  const fetchData = useCallback(async () => {
+    if (orderId <= 0) {
+      setError(true);
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     setError(false);
-    setTimeout(() => {
+    try {
+      const data = await shopOrderApi.detail(orderId);
+      setOrder(data);
+    } catch {
+      setError(true);
+    } finally {
       setLoading(false);
-    }, 300);
-  };
+    }
+  }, [orderId]);
 
-  const handleBack = () => {
-    goBackOr('order');
-  };
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  const handleBack = () => goBackOr('order');
 
   const handleCopy = (text: string) => {
-    navigator.clipboard.writeText(text);
-    alert('订单号已复制');
+    if (!text) return;
+    copyToClipboard(text).then((ok) => {
+      showToast({ message: ok ? '已复制' : '复制失败', type: ok ? 'success' : 'error' });
+    });
   };
 
-  const renderHeader = () => (
-    <div className="bg-white dark:bg-gray-900 z-40 relative shrink-0 border-b border-gray-100 dark:border-gray-800">
-      <div className="h-11 flex items-center justify-between px-3">
-        <div className="flex items-center w-1/3">
-          <button onClick={handleBack} className="p-1 -ml-1 text-gray-900 dark:text-gray-100 active:opacity-70">
-            <ChevronLeft size={24} />
-          </button>
+  const handleConfirmReceipt = async () => {
+    if (orderId <= 0 || confirming) return;
+    setConfirming(true);
+    showLoading('确认收货中...');
+    try {
+      await shopOrderApi.confirm(orderId);
+      showToast({ message: '确认收货成功', type: 'success' });
+      await fetchData();
+    } catch (e) {
+      showToast({ message: getErrorMessage(e), type: 'error' });
+    } finally {
+      hideLoading();
+      setConfirming(false);
+    }
+  };
+
+  const handleCancelOrder = async () => {
+    if (orderId <= 0) return;
+    if (!window.confirm('确定要取消该订单吗？')) return;
+    showLoading('取消中...');
+    try {
+      await shopOrderApi.cancel({ order_id: orderId });
+      showToast({ message: '订单已取消', type: 'success' });
+      await fetchData();
+    } catch (e) {
+      showToast({ message: getErrorMessage(e) || '取消订单失败', type: 'error' });
+    } finally {
+      hideLoading();
+    }
+  };
+
+  const handleGoPay = () => {
+    if (!order) return;
+    const cashierParams = new URLSearchParams({
+      order_id: String(order.id),
+      amount: String(order.total_amount),
+      total_score: String(order.total_score),
+      order_no: order.order_no,
+      pay_type: order.pay_type,
+      balance: order.balance_available ?? '0',
+      score_balance: order.score ?? '0',
+    });
+    navigate(`/cashier?${cashierParams.toString()}`);
+  };
+
+  const hasBottomBar = !loading && !error && order &&
+    (order.status === 'pending' || order.status === 'shipped' || order.status === 'completed');
+
+  const renderSkeleton = () => (
+    <div className="p-4 space-y-3">
+      <div className="rounded-2xl overflow-hidden">
+        <div className="h-[120px] bg-gradient-to-r from-gray-200 to-gray-100 dark:from-gray-800 dark:to-gray-700 animate-pulse" />
+      </div>
+      <div className="bg-white dark:bg-gray-900 rounded-2xl p-4 animate-pulse">
+        <div className="flex items-start">
+          <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 mr-3 shrink-0" />
+          <div className="flex-1 space-y-2">
+            <div className="h-5 bg-gray-200 dark:bg-gray-700 rounded w-2/3" />
+            <div className="h-4 bg-gray-100 dark:bg-gray-800 rounded w-full" />
+          </div>
         </div>
-        <h1 className="text-2xl font-medium text-gray-900 dark:text-gray-100 text-center w-1/3">订单详情</h1>
-        <div className="w-1/3"></div>
+      </div>
+      <div className="bg-white dark:bg-gray-900 rounded-2xl p-4 animate-pulse">
+        <div className="flex space-x-3">
+          <div className="w-20 h-20 bg-gray-200 dark:bg-gray-700 rounded-xl shrink-0" />
+          <div className="flex-1 space-y-2">
+            <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-full" />
+            <div className="h-4 bg-gray-100 dark:bg-gray-800 rounded w-1/2" />
+            <div className="h-5 bg-gray-200 dark:bg-gray-700 rounded w-1/3 mt-2" />
+          </div>
+        </div>
+      </div>
+      <div className="bg-white dark:bg-gray-900 rounded-2xl p-4 animate-pulse space-y-3">
+        {[1, 2, 3, 4].map(i => (
+          <div key={i} className="flex justify-between">
+            <div className="h-4 bg-gray-100 dark:bg-gray-800 rounded w-20" />
+            <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-32" />
+          </div>
+        ))}
       </div>
     </div>
   );
 
-  const renderSkeleton = () => (
-    <div className="p-3 space-y-3">
-      <div className="bg-white dark:bg-gray-900 rounded-xl p-4 animate-pulse h-24"></div>
-      <div className="bg-white dark:bg-gray-900 rounded-xl p-4 animate-pulse h-20"></div>
-      <div className="bg-white dark:bg-gray-900 rounded-xl p-4 animate-pulse h-32"></div>
-      <div className="bg-white dark:bg-gray-900 rounded-xl p-4 animate-pulse h-40"></div>
-    </div>
-  );
-
-  const renderError = () => (
-    <ErrorState onRetry={fetchData} />
-  );
-
   const renderContent = () => {
     if (loading) return renderSkeleton();
-    if (error) return renderError();
+    if (error || !order) return <ErrorState onRetry={fetchData} />;
+
+    const activeSteps = getActiveSteps(order.status);
+    const showProgress = order.status !== 'cancelled' && order.status !== 'refunded';
+    const stepLabels = ['下单', '付款', '发货', '完成'];
+    const config = STATUS_CONFIG[order.status] ?? STATUS_CONFIG.pending;
+    const StatusIcon = config.icon;
 
     return (
-      <div className="p-3 space-y-3 pb-24">
-        {/* Status Card */}
-        <div className="bg-gradient-to-r from-brand-start to-brand-end rounded-xl p-4 text-white shadow-sm">
-          <div className="flex items-center mb-2">
-            <Package size={24} className="mr-2" />
-            <h2 className="text-3xl font-bold">{mockOrder.statusText}</h2>
+      <div className={`p-4 space-y-3 ${hasBottomBar ? 'pb-28' : 'pb-8'}`}>
+        {/* ===== Status Card ===== */}
+        <div className={`bg-gradient-to-br ${config.gradient} rounded-2xl p-5 text-white shadow-lg relative overflow-hidden`}>
+          <div className="absolute -right-6 -top-6 w-28 h-28 rounded-full bg-white/10" />
+          <div className="absolute -right-2 -bottom-8 w-20 h-20 rounded-full bg-white/5" />
+
+          <div className="flex items-center mb-1 relative z-10">
+            <StatusIcon size={22} className="mr-2.5 drop-shadow" />
+            <h2 className="text-2xl font-bold tracking-wide">{order.status_text}</h2>
           </div>
-          <p className="text-base opacity-90 mb-4">{mockOrder.statusDesc}</p>
-          
-          {/* Progress Bar (Simplified) */}
-          <div className="flex items-center justify-between relative px-2">
-            <div className="absolute top-1/2 left-4 right-4 h-[2px] bg-white dark:bg-gray-900/30 -translate-y-1/2 z-0"></div>
-            <div className="absolute top-1/2 left-4 w-2/3 h-[2px] bg-white dark:bg-gray-900 -translate-y-1/2 z-0"></div>
-            
-            <div className="flex flex-col items-center z-10 relative">
-              <div className="w-4 h-4 rounded-full bg-white dark:bg-gray-900 flex items-center justify-center mb-1">
-                <div className="w-2 h-2 rounded-full bg-brand-start"></div>
-              </div>
-              <span className="text-xs opacity-90">已下单</span>
+          <p className="text-sm opacity-80 ml-[32px] mb-4">{order.pay_type_text}</p>
+
+          {showProgress && (
+            <div className="flex items-center justify-between relative mt-2 px-1">
+              <div className="absolute top-[10px] left-[16px] right-[16px] h-[2px] bg-white/25 z-0" />
+              {activeSteps > 1 && (
+                <div
+                  className="absolute top-[10px] left-[16px] h-[2px] bg-white z-0 transition-all duration-500"
+                  style={{ width: `calc(${((activeSteps - 1) / (stepLabels.length - 1)) * 100}% - 32px)` }}
+                />
+              )}
+              {stepLabels.map((label, i) => (
+                <div key={label} className="flex flex-col items-center z-10 relative">
+                  <div className={`w-5 h-5 rounded-full flex items-center justify-center border-2 transition-all ${
+                    i < activeSteps
+                      ? 'bg-white border-white shadow-sm'
+                      : 'bg-transparent border-white/40'
+                  }`}>
+                    {i < activeSteps && <div className="w-2 h-2 rounded-full bg-current" style={{ color: 'var(--tw-gradient-from)' }} />}
+                  </div>
+                  <span className={`text-xs mt-1.5 font-medium ${i < activeSteps ? 'opacity-100' : 'opacity-50'}`}>{label}</span>
+                </div>
+              ))}
             </div>
-            <div className="flex flex-col items-center z-10 relative">
-              <div className="w-4 h-4 rounded-full bg-white dark:bg-gray-900 flex items-center justify-center mb-1">
-                <div className="w-2 h-2 rounded-full bg-brand-start"></div>
-              </div>
-              <span className="text-xs opacity-90">已付款</span>
-            </div>
-            <div className="flex flex-col items-center z-10 relative">
-              <div className="w-4 h-4 rounded-full bg-white dark:bg-gray-900 flex items-center justify-center mb-1">
-                <div className="w-2 h-2 rounded-full bg-brand-start"></div>
-              </div>
-              <span className="text-xs opacity-90">已发货</span>
-            </div>
-            <div className="flex flex-col items-center z-10 relative">
-              <div className="w-4 h-4 rounded-full bg-white dark:bg-gray-900/30 flex items-center justify-center mb-1">
-              </div>
-              <span className="text-xs opacity-60">交易完成</span>
-            </div>
-          </div>
+          )}
         </div>
 
-        {/* Logistics Entry */}
-        {mockOrder.logistics && (
-          <div className="bg-white dark:bg-gray-900 rounded-xl p-4 flex items-center active:bg-gray-50 dark:bg-gray-800 cursor-pointer" onClick={() => alert('查看物流详情')}>
-            <div className="w-8 h-8 rounded-full bg-blue-50 text-blue-500 flex items-center justify-center mr-3 shrink-0">
-              <Truck size={16} />
+        {/* ===== Logistics Entry ===== */}
+        {order.shipping_no && (
+          <div
+            className="bg-white dark:bg-gray-900 rounded-2xl p-4 flex items-center active:bg-gray-50 dark:active:bg-gray-800 cursor-pointer shadow-sm transition-colors"
+            onClick={() => navigate(`/logistics/${orderId}`)}
+          >
+            <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-900/20 text-blue-500 flex items-center justify-center mr-3 shrink-0">
+              <Truck size={20} />
             </div>
             <div className="flex-1 min-w-0 pr-2">
-              <p className="text-md text-text-main line-clamp-2 leading-snug mb-1">{mockOrder.logistics.latestStatus}</p>
-              <p className="text-sm text-gray-400 dark:text-gray-500">{mockOrder.logistics.time}</p>
+              <p className="text-base font-medium text-text-main leading-snug line-clamp-1">
+                {order.shipping_company} {order.shipping_no}
+              </p>
+              {order.ship_time > 0 && (
+                <p className="text-xs text-text-aux mt-0.5">{formatTime(order.ship_time)}</p>
+              )}
             </div>
-            <ChevronRight size={16} className="text-gray-400 dark:text-gray-500 shrink-0" />
+            <ChevronRight size={18} className="text-text-aux shrink-0" />
           </div>
         )}
 
-        {/* Address Card */}
-        <div className="bg-white dark:bg-gray-900 rounded-xl p-4 flex items-start">
-          <div className="w-8 h-8 rounded-full bg-red-50 text-text-price flex items-center justify-center mr-3 shrink-0 mt-0.5">
-            <MapPin size={16} />
-          </div>
-          <div className="flex-1">
-            <div className="flex items-center mb-1">
-              <span className="text-lg font-bold text-text-main mr-2">{mockOrder.address.name}</span>
-              <span className="text-md text-gray-500 dark:text-gray-400">{mockOrder.address.phone}</span>
+        {/* ===== Address Card ===== */}
+        <div className="bg-white dark:bg-gray-900 rounded-2xl p-4 shadow-sm">
+          <div className="flex items-start">
+            <div className="w-10 h-10 rounded-xl bg-red-50 dark:bg-red-900/20 text-red-500 flex items-center justify-center mr-3 shrink-0 mt-0.5">
+              <MapPin size={20} />
             </div>
-            <p className="text-base text-text-main leading-relaxed">{mockOrder.address.detail}</p>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-baseline gap-2 mb-1">
+                <span className="text-base font-bold text-text-main">{order.recipient_name}</span>
+                <span className="text-sm text-text-sub">{order.recipient_phone}</span>
+              </div>
+              <p className="text-sm text-text-sub leading-relaxed">{order.recipient_address}</p>
+            </div>
           </div>
         </div>
 
-        {/* Product List */}
-        <div className="bg-white dark:bg-gray-900 rounded-xl p-4">
-          <div className="flex items-center mb-3 pb-3 border-b border-gray-50 dark:border-gray-800">
-            <span className="text-md font-bold text-text-main">京东自营</span>
-            <ChevronRight size={14} className="text-gray-400 dark:text-gray-500 ml-1" />
+        {/* ===== Product List ===== */}
+        <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm overflow-hidden">
+          <div className="px-4 py-3 flex items-center border-b border-gray-50 dark:border-gray-800">
+            <ShoppingBag size={16} className="text-text-main mr-1.5" />
+            <span className="text-base font-bold text-text-main">商品信息</span>
+            <span className="text-xs text-text-aux ml-auto">共{order.items.length}件</span>
           </div>
-          
-          {mockOrder.products.map(product => (
-            <div key={product.id} className="flex py-2">
-              <div className="w-20 h-20 bg-gray-50 dark:bg-gray-800 rounded-lg shrink-0 mr-3 overflow-hidden">
-                <img src={product.image} alt={product.title} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-              </div>
-              <div className="flex-1 flex flex-col min-w-0">
-                <div className="text-md text-text-main line-clamp-2 leading-snug mb-1">
-                  {product.isSelfOperated && (
-                    <span className="inline-block bg-brand-start text-white text-xs px-1 rounded-sm mr-1.5 align-middle leading-tight font-normal">自营</span>
-                  )}
-                  <span className="align-middle">{product.title}</span>
+
+          <div className="px-4 py-2 divide-y divide-gray-50 dark:divide-gray-800">
+            {order.items.map(item => {
+              const thumb = item.product_thumbnail ? resolveShopProductImageUrl(item.product_thumbnail) : '';
+              const productPath = buildShopProductPath(item.product_id);
+              return (
+                <div
+                  key={item.id}
+                  role="button"
+                  tabIndex={0}
+                  className="flex py-3 cursor-pointer active:opacity-80 transition-opacity"
+                  onClick={() => navigate(productPath)}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigate(productPath); } }}
+                >
+                  <div className="w-[76px] h-[76px] bg-gray-50 dark:bg-gray-800 rounded-xl shrink-0 mr-3 overflow-hidden border border-gray-100 dark:border-gray-700">
+                    {thumb ? (
+                      <img src={thumb} alt={item.product_name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-text-aux text-xs">商品</div>
+                    )}
+                  </div>
+                  <div className="flex-1 flex flex-col min-w-0 justify-between py-0.5">
+                    <div className="text-sm text-text-main line-clamp-2 leading-snug">{item.product_name}</div>
+                    <div className="flex justify-between items-end">
+                      <span className="text-base font-bold text-text-main">{formatItemPrice(item, order.pay_type)}</span>
+                      <span className="text-xs text-text-aux">x{item.quantity}</span>
+                    </div>
+                  </div>
                 </div>
-                <div className="text-sm text-gray-400 dark:text-gray-500 bg-gray-50 dark:bg-gray-800 px-1.5 py-0.5 rounded inline-block self-start mb-auto">
-                  {product.sku}
-                </div>
-                <div className="flex justify-between items-center mt-2">
-                  <div className="text-md font-bold text-text-main">¥{product.price}</div>
-                  <div className="text-sm text-gray-500 dark:text-gray-400">x{product.quantity}</div>
-                </div>
-              </div>
+              );
+            })}
+          </div>
+
+          {/* Amount Summary */}
+          <div className="px-4 py-3 border-t border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-800/30">
+            <div className="flex justify-end items-baseline gap-1">
+              <span className="text-sm text-text-sub">实付款</span>
+              <span className="text-xl font-bold text-text-price">{formatTotalAmount(order)}</span>
             </div>
-          ))}
-          
-          <div className="mt-4 pt-3 border-t border-gray-50 dark:border-gray-800 flex justify-end space-x-2">
-            <button className="px-4 py-1.5 rounded-full border border-gray-300 dark:border-gray-600 text-base text-text-main" onClick={() => alert('申请售后')}>
-              申请售后
-            </button>
-            <button className="px-4 py-1.5 rounded-full border border-gray-300 dark:border-gray-600 text-base text-text-main" onClick={() => alert('加入购物车')}>
-              再次购买
-            </button>
           </div>
         </div>
 
-        {/* Order Info & Fees */}
-        <div className="bg-white dark:bg-gray-900 rounded-xl p-4">
-          <h3 className="text-md font-bold text-text-main mb-3">订单信息</h3>
-          <div className="space-y-2 text-base">
-            <div className="flex justify-between">
-              <span className="text-gray-500 dark:text-gray-400">订单编号</span>
-              <div className="flex items-center text-text-main">
-                {mockOrder.id}
-                <button onClick={() => handleCopy(mockOrder.id)} className="ml-2 text-gray-400 dark:text-gray-500 active:text-gray-600 dark:text-gray-400">
-                  <Copy size={12} />
+        {/* ===== Order Info ===== */}
+        <div className="bg-white dark:bg-gray-900 rounded-2xl p-4 shadow-sm">
+          <h3 className="text-base font-bold text-text-main mb-3">订单信息</h3>
+          <div className="space-y-2.5 text-sm">
+            <div className="flex justify-between items-center">
+              <span className="text-text-aux shrink-0">订单编号</span>
+              <div className="flex items-center min-w-0 ml-4">
+                <span className="text-text-main font-mono text-xs truncate">{order.order_no}</span>
+                <button onClick={() => handleCopy(order.order_no)} className="ml-1.5 text-text-aux active:text-primary-start shrink-0 p-0.5">
+                  <Copy size={13} />
                 </button>
               </div>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-500 dark:text-gray-400">下单时间</span>
-              <span className="text-text-main">{mockOrder.createTime}</span>
+              <span className="text-text-aux">下单时间</span>
+              <span className="text-text-main">{formatTime(order.create_time)}</span>
             </div>
+            {order.pay_time > 0 && (
+              <div className="flex justify-between">
+                <span className="text-text-aux">支付时间</span>
+                <span className="text-text-main">{formatTime(order.pay_time)}</span>
+              </div>
+            )}
             <div className="flex justify-between">
-              <span className="text-gray-500 dark:text-gray-400">支付方式</span>
-              <span className="text-text-main">在线支付</span>
+              <span className="text-text-aux">支付方式</span>
+              <span className="text-text-main">{order.pay_type_text || '在线支付'}</span>
             </div>
-          </div>
-
-          <div className="mt-4 pt-4 border-t border-gray-50 dark:border-gray-800 space-y-2 text-base">
-            <div className="flex justify-between">
-              <span className="text-gray-500 dark:text-gray-400">商品总额</span>
-              <span className="text-text-main">¥{mockOrder.fees.total}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-500 dark:text-gray-400">运费</span>
-              <span className="text-text-main">¥{mockOrder.fees.shipping}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-500 dark:text-gray-400">优惠金额</span>
-              <span className="text-text-price">{mockOrder.fees.discount}</span>
-            </div>
-            <div className="flex justify-between items-center mt-2 pt-2 border-t border-gray-50 dark:border-gray-800">
-              <span className="text-md font-bold text-text-main">实付款</span>
-              <span className="text-xl font-bold text-text-price">¥{mockOrder.fees.actualPay}</span>
-            </div>
+            {order.remark && (
+              <div className="flex justify-between">
+                <span className="text-text-aux shrink-0">订单备注</span>
+                <span className="text-text-main ml-4 text-right">{order.remark}</span>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -269,32 +367,76 @@ export const OrderDetailPage = () => {
   };
 
   return (
-    <div className="flex-1 flex flex-col bg-bg-hover dark:bg-gray-950 relative h-full overflow-hidden">
-      {/* Offline Banner */}
+    <div className="flex-1 flex flex-col bg-[#F7F7FA] dark:bg-gray-950 relative h-full overflow-hidden">
       {offline && (
-        <div className="bg-[#ffe4e4] text-text-price text-sm py-2 px-4 flex items-center justify-center sticky top-0 z-50">
+        <div className="bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 text-sm py-2 px-4 flex items-center justify-center shrink-0">
           <WifiOff size={14} className="mr-2" />
           网络连接已断开，请检查网络设置
         </div>
       )}
 
-      
+      {/* Header */}
+      <div className="bg-white dark:bg-gray-900 z-40 relative shrink-0 border-b border-gray-100 dark:border-gray-800">
+        <div className="h-12 flex items-center px-3">
+          <button onClick={handleBack} className="p-1.5 -ml-1 text-text-main active:opacity-70 rounded-full">
+            <ChevronLeft size={22} />
+          </button>
+          <h1 className="text-lg font-bold text-text-main flex-1 text-center -ml-8">订单详情</h1>
+          <div className="w-8" />
+        </div>
+      </div>
 
-      {renderHeader()}
-      
       <div className="flex-1 overflow-y-auto no-scrollbar relative">
         {renderContent()}
       </div>
 
-      {/* Bottom Action Bar */}
-      {!loading && !error && (
-        <div className="absolute bottom-0 left-0 right-0 bg-white dark:bg-gray-900 border-t border-gray-100 dark:border-gray-800 px-4 py-3 pb-safe flex justify-end items-center space-x-3 z-40">
-          <button className="px-5 py-1.5 rounded-full border border-gray-300 dark:border-gray-600 text-md text-text-main active:bg-gray-50 dark:bg-gray-800">
+      {/* ===== Bottom Action Bar ===== */}
+      {!loading && !error && order?.status === 'pending' && (
+        <div className="absolute bottom-0 left-0 right-0 bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm border-t border-gray-100 dark:border-gray-800 px-4 py-3 pb-safe flex justify-between items-center z-40">
+          <div className="text-sm text-text-sub">
+            应付 <span className="text-base font-bold text-text-price">{formatTotalAmount(order)}</span>
+          </div>
+          <div className="flex items-center gap-2.5">
+            <button
+              className="px-5 py-2 rounded-full text-sm font-medium text-text-sub border border-gray-200 dark:border-gray-700 active:bg-gray-50 dark:active:bg-gray-800 transition-colors"
+              onClick={handleCancelOrder}
+            >
+              取消订单
+            </button>
+            <button
+              className="px-6 py-2 rounded-full text-sm font-bold text-white bg-gradient-to-r from-red-500 to-orange-500 shadow-sm active:opacity-80 transition-opacity"
+              onClick={handleGoPay}
+            >
+              立即付款
+            </button>
+          </div>
+        </div>
+      )}
+
+      {!loading && !error && order?.status === 'shipped' && (
+        <div className="absolute bottom-0 left-0 right-0 bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm border-t border-gray-100 dark:border-gray-800 px-4 py-3 pb-safe flex justify-end items-center gap-2.5 z-40">
+          <button
+            className="px-5 py-2 rounded-full text-sm font-medium text-text-sub border border-gray-200 dark:border-gray-700 active:bg-gray-50 dark:active:bg-gray-800 transition-colors"
+            onClick={handleCancelOrder}
+          >
             取消订单
           </button>
-          <button className="px-5 py-1.5 rounded-full border border-[#f2270c] text-md text-text-price active:bg-red-50">
-            确认收货
+          <button
+            className="px-6 py-2 rounded-full text-sm font-bold text-white bg-gradient-to-r from-emerald-500 to-green-500 shadow-sm active:opacity-80 transition-opacity disabled:opacity-50"
+            onClick={handleConfirmReceipt}
+            disabled={confirming || orderId <= 0}
+          >
+            {confirming ? '确认中...' : '确认收货'}
           </button>
+        </div>
+      )}
+
+      {!loading && !error && order?.status === 'completed' && (
+        <div className="absolute bottom-0 left-0 right-0 bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm border-t border-gray-100 dark:border-gray-800 px-4 py-3 pb-safe flex justify-center items-center z-40">
+          <span className="text-sm text-text-aux flex items-center gap-1.5">
+            <CheckCircle2 size={14} className="text-emerald-500" />
+            交易已完成
+          </span>
         </div>
       )}
     </div>

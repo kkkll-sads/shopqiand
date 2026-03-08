@@ -1,53 +1,130 @@
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useAppNavigate } from '../../lib/navigation';
-import { Search, Headset, Store, ShieldCheck, FileText, Volume2, Wallet, Package, Truck, ShoppingCart, WifiOff, RefreshCcw, FileX, ArrowRight } from 'lucide-react';
+import { Search, Headset, Store, ShieldCheck, FileText, Volume2, Wallet, Package, Truck, WifiOff, RefreshCcw, ArrowRight, User } from 'lucide-react';
 import { Skeleton } from '../../components/ui/Skeleton';
+import { PullToRefreshContainer } from '../../components/ui/PullToRefreshContainer';
+import { ForceAnnouncementModal } from '../../components/biz/ForceAnnouncementModal';
 import { useRouteScrollRestoration } from '../../hooks/useRouteScrollRestoration';
+import { useRequest } from '../../hooks/useRequest';
+import { bannerApi, type BannerItem } from '../../api/modules/banner';
+import { announcementApi } from '../../api/modules/announcement';
+import { accountApi } from '../../api/modules/account';
+import { reservationApi } from '../../api/modules/reservation';
+import { resolveUploadUrl } from '../../api/modules/upload';
+import { ReservationCard } from '../../features/reservation/ReservationCard';
 
-const HOME_BANNERS = [
-  {
-    id: 'store-hot',
-    title: '精选商城限时上新',
-    description: '数码好物、热销 SKU 与自营专区快速直达。',
-    eyebrow: 'HOT DROP',
-    route: 'store',
-    cta: '去逛商城',
-    icon: Store,
-    gradientClassName: 'from-[#171717] via-[#2D1B69] to-[#FF4B2B]',
-    accentClassName: 'bg-[#FFD84D] text-[#2B1600]',
-  },
-  {
-    id: 'trade-zone',
-    title: '交易专区场次开放中',
-    description: '查看当前可参与场次、额度与倒计时信息。',
-    eyebrow: 'LIVE ACCESS',
-    route: 'trading_zone',
-    cta: '进入专区',
-    icon: Wallet,
-    gradientClassName: 'from-[#B71C1C] via-[#D32F2F] to-[#FF7A18]',
-    accentClassName: 'bg-white/20 text-white',
-  },
-  {
-    id: 'shield-entry',
-    title: '实名认证与权益中心',
-    description: '资料提交、实名状态和权益服务入口集中管理。',
-    eyebrow: 'ACCOUNT',
-    route: 'shield',
-    cta: '立即查看',
-    icon: ShieldCheck,
-    gradientClassName: 'from-[#0F766E] via-[#0D9488] to-[#38BDF8]',
-    accentClassName: 'bg-white/20 text-white',
-  },
-] as const;
+
 
 export const HomePage = () => {
   const { goTo } = useAppNavigate();
   const [loading, setLoading] = useState(true);
   const [offline, setOffline] = useState(false);
   const [error, setError] = useState(false);
-  const [emptyFeed, setEmptyFeed] = useState(false);
   const [activeBannerIndex, setActiveBannerIndex] = useState(0);
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
+
+  /* ---- 轮播图数据（来自后端 API） ---- */
+  const [banners, setBanners] = useState<BannerItem[]>([]);
+  const [bannersLoading, setBannersLoading] = useState(true);
+
+  /* 请求轮播图列表 */
+  const fetchBanners = useCallback(async (signal?: AbortSignal) => {
+    setBannersLoading(true);
+    try {
+      const response = await bannerApi.getList({ page: 1, limit: 10 }, signal);
+      const list = response?.list;
+      setBanners(Array.isArray(list) ? list : []);
+    } catch {
+      /* 请求失败时置空，不展示轮播图 */
+      setBanners([]);
+    } finally {
+      setBannersLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    void fetchBanners(controller.signal);
+    return () => controller.abort();
+  }, [fetchBanners]);
+
+  /* ---- 申购记录（实时 API） ---- */
+  const reservationsRequest = useRequest(
+    (signal) => reservationApi.getList({ page: 1, limit: 3 }, signal),
+    { cacheKey: 'home:reservations' },
+  );
+  const reservations = reservationsRequest.data?.list ?? [];
+
+  /* ---- 滚动公告（实时 API） ---- */
+  const scrollAnnouncementsRequest = useRequest(
+    (signal) => announcementApi.getScrollList(signal),
+    { cacheKey: 'home:scroll-announcements' },
+  );
+  const scrollAnnouncements = scrollAnnouncementsRequest.data?.list ?? [];
+
+  /* ---- 用户资料（头像） ---- */
+  const profileRequest = useRequest(
+    (signal) => accountApi.getProfile({ signal }),
+    { cacheKey: 'home:profile' },
+  );
+  const userAvatar = profileRequest.data?.userInfo?.avatar;
+
+  /* ---- 弹出公告 ---- */
+  const popupRequest = useRequest(
+    (signal) => announcementApi.getPopupList(signal),
+    { cacheKey: 'home:popup-announcements' },
+  );
+  const popupList = popupRequest.data?.list ?? [];
+  const unreadPopups = popupList.filter((a) => !a.is_read);
+
+  const [showPopupIndex, setShowPopupIndex] = useState(0);
+  const [popupVisible, setPopupVisible] = useState(false);
+  const popupDelayRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    setShowPopupIndex(0);
+    setPopupVisible(false);
+  }, [popupList.length]);
+
+  useEffect(() => {
+    if (unreadPopups.length === 0) return;
+
+    const item = unreadPopups[showPopupIndex];
+    if (!item) return;
+
+    const delayMs = Math.max(0, item.popup_delay ?? 0) * 1000;
+
+    popupDelayRef.current = window.setTimeout(() => {
+      setPopupVisible(true);
+    }, delayMs);
+
+    return () => {
+      if (popupDelayRef.current) {
+        window.clearTimeout(popupDelayRef.current);
+        popupDelayRef.current = null;
+      }
+    };
+  }, [unreadPopups, showPopupIndex]);
+
+  const handlePopupClose = useCallback(() => {
+    setPopupVisible(false);
+    if (showPopupIndex < unreadPopups.length - 1) {
+      setShowPopupIndex((i) => i + 1);
+    }
+  }, [showPopupIndex, unreadPopups.length]);
+
+  /** 下拉刷新回调 */
+  const handleRefresh = useCallback(async () => {
+    setLoading(true);
+    await Promise.allSettled([
+      fetchBanners(),
+      reservationsRequest.reload(),
+      scrollAnnouncementsRequest.reload(),
+      profileRequest.reload(),
+      popupRequest.reload(),
+    ]);
+    setLoading(false);
+  }, [fetchBanners, reservationsRequest, scrollAnnouncementsRequest, profileRequest, popupRequest]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -56,25 +133,50 @@ export const HomePage = () => {
     return () => clearTimeout(timer);
   }, []);
 
+  /* 自动轮播：依赖 banners 长度 */
   useEffect(() => {
+    if (banners.length <= 1) return;
     const timer = window.setInterval(() => {
-      setActiveBannerIndex((current) => (current + 1) % HOME_BANNERS.length);
+      setActiveBannerIndex((current) => (current + 1) % banners.length);
     }, 4000);
-
     return () => window.clearInterval(timer);
-  }, []);
+  }, [banners.length]);
 
   useRouteScrollRestoration({
     containerRef: scrollContainerRef,
     namespace: 'home-page',
-    restoreDeps: [emptyFeed, error, loading],
+    restoreDeps: [error, loading],
     restoreWhen: !error && !loading,
   });
 
+  /** 解析轮播图图片地址（支持后端返回相对路径） */
+  const resolveBannerImage = (item: BannerItem) => {
+    if (!item.image) return '';
+    if (/^https?:\/\//i.test(item.image)) return item.image;
+    return resolveUploadUrl(item.image);
+  };
+
+  /** 处理轮播图点击跳转 */
+  const handleBannerClick = (item: BannerItem) => {
+    if (!item.url) return;
+    if (item.url.startsWith('/')) {
+      goTo(item.url.replace(/^\//, '') as never);
+    } else if (/^https?:\/\//i.test(item.url)) {
+      window.open(item.url, '_blank');
+    }
+  };
+
   const renderHeader = () => (
-    <div className="sticky top-0 z-40 bg-white dark:bg-gray-900/90 dark:bg-gray-900/90 backdrop-blur-md px-4 py-2 flex items-center space-x-3 border-b border-gray-100 dark:border-gray-800">
-      <div className="w-8 h-8 rounded-full overflow-hidden shrink-0 bg-[#FF4142] flex items-center justify-center text-white">
-        <img src="https://picsum.photos/seed/jdlogo/100/100" alt="Logo" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+    <div className="sticky top-0 z-40 bg-white dark:bg-gray-900/90 backdrop-blur-md px-4 py-2 flex items-center space-x-3 border-b border-gray-100 dark:border-gray-800">
+      <div
+        className="w-8 h-8 rounded-full overflow-hidden shrink-0 bg-[#FF4142] flex items-center justify-center text-white cursor-pointer active:opacity-80"
+        onClick={() => goTo('user')}
+      >
+        {userAvatar ? (
+          <img src={userAvatar} alt="头像" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+        ) : (
+          <User size={18} />
+        )}
       </div>
       <div 
         className="flex-1 h-8 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center px-3 shadow-sm border border-transparent dark:border-gray-700 cursor-pointer"
@@ -110,76 +212,77 @@ export const HomePage = () => {
 
     return (
       <div ref={scrollContainerRef} className="flex-1 overflow-y-auto no-scrollbar pb-4">
+        {/* ===== 轮播图区域（数据来自 /api/Banner/getBannerList） ===== */}
         <div className="mx-4 mt-4 mb-4">
           <div className="relative overflow-hidden rounded-[24px] shadow-[0_18px_45px_rgba(15,23,42,0.14)]">
-            <div
-              className="flex transition-transform duration-500 ease-out"
-              style={{ transform: `translateX(-${activeBannerIndex * 100}%)` }}
-            >
-              {HOME_BANNERS.map((banner) => {
-                const Icon = banner.icon;
+            {bannersLoading ? (
+              /* 加载骨架屏 */
+              <Skeleton className="w-full min-h-[168px] rounded-none" />
+            ) : banners.length > 0 ? (
+              <>
+                <div
+                  className="flex transition-transform duration-500 ease-out"
+                  style={{ transform: `translateX(-${activeBannerIndex * 100}%)` }}
+                >
+                  {banners.map((banner) => {
+                    const imageUrl = resolveBannerImage(banner);
 
-                return (
-                  <button
-                    key={banner.id}
-                    type="button"
-                    className={`relative min-h-[168px] w-full shrink-0 overflow-hidden bg-gradient-to-r px-5 py-5 text-left ${banner.gradientClassName}`}
-                    onClick={() => goTo(banner.route)}
-                    aria-label={banner.title}
-                  >
-                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.24),transparent_34%),radial-gradient(circle_at_bottom_left,rgba(255,255,255,0.18),transparent_32%)]" />
-                    <div className="absolute -right-6 top-4 h-24 w-24 rounded-full border border-white/20" />
-                    <div className="absolute right-10 bottom-[-30px] h-28 w-28 rounded-full bg-white/10 blur-2xl" />
+                    return (
+                      <button
+                        key={banner.id}
+                        type="button"
+                        className="relative min-h-[168px] w-full shrink-0 overflow-hidden bg-gradient-to-r from-[#171717] via-[#2D1B69] to-[#FF4B2B] text-left"
+                        onClick={() => handleBannerClick(banner)}
+                        aria-label={banner.title || '轮播图'}
+                      >
+                        {/* 有图片则展示图片，否则展示渐变背景 + 文字 */}
+                        {imageUrl ? (
+                          <img
+                            src={imageUrl}
+                            alt={banner.title || '轮播图'}
+                            className="absolute inset-0 h-full w-full object-cover"
+                            loading="lazy"
+                          />
+                        ) : (
+                          <>
+                            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.24),transparent_34%),radial-gradient(circle_at_bottom_left,rgba(255,255,255,0.18),transparent_32%)]" />
+                            <div className="absolute -right-6 top-4 h-24 w-24 rounded-full border border-white/20" />
+                            <div className="absolute right-10 bottom-[-30px] h-28 w-28 rounded-full bg-white/10 blur-2xl" />
+                          </>
+                        )}
 
-                    <div className="relative z-10 flex h-full items-start justify-between gap-4">
-                      <div className="max-w-[72%]">
-                        <span className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold tracking-[0.16em] ${banner.accentClassName}`}>
-                          {banner.eyebrow}
-                        </span>
-                        <h3 className="mt-3 text-[24px] font-bold leading-tight text-white">
-                          {banner.title}
-                        </h3>
-                        <p className="mt-2 text-[13px] leading-6 text-white/88">
-                          {banner.description}
-                        </p>
-                        <span className="mt-4 inline-flex items-center rounded-full border border-white/25 bg-white/12 px-3 py-1.5 text-[12px] font-medium text-white backdrop-blur-sm">
-                          {banner.cta}
-                          <ArrowRight size={14} className="ml-1.5" />
-                        </span>
-                      </div>
 
-                      <div className="relative mt-1 flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-white/20 bg-white/12 text-white shadow-[0_10px_28px_rgba(15,23,42,0.2)] backdrop-blur-sm">
-                        <Icon size={24} strokeWidth={1.8} />
-                      </div>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* 轮播指示器 */}
+                {banners.length > 1 && (
+                  <div className="pointer-events-none absolute inset-x-0 bottom-4 z-20 flex items-center justify-between px-4">
+                    <div className="pointer-events-auto flex items-center gap-2">
+                      {banners.map((banner, index) => {
+                        const isActive = index === activeBannerIndex;
+                        return (
+                          <button
+                            key={banner.id}
+                            type="button"
+                            aria-label={`切换到第 ${index + 1} 张轮播`}
+                            onClick={() => setActiveBannerIndex(index)}
+                            className={`h-2.5 rounded-full transition-all ${
+                              isActive ? 'w-6 bg-white' : 'w-2.5 bg-white/45'
+                            }`}
+                          />
+                        );
+                      })}
                     </div>
-                  </button>
-                );
-              })}
-            </div>
-
-            <div className="pointer-events-none absolute inset-x-0 bottom-4 z-20 flex items-center justify-between px-4">
-              <div className="pointer-events-auto flex items-center gap-2">
-                {HOME_BANNERS.map((banner, index) => {
-                  const isActive = index === activeBannerIndex;
-
-                  return (
-                    <button
-                      key={banner.id}
-                      type="button"
-                      aria-label={`切换到第 ${index + 1} 张轮播`}
-                      onClick={() => setActiveBannerIndex(index)}
-                      className={`h-2.5 rounded-full transition-all ${
-                        isActive ? 'w-6 bg-white' : 'w-2.5 bg-white/45'
-                      }`}
-                    />
-                  );
-                })}
-              </div>
-
-              <div className="rounded-full border border-white/20 bg-black/15 px-2.5 py-1 text-[11px] font-medium tracking-[0.18em] text-white backdrop-blur-sm">
-                {String(activeBannerIndex + 1).padStart(2, '0')} / {String(HOME_BANNERS.length).padStart(2, '0')}
-              </div>
-            </div>
+                    <div className="rounded-full border border-white/20 bg-black/15 px-2.5 py-1 text-[11px] font-medium tracking-[0.18em] text-white backdrop-blur-sm">
+                      {String(activeBannerIndex + 1).padStart(2, '0')} / {String(banners.length).padStart(2, '0')}
+                    </div>
+                  </div>
+                )}
+              </>
+            ) : null}
           </div>
         </div>
 
@@ -232,25 +335,26 @@ export const HomePage = () => {
           </div>
         </div>
 
-        {/* Announcement */}
-        <div 
-          className="mx-4 mb-4 h-9 bg-white dark:bg-gray-800 rounded-full flex items-center px-3 shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden cursor-pointer active:opacity-80"
-          onClick={() => goTo('announcement')}
-        >
-          <Volume2 size={16} className="text-[#FF4142] mr-2 shrink-0" />
-          <div className="flex-1 overflow-hidden relative h-full flex items-center">
-            <div className="absolute whitespace-nowrap text-[12px] text-gray-900 dark:text-gray-100 animate-marquee">
-              最新公告：数据资产确权交易平台正式上线，欢迎体验...
+        {/* Announcement - 滚动公告 */}
+        {scrollAnnouncements.length > 0 && (
+          <div 
+            className="mx-4 mb-4 h-9 bg-white dark:bg-gray-800 rounded-full flex items-center px-3 shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden cursor-pointer active:opacity-80"
+            onClick={() => goTo('announcement')}
+          >
+            <Volume2 size={16} className="text-[#FF4142] mr-2 shrink-0" />
+            <div className="flex-1 overflow-hidden relative h-full flex items-center">
+              <div className="absolute whitespace-nowrap text-[12px] text-gray-900 dark:text-gray-100 animate-marquee">
+                {scrollAnnouncements.map((a) => a.title).join('　　　')}
+              </div>
             </div>
           </div>
-        </div>
+        )}
 
-        {/* Trading Zone Banner (Replaced Asset/Flash Sale Banner) */}
+        {/* Trading Zone Banner */}
         <div 
           className="mx-4 mb-4 rounded-[16px] bg-gradient-to-r from-[#D32F2F] to-[#FF4B2B] p-5 relative overflow-hidden shadow-md cursor-pointer active:opacity-90 transition-opacity flex items-center justify-between min-h-[88px]"
           onClick={() => goTo('trading_zone')}
         >
-          {/* Decorative background elements */}
           <div className="absolute right-0 top-0 bottom-0 w-1/2 bg-gradient-to-l from-white/10 to-transparent"></div>
           <div className="absolute -right-4 -top-4 w-24 h-24 rounded-full border-4 border-white/10"></div>
           
@@ -273,7 +377,6 @@ export const HomePage = () => {
             >
               <Wallet size={24} strokeWidth={1.5} className="mb-1.5 text-gray-700 dark:text-gray-400" />
               <span className="text-[12px]">待付款</span>
-              <div className="absolute top-0 right-4 bg-[#FF4142] text-white text-[10px] font-bold px-1.5 rounded-full border border-white dark:border-gray-900">2</div>
             </div>
             <div 
               className="flex flex-col items-center text-gray-900 dark:text-gray-100 cursor-pointer active:opacity-70 w-1/4"
@@ -299,67 +402,48 @@ export const HomePage = () => {
           </div>
         </div>
 
-        {/* Product Feed */}
+        {/* 申购记录 */}
         <div className="px-4 mb-4">
-          <h3 className="text-[16px] font-bold text-gray-900 dark:text-gray-100 mb-3 flex items-center justify-center">
-            <span className="w-4 h-px bg-gray-300 dark:bg-gray-600 mr-2"></span>
-            推荐商品
-            <span className="w-4 h-px bg-gray-300 dark:bg-gray-600 ml-2"></span>
-          </h3>
-          
-          {emptyFeed ? (
-            <div className="bg-white dark:bg-gray-900 rounded-[16px] flex flex-col items-center justify-center py-10 border border-gray-100 dark:border-gray-800 shadow-sm">
-              <FileX size={40} className="text-gray-300 dark:text-gray-600 dark:text-gray-400 mb-3" strokeWidth={1.5} />
-              <p className="text-[14px] text-gray-500 dark:text-gray-400 mb-4">暂无推荐商品</p>
-              <button 
-                className="px-5 py-2 border border-[#FF4142] text-[#FF4142] rounded-full text-[13px] font-medium active:bg-red-50 dark:active:bg-red-900/20 transition-colors"
-                onClick={() => goTo('category')}
-              >
-                去分类看看
-              </button>
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-[16px] font-bold text-gray-900 dark:text-gray-100 flex items-center">
+              <span className="w-4 h-px bg-gray-300 dark:bg-gray-600 mr-2"></span>
+              申购记录
+              <span className="w-4 h-px bg-gray-300 dark:bg-gray-600 ml-2"></span>
+            </h3>
+            <button
+              className="text-[12px] text-gray-500 dark:text-gray-400 flex items-center active:opacity-70"
+              onClick={() => goTo('reservations')}
+            >
+              查看更多 <ArrowRight size={12} className="ml-0.5" />
+            </button>
+          </div>
+
+          {reservationsRequest.loading && reservations.length === 0 ? (
+            <div className="space-y-3">
+              {[1, 2, 3].map(i => (
+                <div key={i} className="bg-white dark:bg-gray-900 rounded-[14px] p-4 border border-gray-100 dark:border-gray-800 shadow-sm">
+                  <div className="flex justify-between items-start mb-3">
+                    <Skeleton className="w-36 h-4" />
+                    <Skeleton className="w-14 h-5 rounded-full" />
+                  </div>
+                  <Skeleton className="w-24 h-3 mb-2" />
+                  <Skeleton className="w-32 h-3" />
+                </div>
+              ))}
+            </div>
+          ) : reservations.length > 0 ? (
+            <div className="space-y-3">
+              {reservations.map((item) => (
+                <ReservationCard
+                  key={item.id}
+                  item={item}
+                  onClick={() => goTo(`/reservation_detail/${item.id}`)}
+                />
+              ))}
             </div>
           ) : (
-            <div className="grid grid-cols-2 gap-3">
-              {loading ? (
-                [1, 2, 3, 4].map(i => (
-                  <div key={i} className="bg-white dark:bg-gray-900 rounded-[16px] overflow-hidden shadow-sm border border-gray-100 dark:border-gray-800 flex flex-col">
-                    <Skeleton className="w-full aspect-square rounded-none" />
-                    <div className="p-3 space-y-2">
-                      <Skeleton className="w-full h-3" />
-                      <Skeleton className="w-2/3 h-3" />
-                      <Skeleton className="w-1/2 h-4 mt-2" />
-                    </div>
-                  </div>
-                ))
-              ) : (
-                [1, 2, 3, 4].map((i) => (
-                  <div 
-                    key={i} 
-                    className="bg-white dark:bg-gray-900 rounded-[16px] overflow-hidden shadow-sm border border-gray-100 dark:border-gray-800 cursor-pointer active:opacity-70 transition-opacity flex flex-col"
-                    onClick={() => goTo('product_detail')}
-                  >
-                    <img src={`https://picsum.photos/seed/prod${i}/200/200`} alt="Product" className="w-full aspect-square object-cover" referrerPolicy="no-referrer" />
-                    <div className="p-3 flex-1 flex flex-col">
-                      <div className="text-[13px] text-gray-900 dark:text-gray-100 line-clamp-2 mb-2 leading-tight">
-                        <span className="inline-block bg-[#FF4142] text-white text-[10px] px-1 rounded-[4px] mr-1 font-medium">自营</span>
-                        Sony/索尼 WH-1000XM5 头戴式无线降噪耳机 蓝牙耳机
-                      </div>
-                      <div className="flex space-x-1 mb-2 mt-auto">
-                        <span className="text-[10px] text-[#FF4142] border border-[#FF4142]/30 rounded-[4px] px-1">包邮</span>
-                        <span className="text-[10px] text-[#FF4142] border border-[#FF4142]/30 rounded-[4px] px-1">热卖</span>
-                      </div>
-                      <div className="flex justify-between items-end">
-                        <div className="text-[16px] font-bold text-[#FF4142] leading-none">
-                          <span className="text-[12px]">¥</span>2499
-                        </div>
-                        <button className="w-6 h-6 rounded-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 flex items-center justify-center text-gray-900 dark:text-gray-100">
-                          <ShoppingCart size={14} />
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                ))
-              )}
+            <div className="bg-white dark:bg-gray-900 rounded-[14px] p-6 border border-gray-100 dark:border-gray-800 shadow-sm text-center">
+              <p className="text-[14px] text-gray-400 dark:text-gray-500">暂无申购记录</p>
             </div>
           )}
         </div>
@@ -383,9 +467,25 @@ export const HomePage = () => {
       
 
       {renderHeader()}
-      {renderContent()}
+      <PullToRefreshContainer onRefresh={handleRefresh} disabled={error || offline}>
+        {renderContent()}
+      </PullToRefreshContainer>
 
-
+      {/* 弹出公告 */}
+      {popupVisible && unreadPopups[showPopupIndex] && (
+        <ForceAnnouncementModal
+          item={unreadPopups[showPopupIndex]}
+          isOpen={popupVisible}
+          loading={popupRequest.loading}
+          error={Boolean(popupRequest.error)}
+          onClose={handlePopupClose}
+          onRetry={() => void popupRequest.reload()}
+          onViewDetail={() => {
+            handlePopupClose();
+            goTo('announcement');
+          }}
+        />
+      )}
     </div>
   );
 };

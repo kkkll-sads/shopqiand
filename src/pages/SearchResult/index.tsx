@@ -4,6 +4,7 @@ import {
   ChevronLeft,
   ChevronUp,
   Filter,
+  Image as ImageIcon,
   LayoutGrid,
   List as ListIcon,
   RefreshCcw,
@@ -46,12 +47,16 @@ const EMPTY_PRODUCT_LIST = {
 
 type SearchSortMode = 'default' | 'latest' | 'price' | 'sales';
 
+/** 商城统一用 score_price 作为余额/消费金；排序时优先使用 score_price（与购物车/结算一致，后端为分则 /100） */
 function getComparablePrice(product: ShopProductItem) {
+  const scorePrice = product.score_price;
+  if (scorePrice != null && Number.isFinite(scorePrice) && scorePrice > 0) {
+    return scorePrice / 100;
+  }
   return Number(
     product.price ??
       product.green_power_amount ??
       product.balance_available_amount ??
-      product.score_price ??
       0,
   );
 }
@@ -110,6 +115,7 @@ export const SearchResultPage = () => {
   const categoriesRequest = useRequest(
     (signal) => shopProductApi.categories(signal),
     {
+      cacheKey: 'search-result:categories',
       initialData: EMPTY_CATEGORY_LIST,
     },
   );
@@ -141,16 +147,17 @@ export const SearchResultPage = () => {
     [keyword, priceOrder, selectedCategory, sortMode],
   );
 
+  const queryKey = `${keyword}::${selectedCategory ?? ''}::${sortMode}::${priceOrder}`;
+
   const resultRequest = useRequest(
     (signal) => fetchProductPage(1, signal),
     {
-      deps: [fetchProductPage],
+      cacheKey: `search-result:list:${queryKey}`,
+      deps: [keyword, selectedCategory, sortMode, priceOrder],
       initialData: EMPTY_PRODUCT_LIST,
       keepPreviousData: true,
     },
   );
-
-  const queryKey = `${keyword}::${selectedCategory}::${sortMode}::${priceOrder}`;
 
   useEffect(() => {
     queryVersionRef.current += 1;
@@ -164,13 +171,18 @@ export const SearchResultPage = () => {
     setLoadMoreError(null);
   }, [queryKey]);
 
+  const prevDataRef = useRef<typeof resultRequest.data>(undefined);
   useEffect(() => {
-    const nextProducts = resultRequest.data?.list ?? [];
+    const data = resultRequest.data;
+    if (data === prevDataRef.current) return;
+    prevDataRef.current = data;
+
+    const nextProducts = data?.list ?? [];
     productsRef.current = nextProducts;
     pageRef.current = 1;
     setProducts(nextProducts);
     setPage(1);
-    setHasMore(nextProducts.length < (resultRequest.data?.total ?? 0));
+    setHasMore(nextProducts.length < (data?.total ?? 0));
     setLoadMoreError(null);
   }, [resultRequest.data]);
 
@@ -398,7 +410,9 @@ export const SearchResultPage = () => {
     if (isGrid) {
       return (
         <div className="flex flex-wrap px-2 pt-2 pb-safe">
-          {visibleProducts.map((item, index) => (
+          {visibleProducts.map((item, index) => {
+            const imageUrl = resolveShopProductImageUrl(item.thumbnail);
+            return (
             <button
               key={item.id}
               type="button"
@@ -407,12 +421,18 @@ export const SearchResultPage = () => {
               onClick={() => goTo(buildShopProductPath(item.id))}
             >
               <div className="flex h-full flex-col overflow-hidden rounded-2xl bg-white pb-2 shadow-sm dark:bg-gray-900">
-                <img
-                  src={resolveShopProductImageUrl(item.thumbnail)}
-                  alt={item.name}
-                  className="aspect-square w-full object-cover"
-                  referrerPolicy="no-referrer"
-                />
+                {imageUrl ? (
+                  <img
+                    src={imageUrl}
+                    alt={item.name}
+                    className="aspect-square w-full object-cover"
+                    referrerPolicy="no-referrer"
+                  />
+                ) : (
+                  <div className="aspect-square w-full flex items-center justify-center bg-bg-base text-text-aux">
+                    <ImageIcon size={40} className="opacity-50" />
+                  </div>
+                )}
                 <div className="mt-2 flex flex-1 flex-col px-2">
                   <h3 className="mb-1.5 line-clamp-2 text-base font-medium leading-snug text-text-main">
                     {item.name}
@@ -421,7 +441,11 @@ export const SearchResultPage = () => {
                     {getShopProductBadges(item).map((badge) => (
                       <span
                         key={`${item.id}-${badge}`}
-                        className="rounded-sm border border-primary-start/25 px-1 py-0.5 text-2xs text-primary-start"
+                        className={
+                          badge === '消费金'
+                            ? 'rounded-sm bg-amber-500 px-1 py-0.5 text-2xs font-medium text-white'
+                            : 'rounded-sm border border-primary-start/25 px-1 py-0.5 text-2xs text-primary-start'
+                        }
                       >
                         {badge}
                       </span>
@@ -436,7 +460,8 @@ export const SearchResultPage = () => {
                 </div>
               </div>
             </button>
-          ))}
+            );
+          })}
           <div className="w-full">{renderLoadMoreFooter()}</div>
         </div>
       );
@@ -444,19 +469,27 @@ export const SearchResultPage = () => {
 
     return (
       <div className="px-2 pt-2 pb-safe">
-        {visibleProducts.map((item) => (
+        {visibleProducts.map((item) => {
+          const imageUrl = resolveShopProductImageUrl(item.thumbnail);
+          return (
           <button
             key={item.id}
             type="button"
             className="mb-2 flex w-full overflow-hidden rounded-2xl bg-white p-2 text-left shadow-sm active:opacity-90 dark:bg-gray-900"
             onClick={() => goTo(buildShopProductPath(item.id))}
           >
-            <img
-              src={resolveShopProductImageUrl(item.thumbnail)}
-              alt={item.name}
-              className="mr-3 h-[120px] w-[120px] shrink-0 rounded-lg object-cover"
-              referrerPolicy="no-referrer"
-            />
+            {imageUrl ? (
+              <img
+                src={imageUrl}
+                alt={item.name}
+                className="mr-3 h-[120px] w-[120px] shrink-0 rounded-lg object-cover"
+                referrerPolicy="no-referrer"
+              />
+            ) : (
+              <div className="mr-3 h-[120px] w-[120px] shrink-0 rounded-lg flex items-center justify-center bg-bg-base text-text-aux">
+                <ImageIcon size={32} className="opacity-50" />
+              </div>
+            )}
             <div className="flex flex-1 flex-col justify-between py-1">
               <div>
                 <h3 className="mb-1.5 line-clamp-2 text-md font-medium leading-snug text-text-main">
@@ -466,7 +499,11 @@ export const SearchResultPage = () => {
                   {getShopProductBadges(item).map((badge) => (
                     <span
                       key={`${item.id}-${badge}`}
-                      className="rounded-sm border border-primary-start/25 px-1 py-0.5 text-2xs text-primary-start"
+                      className={
+                        badge === '消费金'
+                          ? 'rounded-sm bg-amber-500 px-1 py-0.5 text-2xs font-medium text-white'
+                          : 'rounded-sm border border-primary-start/25 px-1 py-0.5 text-2xs text-primary-start'
+                      }
                     >
                       {badge}
                     </span>
@@ -488,7 +525,8 @@ export const SearchResultPage = () => {
               </div>
             </div>
           </button>
-        ))}
+          );
+        })}
         {renderLoadMoreFooter()}
       </div>
     );

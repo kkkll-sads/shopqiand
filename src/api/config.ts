@@ -1,4 +1,5 @@
-const DEFAULT_API_BASE_URL = 'http://47.76.239.170:8182';
+/* 不在前端暴露后端地址，API 请求通过 Vite 代理转发（开发环境）或 Nginx 反向代理（生产环境） */
+const DEFAULT_API_BASE_URL = '';
 
 function toNumber(value: string | undefined, fallback: number): number {
   const next = Number(value);

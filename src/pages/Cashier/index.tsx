@@ -1,39 +1,114 @@
-import React, { useState, useEffect } from 'react';
-import { ChevronLeft, WifiOff, RefreshCcw, Copy, CheckCircle2, Circle, Wallet, CreditCard, ShieldCheck, AlertCircle } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import {
+  ChevronLeft,
+  WifiOff,
+  RefreshCcw,
+  Copy,
+  CheckCircle2,
+  Circle,
+  Wallet,
+  Coins,
+  ShieldCheck,
+  AlertCircle,
+} from 'lucide-react';
+import { shopOrderApi } from '../../api';
+import { getErrorMessage } from '../../api/core/errors';
+import { useFeedback } from '../../components/ui/FeedbackProvider';
 import { Skeleton } from '../../components/ui/Skeleton';
+import { copyToClipboard } from '../../lib/clipboard';
 import { useAppNavigate } from '../../lib/navigation';
-import { PageHeader } from '../../components/layout/PageHeader';
 
-const WeChatIcon = () => (
-  <div className="w-6 h-6 rounded-full bg-[#09B83E] flex items-center justify-center shrink-0">
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>
-    </svg>
-  </div>
-);
-
-const AlipayIcon = () => (
-  <div className="w-6 h-6 rounded-full bg-[#1677FF] flex items-center justify-center shrink-0">
-    <span className="text-white text-sm font-bold font-serif">支</span>
-  </div>
-);
+/**
+ * 支付方式定义
+ * 根据订单的 pay_type 动态决定可选的支付方式
+ */
+interface PaymentMethod {
+  id: string;
+  name: string;
+  desc: string;
+  icon: React.ElementType;
+  color: string;
+  bg: string;
+}
 
 export const CashierPage = () => {
-  const { goTo, goBack } = useAppNavigate();
+  const [searchParams] = useSearchParams();
+  const { goBack, navigate } = useAppNavigate();
+  const { showToast, showLoading, hideLoading } = useFeedback();
 
+  /* ---- 从 URL 参数获取订单信息 ---- */
+  const orderId = Number(searchParams.get('order_id')) || 0;
+  const orderNoParam = searchParams.get('order_no') ?? '';
+  const amountParam = Number(searchParams.get('amount')) || 0;
+  const scoreParam = Number(searchParams.get('total_score')) || 0;
+  const payTypeParam = searchParams.get('pay_type') ?? '';
+  const balanceParam = searchParams.get('balance') ?? '0';
+  const scoreBalanceParam = searchParams.get('score_balance') ?? '0';
+
+  const displayOrderNo = orderNoParam || '--';
+
+  /* ---- 判断支付类型 ---- */
+  /** 是否为纯消费金支付 */
+  const isScoreOnly = payTypeParam === 'score' || (scoreParam > 0 && amountParam <= 0);
+  /** 是否为纯人民币支付 */
+  const isMoneyOnly = payTypeParam === 'money' || (amountParam > 0 && scoreParam <= 0);
+
+  /* ---- 状态 ---- */
   const [loading, setLoading] = useState(true);
   const [offline, setOffline] = useState(false);
   const [moduleError, setModuleError] = useState(false);
-  const [selectedMethod, setSelectedMethod] = useState('balance');
+  const [selectedMethod, setSelectedMethod] = useState(isScoreOnly ? 'score' : 'balance');
   const [timeLeft, setTimeLeft] = useState(29 * 60 + 59);
   const [showFailureModal, setShowFailureModal] = useState(false);
+  const [paying, setPaying] = useState(false);
 
-  const paymentMethods = [
-    { id: 'balance', name: '树交所余额', desc: '可用余额 ¥10000.00', icon: Wallet, color: 'text-primary-start', bg: 'bg-primary-start/10' },
-    { id: 'bank', name: '招商银行 储蓄卡 (1234)', desc: '单笔限额 ¥50000.00', icon: CreditCard, color: 'text-blue-500', bg: 'bg-blue-50' },
-    { id: 'wechat', name: '微信支付', desc: '亿万用户的选择', customIcon: WeChatIcon },
-    { id: 'alipay', name: '支付宝', desc: '安全快捷', customIcon: AlipayIcon },
-  ];
+  /* ---- 根据 pay_type 动态生成支付方式列表 ---- */
+  const paymentMethods = useMemo<PaymentMethod[]>(() => {
+    if (isScoreOnly) {
+      return [
+        {
+          id: 'score',
+          name: '消费金支付',
+          desc: `可用消费金 ${Number(scoreBalanceParam).toLocaleString('zh-CN')}`,
+          icon: Coins,
+          color: 'text-orange-500',
+          bg: 'bg-orange-50',
+        },
+      ];
+    }
+    if (isMoneyOnly) {
+      return [
+        {
+          id: 'balance',
+          name: '余额支付',
+          desc: `可用余额 ¥${Number(balanceParam).toLocaleString('zh-CN', { minimumFractionDigits: 2 })}`,
+          icon: Wallet,
+          color: 'text-primary-start',
+          bg: 'bg-primary-start/10',
+        },
+      ];
+    }
+    // combined 混合支付
+    return [
+      {
+        id: 'balance',
+        name: '余额支付',
+        desc: `可用余额 ¥${Number(balanceParam).toLocaleString('zh-CN', { minimumFractionDigits: 2 })}`,
+        icon: Wallet,
+        color: 'text-primary-start',
+        bg: 'bg-primary-start/10',
+      },
+      {
+        id: 'score',
+        name: '消费金支付',
+        desc: `可用消费金 ${Number(scoreBalanceParam).toLocaleString('zh-CN')}`,
+        icon: Coins,
+        color: 'text-orange-500',
+        bg: 'bg-orange-50',
+      },
+    ];
+  }, [isScoreOnly, isMoneyOnly, balanceParam, scoreBalanceParam]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -45,13 +120,15 @@ export const CashierPage = () => {
   useEffect(() => {
     if (timeLeft <= 0 || loading || moduleError) return;
     const timer = setInterval(() => {
-      setTimeLeft(prev => prev - 1);
-    }, 300);
+      setTimeLeft((prev) => prev - 1);
+    }, 1000);
     return () => clearInterval(timer);
   }, [timeLeft, loading, moduleError]);
 
   const formatTime = (seconds: number) => {
-    const m = Math.floor(seconds / 60).toString().padStart(2, '0');
+    const m = Math.floor(seconds / 60)
+      .toString()
+      .padStart(2, '0');
     const s = (seconds % 60).toString().padStart(2, '0');
     return `${m}:${s}`;
   };
@@ -61,13 +138,105 @@ export const CashierPage = () => {
   };
 
   const handleCopy = () => {
-    // In a real app, use navigator.clipboard.writeText
-    alert('订单号已复制');
+    if (!displayOrderNo || displayOrderNo === '--') return;
+    copyToClipboard(displayOrderNo).then((ok) => {
+      showToast({ message: ok ? '已复制订单号' : '复制失败，请长按手动复制', type: ok ? 'success' : 'error' });
+    });
   };
 
-  const handlePay = () => {
-    // Simulate payment success/failure randomly or just go to result page
-    goTo('payment_result');
+  const handlePay = async () => {
+    if (paying) return;
+
+    if (orderId <= 0) {
+      showToast({ message: '订单信息无效，请返回重新下单', type: 'error' });
+      return;
+    }
+
+    setPaying(true);
+    showLoading('支付中...');
+    try {
+      const payParams: { order_id: number; pay_money?: number; pay_score?: number } = {
+        order_id: orderId,
+      };
+
+      if (isScoreOnly) {
+        payParams.pay_score = scoreParam;
+        payParams.pay_money = 0;
+      } else if (isMoneyOnly) {
+        payParams.pay_money = amountParam;
+        payParams.pay_score = 0;
+      } else {
+        // 混合支付
+        payParams.pay_money = amountParam;
+        payParams.pay_score = scoreParam;
+      }
+
+      const result = await shopOrderApi.pay(payParams);
+
+      const params = new URLSearchParams({
+        status: 'success',
+        order_no: result.order_no,
+        pay_type: payTypeParam,
+      });
+      if (isScoreOnly) {
+        params.set('amount', String(result.pay_score ?? 0));
+      } else if (isMoneyOnly) {
+        params.set('amount', String(result.pay_money ?? 0));
+      } else {
+        params.set('amount', String(result.pay_money ?? 0));
+        params.set('total_score', String(result.pay_score ?? 0));
+      }
+      navigate(`/payment/result?${params.toString()}`, { replace: true });
+    } catch (error) {
+      const msg = getErrorMessage(error);
+      showToast({ message: msg, type: 'error', duration: 3000 });
+      setShowFailureModal(true);
+    } finally {
+      hideLoading();
+      setPaying(false);
+    }
+  };
+
+  /* ---- 渲染应付金额显示 ---- */
+  const renderAmountDisplay = () => {
+    if (isScoreOnly) {
+      return (
+        <div className="text-primary-start font-bold mb-4 flex items-baseline">
+          <span className="text-7xl leading-none">{scoreParam}</span>
+          <span className="text-2xl ml-1">消费金</span>
+        </div>
+      );
+    }
+    if (isMoneyOnly) {
+      return (
+        <div className="text-primary-start font-bold mb-4 flex items-baseline">
+          <span className="text-3xl mr-0.5">¥</span>
+          <span className="text-7xl leading-none">{amountParam.toFixed(2).split('.')[0]}</span>
+          <span className="text-3xl">.{amountParam.toFixed(2).split('.')[1]}</span>
+        </div>
+      );
+    }
+    // 混合支付：显示两行
+    return (
+      <div className="mb-4 flex flex-col items-center gap-1">
+        <div className="text-primary-start font-bold flex items-baseline">
+          <span className="text-2xl mr-0.5">¥</span>
+          <span className="text-5xl leading-none">{amountParam.toFixed(2).split('.')[0]}</span>
+          <span className="text-2xl">.{amountParam.toFixed(2).split('.')[1]}</span>
+        </div>
+        <div className="text-orange-500 font-bold flex items-baseline">
+          <span className="text-3xl leading-none">+{scoreParam}</span>
+          <span className="text-lg ml-1">消费金</span>
+        </div>
+      </div>
+    );
+  };
+
+  /* ---- 底部按钮文字 ---- */
+  const payButtonText = () => {
+    if (isScoreOnly) return `确认支付 ${scoreParam}消费金`;
+    if (isMoneyOnly) return `确认支付 ¥${amountParam.toFixed(2)}`;
+    return `确认支付 ¥${amountParam.toFixed(2)} + ${scoreParam}消费金`;
   };
 
   const renderHeader = () => (
@@ -78,7 +247,12 @@ export const CashierPage = () => {
             <WifiOff size={14} className="mr-2" />
             <span>网络不稳定，请检查网络设置</span>
           </div>
-          <button onClick={() => setOffline(false)} className="font-medium px-2 py-1 bg-white dark:bg-gray-900 rounded shadow-sm">刷新</button>
+          <button
+            onClick={() => setOffline(false)}
+            className="font-medium px-2 py-1 bg-white dark:bg-gray-900 rounded shadow-sm"
+          >
+            刷新
+          </button>
         </div>
       )}
       <div className="h-12 flex items-center justify-between px-3 pt-safe">
@@ -95,16 +269,13 @@ export const CashierPage = () => {
 
   const renderSkeleton = () => (
     <div className="p-3">
-      {/* Amount Skeleton */}
       <div className="bg-white dark:bg-gray-900 rounded-2xl p-6 mb-3 shadow-sm flex flex-col items-center">
         <Skeleton className="w-16 h-4 mb-3" />
         <Skeleton className="w-32 h-10 mb-4" />
         <Skeleton className="w-48 h-6 rounded-full" />
       </div>
-      
-      {/* Methods Skeleton */}
       <div className="bg-white dark:bg-gray-900 rounded-2xl p-2 mb-3 shadow-sm">
-        {[1, 2, 3, 4].map(i => (
+        {[1, 2].map((i) => (
           <div key={i} className="flex items-center p-3">
             <Skeleton className="w-6 h-6 rounded-full mr-3 shrink-0" />
             <div className="flex-1">
@@ -124,8 +295,11 @@ export const CashierPage = () => {
         <div className="flex-1 flex flex-col items-center justify-center p-4">
           <RefreshCcw size={32} className="text-text-aux mb-3" />
           <p className="text-md text-text-sub mb-4">加载失败，请检查网络</p>
-          <button 
-            onClick={() => { setLoading(true); setModuleError(false); }} 
+          <button
+            onClick={() => {
+              setLoading(true);
+              setModuleError(false);
+            }}
             className="px-6 py-2 border border-border-light rounded-full text-base text-text-main bg-white dark:bg-gray-900 shadow-sm active:bg-bg-base"
           >
             重试
@@ -150,36 +324,32 @@ export const CashierPage = () => {
         {/* Amount Card */}
         <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm mb-3 p-6 flex flex-col items-center">
           <span className="text-base text-text-sub mb-2">应付金额</span>
-          <div className="text-primary-start font-bold mb-4 flex items-baseline">
-            <span className="text-3xl mr-0.5">¥</span>
-            <span className="text-7xl leading-none">7939</span>
-            <span className="text-3xl">.00</span>
-          </div>
-          <div className="flex items-center text-sm text-text-sub bg-bg-base px-3 py-1.5 rounded-full">
-            <span className="mr-2">订单号：1234567890123456</span>
-            <button onClick={handleCopy} className="active:opacity-70 flex items-center text-text-main font-medium">
+          {renderAmountDisplay()}
+          <div className="flex items-center text-sm text-text-sub bg-bg-base px-3 py-1.5 rounded-full max-w-full cursor-pointer" onClick={handleCopy}>
+            <span className="truncate mr-2">订单号：{displayOrderNo}</span>
+            <span className="flex items-center text-text-main font-medium shrink-0 whitespace-nowrap">
               <Copy size={12} className="mr-1" />
               复制
-            </button>
+            </span>
           </div>
         </div>
 
         {/* Payment Methods Card */}
         <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm mb-4 overflow-hidden">
           {paymentMethods.map((method, index) => (
-            <div 
-              key={method.id} 
-              className={`flex items-center p-4 active:bg-bg-base transition-colors cursor-pointer ${index !== paymentMethods.length - 1 ? 'border-b border-border-light/50' : ''}`}
+            <div
+              key={method.id}
+              className={`flex items-center p-4 active:bg-bg-base transition-colors cursor-pointer ${
+                index !== paymentMethods.length - 1 ? 'border-b border-border-light/50' : ''
+              }`}
               onClick={() => setSelectedMethod(method.id)}
             >
-              {method.customIcon ? (
-                <method.customIcon />
-              ) : (
-                <div className={`w-6 h-6 rounded-full ${method.bg} flex items-center justify-center shrink-0`}>
-                  <method.icon size={14} className={method.color} />
-                </div>
-              )}
-              
+              <div
+                className={`w-6 h-6 rounded-full ${method.bg} flex items-center justify-center shrink-0`}
+              >
+                <method.icon size={14} className={method.color} />
+              </div>
+
               <div className="flex-1 ml-3 min-w-0">
                 <div className="text-md text-text-main font-medium truncate">{method.name}</div>
                 <div className="text-sm text-text-sub truncate mt-0.5">{method.desc}</div>
@@ -207,22 +377,26 @@ export const CashierPage = () => {
 
   return (
     <div className="flex-1 flex flex-col bg-bg-base relative h-full overflow-hidden">
-      
-
       {renderHeader()}
-      
-      <div className="flex-1 overflow-y-auto no-scrollbar relative">
-        {renderContent()}
-      </div>
+
+      <div className="flex-1 overflow-y-auto no-scrollbar relative">{renderContent()}</div>
 
       {/* Bottom Fixed Bar */}
       {!moduleError && (
         <div className="absolute bottom-0 left-0 right-0 bg-white dark:bg-gray-900 border-t border-border-light px-4 py-3 z-40 pb-safe">
-          <button 
+          <button
             onClick={handlePay}
-            className="w-full h-11 rounded-full bg-gradient-to-r from-primary-start to-primary-end text-white text-lg font-medium shadow-sm active:opacity-80 flex items-center justify-center"
+            disabled={paying || orderId <= 0}
+            className="w-full h-11 rounded-full bg-gradient-to-r from-primary-start to-primary-end text-white text-lg font-medium shadow-sm active:opacity-80 flex items-center justify-center disabled:opacity-60 disabled:cursor-not-allowed"
           >
-            确认支付 ¥7939.00
+            {paying ? (
+              <>
+                <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2" />
+                支付中...
+              </>
+            ) : (
+              payButtonText()
+            )}
           </button>
         </div>
       )}
@@ -236,19 +410,19 @@ export const CashierPage = () => {
             </div>
             <h3 className="text-xl font-bold text-text-main mb-2">支付失败</h3>
             <p className="text-base text-text-sub text-center mb-6 leading-relaxed">
-              您的银行卡余额不足或已被限制交易，请更换支付方式或稍后重试。
+              余额不足或支付异常，请稍后重试。
             </p>
             <div className="w-full flex space-x-3">
-              <button 
+              <button
                 onClick={() => setShowFailureModal(false)}
                 className="flex-1 h-10 rounded-full border border-border-light text-md font-medium text-text-main active:bg-bg-base"
               >
-                更换方式
+                取消
               </button>
-              <button 
+              <button
                 onClick={() => {
                   setShowFailureModal(false);
-                  // retry logic
+                  handlePay();
                 }}
                 className="flex-1 h-10 rounded-full bg-gradient-to-r from-primary-start to-primary-end text-md font-medium text-white active:opacity-80 shadow-sm"
               >

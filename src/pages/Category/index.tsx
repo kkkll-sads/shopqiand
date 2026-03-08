@@ -12,6 +12,7 @@ import { Card } from '../../components/ui/Card';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { ErrorState } from '../../components/ui/ErrorState';
 import { Skeleton } from '../../components/ui/Skeleton';
+import { PullToRefreshContainer } from '../../components/ui/PullToRefreshContainer';
 import {
   buildShopProductPath,
   formatShopProductSales,
@@ -72,6 +73,7 @@ export const CategoryPage = () => {
   const categoriesRequest = useRequest(
     (signal) => shopProductApi.categories(signal),
     {
+      cacheKey: 'category:categories',
       initialData: EMPTY_CATEGORY_LIST,
     },
   );
@@ -112,7 +114,8 @@ export const CategoryPage = () => {
   const productsRequest = useRequest(
     (signal) => fetchCategoryPage(1, signal),
     {
-      deps: [fetchCategoryPage],
+      cacheKey: `category:products:${activeCategory ?? ''}`,
+      deps: [activeCategory],
       initialData: EMPTY_PRODUCT_LIST,
       keepPreviousData: true,
     },
@@ -291,6 +294,10 @@ export const CategoryPage = () => {
               })}
         </div>
 
+        <PullToRefreshContainer
+          onRefresh={() => Promise.allSettled([categoriesRequest.reload(), productsRequest.reload()])}
+          disabled={isOffline}
+        >
         <div ref={productListRef} className="flex-1 overflow-y-auto bg-white p-3 pb-safe dark:bg-gray-900">
           {hasError ? (
             <ErrorState
@@ -358,7 +365,11 @@ export const CategoryPage = () => {
                             {getShopProductBadges(item).map((badge) => (
                               <span
                                 key={`${item.id}-${badge}`}
-                                className="rounded-sm border border-primary-start/25 px-1 py-0.5 text-2xs text-primary-start"
+                                className={
+                                  badge === '消费金'
+                                    ? 'rounded-sm bg-amber-500 px-1 py-0.5 text-2xs font-medium text-white'
+                                    : 'rounded-sm border border-primary-start/25 px-1 py-0.5 text-2xs text-primary-start'
+                                }
                               >
                                 {badge}
                               </span>
@@ -385,6 +396,7 @@ export const CategoryPage = () => {
             </>
           )}
         </div>
+        </PullToRefreshContainer>
       </div>
     </div>
   );

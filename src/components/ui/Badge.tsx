@@ -1,6 +1,6 @@
 import type { PropsWithChildren } from 'react';
 
-type BadgeVariant = 'default' | 'primary' | 'solid';
+type BadgeVariant = 'default' | 'primary' | 'score' | 'solid';
 
 interface BadgeProps {
   variant?: BadgeVariant;
@@ -15,6 +15,7 @@ export const Badge = ({
   const variants: Record<BadgeVariant, string> = {
     default: 'bg-bg-base text-text-sub border border-border-light',
     primary: 'bg-red-50 text-primary-start border border-red-100',
+    score: 'bg-amber-500 text-white font-medium',
     solid: 'bg-gradient-to-r from-primary-start to-primary-end text-white',
   };
 

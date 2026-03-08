@@ -3,7 +3,6 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { LucideIcon } from 'lucide-react';
 import {
   CheckCircle2,
-  ChevronLeft,
   Copy,
   CreditCard,
   Eye,
@@ -38,7 +37,9 @@ import { useAuthSession } from '../../hooks/useAuthSession';
 import { useNetworkStatus } from '../../hooks/useNetworkStatus';
 import { useRequest } from '../../hooks/useRequest';
 import { useRouteScrollRestoration } from '../../hooks/useRouteScrollRestoration';
+import { copyToClipboard } from '../../lib/clipboard';
 import { useAppNavigate } from '../../lib/navigation';
+import { PageHeader } from '../../components/layout/PageHeader';
 
 const QUICK_AMOUNTS = [500, 1000, 2000, 5000, 10000];
 
@@ -51,6 +52,7 @@ function formatMoney(value: number | string | undefined, fractionDigits = 2) {
   return nextValue.toLocaleString('zh-CN', {
     maximumFractionDigits: fractionDigits,
     minimumFractionDigits: fractionDigits,
+    useGrouping: false,
   });
 }
 
@@ -171,7 +173,7 @@ export function RechargePage() {
 
   const paymentAccounts = useMemo(
     () =>
-      (companyAccounts ?? []).map((account) => ({
+      (Array.isArray(companyAccounts) ? companyAccounts : []).map((account) => ({
         ...account,
         color: getCompanyAccountColor(account.type),
         iconComponent: getCompanyAccountIcon(account.type),
@@ -243,12 +245,8 @@ export function RechargePage() {
       return;
     }
 
-    try {
-      await navigator.clipboard.writeText(nextValue);
-      showToast({ message: successMessage, type: 'success' });
-    } catch {
-      showToast({ message: '复制失败，请稍后重试', type: 'error' });
-    }
+    const ok = await copyToClipboard(nextValue);
+    showToast({ message: ok ? successMessage : '复制失败，请稍后重试', type: ok ? 'success' : 'error' });
   };
 
   const handlePickScreenshot = () => {
@@ -334,12 +332,10 @@ export function RechargePage() {
   };
 
   const renderHeader = () => (
-    <div className="sticky top-0 z-40 bg-bg-base/90 backdrop-blur-md">
-      <div className="flex h-12 items-center justify-between px-4">
-        <button onClick={goBack} className="p-1 -ml-1 text-text-main active:opacity-70">
-          <ChevronLeft size={24} />
-        </button>
-        <h1 className="text-2xl font-medium text-text-main">专项金充值</h1>
+    <PageHeader
+      title="专项金充值"
+      onBack={goBack}
+      rightAction={
         <button
           type="button"
           className="flex items-center text-sm text-text-sub active:opacity-70"
@@ -348,8 +344,8 @@ export function RechargePage() {
           <FileText size={16} className="mr-1" />
           记录
         </button>
-      </div>
-    </div>
+      }
+    />
   );
 
   if (!isAuthenticated) {

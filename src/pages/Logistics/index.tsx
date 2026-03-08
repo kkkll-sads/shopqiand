@@ -3,9 +3,12 @@ import { ChevronLeft, WifiOff, RefreshCcw, Copy, Package, MapPin, Phone, Headpho
 import { Skeleton } from '../../components/ui/Skeleton';
 import { useAppNavigate } from '../../lib/navigation';
 import { PageHeader } from '../../components/layout/PageHeader';
+import { useFeedback } from '../../components/ui/FeedbackProvider';
+import { copyToClipboard } from '../../lib/clipboard';
 
 export const LogisticsPage = () => {
   const { goTo, goBack } = useAppNavigate();
+  const { showToast } = useFeedback();
 
   const [loading, setLoading] = useState(true);
   const [offline, setOffline] = useState(false);
@@ -46,8 +49,9 @@ export const LogisticsPage = () => {
     goBack();
   };
 
-  const handleCopy = (text: string) => {
-    alert('运单号已复制: ' + text);
+  const handleCopy = async (text: string) => {
+    const ok = await copyToClipboard(text);
+    showToast({ message: ok ? '运单号已复制' : '复制失败，请稍后重试', type: ok ? 'success' : 'error' });
   };
 
   const renderHeader = () => (

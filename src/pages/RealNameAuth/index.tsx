@@ -4,20 +4,19 @@ import {
   AlertCircle,
   Camera,
   CheckCircle2,
-  ChevronLeft,
   ChevronRight,
   Clock,
   ExternalLink,
   Loader2,
   User,
   Wifi,
-  WifiOff,
   XCircle,
 } from 'lucide-react';
 import { getErrorMessage } from '../../api/core/errors';
 import { userApi, uploadApi, type UploadedFile } from '../../api';
 import { Card } from '../../components/ui/Card';
 import { ErrorState } from '../../components/ui/ErrorState';
+import { PageHeader } from '../../components/layout/PageHeader';
 import { useRequest } from '../../hooks/useRequest';
 import { useAppNavigate } from '../../lib/navigation';
 
@@ -454,36 +453,12 @@ export const RealNameAuthPage = () => {
   };
 
   const renderHeader = () => (
-    <div className="relative z-40 shrink-0 border-b border-gray-100 bg-white dark:border-gray-800 dark:bg-gray-900">
-      {offline && (
-        <div className="flex items-center justify-between bg-red-50 px-4 py-2 text-sm text-brand-start dark:bg-red-900/30 dark:text-red-400">
-          <div className="flex items-center">
-            <WifiOff size={14} className="mr-2" />
-            <span>网络不稳定，请检查网络设置</span>
-          </div>
-          <button
-            onClick={() => setOffline(false)}
-            className="rounded bg-white px-2 py-1 font-medium shadow-sm dark:bg-gray-800"
-          >
-            刷新
-          </button>
-        </div>
-      )}
-      <div className="flex h-12 items-center justify-between px-3 pt-safe">
-        <div className="flex w-1/3 items-center">
-          <button
-            onClick={goBack}
-            className="p-1 -ml-1 text-gray-900 active:opacity-70 dark:text-gray-100"
-          >
-            <ChevronLeft size={24} />
-          </button>
-        </div>
-        <h1 className="w-1/3 text-center text-2xl font-bold text-gray-900 dark:text-gray-100">
-          实名认证
-        </h1>
-        <div className="w-1/3" />
-      </div>
-    </div>
+    <PageHeader
+      title="实名认证"
+      onBack={goBack}
+      offline={offline}
+      onRefresh={retryFetch}
+    />
   );
 
   const renderStepBar = () => (

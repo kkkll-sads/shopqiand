@@ -186,7 +186,7 @@ export const LoginPage = () => {
   };
 
   return (
-    <div className="relative flex h-full flex-1 flex-col overflow-y-auto bg-[#FFF8F8] no-scrollbar">
+    <div className="relative flex h-full flex-1 flex-col overflow-y-auto bg-bg-base no-scrollbar">
       <div className="relative z-10 flex flex-1 flex-col overflow-y-auto px-4 pb-8 pt-12 no-scrollbar">
         <div className="absolute left-4 right-4 top-4 z-20 flex justify-between">
           <button
@@ -230,7 +230,15 @@ export const LoginPage = () => {
                 className={`relative pb-1 text-[18px] font-medium ${
                   currentTab === tab ? 'text-text-main' : 'text-text-aux'
                 }`}
-                onClick={() => setCurrentTab(tab)}
+                onClick={() => {
+                  /* 切换 tab 时保留手机号：密码登录 ↔ 验证码登录 */
+                  if (tab === 'sms_login' && MOBILE_PATTERN.test(username.trim())) {
+                    setMobile(username.trim());
+                  } else if (tab === 'login' && mobile.trim()) {
+                    setUsername(mobile.trim());
+                  }
+                  setCurrentTab(tab);
+                }}
               >
                 {TAB_LABELS[tab]}
                 {currentTab === tab && (

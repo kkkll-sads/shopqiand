@@ -95,7 +95,7 @@ export function RightsHistoryPage() {
                     <div className="text-sm text-text-sub">{record.time}</div>
                   </div>
                   <div className={`text-3xl font-bold ${record.status === 'rejected' || record.status === 'cancelled' ? 'text-text-main' : 'text-red-500'}`}>
-                    ¥{record.amount.toLocaleString()}
+                    ¥{record.amount.toLocaleString('zh-CN', { useGrouping: false })}
                   </div>
                 </div>
                 {record.remark && (

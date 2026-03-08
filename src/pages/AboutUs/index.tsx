@@ -3,6 +3,7 @@ import { ChevronRight, Copy } from 'lucide-react';
 import { appVersionApi } from '../../api';
 import { getErrorMessage } from '../../api/core/errors';
 import { PageHeader } from '../../components/layout/PageHeader';
+import { copyToClipboard } from '../../lib/clipboard';
 import { useFeedback } from '../../components/ui/FeedbackProvider';
 import { useNetworkStatus } from '../../hooks/useNetworkStatus';
 import { useRequest } from '../../hooks/useRequest';
@@ -62,12 +63,8 @@ export const AboutUsPage = () => {
   }, [isCheckingUpdate, latestVersion, latestVersionError, latestVersionLoading]);
 
   const handleCopy = async (text: string) => {
-    try {
-      await navigator.clipboard.writeText(text);
-      showToast({ message: `已复制 ${text}`, type: 'success' });
-    } catch {
-      showToast({ message: '复制失败，请稍后重试', type: 'error' });
-    }
+    const ok = await copyToClipboard(text);
+    showToast({ message: ok ? `已复制 ${text}` : '复制失败，请稍后重试', type: ok ? 'success' : 'error' });
   };
 
   const handleCheckUpdate = async () => {

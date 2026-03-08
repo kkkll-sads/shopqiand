@@ -54,10 +54,13 @@ export const VIEW_TO_PATH: Record<string, string> = {
   withdraw: '/withdraw',
   live: '/live',
   live_webview: '/live/view',
+  reservations: '/reservations',
+  flash_sale: '/flash-sale',
   product_qa: '/product/0/qa',         // 默认 ID
   reviews: '/product/0/reviews',       // 默认 ID
   add_review: '/product/0/review/new', // 默认 ID
   service_description: '/service-description',
+  sign_in: '/sign-in',
   login: '/login',
   register: '/register',
   design: '/design',

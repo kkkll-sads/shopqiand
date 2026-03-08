@@ -216,7 +216,8 @@ export const rechargeApi = {
       signal: options.signal,
     });
 
-    return (payload.list ?? []).map(normalizeCompanyAccount);
+    const list = Array.isArray(payload?.list) ? payload.list : Array.isArray(payload) ? payload : [];
+    return list.map(normalizeCompanyAccount);
   },
 
   async submitOrder(

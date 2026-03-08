@@ -1,0 +1,181 @@
+import {
+  Wallet,
+  CalendarCheck,
+  Receipt,
+  FileText,
+  ShieldCheck,
+  Box,
+  ClipboardList,
+  Coins,
+  Package,
+  Truck,
+  CheckCircle,
+  UserCheck,
+  CreditCard,
+  MapPin,
+  Users,
+  HelpCircle,
+  HeadphonesIcon,
+  Newspaper,
+  Gift,
+  Layers,
+} from 'lucide-react';
+import type { NavigateFunction } from 'react-router-dom';
+import CoinsIcon from './components/CoinsIcon';
+import type { ProfileSectionItem } from './components/ProfileSectionGrid';
+
+interface BuildConvenientServicesParams {
+  navigate: NavigateFunction;
+  hasSignedToday: boolean;
+}
+
+export const buildConvenientServices = ({
+  navigate,
+  hasSignedToday,
+}: BuildConvenientServicesParams): ProfileSectionItem[] => {
+  return [
+    {
+      label: '专项金充值',
+      icon: Wallet,
+      iconColorClass: 'text-red-600',
+      iconBgClass: 'bg-red-50',
+      action: () => navigate('/recharge'),
+    },
+    {
+      label: '每日签到',
+      icon: CalendarCheck,
+      iconColorClass: 'text-red-500',
+      iconBgClass: 'bg-red-50',
+      action: () => navigate('/sign-in'),
+      showDot: !hasSignedToday,
+    },
+    {
+      label: '收益提现',
+      icon: Receipt,
+      iconColorClass: 'text-red-500',
+      iconBgClass: 'bg-red-50',
+      action: () => navigate('/withdraw'),
+    },
+    {
+      label: '消费金兑换',
+      icon: CoinsIcon,
+      iconColorClass: 'text-yellow-600',
+      iconBgClass: 'bg-yellow-50',
+      action: () => navigate('/store'),
+    },
+    {
+      label: '新春荣耀榜',
+      icon: Gift,
+      iconColorClass: 'text-red-500',
+      iconBgClass: 'bg-red-50',
+      action: () => navigate('/activity/team-leaderboard'),
+    },
+  ];
+};
+
+export const buildRightsManagement = (navigate: NavigateFunction): ProfileSectionItem[] => {
+  return [
+    {
+      label: '资产明细',
+      icon: FileText,
+      iconColorClass: 'text-purple-600',
+      iconBgClass: 'bg-purple-50',
+      action: () => navigate('/coupon'),
+    },
+    {
+      label: '累计权益',
+      icon: ShieldCheck,
+      iconColorClass: 'text-green-600',
+      iconBgClass: 'bg-green-50',
+      action: () => navigate('/growth_rights'),
+    },
+    {
+      label: '寄售券',
+      icon: Receipt,
+      iconColorClass: 'text-pink-600',
+      iconBgClass: 'bg-pink-50',
+      action: () => navigate('/consignment-voucher'),
+    },
+    {
+      label: '我的藏品',
+      icon: Box,
+      iconColorClass: 'text-indigo-600',
+      iconBgClass: 'bg-indigo-50',
+      action: () => navigate('/my-collection'),
+    },
+    {
+      label: '我的卡包',
+      icon: Layers,
+      iconColorClass: 'text-orange-600',
+      iconBgClass: 'bg-orange-50',
+      action: () => navigate('/my-card-packs'),
+    },
+    {
+      label: '藏品订单',
+      icon: ClipboardList,
+      iconColorClass: 'text-blue-600',
+      iconBgClass: 'bg-blue-50',
+      action: () => navigate('/reservations'),
+    },
+  ];
+};
+
+export const buildPointsOrder = (
+  navigate: NavigateFunction,
+  orderStats: any // 暂时使用 any 处理，稍后统一用外部请求的状态接入
+): ProfileSectionItem[] => {
+  return [
+    {
+      label: '待付款',
+      icon: Coins,
+      iconColorClass: 'text-red-500',
+      iconBgClass: 'bg-red-50',
+      action: () => navigate('/order?tab=unpaid'),
+      badge: orderStats?.pending_count || 0,
+    },
+    {
+      label: '待发货',
+      icon: Package,
+      iconColorClass: 'text-blue-500',
+      iconBgClass: 'bg-blue-50',
+      action: () => navigate('/order?tab=toship'),
+      badge: orderStats?.paid_count || 0,
+    },
+    {
+      label: '待收货',
+      icon: Truck,
+      iconColorClass: 'text-purple-500',
+      iconBgClass: 'bg-purple-50',
+      action: () => navigate('/order?tab=toreceive'),
+      badge: orderStats?.shipped_count || 0,
+    },
+    {
+      label: '已完成',
+      icon: CheckCircle,
+      iconColorClass: 'text-green-500',
+      iconBgClass: 'bg-green-50',
+      action: () => navigate('/order?tab=completed'),
+      badge: orderStats?.completed_count || 0,
+    },
+  ];
+};
+
+export const buildServiceManagement = (navigate: NavigateFunction): ProfileSectionItem[] => {
+  return [
+    { label: '实名认证', icon: UserCheck, action: () => navigate('/real_name_auth') },
+    { label: '卡号管理', icon: CreditCard, action: () => navigate('/address') },
+    { label: '收货地址', icon: MapPin, action: () => navigate('/address') },
+    { label: '我的好友', icon: Users, action: () => navigate('/friends') },
+    { label: '帮助中心', icon: HelpCircle, action: () => navigate('/help_center') },
+    { label: '规则协议', icon: FileText, action: () => navigate('/user_agreement') },
+    { label: '活动中心', icon: Gift, action: () => navigate('/activity-center') },
+    { label: '在线客服', icon: HeadphonesIcon, action: () => navigate('/help_center') },
+    { label: '平台资讯', icon: Newspaper, action: () => navigate('/announcement') },
+  ].map((item) => ({
+    ...item,
+    iconBgClass: 'bg-gray-50',
+    iconColorClass: 'text-gray-600',
+    iconStrokeWidth: 1.5,
+    labelClassName: 'text-xs text-gray-500 dark:text-gray-400',
+  }));
+};
