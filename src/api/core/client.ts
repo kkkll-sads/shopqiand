@@ -8,6 +8,7 @@ type EnvelopeCode = number | string;
 
 interface ApiEnvelope<TData> {
   code: EnvelopeCode;
+  biz_code?: EnvelopeCode;
   message?: string;
   msg?: string;
   data: TData;
@@ -169,6 +170,10 @@ function createAbortError(): Error {
 
 function shouldRedirectToLogin(status?: number, code?: EnvelopeCode): boolean {
   return status === 303 || code === 303 || code === '303';
+}
+
+function getBizCode(payload: ApiEnvelope<unknown>): EnvelopeCode {
+  return payload.biz_code ?? payload.code;
 }
 
 function redirectToLogin() {
@@ -411,12 +416,12 @@ export class HttpClient {
 
   private toApiError(payload: unknown, status: number): ApiError {
     if (isEnvelope(payload)) {
-      if (shouldRedirectToLogin(status, payload.code)) {
+      if (shouldRedirectToLogin(status, getBizCode(payload))) {
         redirectToLogin();
       }
 
       return new ApiError(payload.message || payload.msg || 'Request failed.', {
-        code: payload.code,
+        code: getBizCode(payload),
         details: payload,
         status,
       });
@@ -436,12 +441,12 @@ export class HttpClient {
   private unwrapPayload<TResponse>(payload: unknown, status: number): TResponse {
     if (isEnvelope<TResponse>(payload)) {
       if (!this.options.isSuccessCode(payload.code)) {
-        if (shouldRedirectToLogin(status, payload.code)) {
+        if (shouldRedirectToLogin(status, getBizCode(payload))) {
           redirectToLogin();
         }
 
         throw new ApiError(payload.message || payload.msg || 'Request failed.', {
-          code: payload.code,
+          code: getBizCode(payload),
           details: payload,
           status,
         });
