@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef } from 'react';
+﻿import { useCallback, useMemo, useRef } from 'react';
 import type { LucideIcon } from 'lucide-react';
 import {
   Banknote,
@@ -340,3 +340,4 @@ export const AccumulatedRightsPage = () => {
     </div>
   );
 };
+

@@ -1,4 +1,4 @@
-import type { OrderType } from '../types';
+﻿import type { OrderType } from '../types';
 
 interface OrderTypeSwitcherProps {
   orderType: OrderType;
@@ -13,7 +13,7 @@ export const OrderTypeSwitcher = ({
     <div className="flex bg-bg-base rounded-lg p-1">
       <button
         className={`flex-1 py-1.5 text-md font-medium rounded-md transition-colors ${
-          orderType === 'mall' ? 'bg-white dark:bg-gray-900 text-primary-start shadow-sm' : 'text-text-sub'
+          orderType === 'mall' ? 'bg-white dark:bg-gray-900 text-primary-start shadow-sm dark:text-red-300' : 'text-text-sub'
         }`}
         onClick={() => onChange('mall')}
       >
@@ -21,7 +21,7 @@ export const OrderTypeSwitcher = ({
       </button>
       <button
         className={`flex-1 py-1.5 text-md font-medium rounded-md transition-colors ${
-          orderType === 'collectible' ? 'bg-white dark:bg-gray-900 text-primary-start shadow-sm' : 'text-text-sub'
+          orderType === 'collectible' ? 'bg-white dark:bg-gray-900 text-primary-start shadow-sm dark:text-red-300' : 'text-text-sub'
         }`}
         onClick={() => onChange('collectible')}
       >
@@ -30,3 +30,4 @@ export const OrderTypeSwitcher = ({
     </div>
   </div>
 );
+

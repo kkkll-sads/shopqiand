@@ -174,7 +174,7 @@ export function RightsTransferPage() {
       </div>
 
       {isOffline && (
-        <div className="bg-orange-50 dark:bg-orange-500/10 text-orange-500 text-base px-4 py-2 flex items-center">
+        <div className="bg-orange-50 text-orange-500 text-base px-4 py-2 flex items-center dark:bg-orange-500/15 dark:text-orange-300">
           <AlertCircle size={14} className="mr-1.5 flex-shrink-0" />
           <span>当前网络不可用，请检查网络设置</span>
         </div>
@@ -185,7 +185,7 @@ export function RightsTransferPage() {
         <div className="p-4 space-y-3">
           
           {/* Account Overview Card */}
-          <Card className="p-4 bg-gradient-to-br from-red-50 to-white dark:from-bg-box dark:to-bg-box border-none relative overflow-hidden">
+          <Card className="p-4 bg-gradient-to-br from-red-50 to-white dark:from-gray-900 dark:to-gray-900 border-none relative overflow-hidden">
             <div className="absolute right-0 top-0 w-24 h-24 bg-red-100 dark:bg-transparent rounded-full blur-2xl -mr-10 -mt-10 pointer-events-none"></div>
             
             <div className="flex items-center justify-between mb-4 relative z-10">
@@ -205,7 +205,7 @@ export function RightsTransferPage() {
               </div>
               
               <div className="px-4 flex flex-col items-center justify-center">
-                <div className="w-8 h-8 rounded-full bg-white dark:bg-gray-700 shadow-sm flex items-center justify-center text-brand-red">
+                <div className="w-8 h-8 rounded-full bg-white dark:bg-gray-900 shadow-sm flex items-center justify-center text-brand-red dark:text-red-300">
                   <ArrowRight size={16} />
                 </div>
               </div>
@@ -296,7 +296,7 @@ export function RightsTransferPage() {
           <Card className="p-4">
             <h3 className="text-lg font-medium text-text-main mb-3 flex items-center">
               划转条件
-              {hasUnmetConditions && <span className="ml-2 text-sm text-red-500 font-normal">有未满足的条件</span>}
+              {hasUnmetConditions && <span className="ml-2 text-sm text-red-500 dark:text-red-300 font-normal">有未满足的条件</span>}
             </h3>
             <div className="space-y-3">
               {MOCK_DATA.conditions.map(condition => (
@@ -315,10 +315,10 @@ export function RightsTransferPage() {
           </Card>
 
           {/* Risk Control Hint Card */}
-          <Card className="p-3 bg-blue-50/50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-900/30">
+          <Card className="p-3 bg-blue-50/50 dark:bg-blue-500/12 border border-blue-100 dark:border-blue-500/25">
             <div className="flex items-start">
-              <Info size={16} className="text-blue-500 mr-2 mt-0.5 flex-shrink-0" />
-              <div className="text-sm text-blue-700 dark:text-blue-400 leading-relaxed">
+              <Info size={16} className="text-blue-500 dark:text-blue-300 mr-2 mt-0.5 flex-shrink-0" />
+              <div className="text-sm text-blue-700 dark:text-blue-300 leading-relaxed">
                 为保障您的资金安全，大额划转或异常操作可能会触发风控审核，导致到账延迟。请确保本人操作，谨防诈骗。
               </div>
             </div>
@@ -377,15 +377,15 @@ export function RightsTransferPage() {
                     }}
                     className={`p-4 mb-2 rounded-xl flex items-center justify-between cursor-pointer transition-colors ${
                       isSelected 
-                        ? 'bg-red-50 dark:bg-red-500/10 border border-brand-red/30' 
-                        : 'bg-white dark:bg-gray-800 border border-transparent active:bg-gray-50 dark:active:bg-gray-700'
+                        ? 'bg-red-50 dark:bg-red-500/12 border border-brand-red/30 dark:border-red-500/30' 
+                        : 'bg-white dark:bg-gray-900 border border-transparent active:bg-gray-50 dark:active:bg-gray-800'
                     }`}
                   >
                     <div className="flex-1">
                       <div className="flex items-center mb-1">
                         <span className="text-lg font-medium text-text-main mr-2">{account.name}</span>
                         {account.feeRate === 0 && (
-                          <span className="text-xs bg-green-100 text-green-600 px-1.5 py-0.5 rounded-sm">免手续费</span>
+                          <span className="text-xs bg-green-100 text-green-600 px-1.5 py-0.5 rounded-sm dark:bg-green-500/15 dark:text-green-300">免手续费</span>
                         )}
                       </div>
                       <div className="text-sm text-text-sub mb-1">{account.desc}</div>
@@ -410,4 +410,5 @@ export function RightsTransferPage() {
     </div>
   );
 }
+
 

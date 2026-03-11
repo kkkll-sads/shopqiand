@@ -1,5 +1,6 @@
-import { ApiError, isAbortError } from './errors';
+﻿import { ApiError, isAbortError } from './errors';
 import { appendQueryParams, type QueryParams } from './query';
+import { clearAuthSession } from '../../lib/auth';
 
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 
@@ -164,6 +165,24 @@ function buildMockKey(method: HttpMethod, url: URL): string {
 
 function createAbortError(): Error {
   return new DOMException('The operation was aborted.', 'AbortError');
+}
+
+function shouldRedirectToLogin(status?: number, code?: EnvelopeCode): boolean {
+  return status === 303 || code === 303 || code === '303';
+}
+
+function redirectToLogin() {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  clearAuthSession();
+
+  if (window.location.hash === '#/login') {
+    return;
+  }
+
+  window.location.hash = '#/login';
 }
 
 async function delay(duration: number, signal: AbortSignal): Promise<void> {
@@ -392,11 +411,19 @@ export class HttpClient {
 
   private toApiError(payload: unknown, status: number): ApiError {
     if (isEnvelope(payload)) {
+      if (shouldRedirectToLogin(status, payload.code)) {
+        redirectToLogin();
+      }
+
       return new ApiError(payload.message || payload.msg || 'Request failed.', {
         code: payload.code,
         details: payload,
         status,
       });
+    }
+
+    if (shouldRedirectToLogin(status)) {
+      redirectToLogin();
     }
 
     if (isPlainObject(payload) && typeof payload.message === 'string') {
@@ -409,6 +436,10 @@ export class HttpClient {
   private unwrapPayload<TResponse>(payload: unknown, status: number): TResponse {
     if (isEnvelope<TResponse>(payload)) {
       if (!this.options.isSuccessCode(payload.code)) {
+        if (shouldRedirectToLogin(status, payload.code)) {
+          redirectToLogin();
+        }
+
         throw new ApiError(payload.message || payload.msg || 'Request failed.', {
           code: payload.code,
           details: payload,
@@ -422,3 +453,4 @@ export class HttpClient {
     return normalizeListPayload(payload as TResponse);
   }
 }
+

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+﻿import { useState, useEffect, useCallback } from 'react';
 import { ArrowLeft, Copy } from 'lucide-react';
 import { Button } from '../../../components/ui/Button';
 import { Card } from '../../../components/ui/Card';
@@ -102,7 +102,7 @@ export const CollectibleOrderDetail = ({
           {/* 藏品信息 */}
           <Card className="p-0 overflow-hidden">
             <div className="px-3 py-3 border-b border-border-light flex items-center">
-              <span className="text-white text-xs px-1 rounded mr-1.5 font-medium leading-tight bg-purple-500">买入</span>
+              <span className="text-white text-xs px-1 rounded mr-1.5 font-medium leading-tight bg-purple-500 dark:bg-purple-500/85">买入</span>
               <span className="text-base font-bold text-text-main">藏品交易</span>
             </div>
             <div className="p-3 flex space-x-3">
@@ -153,7 +153,7 @@ export const CollectibleOrderDetail = ({
             {order.mining_status === 1 && (
               <div className="flex justify-between text-sm">
                 <span className="text-text-sub">矿机状态</span>
-                <span className="text-green-600 font-medium">运行中</span>
+                <span className="text-green-600 dark:text-green-300 font-medium">运行中</span>
               </div>
             )}
 
@@ -197,7 +197,7 @@ export const CollectibleOrderDetail = ({
     return (
       <>
         {/* 状态头部 */}
-        <div className="bg-gradient-to-r from-green-500 to-green-600 p-6 text-white">
+        <div className="bg-gradient-to-r from-green-500 to-green-600 dark:from-green-600 dark:to-emerald-500 p-6 text-white">
           <h2 className="text-4xl font-bold mb-1">{order.status_text}</h2>
           <p className="text-sm opacity-90">{isSettled ? '已结算' : '待结算'}</p>
         </div>
@@ -277,7 +277,7 @@ export const CollectibleOrderDetail = ({
             {/* 结算信息 */}
             <div className="flex justify-between text-sm">
               <span className="text-text-sub">结算状态</span>
-              <span className={isSettled ? 'text-green-600 font-medium' : 'text-text-aux'}>
+              <span className={isSettled ? 'text-green-600 dark:text-green-300 font-medium' : 'text-text-aux'}>
                 {isSettled ? '已结算' : '待结算'}
               </span>
             </div>
@@ -303,7 +303,7 @@ export const CollectibleOrderDetail = ({
             <div className="h-px bg-border-light my-1" />
             <div className="flex justify-between text-md font-bold pt-1">
               <span className="text-text-main">成交金额</span>
-              <span className="text-green-600">¥{fmt(order.sold_price)}</span>
+              <span className="text-green-600 dark:text-green-300">¥{fmt(order.sold_price)}</span>
             </div>
           </Card>
         </div>
@@ -346,3 +346,4 @@ export const CollectibleOrderDetail = ({
     </div>
   );
 };
+

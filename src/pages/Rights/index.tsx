@@ -59,9 +59,9 @@ interface UploadImage {
 function ApplySkeleton() {
   return (
     <div className="space-y-4">
-      <Card className="h-32 animate-pulse rounded-2xl bg-white dark:bg-bg-card" />
-      <Card className="h-[420px] animate-pulse rounded-2xl bg-white dark:bg-bg-card" />
-      <Card className="h-48 animate-pulse rounded-2xl bg-white dark:bg-bg-card" />
+      <Card className="h-32 animate-pulse rounded-2xl bg-white dark:bg-gray-900" />
+      <Card className="h-[420px] animate-pulse rounded-2xl bg-white dark:bg-gray-900" />
+      <Card className="h-48 animate-pulse rounded-2xl bg-white dark:bg-gray-900" />
     </div>
   );
 }
@@ -469,7 +469,7 @@ export function RightsPage() {
                         <button
                           type="button"
                           onClick={() => retryUpload(image.id)}
-                          className="rounded bg-white px-2 py-0.5 text-xs text-gray-900"
+                          className="rounded bg-white px-2 py-0.5 text-xs text-gray-900 dark:bg-gray-100 dark:text-gray-900"
                         >
                           重试
                         </button>
@@ -579,7 +579,7 @@ export function RightsPage() {
       <PageHeader
         title="确权中心"
         onBack={goBack}
-        className="border-b border-border-light bg-white/95 shadow-sm backdrop-blur-md dark:bg-bg-card/90"
+        className="border-b border-border-light bg-white/95 shadow-sm backdrop-blur-md dark:border-gray-800 dark:bg-gray-900/90"
         contentClassName="h-12 px-4"
         rightAction={
           <div className="flex items-center gap-3">
@@ -607,7 +607,7 @@ export function RightsPage() {
         }
       />
 
-      <div className="sticky top-0 z-10 flex border-b border-border-light bg-white px-4 dark:bg-bg-card">
+      <div className="sticky top-0 z-10 flex border-b border-border-light bg-white px-4 dark:border-gray-800 dark:bg-gray-900">
         <button
           type="button"
           className={`relative flex-1 pb-3 text-lg font-bold transition-colors ${
@@ -677,4 +677,5 @@ export function RightsPage() {
     </div>
   );
 }
+
 

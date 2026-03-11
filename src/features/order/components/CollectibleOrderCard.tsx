@@ -1,4 +1,4 @@
-import type { FC } from 'react';
+﻿import type { FC } from 'react';
 import { ChevronRight, Copy } from 'lucide-react';
 import type { CollectionBuyOrder, CollectionSellOrder } from '../../../api';
 import { Card } from '../../../components/ui/Card';
@@ -27,7 +27,7 @@ export const CollectibleBuyOrderCard: FC<BuyOrderCardProps> = ({ order, onCopy, 
       {/* 顶部：标签 + 状态 */}
       <div className="px-3 py-2.5 border-b border-border-light flex justify-between items-center bg-bg-base/50">
         <div className="flex items-center">
-          <span className="bg-purple-500 text-white text-xs px-1 rounded mr-1.5 font-medium leading-tight">买入</span>
+          <span className="bg-purple-500 text-white dark:bg-purple-500/85 text-xs px-1 rounded mr-1.5 font-medium leading-tight">买入</span>
           <span className="text-base font-bold text-text-main">藏品交易</span>
           <ChevronRight size={14} className="text-text-aux ml-0.5" />
         </div>
@@ -98,11 +98,11 @@ export const CollectibleSellOrderCard: FC<SellOrderCardProps> = ({ order, onCopy
       {/* 顶部：标签 + 状态 */}
       <div className="px-3 py-2.5 border-b border-border-light flex justify-between items-center bg-bg-base/50">
         <div className="flex items-center">
-          <span className="bg-green-600 text-white text-xs px-1 rounded mr-1.5 font-medium leading-tight">卖出</span>
+          <span className="bg-green-600 text-white dark:bg-green-500/85 text-xs px-1 rounded mr-1.5 font-medium leading-tight">卖出</span>
           <span className="text-base font-bold text-text-main">藏品交易</span>
           <ChevronRight size={14} className="text-text-aux ml-0.5" />
         </div>
-        <span className="text-base text-green-600 font-medium">{order.status_text}</span>
+        <span className="text-base text-green-600 dark:text-green-300 font-medium">{order.status_text}</span>
       </div>
 
       <div className="p-3">
@@ -140,7 +140,7 @@ export const CollectibleSellOrderCard: FC<SellOrderCardProps> = ({ order, onCopy
             </button>
           </div>
           <div className="shrink-0 ml-2">
-            成交金额: <span className="text-md font-bold text-green-600">¥{Number(order.sold_price).toFixed(2)}</span>
+            成交金额: <span className="text-md font-bold text-green-600 dark:text-green-300">¥{Number(order.sold_price).toFixed(2)}</span>
           </div>
         </div>
 
@@ -150,3 +150,4 @@ export const CollectibleSellOrderCard: FC<SellOrderCardProps> = ({ order, onCopy
     </Card>
   );
 };
+
