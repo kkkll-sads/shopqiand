@@ -317,9 +317,21 @@ export function RechargePage() {
         paymentType: selectedPaymentOption.type,
       });
 
+      const resolvedPaymentMethod = result.paymentMethod ?? 'offline';
+
+      if (resolvedPaymentMethod === 'online') {
+        await submitMatchedOrder({
+          account: result.account,
+          matchedId: result.matchedAccountId,
+          paymentMethod: resolvedPaymentMethod,
+          successMessage: '支付订单已创建，正在打开支付页面',
+        });
+        return;
+      }
+
       setMatchedAccount(result.account);
       setMatchedAccountId(result.matchedAccountId);
-      setMatchedPaymentMethod(result.paymentMethod ?? 'offline');
+      setMatchedPaymentMethod(resolvedPaymentMethod);
       setMatchStep('matched');
     } catch (error) {
       setMatchStep('select');
@@ -360,28 +372,38 @@ export function RechargePage() {
     }
   };
 
-  const handleSubmit = async () => {
-    if (!matchedAccount || !canSubmit) {
-      return;
-    }
-
+  const submitMatchedOrder = async ({
+    account,
+    matchedId,
+    paymentMethod,
+    screenshotId,
+    screenshotUrl,
+    successMessage,
+  }: {
+    account: CompanyAccount;
+    matchedId: number;
+    paymentMethod: RechargePaymentMethod;
+    screenshotId?: number;
+    screenshotUrl?: string;
+    successMessage?: string;
+  }) => {
     setSubmitting(true);
 
     try {
       const result = await rechargeApi.submitOrder({
         amount: numAmount,
-        matchedAccountId,
-        paymentMethod: matchedPaymentMethod,
-        paymentScreenshotId: matchedPaymentMethod === 'offline' ? paymentScreenshot?.id : undefined,
-        paymentScreenshotUrl: matchedPaymentMethod === 'offline' ? paymentScreenshot?.url : undefined,
-        paymentType: matchedAccount.type,
+        matchedAccountId: matchedId,
+        paymentMethod,
+        paymentScreenshotId: paymentMethod === 'offline' ? screenshotId : undefined,
+        paymentScreenshotUrl: paymentMethod === 'offline' ? screenshotUrl : undefined,
+        paymentType: account.type,
         userRemark: remark.trim() || undefined,
       });
 
       showToast({
-        message: result.orderNo
-          ? `充值申请已提交，订单号 ${result.orderNo}`
-          : '充值申请已提交，请等待审核',
+        message:
+          successMessage ||
+          (result.orderNo ? `充值申请已提交，订单号 ${result.orderNo}` : '充值申请已提交，请等待审核'),
         type: 'success',
         duration: 3200,
       });
@@ -393,15 +415,32 @@ export function RechargePage() {
       if (result.payUrl) {
         window.open(result.payUrl, '_blank', 'noopener,noreferrer');
       }
+
+      return result;
     } catch (error) {
       showToast({
         message: getErrorMessage(error),
         type: 'error',
         duration: 3000,
       });
+      throw error;
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const handleSubmit = async () => {
+    if (!matchedAccount || !canSubmit) {
+      return;
+    }
+
+    await submitMatchedOrder({
+      account: matchedAccount,
+      matchedId: matchedAccountId,
+      paymentMethod: matchedPaymentMethod,
+      screenshotId: paymentScreenshot?.id,
+      screenshotUrl: paymentScreenshot?.url,
+    });
   };
 
   const renderHeader = () => (

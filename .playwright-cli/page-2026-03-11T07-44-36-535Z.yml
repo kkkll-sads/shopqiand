@@ -1,0 +1,7 @@
+- generic [ref=e2]:
+  - button [ref=e4]:
+    - img [ref=e5]
+  - generic:
+    - generic:
+      - img
+      - generic: 请先登录后再进入该页面

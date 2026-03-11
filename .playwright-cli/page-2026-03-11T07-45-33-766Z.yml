@@ -1,0 +1,38 @@
+- generic [ref=e3]:
+  - button [ref=e4]:
+    - img [ref=e5]
+  - generic [ref=e12]:
+    - generic [ref=e13]:
+      - button [ref=e14]:
+        - img [ref=e15]
+      - button "�ͷ�" [ref=e17]:
+        - generic [ref=e18]:
+          - img [ref=e19]
+          - text: �ͷ�
+    - generic [ref=e22]:
+      - generic [ref=e23]:
+        - heading "Hello!" [level=1] [ref=e24]
+        - paragraph [ref=e25]: ��ӭ��¼������
+      - generic [ref=e27]:
+        - button "�����¼" [ref=e28]: �����¼
+        - button "��֤���¼" [ref=e30]
+      - generic [ref=e31]:
+        - textbox "�������û������ֻ���" [ref=e33]
+        - generic [ref=e34]:
+          - textbox "�������¼����" [ref=e35]
+          - button "��ʾ����" [ref=e37]:
+            - img [ref=e38]
+      - generic [ref=e44]:
+        - generic [ref=e47] [cursor=pointer]: ��ס����
+        - button "��������" [ref=e48]:
+          - generic [ref=e49]: ��������
+      - button "��¼" [ref=e51]:
+        - generic [ref=e52]: ��¼
+      - generic [ref=e53]:
+        - generic [ref=e57]:
+          - text: 登录即代表你已同意
+          - button "用户协议" [ref=e58]
+          - text: 和
+          - button "隐私政策" [ref=e59]
+        - button "û���˻������ע��" [ref=e61]:
+          - generic [ref=e62]: û���˻������ע��

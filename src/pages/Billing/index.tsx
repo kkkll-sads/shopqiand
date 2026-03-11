@@ -687,7 +687,7 @@ export function BillingPage() {
     }
 
     return (
-      <div className="space-y-6 p-4 pb-10">
+      <div className="space-y-6 px-4 pb-10 pt-6">
         {groupedLogs.map((group) => (
           <div key={group.label}>
             <div className="mb-3 ml-1 text-base font-bold text-text-main">{group.label}</div>
