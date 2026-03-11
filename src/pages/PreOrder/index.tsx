@@ -121,6 +121,16 @@ export const PreOrderPage = () => {
     hasEnoughPower &&
     agreed;
 
+  const submitButtonText = previewLoading
+    ? '预览中...'
+    : !canAfford
+      ? '余额不足'
+      : !hasEnoughPower
+        ? '算力不足'
+        : !agreed
+          ? '请先同意协议'
+          : '确认预约';
+
   const handleRefresh = useCallback(async () => {
     await reload().catch(() => undefined);
   }, [reload]);
@@ -317,10 +327,10 @@ export const PreOrderPage = () => {
             {previewLoading ? (
               <span className="inline-flex items-center">
                 <RefreshCcw size={16} className="mr-2 animate-spin" />
-                预览中...
+                {submitButtonText}
               </span>
             ) : (
-              '确认预约'
+              submitButtonText
             )}
           </button>
         </div>

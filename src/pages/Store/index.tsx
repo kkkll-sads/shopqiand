@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+﻿import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Award,
   CheckCircle2,
@@ -44,7 +44,7 @@ const KING_KONG_ITEMS = [
   { icon: Flame, label: '热卖排行', target: 'store' },
   { icon: Award, label: '品牌闪购', target: 'store' },
   { icon: FileText, label: '我的订单', target: 'order' },
-  { icon: MapPin, label: '地址/客服', target: 'help_center' },
+  { icon: MapPin, label: '地址', target: 'address' },
 ];
 
 const FLASH_SALE_LIST_INITIAL_DATA = {
@@ -660,3 +660,4 @@ export const StorePage = () => {
     </div>
   );
 };
+
