@@ -11,12 +11,15 @@ import { announcementApi } from '../../api/modules/announcement';
 import { accountApi } from '../../api/modules/account';
 import { reservationApi } from '../../api/modules/reservation';
 import { resolveUploadUrl } from '../../api/modules/upload';
+import { useFeedback } from '../../components/ui/FeedbackProvider';
 import { ReservationCard } from '../../features/reservation/ReservationCard';
+import { openCustomerServiceLink } from '../../lib/customerService';
 
 
 
 export const HomePage = () => {
   const { goTo } = useAppNavigate();
+  const { showToast } = useFeedback();
   const [loading, setLoading] = useState(true);
   const [offline, setOffline] = useState(false);
   const [error, setError] = useState(false);
@@ -156,6 +159,12 @@ export const HomePage = () => {
     return resolveUploadUrl(item.image);
   };
 
+  const handleOpenSupport = useCallback(() => {
+    void openCustomerServiceLink(({ duration, message, type }) => {
+      showToast({ duration, message, type });
+    });
+  }, [showToast]);
+
   const renderHeader = () => (
     <div className="sticky top-0 z-40 bg-white dark:bg-gray-900/90 backdrop-blur-md px-4 py-2 flex items-center space-x-3 border-b border-gray-100 dark:border-gray-800">
       <div
@@ -177,7 +186,7 @@ export const HomePage = () => {
       </div>
       <button 
         className="flex items-center justify-center w-8 h-8 text-gray-900 dark:text-gray-100 shrink-0 active:opacity-70"
-        onClick={() => goTo('help_center')}
+        onClick={handleOpenSupport}
       >
         <Headset size={20} />
       </button>
@@ -312,7 +321,7 @@ export const HomePage = () => {
           </div>
           <div 
             className="flex flex-col items-center cursor-pointer active:opacity-70"
-            onClick={() => goTo('help_center')}
+            onClick={handleOpenSupport}
           >
             <div className="w-11 h-11 rounded-[14px] bg-white dark:bg-gray-800 shadow-sm flex items-center justify-center text-[#FF4142] dark:text-red-300 mb-1.5">
               <Headset size={22} strokeWidth={1.5} />
@@ -475,6 +484,5 @@ export const HomePage = () => {
     </div>
   );
 };
-
 
 

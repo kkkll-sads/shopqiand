@@ -5,8 +5,10 @@ import { PageHeader } from '../../components/layout/PageHeader';
 import { ErrorState } from '../../components/ui/ErrorState';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { PullToRefreshContainer } from '../../components/ui/PullToRefreshContainer';
+import { useFeedback } from '../../components/ui/FeedbackProvider';
 import { useRouteScrollRestoration } from '../../hooks/useRouteScrollRestoration';
 import { useSessionState } from '../../hooks/useSessionState';
+import { openCustomerServiceLink } from '../../lib/customerService';
 
 interface AfterSalesItem {
   id: string;
@@ -61,6 +63,7 @@ const MOCK_TIMELINE = [
 
 export const AfterSalesPage = () => {
   const { goTo, goBack } = useAppNavigate();
+  const { showToast } = useFeedback();
 
   const [view, setView] = useState<'list' | 'entry' | 'apply' | 'detail'>('list');
   const [activeTab, setActiveTab] = useSessionState<'processing' | 'completed' | 'closed'>(
@@ -120,6 +123,12 @@ export const AfterSalesPage = () => {
     } else {
       goBack();
     }
+  };
+
+  const handleOpenSupport = () => {
+    void openCustomerServiceLink(({ duration, message, type }) => {
+      showToast({ duration, message, type });
+    });
   };
 
   const renderHeader = (title: string) => (
@@ -481,7 +490,11 @@ export const AfterSalesPage = () => {
 
         {/* Bottom Actions */}
         <div className="absolute bottom-0 left-0 right-0 p-4 bg-white dark:bg-gray-900 border-t border-border-light pb-safe flex space-x-3">
-          <button className="flex-1 h-10 rounded-full border border-border-main text-text-main text-md font-medium flex items-center justify-center active:bg-gray-50 dark:bg-gray-800 transition-colors">
+          <button
+            type="button"
+            onClick={handleOpenSupport}
+            className="flex-1 h-10 rounded-full border border-border-main text-text-main text-md font-medium flex items-center justify-center active:bg-gray-50 dark:bg-gray-800 transition-colors"
+          >
             <HeadphonesIcon size={16} className="mr-1.5" /> 联系客服
           </button>
           <button className="flex-1 h-10 rounded-full border border-border-main text-text-main text-md font-medium active:bg-gray-50 dark:bg-gray-800 transition-colors">

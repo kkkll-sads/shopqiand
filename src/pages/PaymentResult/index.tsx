@@ -4,11 +4,17 @@ import { ChevronLeft, WifiOff, CheckCircle2, AlertCircle, Copy, HeadphonesIcon }
 import { useAppNavigate } from '../../lib/navigation';
 import { copyToClipboard } from '../../lib/clipboard';
 import { useFeedback } from '../../components/ui/FeedbackProvider';
+import { openCustomerServiceLink } from '../../lib/customerService';
 
 export const PaymentResultPage = () => {
   const [searchParams] = useSearchParams();
   const { goTo, goBack } = useAppNavigate();
   const { showToast } = useFeedback();
+  const handleOpenSupport = () => {
+    void openCustomerServiceLink(({ duration, message, type }) => {
+      showToast({ duration, message, type });
+    });
+  };
 
   const [offline, setOffline] = useState(false);
 
@@ -163,7 +169,7 @@ export const PaymentResultPage = () => {
 
       <button 
         className="flex items-center text-base text-text-sub active:opacity-70"
-        onClick={() => goTo('help_center')}
+        onClick={handleOpenSupport}
       >
         <HeadphonesIcon size={14} className="mr-1" />
         联系客服

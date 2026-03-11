@@ -11,13 +11,16 @@ import { PageHeader } from '../../components/layout/PageHeader';
 import { ErrorState } from '../../components/ui/ErrorState';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { PullToRefreshContainer } from '../../components/ui/PullToRefreshContainer';
+import { useFeedback } from '../../components/ui/FeedbackProvider';
 import { useRouteScrollRestoration } from '../../hooks/useRouteScrollRestoration';
 import { useRequest } from '../../hooks/useRequest';
 import { collectionSessionApi, type CollectionSession } from '../../api';
 import { resolveUploadUrl } from '../../api/modules/upload';
+import { openCustomerServiceLink } from '../../lib/customerService';
 
 export const TradingZonePage = () => {
   const { goTo, goBack, navigate } = useAppNavigate();
+  const { showToast } = useFeedback();
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const [nowMs, setNowMs] = useState(() => Date.now());
 
@@ -63,6 +66,12 @@ export const TradingZonePage = () => {
 
     navigate(`/trading/detail/${session.id}`);
   };
+
+  const handleOpenSupport = useCallback(() => {
+    void openCustomerServiceLink(({ duration, message, type }) => {
+      showToast({ duration, message, type });
+    });
+  }, [showToast]);
 
   /** 获取专场图片 */
   const getSessionImage = (url: string) => {
@@ -263,7 +272,7 @@ export const TradingZonePage = () => {
       {!loading && !error && sessions.length > 0 && (
         <button
           className="absolute right-4 bottom-8 w-12 h-12 bg-white dark:bg-gray-800 rounded-full shadow-lg border border-gray-100 dark:border-gray-700 flex items-center justify-center text-gray-900 dark:text-gray-100 active:scale-95 transition-transform z-40"
-          onClick={() => goTo('help_center')}
+          onClick={handleOpenSupport}
         >
           <Headset size={24} />
         </button>

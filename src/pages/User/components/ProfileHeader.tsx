@@ -18,6 +18,7 @@ export interface ProfileHeaderProps {
   displayId: string;
   unreadCount: number;
   onNavigate: (viewId: string) => void;
+  onOpenHelp: () => void;
 }
 
 const ProfileHeader: React.FC<ProfileHeaderProps> = ({
@@ -28,6 +29,7 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
   displayId,
   unreadCount,
   onNavigate,
+  onOpenHelp,
 }) => {
   const userInfoRecord = (userInfo ?? {}) as Record<string, unknown>;
   const readNumericValue = (value: unknown) => {
@@ -96,7 +98,7 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
 
         <div className="flex items-center gap-5">
           <button
-            onClick={() => onNavigate('help_center')}
+            onClick={onOpenHelp}
             className="flex flex-col items-center text-text-main active:opacity-70"
           >
             <HeadphonesIcon size={26} strokeWidth={1.5} />

@@ -29,6 +29,11 @@ interface BuildConvenientServicesParams {
   hasSignedToday: boolean;
 }
 
+interface BuildServiceManagementParams {
+  navigate: NavigateFunction;
+  openSupport: () => void;
+}
+
 export const buildConvenientServices = ({
   navigate,
   hasSignedToday,
@@ -160,7 +165,10 @@ export const buildPointsOrder = (
   ];
 };
 
-export const buildServiceManagement = (navigate: NavigateFunction): ProfileSectionItem[] => {
+export const buildServiceManagement = ({
+  navigate,
+  openSupport,
+}: BuildServiceManagementParams): ProfileSectionItem[] => {
   return [
     { label: '实名认证', icon: UserCheck, action: () => navigate('/auth/real-name') },
     { label: '卡号管理', icon: CreditCard, action: () => navigate('/payment-accounts') },
@@ -170,7 +178,7 @@ export const buildServiceManagement = (navigate: NavigateFunction): ProfileSecti
     { label: '规则协议', icon: FileText, action: () => navigate('/user_agreement') },
     { label: '隐私政策', icon: ShieldCheck, action: () => navigate('/privacy_policy') },
     { label: '活动中心', icon: Gift, action: () => navigate('/activity-center') },
-    { label: '在线客服', icon: HeadphonesIcon, action: () => navigate('/help_center') },
+    { label: '在线客服', icon: HeadphonesIcon, action: openSupport },
     { label: '平台资讯', icon: Newspaper, action: () => navigate('/announcement') },
   ].map((item) => ({
     ...item,

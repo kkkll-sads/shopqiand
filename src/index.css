@@ -5,11 +5,50 @@
 
 /* 全局字体：系统字体栈，优先使用苹方/思源 */
 @layer base {
+  html,
+  body {
+    width: 100%;
+    min-height: 100%;
+    margin: 0;
+    display: block;
+    font-size: 12px;
+    -webkit-text-size-adjust: 100% !important;
+    text-size-adjust: 100% !important;
+  }
+
   html {
     font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB",
       "Microsoft YaHei", "Helvetica Neue", Helvetica, Arial, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    background: var(--bg-base);
+  }
+
+  form {
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+
+  #root {
+    position: relative;
+    width: 100%;
+    max-width: 750px;
+    min-height: 100vh;
+    margin: 0 auto;
+  }
+
+  #share-img {
+    position: absolute;
+    top: -100px;
+    left: -100px;
+    width: 0;
+    height: 0;
+    overflow: hidden;
+    visibility: hidden;
   }
 }
 
@@ -44,51 +83,46 @@
   --color-border-card: var(--border-card);
 
   /* 字体大小层级（语义化 Token） */
-  --text-2xs: 10px;   /* 极小标签 */
-  --text-xs: 11px;    /* 辅助标签 */
-  --text-s: 12px;     /* 次要信息 */
-  --text-sm: 13px;    /* 常规辅助文字 */
-  --text-base: 14px;  /* 正文基准 */
-  --text-md: 15px;    /* 正文稍大 */
-  --text-lg: 16px;    /* 副标题 */
-  --text-xl: 17px;    /* 标题 */
-  --text-2xl: 18px;   /* 页面标题 */
-  --text-3xl: 20px;   /* 大标题 */
-  --text-4xl: 22px;   /* 特大标题 */
-  --text-5xl: 26px;   /* 数据强调 */
-  --text-6xl: 30px;   /* 价格/数字 */
-  --text-7xl: 34px;   /* 超大数字 */
+  --text-2xs: 10px;
+  --text-xs: 11px;
+  --text-s: 12px;
+  --text-sm: 13px;
+  --text-base: 14px;
+  --text-md: 15px;
+  --text-lg: 16px;
+  --text-xl: 17px;
+  --text-2xl: 18px;
+  --text-3xl: 20px;
+  --text-4xl: 22px;
+  --text-5xl: 26px;
+  --text-6xl: 30px;
+  --text-7xl: 34px;
 
   --shadow-soft: var(--shadow-soft);
 }
 
 @layer base {
   :root {
-    /* 品牌色 */
     --primary-start: #E93B3B;
     --primary-end: #FF5C5C;
     --brand-start: #FF4142;
     --brand-end: #FF4B2B;
 
-    /* 功能色 */
     --success: #07C160;
     --warning: #FF9900;
     --info: #1677FF;
 
-    /* 背景 */
     --bg-base: #FFF7F8;
     --bg-card: #FFFFFF;
     --bg-box: #FFFFFF;
     --bg-hover: #F7F8FA;
     --bg-skeleton: #F0F0F0;
 
-    /* 文字 */
     --text-main: #1A1A1A;
     --text-sub: #666666;
     --text-aux: #999999;
     --text-price: #f2270c;
 
-    /* 边框 */
     --border-light: #F2F2F2;
     --border-main: #E0E0E0;
     --border-card: #E5E5E5;
@@ -97,31 +131,26 @@
   }
 
   .dark {
-    /* 品牌色（深色模式适当降低饱和度） */
     --primary-start: #D32F2F;
     --primary-end: #E53935;
     --brand-start: #D32F2F;
     --brand-end: #E53935;
 
-    /* 功能色 */
     --success: #00C853;
     --warning: #FFB300;
     --info: #448AFF;
 
-    /* 背景 */
     --bg-base: #121212;
     --bg-card: #1C1C1E;
     --bg-box: #1C1C1E;
     --bg-hover: #2A2A2A;
     --bg-skeleton: #2C2C2E;
 
-    /* 文字 */
     --text-main: #F5F5F5;
     --text-sub: #A0A0A0;
     --text-aux: #707070;
     --text-price: #FF6B6B;
 
-    /* 边框 */
     --border-light: #2C2C2E;
     --border-main: #3A3A3C;
     --border-card: #3A3A3C;
@@ -179,7 +208,6 @@
   }
 }
 
-
 .app-viewport-height {
   height: 100vh;
 }
@@ -189,6 +217,11 @@
 }
 
 @supports (height: 100dvh) {
+  .app-viewport-height,
+  #root {
+    min-height: 100dvh;
+  }
+
   .app-viewport-height {
     height: 100dvh;
   }

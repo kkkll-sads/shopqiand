@@ -2,6 +2,7 @@
 import { useParams } from 'react-router-dom';
 import { getErrorMessage } from '../../api/core/errors';
 import { addressApi, shopCartApi, shopOrderApi, shopProductApi } from '../../api';
+import type { AddressItem } from '../../api/modules/address';
 import { OfflineBanner } from '../../components/layout/OfflineBanner';
 import { useFeedback } from '../../components/ui/FeedbackProvider';
 import { ErrorState } from '../../components/ui/ErrorState';
@@ -25,6 +26,7 @@ import {
 import { useNetworkStatus } from '../../hooks/useNetworkStatus';
 import { useRequest } from '../../hooks/useRequest';
 import { useAppNavigate } from '../../lib/navigation';
+import { openCustomerServiceLink } from '../../lib/customerService';
 
 const EMPTY_REVIEW_SUMMARY = {
   follow_up_count: 0,
@@ -50,6 +52,8 @@ export const ProductDetailPage = () => {
   const [activeTab, setActiveTab] = useState<ProductDetailTab>('details');
   const [isScrolled, setIsScrolled] = useState(false);
   const [selectedOptions, setSelectedOptions] = useState<Record<string, string>>({});
+  const [addresses, setAddresses] = useState<AddressItem[]>([]);
+  const [selectedAddress, setSelectedAddress] = useState<AddressItem | null>(null);
 
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -129,8 +133,28 @@ export const ProductDetailPage = () => {
     return () => currentRef.removeEventListener('scroll', handleScroll);
   }, []);
 
+  const loadAddresses = useCallback(async () => {
+    const list = await addressApi.list().catch(() => []);
+    setAddresses(list);
+    setSelectedAddress((current) => {
+      if (current) {
+        const matched = list.find((item) => item.id === current.id);
+        if (matched) {
+          return matched;
+        }
+      }
+
+      return list.find((item) => item.is_default) ?? list[0] ?? null;
+    });
+  }, []);
+
+  useEffect(() => {
+    void loadAddresses();
+  }, [loadAddresses]);
+
   const openSkuSheet = (mode: SkuMode) => {
     setSkuMode(mode);
+    void loadAddresses();
     setShowSkuSheet(true);
   };
 
@@ -185,9 +209,6 @@ export const ProductDetailPage = () => {
     try {
       closeSkuSheet();
 
-      // 获取收货地址
-      const addresses = await addressApi.list().catch(() => []);
-      const selectedAddress = addresses.find((a) => a.is_default) ?? addresses[0];
       if (!selectedAddress) {
         showToast({ message: '请先添加收货地址', type: 'warning' });
         goTo('address');
@@ -216,7 +237,13 @@ export const ProductDetailPage = () => {
     } catch (err) {
       showToast({ message: getErrorMessage(err) || '创建订单失败', type: 'error' });
     }
-  }, [product, optionGroups, selectedOptions, quantity, showToast, closeSkuSheet, navigate, goTo]);
+  }, [product, optionGroups, selectedOptions, quantity, showToast, closeSkuSheet, navigate, goTo, selectedAddress]);
+
+  const handleOpenSupport = useCallback(() => {
+    void openCustomerServiceLink(({ duration, message, type }) => {
+      showToast({ duration, message, type });
+    });
+  }, [showToast]);
 
   const isLoading =
     (productRequest.loading && !product) || (!hasValidProductId && fallbackProductRequest.loading);
@@ -272,13 +299,14 @@ export const ProductDetailPage = () => {
 
           <ProductPurchaseBar
             onOpenStore={() => goTo('store')}
-            onOpenHelp={() => goTo('help_center')}
+            onOpenHelp={handleOpenSupport}
             onOpenCart={() => goTo('cart')}
             onAddToCart={() => openSkuSheet('cart')}
             onBuyNow={() => openSkuSheet('buy')}
           />
 
           <ProductSkuSheet
+            addresses={addresses}
             isOpen={showSkuSheet}
             mode={skuMode}
             onAddToCart={handleAddToCart}
@@ -286,6 +314,7 @@ export const ProductDetailPage = () => {
             onConfirm={handleBuyNow}
             onDecreaseQuantity={() => setQuantity((previous) => Math.max(1, previous - 1))}
             onIncreaseQuantity={() => setQuantity((previous) => previous + 1)}
+            onManageAddress={() => goTo('address')}
             onSelectOption={(groupName, option) =>
               setSelectedOptions((previous) => ({
                 ...previous,
@@ -295,6 +324,8 @@ export const ProductDetailPage = () => {
             optionGroups={optionGroups}
             product={product}
             quantity={quantity}
+            selectedAddress={selectedAddress}
+            setSelectedAddress={setSelectedAddress}
             selectedOptions={selectedOptions}
           />
 

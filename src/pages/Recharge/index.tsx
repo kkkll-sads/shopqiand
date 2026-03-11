@@ -128,6 +128,8 @@ function getOrderTitle(record: RechargeOrderRecord) {
   return record.paymentTypeText || '充值申请';
 }
 
+type MatchStep = 'select' | 'matching' | 'matched';
+
 export function RechargePage() {
   const { goBack, goTo } = useAppNavigate();
   const { isAuthenticated } = useAuthSession();
@@ -138,7 +140,10 @@ export function RechargePage() {
 
   const [showBalance, setShowBalance] = useState(true);
   const [amount, setAmount] = useState('');
-  const [selectedAccountId, setSelectedAccountId] = useState<number | null>(null);
+  const [selectedPaymentType, setSelectedPaymentType] = useState<string>('');
+  const [matchStep, setMatchStep] = useState<MatchStep>('select');
+  const [matchedAccount, setMatchedAccount] = useState<CompanyAccount | null>(null);
+  const [matchedAccountId, setMatchedAccountId] = useState<number>(0);
   const [remark, setRemark] = useState('');
   const [paymentScreenshot, setPaymentScreenshot] = useState<UploadedFile | null>(null);
   const [uploadingScreenshot, setUploadingScreenshot] = useState(false);
@@ -186,25 +191,38 @@ export function RechargePage() {
       })),
     [companyAccounts],
   );
+  const paymentTypeOptions = useMemo(() => {
+    const options = new Map<string, typeof paymentAccounts[number]>();
+
+    paymentAccounts.forEach((account) => {
+      if (!account.type || options.has(account.type)) {
+        return;
+      }
+
+      options.set(account.type, account);
+    });
+
+    return Array.from(options.values());
+  }, [paymentAccounts]);
   const recentOrderList = Array.isArray(recentOrders?.list) ? recentOrders.list : [];
 
   useEffect(() => {
-    if (!paymentAccounts.length) {
-      setSelectedAccountId(null);
+    if (!paymentTypeOptions.length) {
+      setSelectedPaymentType('');
       return;
     }
 
-    setSelectedAccountId((current) => {
-      if (current && paymentAccounts.some((item) => item.id === current)) {
+    setSelectedPaymentType((current) => {
+      if (current && paymentTypeOptions.some((item) => item.type === current)) {
         return current;
       }
 
-      return paymentAccounts[0].id;
+      return paymentTypeOptions[0].type;
     });
-  }, [paymentAccounts]);
+  }, [paymentTypeOptions]);
 
-  const selectedAccount =
-    paymentAccounts.find((item) => item.id === selectedAccountId) ?? paymentAccounts[0] ?? null;
+  const selectedPaymentOption =
+    paymentTypeOptions.find((item) => item.type === selectedPaymentType) ?? paymentTypeOptions[0] ?? null;
   const totalBalance = profile?.userInfo?.money;
   const availableBalance = profile?.userInfo?.balanceAvailable;
   const frozenBalance = profile?.userInfo?.frozenAmount;
@@ -220,7 +238,8 @@ export function RechargePage() {
     !isOffline &&
     !submitting &&
     !uploadingScreenshot &&
-    Boolean(selectedAccount) &&
+    Boolean(matchedAccount) &&
+    matchedAccountId > 0 &&
     numAmount > 0 &&
     Boolean(paymentScreenshot);
 
@@ -237,9 +256,20 @@ export function RechargePage() {
     void Promise.allSettled([reloadProfile(), reloadCompanyAccounts(), reloadRecentOrders()]);
   };
 
+  const resetMatchState = () => {
+    setMatchStep('select');
+    setMatchedAccount(null);
+    setMatchedAccountId(0);
+    setPaymentScreenshot(null);
+    setRemark('');
+  };
+
   const handleAmountChange = (event: ChangeEvent<HTMLInputElement>) => {
     const nextValue = event.target.value;
     if (nextValue === '' || /^\d*\.?\d{0,2}$/.test(nextValue)) {
+      if (matchStep !== 'select') {
+        resetMatchState();
+      }
       setAmount(nextValue);
     }
   };
@@ -260,6 +290,42 @@ export function RechargePage() {
     }
 
     screenshotInputRef.current?.click();
+  };
+
+  const handleStartMatching = async () => {
+    if (!selectedPaymentOption) {
+      showToast({ message: '请选择支付方式', type: 'warning' });
+      return;
+    }
+
+    if (numAmount <= 0) {
+      showToast({ message: '请输入充值金额', type: 'warning' });
+      return;
+    }
+
+    setMatchStep('matching');
+    setMatchedAccount(null);
+    setMatchedAccountId(0);
+    setPaymentScreenshot(null);
+    setRemark('');
+
+    try {
+      const result = await rechargeApi.matchAccount({
+        amount: numAmount,
+        paymentType: selectedPaymentOption.type,
+      });
+
+      setMatchedAccount(result.account);
+      setMatchedAccountId(result.matchedAccountId);
+      setMatchStep('matched');
+    } catch (error) {
+      setMatchStep('select');
+      showToast({
+        message: getErrorMessage(error),
+        type: 'error',
+        duration: 3000,
+      });
+    }
   };
 
   const handleScreenshotChange = async (event: ChangeEvent<HTMLInputElement>) => {
@@ -292,7 +358,7 @@ export function RechargePage() {
   };
 
   const handleSubmit = async () => {
-    if (!selectedAccount || !paymentScreenshot || !canSubmit) {
+    if (!matchedAccount || !paymentScreenshot || !canSubmit) {
       return;
     }
 
@@ -301,11 +367,11 @@ export function RechargePage() {
     try {
       const result = await rechargeApi.submitOrder({
         amount: numAmount,
-        companyAccountId: selectedAccount.id,
+        matchedAccountId,
         paymentMethod: 'offline',
         paymentScreenshotId: paymentScreenshot.id,
         paymentScreenshotUrl: paymentScreenshot.url,
-        paymentType: selectedAccount.type,
+        paymentType: matchedAccount.type,
         userRemark: remark.trim() || undefined,
       });
 
@@ -318,8 +384,7 @@ export function RechargePage() {
       });
 
       setAmount('');
-      setRemark('');
-      setPaymentScreenshot(null);
+      resetMatchState();
       void Promise.allSettled([reloadProfile(), reloadRecentOrders()]);
 
       if (result.payUrl) {
@@ -491,7 +556,7 @@ export function RechargePage() {
 
           <Card className="overflow-hidden p-0">
             <div className="border-b border-border-light px-4 py-3">
-              <div className="text-lg font-medium text-text-main">收款账户</div>
+              <div className="text-lg font-medium text-text-main">支付方式</div>
             </div>
             {mainLoading ? (
               <div className="space-y-3 p-4">
@@ -508,17 +573,22 @@ export function RechargePage() {
                   </div>
                 ))}
               </div>
-            ) : paymentAccounts.length ? (
+            ) : paymentTypeOptions.length ? (
               <div className="divide-y divide-border-light">
-                {paymentAccounts.map((account) => {
-                  const isSelected = account.id === selectedAccount?.id;
+                {paymentTypeOptions.map((account) => {
+                  const isSelected = account.type === selectedPaymentType;
                   const Icon = account.iconComponent;
 
                   return (
                     <button
-                      key={account.id}
+                      key={account.type}
                       type="button"
-                      onClick={() => setSelectedAccountId(account.id)}
+                      onClick={() => {
+                        if (selectedPaymentType !== account.type && matchStep !== 'select') {
+                          resetMatchState();
+                        }
+                        setSelectedPaymentType(account.type);
+                      }}
                       className="flex w-full items-center justify-between px-4 py-3 text-left transition-colors active:bg-bg-base"
                     >
                       <div className="flex min-w-0 items-center">
@@ -538,38 +608,22 @@ export function RechargePage() {
                         </div>
                         <div className="min-w-0">
                           <div className="truncate text-md font-medium text-text-main">
-                            {account.title}
+                            {account.typeText || account.title}
                           </div>
-                          <div className="truncate text-sm text-text-sub">{account.subtitle}</div>
-                          {account.remark ? (
-                            <div className="mt-0.5 truncate text-xs text-text-aux">{account.remark}</div>
-                          ) : null}
+                          <div className="truncate text-sm text-text-sub">
+                            系统将自动分配具体收款账户
+                          </div>
                         </div>
                       </div>
-                      <div className="ml-3 flex shrink-0 items-center">
-                        {account.accountNumber ? (
-                          <button
-                            type="button"
-                            className="mr-2 flex items-center rounded-full bg-bg-base px-2 py-1 text-xs text-text-sub"
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              void handleCopy(account.accountNumber, '账号已复制');
-                            }}
-                          >
-                            <Copy size={12} className="mr-1" />
-                            复制
-                          </button>
-                        ) : null}
-                        <span
-                          className={`flex h-5 w-5 items-center justify-center rounded-full border ${
-                            isSelected
-                              ? 'border-primary-start bg-primary-start text-white'
-                              : 'border-border-main text-transparent'
-                          }`}
-                        >
-                          <CheckCircle2 size={12} />
-                        </span>
-                      </div>
+                      <span
+                        className={`flex h-5 w-5 items-center justify-center rounded-full border ${
+                          isSelected
+                            ? 'border-primary-start bg-primary-start text-white'
+                            : 'border-border-main text-transparent'
+                        }`}
+                      >
+                        <CheckCircle2 size={12} />
+                      </span>
                     </button>
                   );
                 })}
@@ -577,7 +631,7 @@ export function RechargePage() {
             ) : (
               <div className="p-4">
                 <EmptyState
-                  message="暂无可用收款账户"
+                  message="暂无可用支付方式"
                   actionText="重新加载"
                   onAction={handleReload}
                 />
@@ -585,81 +639,162 @@ export function RechargePage() {
             )}
           </Card>
 
-          <Card className="p-4">
-            <div className="mb-3 flex items-center justify-between">
-              <div className="text-lg font-medium text-text-main">付款截图</div>
-              {paymentScreenshot ? (
-                <button
-                  type="button"
-                  onClick={() => setPaymentScreenshot(null)}
-                  className="text-sm text-text-sub active:opacity-70"
-                >
-                  重新上传
-                </button>
-              ) : null}
-            </div>
-
-            <input
-              ref={screenshotInputRef}
-              type="file"
-              accept="image/png,image/jpeg,image/gif,image/webp,image/bmp"
-              className="hidden"
-              onChange={handleScreenshotChange}
-            />
-
-            {uploadingScreenshot ? (
-              <div className="flex h-40 items-center justify-center rounded-2xl border border-dashed border-primary-start/30 bg-red-50/50 dark:bg-red-500/10">
-                <div className="flex items-center text-sm text-primary-start">
-                  <Loader2 size={16} className="mr-2 animate-spin" />
-                  正在上传付款截图
+          {matchStep === 'matching' ? (
+            <Card className="overflow-hidden p-0">
+              <div className="flex flex-col items-center px-6 py-10 text-center">
+                <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-red-50 text-primary-start dark:bg-red-500/10">
+                  <Loader2 size={28} className="animate-spin" />
+                </div>
+                <div className="text-xl font-semibold text-text-main">匹配中</div>
+                <div className="mt-2 text-sm leading-6 text-text-sub">
+                  正在为你匹配可用的
+                  {selectedPaymentOption?.typeText || '支付'}
+                  收款账户，请稍候。
                 </div>
               </div>
-            ) : paymentScreenshot ? (
-              <div className="relative overflow-hidden rounded-2xl border border-border-light">
-                <img
-                  src={paymentScreenshot.url}
-                  alt={paymentScreenshot.name}
-                  className="h-48 w-full object-cover"
-                  referrerPolicy="no-referrer"
+            </Card>
+          ) : null}
+
+          {matchStep === 'matched' && matchedAccount ? (
+            <>
+              <Card className="overflow-hidden p-0">
+                <div className="border-b border-border-light px-4 py-3">
+                  <div className="flex items-center justify-between">
+                    <div className="text-lg font-medium text-text-main">已匹配收款账户</div>
+                    <button
+                      type="button"
+                      className="text-sm text-text-sub active:opacity-70"
+                      onClick={resetMatchState}
+                    >
+                      重新匹配
+                    </button>
+                  </div>
+                </div>
+                <div className="space-y-4 p-4">
+                  <div className="rounded-2xl bg-bg-base p-4">
+                    <div className="mb-1 text-sm text-text-sub">支付方式</div>
+                    <div className="text-lg font-semibold text-text-main">
+                      {matchedAccount.typeText || selectedPaymentOption?.typeText || '收款账户'}
+                    </div>
+                  </div>
+                  <div className="rounded-2xl bg-bg-base p-4">
+                    <div className="mb-1 text-sm text-text-sub">收款人</div>
+                    <div className="text-lg font-semibold text-text-main">
+                      {matchedAccount.accountName || '--'}
+                    </div>
+                  </div>
+                  <div className="rounded-2xl bg-bg-base p-4">
+                    <div className="mb-1 text-sm text-text-sub">收款账号</div>
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="break-all text-lg font-semibold text-text-main">
+                        {matchedAccount.accountNumber || '--'}
+                      </div>
+                      {matchedAccount.accountNumber ? (
+                        <button
+                          type="button"
+                          className="shrink-0 rounded-full bg-white px-3 py-1.5 text-sm text-text-sub active:opacity-70"
+                          onClick={() => void handleCopy(matchedAccount.accountNumber, '账号已复制')}
+                        >
+                          <Copy size={14} className="mr-1 inline-block" />
+                          复制
+                        </button>
+                      ) : null}
+                    </div>
+                  </div>
+                  {matchedAccount.bankName || matchedAccount.bankBranch ? (
+                    <div className="rounded-2xl bg-bg-base p-4">
+                      <div className="mb-1 text-sm text-text-sub">开户信息</div>
+                      <div className="space-y-1 text-sm text-text-main">
+                        {matchedAccount.bankName ? <div>{matchedAccount.bankName}</div> : null}
+                        {matchedAccount.bankBranch ? <div>{matchedAccount.bankBranch}</div> : null}
+                      </div>
+                    </div>
+                  ) : null}
+                  {matchedAccount.remark ? (
+                    <div className="rounded-2xl bg-red-50/60 p-4 text-sm leading-6 text-text-sub dark:bg-red-500/10">
+                      {matchedAccount.remark}
+                    </div>
+                  ) : null}
+                </div>
+              </Card>
+
+              <Card className="p-4">
+                <div className="mb-3 flex items-center justify-between">
+                  <div className="text-lg font-medium text-text-main">付款截图</div>
+                  {paymentScreenshot ? (
+                    <button
+                      type="button"
+                      onClick={() => setPaymentScreenshot(null)}
+                      className="text-sm text-text-sub active:opacity-70"
+                    >
+                      重新上传
+                    </button>
+                  ) : null}
+                </div>
+
+                <input
+                  ref={screenshotInputRef}
+                  type="file"
+                  accept="image/png,image/jpeg,image/gif,image/webp,image/bmp"
+                  className="hidden"
+                  onChange={handleScreenshotChange}
                 />
-                <button
-                  type="button"
-                  onClick={() => setPaymentScreenshot(null)}
-                  className="absolute top-3 right-3 flex h-8 w-8 items-center justify-center rounded-full bg-black/55 text-white active:scale-95"
-                >
-                  <X size={16} />
-                </button>
-                <div className="flex items-center justify-between px-3 py-2 text-sm">
-                  <span className="truncate text-text-main">{paymentScreenshot.name}</span>
+
+                {uploadingScreenshot ? (
+                  <div className="flex h-40 items-center justify-center rounded-2xl border border-dashed border-primary-start/30 bg-red-50/50 dark:bg-red-500/10">
+                    <div className="flex items-center text-sm text-primary-start">
+                      <Loader2 size={16} className="mr-2 animate-spin" />
+                      正在上传付款截图
+                    </div>
+                  </div>
+                ) : paymentScreenshot ? (
+                  <div className="relative overflow-hidden rounded-2xl border border-border-light">
+                    <img
+                      src={paymentScreenshot.url}
+                      alt={paymentScreenshot.name}
+                      className="h-48 w-full object-cover"
+                      referrerPolicy="no-referrer"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setPaymentScreenshot(null)}
+                      className="absolute top-3 right-3 flex h-8 w-8 items-center justify-center rounded-full bg-black/55 text-white active:scale-95"
+                    >
+                      <X size={16} />
+                    </button>
+                    <div className="flex items-center justify-between px-3 py-2 text-sm">
+                      <span className="truncate text-text-main">{paymentScreenshot.name}</span>
+                      <button
+                        type="button"
+                        className="ml-2 shrink-0 text-text-sub active:opacity-70"
+                        onClick={handlePickScreenshot}
+                      >
+                        更换
+                      </button>
+                    </div>
+                  </div>
+                ) : (
                   <button
                     type="button"
-                    className="ml-2 shrink-0 text-text-sub active:opacity-70"
                     onClick={handlePickScreenshot}
+                    className="flex h-40 w-full flex-col items-center justify-center rounded-2xl border border-dashed border-border-main bg-bg-base text-text-sub transition-colors active:bg-red-50/50 dark:active:bg-red-500/10"
                   >
-                    更换
+                    <ImagePlus size={28} className="mb-2 text-text-aux" />
+                    <span className="text-base font-medium">上传付款截图</span>
+                    <span className="mt-1 text-sm text-text-aux">支持 JPG、PNG、GIF、WEBP、BMP</span>
                   </button>
-                </div>
-              </div>
-            ) : (
-              <button
-                type="button"
-                onClick={handlePickScreenshot}
-                className="flex h-40 w-full flex-col items-center justify-center rounded-2xl border border-dashed border-border-main bg-bg-base text-text-sub transition-colors active:bg-red-50/50 dark:active:bg-red-500/10"
-              >
-                <ImagePlus size={28} className="mb-2 text-text-aux" />
-                <span className="text-base font-medium">上传付款截图</span>
-                <span className="mt-1 text-sm text-text-aux">支持 JPG、PNG、GIF、WEBP、BMP</span>
-              </button>
-            )}
+                )}
 
-            <textarea
-              value={remark}
-              onChange={(event) => setRemark(event.target.value.slice(0, 500))}
-              rows={3}
-              placeholder="备注转账时间、付款账户等信息（选填）"
-              className="mt-4 w-full resize-none rounded-2xl border border-border-light bg-bg-base px-4 py-3 text-sm text-text-main outline-none placeholder:text-text-aux focus:border-primary-start"
-            />
-          </Card>
+                <textarea
+                  value={remark}
+                  onChange={(event) => setRemark(event.target.value.slice(0, 500))}
+                  rows={3}
+                  placeholder="备注转账时间、付款账户等信息（选填）"
+                  className="mt-4 w-full resize-none rounded-2xl border border-border-light bg-bg-base px-4 py-3 text-sm text-text-main outline-none placeholder:text-text-aux focus:border-primary-start"
+                />
+              </Card>
+            </>
+          ) : null}
 
           <Card className="overflow-hidden p-0">
             <div className="flex items-center justify-between border-b border-border-light px-4 py-3">
@@ -751,21 +886,27 @@ export function RechargePage() {
           </div>
           <button
             type="button"
-            disabled={!canSubmit}
-            onClick={handleSubmit}
+            disabled={
+              matchStep === 'matched'
+                ? !canSubmit
+                : !isAuthenticated || isOffline || submitting || mainLoading || matchStep === 'matching' || numAmount <= 0 || !selectedPaymentOption
+            }
+            onClick={matchStep === 'matched' ? handleSubmit : handleStartMatching}
             className={`flex h-12 min-w-[148px] items-center justify-center rounded-full px-6 text-lg font-medium transition ${
-              canSubmit
+              (matchStep === 'matched'
+                ? canSubmit
+                : isAuthenticated && !isOffline && !submitting && !mainLoading && matchStep !== 'matching' && numAmount > 0 && Boolean(selectedPaymentOption))
                 ? 'bg-gradient-to-r from-primary-start to-primary-end text-white shadow-md shadow-red-500/20 active:scale-[0.98]'
                 : 'bg-gray-200 text-gray-400 dark:bg-gray-800 dark:text-gray-500'
             }`}
           >
-            {submitting ? (
+            {matchStep === 'matched' && submitting ? (
               <>
                 <Loader2 size={18} className="mr-2 animate-spin" />
                 提交中
               </>
             ) : (
-              '确认充值'
+              matchStep === 'matched' ? '确认已转账并提交' : matchStep === 'matching' ? '匹配中' : '开始匹配'
             )}
           </button>
         </div>

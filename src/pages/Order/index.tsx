@@ -17,6 +17,7 @@ import { useRouteScrollRestoration } from '../../hooks/useRouteScrollRestoration
 import { useSessionState } from '../../hooks/useSessionState';
 import { copyToClipboard } from '../../lib/clipboard';
 import { useAppNavigate } from '../../lib/navigation';
+import { openCustomerServiceLink } from '../../lib/customerService';
 
 export const OrderPage = () => {
   const { goTo, navigate } = useAppNavigate();
@@ -143,6 +144,12 @@ export const OrderPage = () => {
     }
   };
 
+  const handleOpenSupport = useCallback(() => {
+    void openCustomerServiceLink(({ duration, message, type }) => {
+      showToast({ duration, message, type });
+    });
+  }, [showToast]);
+
   const handleCancelOrder = useCallback(
     async (orderId: number, cancelReason?: string) => {
       if (!window.confirm('确定要取消该订单吗？')) return;
@@ -230,7 +237,7 @@ export const OrderPage = () => {
           type={selectedOrder.type}
           id={selectedOrder.id}
           onBack={() => setSelectedOrder(null)}
-          onOpenHelp={() => goTo('help_center')}
+          onOpenHelp={handleOpenSupport}
         />
       )}
     </div>

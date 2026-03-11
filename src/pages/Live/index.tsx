@@ -13,6 +13,8 @@ import { EmptyState } from '../../components/ui/EmptyState';
 import { ErrorState } from '../../components/ui/ErrorState';
 import { useRequest } from '../../hooks/useRequest';
 import { useAppNavigate } from '../../lib/navigation';
+import { useFeedback } from '../../components/ui/FeedbackProvider';
+import { openCustomerServiceLink } from '../../lib/customerService';
 
 function getDomainLabel(url: string): string {
   try {
@@ -24,7 +26,13 @@ function getDomainLabel(url: string): string {
 
 export const LivePage = () => {
   const { goBack, goTo, navigate } = useAppNavigate();
+  const { showToast } = useFeedback();
   const [offline, setOffline] = useState(!navigator.onLine);
+  const handleOpenSupport = () => {
+    void openCustomerServiceLink(({ duration, message, type }) => {
+      showToast({ duration, message, type });
+    });
+  };
 
   const {
     data,
@@ -78,7 +86,7 @@ export const LivePage = () => {
         rightAction={
           <button
             type="button"
-            onClick={() => goTo('help_center')}
+            onClick={handleOpenSupport}
             className="text-text-sub active:opacity-70"
           >
             <HeadphonesIcon size={20} />

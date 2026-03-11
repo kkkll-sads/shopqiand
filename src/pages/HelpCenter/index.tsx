@@ -10,9 +10,8 @@ import {
   Loader2,
   MessageSquare,
 } from 'lucide-react';
-import { commonApi, helpApi, type HelpCategory, type HelpQuestion } from '../../api';
+import { helpApi, type HelpCategory, type HelpQuestion } from '../../api';
 import { getErrorMessage } from '../../api/core/errors';
-import { CustomerServicePanel } from '../../components/biz/CustomerServicePanel';
 import { OfflineBanner } from '../../components/layout/OfflineBanner';
 import { PageHeader } from '../../components/layout/PageHeader';
 import { Card } from '../../components/ui/Card';
@@ -26,6 +25,7 @@ import { useRequest } from '../../hooks/useRequest';
 import { useRouteScrollRestoration } from '../../hooks/useRouteScrollRestoration';
 import { useSessionState } from '../../hooks/useSessionState';
 import { useAppNavigate } from '../../lib/navigation';
+import { openCustomerServiceLink } from '../../lib/customerService';
 
 const EMPTY_CATEGORIES = { list: [] as HelpCategory[] };
 const EMPTY_QUESTIONS = { list: [] as HelpQuestion[] };
@@ -86,7 +86,6 @@ export const HelpCenterPage = () => {
     'help-center:expanded-faq',
     null,
   );
-  const [chatPanelOpen, setChatPanelOpen] = useState(false);
 
   const categoriesRequest = useRequest((signal) => helpApi.getCategories(signal), {
     initialData: EMPTY_CATEGORIES,
@@ -124,14 +123,8 @@ export const HelpCenterPage = () => {
     },
   );
 
-  const chatConfigRequest = useRequest((signal) => commonApi.getChatConfig(signal), {
-    manual: true,
-    cacheKey: 'common:chat-config',
-  });
-
   const questions = questionsRequest.data?.list ?? [];
   const isInitialLoading = categoriesRequest.loading && categories.length === 0;
-  const customerServiceUrl = chatConfigRequest.data?.chatUrl || chatConfigRequest.data?.backupUrl || '';
 
   useRouteScrollRestoration({
     containerRef: scrollContainerRef,
@@ -164,39 +157,8 @@ export const HelpCenterPage = () => {
   );
 
   const handleOpenCS = useCallback(async () => {
-    let nextUrl = customerServiceUrl;
-
-    if (!nextUrl) {
-      const config = await chatConfigRequest.reload().catch((error) => {
-        showToast({
-          message: getErrorMessage(error),
-          type: 'error',
-        });
-        return undefined;
-      });
-
-      nextUrl = config?.chatUrl || config?.backupUrl || '';
-    }
-
-    if (!nextUrl) {
-      showToast({
-        message: '暂未配置客服链接',
-        type: 'warning',
-      });
-      return;
-    }
-
-    setChatPanelOpen(true);
-  }, [chatConfigRequest, customerServiceUrl, showToast]);
-
-  const handleRefreshCS = useCallback(async () => {
-    await chatConfigRequest.reload().catch((error) => {
-      showToast({
-        message: getErrorMessage(error),
-        type: 'error',
-      });
-    });
-  }, [chatConfigRequest, showToast]);
+    await openCustomerServiceLink(showToast);
+  }, [showToast]);
 
   const renderFaqBody = () => {
     if (questionsRequest.loading && questions.length === 0) {
@@ -323,14 +285,9 @@ export const HelpCenterPage = () => {
                 <button
                   type="button"
                   onClick={() => void handleOpenCS()}
-                  disabled={chatConfigRequest.loading}
                   className="flex h-11 w-full items-center justify-center rounded-full bg-gradient-to-r from-primary-start to-primary-end text-[15px] font-medium text-white shadow-sm disabled:cursor-not-allowed disabled:opacity-70"
                 >
-                  {chatConfigRequest.loading ? (
-                    <Loader2 size={18} className="mr-2 animate-spin" />
-                  ) : (
-                    <MessageSquare size={18} className="mr-2" />
-                  )}
+                  <MessageSquare size={18} className="mr-2" />
                   立即咨询
                 </button>
               </Card>
@@ -398,20 +355,12 @@ export const HelpCenterPage = () => {
 
               <div className="mb-4 mt-6 flex items-center justify-center text-text-aux">
                 <ExternalLink size={12} className="mr-1" />
-                <span className="text-[12px]">客服将以站内悬浮窗形式打开，可随时复制链接或浏览器打开</span>
+                <span className="text-[12px]">客服将直接跳转到第三方链接</span>
               </div>
             </div>
           </div>
         </PullToRefreshContainer>
       </div>
-
-      <CustomerServicePanel
-        isOpen={chatPanelOpen}
-        url={customerServiceUrl}
-        isRefreshing={chatConfigRequest.loading}
-        onClose={() => setChatPanelOpen(false)}
-        onRefresh={handleRefreshCS}
-      />
     </>
   );
 };

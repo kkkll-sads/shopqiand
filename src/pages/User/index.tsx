@@ -6,12 +6,14 @@ import { OfflineBanner } from '../../components/layout/OfflineBanner';
 import { ActionSheet } from '../../components/ui/ActionSheet';
 import { Card } from '../../components/ui/Card';
 import { PullToRefreshContainer } from '../../components/ui/PullToRefreshContainer';
+import { useFeedback } from '../../components/ui/FeedbackProvider';
 import { Skeleton } from '../../components/ui/Skeleton';
 import { useAuthSession } from '../../hooks/useAuthSession';
 import { useNetworkStatus } from '../../hooks/useNetworkStatus';
 import { useRequest } from '../../hooks/useRequest';
 import { useRouteScrollRestoration } from '../../hooks/useRouteScrollRestoration';
 import { useAppNavigate } from '../../lib/navigation';
+import { openCustomerServiceLink } from '../../lib/customerService';
 import ProfileBalanceCard from './components/ProfileBalanceCard';
 import ProfileHeader from './components/ProfileHeader';
 import ProfileSectionGrid from './components/ProfileSectionGrid';
@@ -24,6 +26,7 @@ import {
 
 export const UserPage = () => {
   const { goTo } = useAppNavigate();
+  const { showToast } = useFeedback();
   const { clearAuthSession, isAuthenticated, session } = useAuthSession();
   const { isOffline, refreshStatus } = useNetworkStatus();
   const [loading, setLoading] = useState(true);
@@ -58,6 +61,11 @@ export const UserPage = () => {
   const accountOverviewLoading = accountOverviewRequest.loading;
   const realNameLoading = realNameRequest.loading;
   const unreadTotal = unreadRequest.data?.total ?? 0;
+  const openSupport = useCallback(() => {
+    void openCustomerServiceLink(({ duration, message, type }) => {
+      showToast({ duration, message, type });
+    });
+  }, [showToast]);
 
   const profileUserInfo = profile?.userInfo ?? session?.userInfo;
   const userInfo = (profileUserInfo ?? {}) as Record<string, unknown>;
@@ -162,6 +170,7 @@ export const UserPage = () => {
           displayId={displayUid}
           unreadCount={unreadTotal}
           onNavigate={goTo}
+          onOpenHelp={openSupport}
         />
       </div>
     );
@@ -274,7 +283,7 @@ export const UserPage = () => {
 
           <Card className="p-4">
             <h3 className="mb-4 text-base font-bold text-text-main">服务与帮助</h3>
-            <ProfileSectionGrid items={buildServiceManagement(goTo)} columns={4} />
+          <ProfileSectionGrid items={buildServiceManagement({ navigate: goTo, openSupport })} columns={4} />
           </Card>
         </div>
 

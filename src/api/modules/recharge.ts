@@ -33,6 +33,11 @@ interface SubmitOrderRaw {
   pay_url?: string;
 }
 
+interface MatchAccountRaw {
+  account?: CompanyAccountRaw;
+  matched_account_id?: number | string;
+}
+
 interface RechargeOrderRecordRaw {
   amount?: number | string;
   audit_remark?: string;
@@ -86,12 +91,22 @@ export interface GetCompanyAccountListParams {
 
 export interface SubmitOrderPayload {
   amount: number;
-  companyAccountId: number;
+  matchedAccountId: number;
   paymentMethod?: RechargePaymentMethod;
   paymentScreenshotId?: number;
   paymentScreenshotUrl?: string;
   paymentType: string;
   userRemark?: string;
+}
+
+export interface MatchAccountPayload {
+  amount: number;
+  paymentType: string;
+}
+
+export interface MatchAccountResult {
+  account: CompanyAccount;
+  matchedAccountId: number;
 }
 
 export interface SubmitOrderResult {
@@ -228,7 +243,7 @@ export const rechargeApi = {
       SubmitOrderRaw,
       {
         amount: number;
-        company_account_id: number;
+        matched_account_id: number;
         payment_method?: RechargePaymentMethod;
         payment_screenshot_id?: number;
         payment_screenshot_url?: string;
@@ -239,7 +254,7 @@ export const rechargeApi = {
       '/api/Recharge/submitOrder',
       {
         amount: payload.amount,
-        company_account_id: payload.companyAccountId,
+        matched_account_id: payload.matchedAccountId,
         payment_method: payload.paymentMethod,
         payment_screenshot_id: payload.paymentScreenshotId,
         payment_screenshot_url: payload.paymentScreenshotUrl,
@@ -256,6 +271,34 @@ export const rechargeApi = {
       orderId: readNumber(response.order_id),
       orderNo: readOptionalString(response.order_no) || '',
       payUrl: readOptionalString(response.pay_url),
+    };
+  },
+
+  async matchAccount(
+    payload: MatchAccountPayload,
+    options: RechargeRequestOptions = {},
+  ): Promise<MatchAccountResult> {
+    const response = await http.post<
+      MatchAccountRaw,
+      {
+        amount: number;
+        payment_type: string;
+      }
+    >(
+      '/api/Recharge/matchAccount',
+      {
+        amount: payload.amount,
+        payment_type: payload.paymentType,
+      },
+      {
+        headers: createApiHeaders(options),
+        signal: options.signal,
+      },
+    );
+
+    return {
+      account: normalizeCompanyAccount(response.account || {}),
+      matchedAccountId: readNumber(response.matched_account_id),
     };
   },
 

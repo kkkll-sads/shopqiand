@@ -1,4 +1,5 @@
-import { Minus, Plus, X } from 'lucide-react';
+import { ChevronRight, MapPin, Minus, Plus, X } from 'lucide-react';
+import type { AddressItem } from '../../../api/modules/address';
 import type { ShopProductDetail } from '../../../api/modules/shopProduct';
 import { Button } from '../../../components/ui/Button';
 import type { ShopProductOptionGroup } from '../../shop-product/utils';
@@ -10,6 +11,7 @@ import {
 import type { SkuMode } from '../types';
 
 interface ProductSkuSheetProps {
+  addresses: AddressItem[];
   isOpen: boolean;
   mode: SkuMode;
   onAddToCart: () => void;
@@ -17,14 +19,18 @@ interface ProductSkuSheetProps {
   onConfirm: () => void;
   onDecreaseQuantity: () => void;
   onIncreaseQuantity: () => void;
+  onManageAddress: () => void;
   onSelectOption: (groupName: string, option: string) => void;
   optionGroups: ShopProductOptionGroup[];
   product: ShopProductDetail | null;
   quantity: number;
+  selectedAddress: AddressItem | null;
+  setSelectedAddress: (address: AddressItem) => void;
   selectedOptions: Record<string, string>;
 }
 
 export const ProductSkuSheet = ({
+  addresses,
   isOpen,
   mode,
   onAddToCart,
@@ -32,10 +38,13 @@ export const ProductSkuSheet = ({
   onConfirm,
   onDecreaseQuantity,
   onIncreaseQuantity,
+  onManageAddress,
   onSelectOption,
   optionGroups,
   product,
   quantity,
+  selectedAddress,
+  setSelectedAddress,
   selectedOptions,
 }: ProductSkuSheetProps) => {
   if (!isOpen || !product) {
@@ -72,6 +81,84 @@ export const ProductSkuSheet = ({
         </div>
 
         <div className="flex-1 space-y-6 overflow-y-auto p-4">
+          {mode !== 'cart' ? (
+            <div>
+              <div className="mb-3 flex items-center justify-between">
+                <h4 className="text-md font-bold text-text-main">收货地址</h4>
+                <button
+                  type="button"
+                  onClick={onManageAddress}
+                  className="inline-flex items-center text-sm text-primary-start active:opacity-70"
+                >
+                  {selectedAddress ? '管理地址' : '新增地址'}
+                  <ChevronRight size={14} className="ml-0.5" />
+                </button>
+              </div>
+
+              {selectedAddress ? (
+                <div className="rounded-2xl border border-border-light bg-bg-base p-3">
+                  <div className="flex items-start gap-3">
+                    <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary-start/10 text-primary-start">
+                      <MapPin size={15} />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-semibold text-text-main">{selectedAddress.name}</span>
+                        <span className="text-sm text-text-main">{selectedAddress.phone}</span>
+                        {selectedAddress.is_default ? (
+                          <span className="rounded bg-primary-start px-1.5 py-0.5 text-xs text-white">默认</span>
+                        ) : null}
+                      </div>
+                      <div className="mt-1 text-sm leading-5 text-text-sub">
+                        {selectedAddress.region} {selectedAddress.detail}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={onManageAddress}
+                  className="flex w-full items-center justify-between rounded-2xl border border-dashed border-border-light bg-bg-base p-4 text-left active:bg-bg-hover"
+                >
+                  <div>
+                    <div className="text-sm font-medium text-text-main">请选择收货地址</div>
+                    <div className="mt-1 text-sm text-text-sub">下单前需要先选择地址</div>
+                  </div>
+                  <ChevronRight size={16} className="text-text-aux" />
+                </button>
+              )}
+
+              {addresses.length > 1 ? (
+                <div className="mt-3 space-y-2">
+                  {addresses.map((address) => {
+                    const active = selectedAddress?.id === address.id;
+                    return (
+                      <button
+                        key={address.id}
+                        type="button"
+                        onClick={() => setSelectedAddress(address)}
+                        className={`w-full rounded-2xl border p-3 text-left transition-colors ${
+                          active
+                            ? 'border-primary-start/30 bg-red-50 text-primary-start dark:bg-red-500/10'
+                            : 'border-border-light bg-white text-text-main dark:bg-gray-900'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-medium">{address.name}</span>
+                          <span className="text-sm">{address.phone}</span>
+                        </div>
+                        <div className={`mt-1 text-sm ${active ? 'text-primary-start/90 dark:text-red-300' : 'text-text-sub'}`}>
+                          {address.region} {address.detail}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+
           {optionGroups.length > 0 ? (
             optionGroups.map((group) => (
               <div key={group.name}>
