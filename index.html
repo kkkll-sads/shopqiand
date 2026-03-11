@@ -15,24 +15,6 @@
         else document.documentElement.classList.remove('dark');
       })();
     </script>
-    <script>
-      (function () {
-        function refreshRem() {
-          var width = document.documentElement.getBoundingClientRect().width;
-          if (!width) return;
-          if (width > 640) width = 640;
-          document.documentElement.style.fontSize = width / 16 + 'px';
-        }
-
-        refreshRem();
-        window.addEventListener('resize', refreshRem);
-        window.addEventListener('pageshow', function (event) {
-          if (event.persisted) {
-            refreshRem();
-          }
-        });
-      })();
-    </script>
   </head>
   <body>
     <img id="share-img" src="/share.png" alt="" />

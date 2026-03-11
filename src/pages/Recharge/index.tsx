@@ -23,6 +23,7 @@ import {
   rechargeApi,
   uploadApi,
   type CompanyAccount,
+  type RechargePaymentMethod,
   type RechargeOrderRecord,
   type UploadedFile,
 } from '../../api';
@@ -140,6 +141,7 @@ export function RechargePage() {
 
   const [showBalance, setShowBalance] = useState(true);
   const [amount, setAmount] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState<RechargePaymentMethod>('offline');
   const [selectedPaymentType, setSelectedPaymentType] = useState<string>('');
   const [matchStep, setMatchStep] = useState<MatchStep>('select');
   const [matchedAccount, setMatchedAccount] = useState<CompanyAccount | null>(null);
@@ -241,7 +243,7 @@ export function RechargePage() {
     Boolean(matchedAccount) &&
     matchedAccountId > 0 &&
     numAmount > 0 &&
-    Boolean(paymentScreenshot);
+    (paymentMethod === 'online' || Boolean(paymentScreenshot));
 
   useRouteScrollRestoration({
     containerRef: scrollContainerRef,
