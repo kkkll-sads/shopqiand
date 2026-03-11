@@ -30,6 +30,8 @@ interface OrderListContentProps {
   onOpenCashier: () => void;
   /** 取消商城订单 */
   onCancelMallOrder?: (orderId: number, cancelReason?: string) => void | Promise<void>;
+  /** 取消售后申请 */
+  onCancelMallAfterSale?: (orderId: number, afterSaleId?: number) => void | Promise<void>;
   /** 确认收货 */
   onConfirmMallOrder?: (orderId: number) => void | Promise<void>;
   /** 去评价 */
@@ -55,6 +57,7 @@ export const OrderListContent = ({
   onOpenLogistics,
   onOpenCashier,
   onCancelMallOrder,
+  onCancelMallAfterSale,
   onConfirmMallOrder,
   onReviewMallOrder,
   onRefundMallOrder,
@@ -136,6 +139,7 @@ export const OrderListContent = ({
               onOpenLogistics={onOpenLogistics}
               onOpenCashier={onOpenCashier}
               onCancelOrder={onCancelMallOrder}
+              onCancelAfterSale={onCancelMallAfterSale}
               onConfirmOrder={onConfirmMallOrder}
               onReview={onReviewMallOrder}
               onRefund={onRefundMallOrder}

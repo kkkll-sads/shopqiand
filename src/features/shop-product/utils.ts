@@ -1,8 +1,9 @@
-import { apiConfig } from '../../api/config';
+﻿import { apiConfig } from '../../api/config';
 import type {
   ShopProductDetail,
   ShopProductItem,
   ShopProductReview,
+  ShopProductSku,
   ShopProductSkuSpec,
 } from '../../api/modules/shopProduct';
 
@@ -47,8 +48,39 @@ function readStringList(source: unknown): string[] {
   }
 
   return source
-    .map((item) => (typeof item === 'string' ? item.trim() : ''))
+    .map((item) => {
+      if (typeof item === 'string') {
+        return item.trim();
+      }
+
+      if (item && typeof item === 'object' && 'value' in item) {
+        const value = (item as { value?: unknown }).value;
+        return typeof value === 'string' ? value.trim() : '';
+      }
+
+      return '';
+    })
     .filter(Boolean);
+}
+
+function splitSpecValueNames(value: string | undefined): string[] {
+  if (typeof value !== 'string') {
+    return [];
+  }
+
+  return value
+    .split('/')
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function readSkuSpecValues(sku: ShopProductSku): string[] {
+  const directValues = readStringList(sku.spec_values);
+  if (directValues.length > 0) {
+    return directValues;
+  }
+
+  return splitSpecValueNames(sku.spec_value_names);
 }
 
 export function buildShopProductPath(id: number | string) {
@@ -251,7 +283,7 @@ export function getSelectedSkuId(
   }
 
   const sku = product.skus.find((s) => {
-    const specValues = readStringList(s.spec_values);
+    const specValues = readSkuSpecValues(s);
     if (specValues.length !== selectedValues.length) return false;
     return selectedValues.every((v, i) => specValues[i] === v);
   });

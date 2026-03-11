@@ -41,6 +41,10 @@ export const VIEW_TO_PATH: Record<string, string> = {
   activity_center: '/activity-center',
   help_center: '/help',
   settings: '/settings',
+  change_password: '/change-password',
+  change_pay_password: '/change-pay-password',
+  reset_password: '/reset-password',
+  reset_pay_password: '/reset-pay-password',
   about: '/about',
   user_agreement: '/user_agreement',
   privacy_policy: '/privacy_policy',
@@ -166,4 +170,5 @@ export function useAppNavigate() {
 
   return useMemo(() => ({ goTo, goBack, goBackOr, navigate }), [goTo, goBack, goBackOr, navigate]);
 }
+
 

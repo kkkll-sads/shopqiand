@@ -181,6 +181,17 @@ export interface GetConsignmentCouponsParams {
   status?: 0 | 1;
 }
 
+export interface UpdatePayPasswordPayload {
+  oldPayPassword: string;
+  newPayPassword: string;
+}
+
+export interface ResetPayPasswordBySmsPayload {
+  mobile: string;
+  captcha: string;
+  newPayPassword: string;
+}
+
 function readOptionalString(value: string | undefined) {
   if (typeof value !== 'string') {
     return undefined;
@@ -452,6 +463,43 @@ export const userApi = {
     );
   },
 
+  async updatePayPassword(
+    payload: UpdatePayPasswordPayload,
+    options: UserRequestOptions = {},
+  ): Promise<void> {
+    await http.post<null, Record<string, string>>(
+      '/api/User/updatePayPassword',
+      {
+        old_pay_password: payload.oldPayPassword,
+        new_pay_password: payload.newPayPassword,
+      },
+      {
+        headers: createApiHeaders(options),
+        signal: options.signal,
+        useMock: false,
+      },
+    );
+  },
+
+  async resetPayPasswordBySms(
+    payload: ResetPayPasswordBySmsPayload,
+    options: UserRequestOptions = {},
+  ): Promise<void> {
+    await http.post<null, Record<string, string>>(
+      '/api/User/resetPayPasswordBySms',
+      {
+        mobile: payload.mobile,
+        captcha: payload.captcha,
+        new_pay_password: payload.newPayPassword,
+      },
+      {
+        headers: createApiHeaders(options),
+        signal: options.signal,
+        useMock: false,
+      },
+    );
+  },
+
   async getConsignmentCoupons(
     params: GetConsignmentCouponsParams = {},
     options: UserRequestOptions = {},
@@ -475,5 +523,9 @@ export const userApi = {
     };
   },
 };
+
+
+
+
 
 

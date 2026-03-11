@@ -1,518 +1,320 @@
-﻿import React, { useRef, useState, useEffect } from 'react';
-import { ChevronLeft, WifiOff, AlertCircle, Package, ChevronRight, Camera, CheckCircle2, Clock, HeadphonesIcon, FileText, RefreshCcw, Store } from 'lucide-react';
-import { useAppNavigate } from '../../lib/navigation';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Clock3, PackageCheck, Slash, RefreshCw } from 'lucide-react';
+import { shopOrderApi, type ShopOrderListItem } from '../../api/modules/shopOrder';
+import { getErrorMessage } from '../../api/core/errors';
 import { PageHeader } from '../../components/layout/PageHeader';
-import { ErrorState } from '../../components/ui/ErrorState';
 import { EmptyState } from '../../components/ui/EmptyState';
-import { PullToRefreshContainer } from '../../components/ui/PullToRefreshContainer';
+import { ErrorState } from '../../components/ui/ErrorState';
 import { useFeedback } from '../../components/ui/FeedbackProvider';
-import { useRouteScrollRestoration } from '../../hooks/useRouteScrollRestoration';
-import { useSessionState } from '../../hooks/useSessionState';
-import { openCustomerServiceLink } from '../../lib/customerService';
+import { useRequest } from '../../hooks/useRequest';
+import { useAppNavigate } from '../../lib/navigation';
+import { resolveShopProductImageUrl } from '../../features/shop-product/utils';
 
-interface AfterSalesItem {
-  id: string;
-  orderId: string;
-  type: '退货退款' | '仅退款' | '换货';
-  status: '处理中' | '已完成' | '已关闭';
-  subStatus: string;
-  amount: number;
-  time: string;
-  product: {
-    title: string;
-    sku: string;
-    image: string;
-  };
+type AfterSaleTab = 'all' | 'processing' | 'completed' | 'closed';
+
+const STATUS_META: Record<Exclude<AfterSaleTab, 'all'>, { label: string; icon: typeof Clock3; color: string; bg: string }> = {
+  processing: {
+    label: '处理中',
+    icon: Clock3,
+    color: 'text-amber-600',
+    bg: 'bg-amber-50 border-amber-100',
+  },
+  completed: {
+    label: '已完成',
+    icon: PackageCheck,
+    color: 'text-emerald-600',
+    bg: 'bg-emerald-50 border-emerald-100',
+  },
+  closed: {
+    label: '已关闭',
+    icon: Slash,
+    color: 'text-slate-500',
+    bg: 'bg-slate-100 border-slate-200',
+  },
+};
+
+function formatTime(timestamp?: number): string {
+  if (!timestamp) return '--';
+  const date = new Date(timestamp * 1000);
+  const pad = (value: number) => String(value).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
-const MOCK_LIST: AfterSalesItem[] = [
-  {
-    id: 'AS123456789',
-    orderId: 'JD987654321',
-    type: '退货退款',
-    status: '处理中',
-    subStatus: '商家审核中',
-    amount: 7999.00,
-    time: '2026-02-28 10:00:00',
-    product: {
-      title: 'Apple iPhone 15 Pro (A3104) 256GB 蓝色钛金属 支持移动联通电信5G 双卡双待手机',
-      sku: '蓝色钛金属, 256GB',
-      image: 'https://picsum.photos/seed/iphone/200/200',
-    }
-  },
-  {
-    id: 'AS987654321',
-    orderId: 'JD123456789',
-    type: '仅退款',
-    status: '已完成',
-    subStatus: '退款成功',
-    amount: 199.00,
-    time: '2026-02-20 15:30:00',
-    product: {
-      title: '罗马仕 20000毫安充电宝 22.5W超级快充',
-      sku: '白色, 20000mAh',
-      image: 'https://picsum.photos/seed/powerbank/200/200',
-    }
-  }
-];
-
-const MOCK_TIMELINE = [
-  { title: '商家审核中', desc: '您的售后申请已提交，等待商家审核。', time: '2026-02-28 10:05:00', active: true },
-  { title: '买家发起申请', desc: '发起了退货退款申请，原因：商品降价', time: '2026-02-28 10:00:00', active: false },
-];
+function getOrderSummary(order: ShopOrderListItem): string {
+  const first = order.items?.[0];
+  if (!first) return '商品信息待补充';
+  const extraCount = Math.max((order.items?.length ?? 1) - 1, 0);
+  return extraCount > 0 ? `${first.product_name} 等${extraCount + 1}件商品` : first.product_name;
+}
 
 export const AfterSalesPage = () => {
-  const { goTo, goBack } = useAppNavigate();
-  const { showToast } = useFeedback();
+  const { goBack, navigate } = useAppNavigate();
+  const { showToast, showLoading, hideLoading } = useFeedback();
+  const [activeTab, setActiveTab] = useState<AfterSaleTab>('all');
+  const [selectedId, setSelectedId] = useState<number>(0);
 
-  const [view, setView] = useState<'list' | 'entry' | 'apply' | 'detail'>('list');
-  const [activeTab, setActiveTab] = useSessionState<'processing' | 'completed' | 'closed'>(
-    'after-sales:tab',
-    'processing',
+  const request = useRequest(
+    (signal) => shopOrderApi.myOrders({ page: 1, limit: 100 }, signal),
+    { initialData: { list: [], total: 0, page: 1, limit: 100, balance_available: '0', score: '0' } },
   );
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
-  const [offline, setOffline] = useState(false);
-  const listScrollContainerRef = useRef<HTMLDivElement | null>(null);
-  const listScrollTopRef = useRef(0);
-  
-  const [selectedService, setSelectedService] = useState<'退货退款' | '仅退款' | '换货' | null>(null);
+
+  const afterSaleOrders = useMemo(
+    () =>
+      (request.data?.list ?? []).filter((order) => {
+        return Number(order.after_sale_id ?? 0) > 0 && Boolean(order.after_sale_status);
+      }),
+    [request.data],
+  );
+
+  const stats = useMemo(() => {
+    return afterSaleOrders.reduce(
+      (acc, order) => {
+        const status = order.after_sale_status;
+        if (status === 'processing') acc.processing += 1;
+        if (status === 'completed') acc.completed += 1;
+        if (status === 'closed') acc.closed += 1;
+        acc.all += 1;
+        return acc;
+      },
+      { all: 0, processing: 0, completed: 0, closed: 0 },
+    );
+  }, [afterSaleOrders]);
+
+  const filteredOrders = useMemo(() => {
+    if (activeTab === 'all') return afterSaleOrders;
+    return afterSaleOrders.filter((order) => order.after_sale_status === activeTab);
+  }, [activeTab, afterSaleOrders]);
 
   useEffect(() => {
-    fetchData();
-  }, [view, activeTab]);
-
-  useEffect(() => {
-    if (view !== 'list' || listScrollTopRef.current <= 0 || !listScrollContainerRef.current) {
+    if (filteredOrders.length === 0) {
+      setSelectedId(0);
       return;
     }
-
-    const frameId = window.requestAnimationFrame(() => {
-      if (listScrollContainerRef.current) {
-        listScrollContainerRef.current.scrollTop = listScrollTopRef.current;
-      }
-    });
-
-    return () => window.cancelAnimationFrame(frameId);
-  }, [view]);
-
-  useRouteScrollRestoration({
-    containerRef: listScrollContainerRef,
-    enabled: view === 'list',
-    namespace: `after-sales:${activeTab}`,
-    restoreDeps: [activeTab, error, loading, view],
-    restoreWhen: view === 'list' && !loading && !error,
-  });
-
-  const fetchData = () => {
-    setLoading(true);
-    setError(false);
-    setTimeout(() => {
-      if (Math.random() < 0.1) {
-        setError(true);
-      }
-      setLoading(false);
-    }, 600);
-  };
-
-  const handleBack = () => {
-    if (view === 'apply') {
-      setView('entry');
-    } else if (view === 'entry' || view === 'detail') {
-      setView('list');
-    } else {
-      goBack();
+    const exists = filteredOrders.some((order) => order.id === selectedId);
+    if (!exists) {
+      setSelectedId(filteredOrders[0].id);
     }
-  };
+  }, [filteredOrders, selectedId]);
 
-  const handleOpenSupport = () => {
-    void openCustomerServiceLink(({ duration, message, type }) => {
-      showToast({ duration, message, type });
-    });
-  };
-
-  const renderHeader = (title: string) => (
-    <div className="bg-white dark:bg-gray-900 z-40 relative shrink-0 border-b border-border-light">
-      {offline && (
-        <div className="bg-red-50 dark:bg-red-900/30 text-primary-start dark:text-red-300 px-4 py-2 flex items-center justify-between text-sm">
-          <div className="flex items-center">
-            <WifiOff size={14} className="mr-2" />
-            <span>网络不稳定，请检查网络设置</span>
-          </div>
-          <button onClick={() => setOffline(false)} className="font-medium px-2 py-1 bg-white dark:bg-gray-800 dark:text-gray-100 rounded shadow-sm">刷新</button>
-        </div>
-      )}
-      <div className="h-12 flex items-center justify-between px-3 pt-safe">
-        <div className="flex items-center w-1/3">
-          <button onClick={handleBack} className="p-1 -ml-1 text-text-main active:opacity-70">
-            <ChevronLeft size={24} />
-          </button>
-        </div>
-        <h1 className="text-2xl font-bold text-text-main text-center w-1/3">{title}</h1>
-        <div className="w-1/3"></div>
-      </div>
-    </div>
+  const selectedOrder = useMemo(
+    () => filteredOrders.find((order) => order.id === selectedId) ?? filteredOrders[0] ?? null,
+    [filteredOrders, selectedId],
   );
 
-  const renderSkeleton = () => (
-    <div className="p-4 space-y-3">
-      {[1, 2, 3].map((i) => (
-        <div key={i} className="bg-white dark:bg-gray-900 rounded-xl p-4 shadow-sm animate-pulse">
-          <div className="flex justify-between mb-3">
-            <div className="w-32 h-4 bg-gray-100 dark:bg-gray-800 rounded"></div>
-            <div className="w-16 h-4 bg-gray-100 dark:bg-gray-800 rounded"></div>
-          </div>
-          <div className="flex mb-3">
-            <div className="w-[72px] h-[72px] bg-gray-100 dark:bg-gray-800 rounded-lg mr-3 shrink-0"></div>
-            <div className="flex-1 space-y-2">
-              <div className="w-full h-4 bg-gray-100 dark:bg-gray-800 rounded"></div>
-              <div className="w-2/3 h-4 bg-gray-100 dark:bg-gray-800 rounded"></div>
-            </div>
-          </div>
-          <div className="flex justify-between items-center">
-            <div className="w-24 h-4 bg-gray-100 dark:bg-gray-800 rounded"></div>
-            <div className="w-20 h-7 bg-gray-100 dark:bg-gray-800 rounded-full"></div>
-          </div>
-        </div>
-      ))}
-    </div>
+  const handleCancelAfterSale = useCallback(
+    async (order: ShopOrderListItem) => {
+      if (!order.after_sale_id) return;
+      if (!window.confirm('确定要取消当前售后申请吗？')) return;
+      showLoading('取消售后申请中...');
+      try {
+        await shopOrderApi.cancelAfterSale({ after_sale_id: order.after_sale_id });
+        showToast({ message: '售后申请已取消', type: 'success' });
+        await request.reload();
+      } catch (error) {
+        showToast({ message: getErrorMessage(error) || '取消售后申请失败', type: 'error' });
+      } finally {
+        hideLoading();
+      }
+    },
+    [hideLoading, request, showLoading, showToast],
   );
 
-  const renderError = () => (
-    <ErrorState onRetry={fetchData} />
-  );
-
-  const renderEmpty = () => (
-    <EmptyState message="暂无售后记录" />
-  );
-
-  const renderList = () => {
-    const filteredList = MOCK_LIST.filter(item => {
-      if (activeTab === 'processing') return item.status === '处理中';
-      if (activeTab === 'completed') return item.status === '已完成';
-      if (activeTab === 'closed') return item.status === '已关闭';
-      return true;
-    });
-
-    return (
-      <div className="flex-1 flex flex-col relative h-full">
-        {renderHeader('退换/售后')}
-        
-        {/* Tabs */}
-        <div className="flex px-4 h-11 relative border-b border-border-light bg-white dark:bg-gray-900 shrink-0">
-          {[
-            { id: 'processing', label: '处理中' },
-            { id: 'completed', label: '已完成' },
-            { id: 'closed', label: '已关闭' }
-          ].map((tab) => (
-            <button
-              key={tab.id}
-              className={`flex-1 flex justify-center items-center text-md font-medium transition-colors relative ${
-                activeTab === tab.id ? 'text-primary-start' : 'text-text-sub'
-              }`}
-              onClick={() => setActiveTab(tab.id as any)}
-            >
-              {tab.label}
-              {activeTab === tab.id && (
-                <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-6 h-0.5 bg-primary-start rounded-full"></div>
-              )}
-            </button>
-          ))}
-        </div>
-
-        <div
-          ref={listScrollContainerRef}
-          className="flex-1 overflow-y-auto no-scrollbar"
-          onScroll={() => {
-            listScrollTopRef.current =
-              listScrollContainerRef.current?.scrollTop ?? listScrollTopRef.current;
-          }}
-        >
-          {loading ? renderSkeleton() : error ? renderError() : filteredList.length === 0 ? renderEmpty() : (
-            <div className="p-3 space-y-3">
-              {filteredList.map(item => (
-                <div key={item.id} className="bg-white dark:bg-gray-900 rounded-xl p-4 shadow-sm">
-                  <div className="flex justify-between items-center mb-3 pb-3 border-b border-border-light/50">
-                    <div className="flex items-center text-sm text-text-sub">
-                      <Store size={14} className="mr-1" />
-                      <span>树交所自营</span>
-                      <ChevronRight size={12} className="ml-0.5" />
-                    </div>
-                    <span className={`text-base font-medium ${item.status === '处理中' ? 'text-primary-start' : 'text-text-sub'}`}>
-                      {item.subStatus}
-                    </span>
-                  </div>
-                  
-                  <div className="flex mb-3">
-                    <img src={item.product.image} alt={item.product.title} className="w-[72px] h-[72px] rounded-lg mr-3 border border-border-light/50" referrerPolicy="no-referrer" />
-                    <div className="flex-1 min-w-0">
-                      <h3 className="text-base text-text-main line-clamp-2 leading-snug mb-1">{item.product.title}</h3>
-                      <div className="text-s text-text-sub">{item.product.sku}</div>
-                    </div>
-                  </div>
-                  
-                  <div className="flex justify-between items-center pt-1">
-                    <div className="text-sm text-text-main flex items-center">
-                      <span className="bg-gray-100 dark:bg-gray-800 text-text-sub px-1.5 py-0.5 rounded text-xs mr-2">{item.type}</span>
-                      {item.type !== '换货' && (
-                        <>退款: <span className="font-bold ml-1">¥{item.amount.toFixed(2)}</span></>
-                      )}
-                    </div>
-                    <button 
-                      onClick={() => {
-                        listScrollTopRef.current =
-                          listScrollContainerRef.current?.scrollTop ?? listScrollTopRef.current;
-                        setView('detail');
-                      }}
-                      className="px-4 py-1.5 rounded-full border border-border-main text-sm text-text-main active:bg-gray-50 dark:bg-gray-800 dark:active:bg-gray-700 transition-colors"
-                    >
-                      查看详情
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-    );
-  };
-
-  const renderEntry = () => {
-    const product = MOCK_LIST[0].product;
-    return (
-      <div className="flex-1 flex flex-col relative h-full">
-        {renderHeader('选择售后类型')}
-        <div className="flex-1 overflow-y-auto no-scrollbar p-3">
-          {/* Product Info */}
-          <div className="bg-white dark:bg-gray-900 rounded-xl p-4 mb-3 shadow-sm flex items-center">
-            <img src={product.image} alt={product.title} className="w-[60px] h-[60px] rounded-lg mr-3 border border-border-light/50" referrerPolicy="no-referrer" />
-            <div className="flex-1 min-w-0">
-              <h3 className="text-base text-text-main line-clamp-2 leading-snug mb-1">{product.title}</h3>
-              <div className="text-s text-text-sub">{product.sku}</div>
-            </div>
-          </div>
-          
-          <h3 className="text-md font-bold text-text-main mb-3 px-1 mt-4">选择服务类型</h3>
-          
-          <div className="space-y-3">
-            <div 
-              className="bg-white dark:bg-gray-900 rounded-xl p-4 shadow-sm flex items-center justify-between active:bg-gray-50 dark:active:bg-gray-800 transition-colors cursor-pointer"
-              onClick={() => { setSelectedService('退货退款'); setView('apply'); }}
-            >
-              <div className="flex items-center">
-                <div className="w-10 h-10 rounded-full bg-red-50 dark:bg-red-500/15 flex items-center justify-center mr-3 text-primary-start dark:text-red-300 shrink-0">
-                  <Package size={20} />
-                </div>
-                <div>
-                  <div className="text-lg font-bold text-text-main mb-1">退货退款</div>
-                  <div className="text-sm text-text-sub">已收到货，需要退换已收到的货物</div>
-                </div>
-              </div>
-              <ChevronRight size={16} className="text-text-aux shrink-0" />
-            </div>
-
-            <div 
-              className="bg-white dark:bg-gray-900 rounded-xl p-4 shadow-sm flex items-center justify-between active:bg-gray-50 dark:active:bg-gray-800 transition-colors cursor-pointer"
-              onClick={() => { setSelectedService('仅退款'); setView('apply'); }}
-            >
-              <div className="flex items-center">
-                <div className="w-10 h-10 rounded-full bg-orange-50 dark:bg-orange-500/15 flex items-center justify-center mr-3 text-orange-500 dark:text-orange-300 shrink-0">
-                  <span className="text-3xl font-bold">¥</span>
-                </div>
-                <div>
-                  <div className="text-lg font-bold text-text-main mb-1">仅退款</div>
-                  <div className="text-sm text-text-sub">未收到货，或与卖家协商同意前提下</div>
-                </div>
-              </div>
-              <ChevronRight size={16} className="text-text-aux shrink-0" />
-            </div>
-
-            <div 
-              className="bg-white dark:bg-gray-900 rounded-xl p-4 shadow-sm flex items-center justify-between active:bg-gray-50 dark:active:bg-gray-800 transition-colors cursor-pointer"
-              onClick={() => { setSelectedService('换货'); setView('apply'); }}
-            >
-              <div className="flex items-center">
-                <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center mr-3 text-blue-500 shrink-0">
-                  <RefreshCcw size={20} />
-                </div>
-                <div>
-                  <div className="text-lg font-bold text-text-main mb-1">换货</div>
-                  <div className="text-sm text-text-sub">商品存在质量问题，联系卖家换货</div>
-                </div>
-              </div>
-              <ChevronRight size={16} className="text-text-aux shrink-0" />
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-  const renderApply = () => {
-    const product = MOCK_LIST[0].product;
-    return (
-      <div className="flex-1 flex flex-col relative h-full bg-bg-base">
-        {renderHeader('申请售后')}
-        <div className="flex-1 overflow-y-auto no-scrollbar p-3 pb-24">
-          {/* Product Info */}
-          <div className="bg-white dark:bg-gray-900 rounded-xl p-4 mb-3 shadow-sm flex items-center">
-            <img src={product.image} alt={product.title} className="w-[60px] h-[60px] rounded-lg mr-3 border border-border-light/50" referrerPolicy="no-referrer" />
-            <div className="flex-1 min-w-0">
-              <h3 className="text-base text-text-main line-clamp-2 leading-snug mb-1">{product.title}</h3>
-              <div className="text-s text-text-sub">{product.sku}</div>
-            </div>
-          </div>
-
-          {/* Reason Selection */}
-          <div className="bg-white dark:bg-gray-900 rounded-xl p-4 mb-3 shadow-sm flex justify-between items-center active:bg-gray-50 dark:bg-gray-800 cursor-pointer">
-            <span className="text-md text-text-main font-medium">申请原因</span>
-            <div className="flex items-center text-base text-text-sub">
-              <span>请选择申请原因</span>
-              <ChevronRight size={16} className="ml-1" />
-            </div>
-          </div>
-
-          {/* Amount */}
-          {selectedService !== '换货' && (
-            <div className="bg-white dark:bg-gray-900 rounded-xl p-4 mb-3 shadow-sm">
-              <div className="flex justify-between items-center mb-3">
-                <span className="text-md text-text-main font-medium">退款金额</span>
-                <span className="text-xl text-primary-start font-bold">¥7999.00</span>
-              </div>
-              <div className="text-s text-text-sub bg-gray-50 dark:bg-gray-800 p-2.5 rounded-lg">
-                不可修改，最多¥7999.00，含发货邮费¥0.00
-              </div>
-            </div>
-          )}
-
-          {/* Description & Upload */}
-          <div className="bg-white dark:bg-gray-900 rounded-xl p-4 mb-3 shadow-sm">
-            <span className="text-md text-text-main font-medium mb-3 block">补充描述和凭证</span>
-            <textarea 
-              className="w-full h-24 bg-gray-50 dark:bg-gray-800 rounded-lg p-3 text-base text-text-main placeholder:text-text-aux outline-none resize-none mb-3" 
-              placeholder="补充描述，有助于商家更好的处理售后问题"
-            ></textarea>
-            <div className="flex flex-wrap gap-2">
-              <div className="w-[72px] h-[72px] bg-gray-50 dark:bg-gray-800 border border-dashed border-border-light rounded-lg flex flex-col items-center justify-center text-text-aux active:bg-gray-100 dark:bg-gray-800 cursor-pointer">
-                <Camera size={24} className="mb-1" />
-                <span className="text-xs">上传凭证</span>
-              </div>
-            </div>
-            <div className="text-s text-text-sub mt-3">最多上传3张，支持JPG、PNG格式</div>
-          </div>
-        </div>
-
-        {/* Bottom Submit */}
-        <div className="absolute bottom-0 left-0 right-0 p-4 bg-white dark:bg-gray-900 border-t border-border-light pb-safe">
-          <button 
-            onClick={() => {
-              setLoading(true);
-              setTimeout(() => {
-                setLoading(false);
-                setView('list');
-              }, 300);
-            }}
-            className="w-full h-11 rounded-full bg-gradient-to-r from-primary-start to-primary-end text-white text-lg font-medium shadow-sm active:opacity-80"
-          >
-            提交申请
-          </button>
-        </div>
-      </div>
-    );
-  };
-
-  const renderDetail = () => {
-    return (
-      <div className="flex-1 flex flex-col relative h-full bg-bg-base">
-        {renderHeader('售后详情')}
-        <div className="flex-1 overflow-y-auto no-scrollbar p-3 pb-24">
-          {/* Status Header */}
-          <div className="bg-gradient-to-r from-primary-start to-primary-end rounded-xl p-5 mb-3 text-white shadow-sm">
-            <div className="flex items-center mb-2">
-              <Clock size={20} className="mr-2" />
-              <span className="text-3xl font-bold">商家审核中</span>
-            </div>
-            <div className="text-sm opacity-90">商家将在 23小时59分 内处理</div>
-          </div>
-
-          {/* Timeline */}
-          <div className="bg-white dark:bg-gray-900 rounded-xl p-4 mb-3 shadow-sm">
-            <div className="text-md font-bold text-text-main mb-4">进度追踪</div>
-            <div className="relative pl-4">
-              {MOCK_TIMELINE.map((item, idx) => (
-                <div key={idx} className="mb-6 last:mb-0 relative">
-                  {/* Line */}
-                  {idx !== MOCK_TIMELINE.length - 1 && (
-                    <div className="absolute left-[-11px] top-[14px] bottom-[-24px] w-px bg-border-light"></div>
-                  )}
-                  {/* Dot */}
-                  <div className={`absolute left-[-14px] top-[4px] w-[7px] h-[7px] rounded-full ${item.active ? 'bg-primary-start ring-4 ring-red-50' : 'bg-gray-300 dark:bg-gray-700'}`}></div>
-                  
-                  <div className={`text-md font-medium mb-1 ${item.active ? 'text-text-main' : 'text-text-sub'}`}>{item.title}</div>
-                  <div className={`text-sm mb-1.5 ${item.active ? 'text-text-main' : 'text-text-sub'}`}>{item.desc}</div>
-                  <div className="text-s text-text-aux">{item.time}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Info */}
-          <div className="bg-white dark:bg-gray-900 rounded-xl p-4 mb-3 shadow-sm">
-            <div className="text-md font-bold text-text-main mb-3">售后信息</div>
-            <div className="space-y-3">
-              <div className="flex justify-between text-base">
-                <span className="text-text-sub">服务单号</span>
-                <span className="text-text-main flex items-center">
-                  AS123456789
-                  <span className="ml-2 text-primary-start text-s px-1.5 py-0.5 bg-red-50 rounded">复制</span>
-                </span>
-              </div>
-              <div className="flex justify-between text-base">
-                <span className="text-text-sub">申请时间</span>
-                <span className="text-text-main">2026-02-28 10:00:00</span>
-              </div>
-              <div className="flex justify-between text-base">
-                <span className="text-text-sub">售后类型</span>
-                <span className="text-text-main">退货退款</span>
-              </div>
-              <div className="flex justify-between text-base">
-                <span className="text-text-sub">申请原因</span>
-                <span className="text-text-main">商品降价</span>
-              </div>
-              <div className="flex justify-between text-base">
-                <span className="text-text-sub">退款金额</span>
-                <span className="text-primary-start font-medium">¥7999.00</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Bottom Actions */}
-        <div className="absolute bottom-0 left-0 right-0 p-4 bg-white dark:bg-gray-900 border-t border-border-light pb-safe flex space-x-3">
-          <button
-            type="button"
-            onClick={handleOpenSupport}
-            className="flex-1 h-10 rounded-full border border-border-main text-text-main text-md font-medium flex items-center justify-center active:bg-gray-50 dark:bg-gray-800 transition-colors"
-          >
-            <HeadphonesIcon size={16} className="mr-1.5" /> 联系客服
-          </button>
-          <button className="flex-1 h-10 rounded-full border border-border-main text-text-main text-md font-medium active:bg-gray-50 dark:bg-gray-800 transition-colors">
-            取消申请
-          </button>
-        </div>
-      </div>
-    );
-  };
+  const tabItems: Array<{ key: AfterSaleTab; label: string; count: number }> = [
+    { key: 'all', label: '全部', count: stats.all },
+    { key: 'processing', label: '处理中', count: stats.processing },
+    { key: 'completed', label: '已完成', count: stats.completed },
+    { key: 'closed', label: '已关闭', count: stats.closed },
+  ];
 
   return (
-    <div className="flex-1 flex flex-col bg-bg-base relative h-full overflow-hidden">
-      {view === 'list' && renderList()}
-      {view === 'entry' && renderEntry()}
-      {view === 'apply' && renderApply()}
-      {view === 'detail' && renderDetail()}
+    <div className="flex h-full flex-1 flex-col overflow-hidden bg-[#f6f7fb]">
+      <PageHeader
+        title="售后服务"
+        onBack={goBack}
+        rightAction={
+          <button type="button" onClick={() => void request.reload()} className="p-1 text-text-main active:opacity-70">
+            <RefreshCw size={18} />
+          </button>
+        }
+      />
+
+      <div className="flex-1 overflow-y-auto px-4 pb-6">
+        <div className="mt-4 rounded-[24px] bg-gradient-to-r from-[#1f2937] via-[#334155] to-[#475569] p-4 text-white shadow-[0_16px_40px_rgba(15,23,42,0.18)]">
+          <div className="text-sm text-white/70">售后概览</div>
+          <div className="mt-2 text-3xl font-semibold">{stats.all}</div>
+          <div className="mt-1 text-sm text-white/75">当前账号已提交的售后申请总数</div>
+          <div className="mt-4 grid grid-cols-3 gap-3 text-center">
+            <div className="rounded-2xl bg-white/10 px-2 py-3 backdrop-blur-sm">
+              <div className="text-lg font-semibold">{stats.processing}</div>
+              <div className="mt-1 text-xs text-white/70">处理中</div>
+            </div>
+            <div className="rounded-2xl bg-white/10 px-2 py-3 backdrop-blur-sm">
+              <div className="text-lg font-semibold">{stats.completed}</div>
+              <div className="mt-1 text-xs text-white/70">已完成</div>
+            </div>
+            <div className="rounded-2xl bg-white/10 px-2 py-3 backdrop-blur-sm">
+              <div className="text-lg font-semibold">{stats.closed}</div>
+              <div className="mt-1 text-xs text-white/70">已关闭</div>
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-4 flex gap-2 overflow-x-auto pb-1">
+          {tabItems.map((tab) => {
+            const active = tab.key === activeTab;
+            return (
+              <button
+                key={tab.key}
+                type="button"
+                onClick={() => setActiveTab(tab.key)}
+                className={`shrink-0 rounded-full px-4 py-2 text-sm font-medium transition ${
+                  active
+                    ? 'bg-[#111827] text-white shadow-sm'
+                    : 'bg-white text-text-sub shadow-[0_4px_16px_rgba(15,23,42,0.06)]'
+                }`}
+              >
+                {tab.label} {tab.count}
+              </button>
+            );
+          })}
+        </div>
+
+        {request.loading ? (
+          <div className="mt-4 space-y-3">
+            {[1, 2, 3].map((item) => (
+              <div key={item} className="h-28 animate-pulse rounded-[24px] bg-white" />
+            ))}
+          </div>
+        ) : request.error ? (
+          <div className="mt-6 rounded-[24px] bg-white p-4">
+            <ErrorState onRetry={() => void request.reload()} />
+          </div>
+        ) : filteredOrders.length === 0 ? (
+          <EmptyState
+            message={afterSaleOrders.length === 0 ? '暂无售后记录' : '该状态下暂无售后记录'}
+            actionText="查看全部订单"
+            onAction={() => navigate('/order')}
+          />
+        ) : (
+          <div className="mt-4 space-y-3">
+            {filteredOrders.map((order) => {
+              const statusKey = (order.after_sale_status || 'closed') as Exclude<AfterSaleTab, 'all'>;
+              const statusMeta = STATUS_META[statusKey] ?? STATUS_META.closed;
+              const StatusIcon = statusMeta.icon;
+              const selected = selectedOrder?.id === order.id;
+              const firstItem = order.items?.[0];
+              const afterSale = order.after_sale_info;
+
+              return (
+                <div
+                  key={order.id}
+                  className={`overflow-hidden rounded-[24px] border bg-white shadow-[0_10px_30px_rgba(15,23,42,0.06)] transition ${
+                    selected ? 'border-[#111827]' : 'border-transparent'
+                  }`}
+                >
+                  <button
+                    type="button"
+                    onClick={() => setSelectedId(order.id)}
+                    className="w-full p-4 text-left"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="text-xs text-text-aux">售后单 #{order.after_sale_id}</div>
+                        <div className="mt-1 truncate text-base font-semibold text-text-main">{getOrderSummary(order)}</div>
+                        <div className="mt-2 text-xs text-text-aux">订单号 {order.order_no}</div>
+                      </div>
+                      <div className={`inline-flex items-center gap-1 rounded-full border px-3 py-1 text-xs font-medium ${statusMeta.bg} ${statusMeta.color}`}>
+                        <StatusIcon size={14} />
+                        {order.after_sale_status_text || statusMeta.label}
+                      </div>
+                    </div>
+
+                    <div className="mt-4 flex items-center gap-3">
+                      <img
+                        src={resolveShopProductImageUrl(firstItem?.product_thumbnail)}
+                        alt={firstItem?.product_name || '商品图片'}
+                        className="h-16 w-16 rounded-2xl bg-[#f4f5f7] object-cover"
+                      />
+                      <div className="min-w-0 flex-1">
+                        <div className="line-clamp-2 text-sm text-text-main">{firstItem?.product_name || '商品信息待补充'}</div>
+                        <div className="mt-2 text-xs text-text-aux">申请时间 {formatTime(afterSale?.apply_time)}</div>
+                      </div>
+                    </div>
+                  </button>
+
+                  {selected && (
+                    <div className="border-t border-[#eef0f3] bg-[#fbfcfe] px-4 py-4">
+                      <div className="grid grid-cols-2 gap-3 text-sm">
+                        <div className="rounded-2xl bg-white p-3">
+                          <div className="text-xs text-text-aux">售后状态</div>
+                          <div className="mt-2 font-medium text-text-main">{order.after_sale_status_text || statusMeta.label}</div>
+                        </div>
+                        <div className="rounded-2xl bg-white p-3">
+                          <div className="text-xs text-text-aux">售后原因</div>
+                          <div className="mt-2 font-medium text-text-main">{afterSale?.reason || '-'}</div>
+                        </div>
+                        <div className="col-span-2 rounded-2xl bg-white p-3">
+                          <div className="text-xs text-text-aux">问题描述</div>
+                          <div className="mt-2 whitespace-pre-wrap break-words text-text-main">
+                            {afterSale?.description || '买家申请售后'}
+                          </div>
+                        </div>
+                        <div className="rounded-2xl bg-white p-3">
+                          <div className="text-xs text-text-aux">申请时间</div>
+                          <div className="mt-2 font-medium text-text-main">{formatTime(afterSale?.apply_time)}</div>
+                        </div>
+                        <div className="rounded-2xl bg-white p-3">
+                          <div className="text-xs text-text-aux">处理结果</div>
+                          <div className="mt-2 font-medium text-text-main">
+                            {afterSale?.close_reason || afterSale?.admin_remark || '平台处理中'}
+                          </div>
+                        </div>
+                      </div>
+
+                      {afterSale?.images?.length ? (
+                        <div className="mt-3">
+                          <div className="mb-2 text-xs text-text-aux">凭证图片</div>
+                          <div className="grid grid-cols-3 gap-2">
+                            {afterSale.images.map((image, index) => (
+                              <img
+                                key={`${order.id}-${index}`}
+                                src={image}
+                                alt={`售后凭证${index + 1}`}
+                                className="h-24 w-full rounded-2xl bg-[#f4f5f7] object-cover"
+                              />
+                            ))}
+                          </div>
+                        </div>
+                      ) : null}
+
+                      <div className="mt-4 flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => navigate(`/order/detail/${order.id}`)}
+                          className="flex-1 rounded-full border border-[#dbe0e7] bg-white px-4 py-3 text-sm font-medium text-text-main active:opacity-80"
+                        >
+                          查看订单
+                        </button>
+                        {order.after_sale_status === 'processing' && order.can_cancel_after_sale === 1 ? (
+                          <button
+                            type="button"
+                            onClick={() => void handleCancelAfterSale(order)}
+                            className="flex-1 rounded-full bg-[#111827] px-4 py-3 text-sm font-medium text-white active:opacity-80"
+                          >
+                            取消申请
+                          </button>
+                        ) : null}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
     </div>
   );
 };
 
-
+export default AfterSalesPage;

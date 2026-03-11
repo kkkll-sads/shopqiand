@@ -10,7 +10,8 @@ export const http = new HttpClient({
   },
   enableMock: apiConfig.useMock,
   getAuthHeaders,
-  isSuccessCode: (code) => code === 1 || code === 200 || code === '1' || code === '200',
+  isSuccessCode: (code) =>
+    code === 0 || code === 1 || code === 200 || code === '0' || code === '1' || code === '200',
   mockDelay: apiConfig.mockDelay,
   mockHandlers,
   timeout: apiConfig.timeout,

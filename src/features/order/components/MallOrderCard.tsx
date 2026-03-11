@@ -12,6 +12,7 @@ interface MallOrderCardProps {
   onOpenLogistics: () => void;
   onOpenCashier: () => void;
   onCancelOrder?: (orderId: number, cancelReason?: string) => void | Promise<void>;
+  onCancelAfterSale?: (orderId: number, afterSaleId?: number) => void | Promise<void>;
   onConfirmOrder?: (orderId: number) => void | Promise<void>;
   onReview?: (orderId: number, productId: number) => void;
   onRefund?: (orderId: number) => void | Promise<void>;
@@ -43,12 +44,18 @@ function formatItemPrice(price: number, scorePrice: number, payType: string): st
 function getOrderActions(order: ShopOrderListItem) {
   const status = order.status;
   const isCommented = order.is_commented === 1;
+  const afterSaleStatus = order.after_sale_status ?? '';
+  const canApplyAfterSale =
+    (order.product_type === 'physical' || order.product_type === 'mixed') &&
+    (status === 'shipped' || status === 'completed') &&
+    !afterSaleStatus;
   return {
     showPay: status === 'pending',
     showCancel: status === 'pending',
     showLogistics: status === 'shipped',
-    showRefund: status === 'paid',
-    showConfirm: status === 'shipped',
+    showRefund: canApplyAfterSale,
+    showCancelAfterSale: afterSaleStatus === 'processing' && order.can_cancel_after_sale === 1,
+    showConfirm: status === 'shipped' && afterSaleStatus !== 'processing',
     showReview: status === 'completed' && !isCommented,
     showReviewed: status === 'completed' && isCommented,
   };
@@ -63,6 +70,7 @@ export const MallOrderCard: FC<MallOrderCardProps> = ({
   onOpenLogistics,
   onOpenCashier,
   onCancelOrder,
+  onCancelAfterSale,
   onConfirmOrder,
   onReview,
   onRefund,
@@ -87,7 +95,12 @@ export const MallOrderCard: FC<MallOrderCardProps> = ({
           <span className="text-base font-bold text-text-main">树交所自营</span>
           <ChevronRight size={14} className="text-text-aux ml-0.5" />
         </div>
-        <span className="text-base text-primary-start font-medium">{order.status_text}</span>
+        <div className="flex flex-col items-end">
+          <span className="text-base text-primary-start font-medium">{order.status_text}</span>
+          {order.after_sale_status_text ? (
+            <span className="text-xs text-text-aux mt-0.5">售后{order.after_sale_status_text}</span>
+          ) : null}
+        </div>
       </div>
 
       <div className="p-3">
@@ -176,7 +189,17 @@ export const MallOrderCard: FC<MallOrderCardProps> = ({
               className={ACTION_BTN}
               onClick={() => onRefund(order.id)}
             >
-              申请退货
+              申请售后
+            </Button>
+          )}
+          {actions.showCancelAfterSale && onCancelAfterSale && (
+            <Button
+              variant="secondary"
+              fullWidth={false}
+              className={ACTION_BTN}
+              onClick={() => onCancelAfterSale(order.id, order.after_sale_id)}
+            >
+              取消申请
             </Button>
           )}
           {actions.showLogistics && (

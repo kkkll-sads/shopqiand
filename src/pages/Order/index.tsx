@@ -170,17 +170,27 @@ export const OrderPage = () => {
 
   const handleRefundOrder = useCallback(
     async (orderId: number) => {
-      if (!window.confirm('确定要申请退货吗？提交后将进入审核流程。')) return;
+      if (!window.confirm('确定要提交售后申请吗？')) return;
       try {
-        const data = await shopOrderApi.cancel({ order_id: orderId, cancel_reason: '买家申请退货' });
-        if (data?.need_review) {
-          showToast({ message: '退货申请已提交，请等待审核', type: 'success' });
-        } else {
-          showToast({ message: '退货成功，款项将原路退回', type: 'success' });
-        }
+        await shopOrderApi.applyAfterSale({ order_id: orderId, reason: '买家申请退货' });
+        showToast({ message: '售后申请已提交', type: 'success' });
         void mallOrdersRequest.reload();
       } catch (err) {
-        showToast({ message: getErrorMessage(err) || '申请退货失败', type: 'error' });
+        showToast({ message: getErrorMessage(err) || '申请售后失败', type: 'error' });
+      }
+    },
+    [showToast, mallOrdersRequest]
+  );
+
+  const handleCancelAfterSale = useCallback(
+    async (orderId: number, afterSaleId?: number) => {
+      if (!window.confirm('确定要取消当前售后申请吗？')) return;
+      try {
+        await shopOrderApi.cancelAfterSale(afterSaleId ? { after_sale_id: afterSaleId } : { order_id: orderId });
+        showToast({ message: '售后申请已取消', type: 'success' });
+        void mallOrdersRequest.reload();
+      } catch (err) {
+        showToast({ message: getErrorMessage(err) || '取消售后申请失败', type: 'error' });
       }
     },
     [showToast, mallOrdersRequest]
@@ -226,6 +236,7 @@ export const OrderPage = () => {
           onOpenLogistics={() => goTo('logistics')}
           onOpenCashier={() => goTo('cashier')}
           onCancelMallOrder={handleCancelOrder}
+          onCancelMallAfterSale={handleCancelAfterSale}
           onConfirmMallOrder={handleConfirmOrder}
           onReviewMallOrder={(orderId, productId) => navigate(`/order/${orderId}/review?product_id=${productId}`)}
           onRefundMallOrder={handleRefundOrder}

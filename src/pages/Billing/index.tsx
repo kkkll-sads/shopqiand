@@ -90,6 +90,8 @@ const BIZ_TYPE_LABELS: Record<string, string> = {
   withdraw: '提现',
 };
 
+BIZ_TYPE_LABELS.balance_transfer = '鍙彁鐜拌浆鍙敤';
+
 const BREAKDOWN_LABELS: Record<string, string> = {
   consume_amount: '消费金分配',
   income_amount: '收益分配',

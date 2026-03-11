@@ -1,11 +1,12 @@
-import { createApiHeaders, type ApiAuthOptions } from '../core/headers';
+﻿import { createApiHeaders, type ApiAuthOptions } from '../core/headers';
 import { http } from '../http';
 
 export type SmsEvent =
   | 'user_login'
   | 'user_register'
   | 'user_retrieve_pwd'
-  | 'user_mobile_verify';
+  | 'user_mobile_verify'
+  | 'reset_pay_password';
 
 export interface SendSmsPayload {
   mobile: string;
@@ -27,3 +28,4 @@ export const smsApi = {
     });
   },
 };
+

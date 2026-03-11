@@ -49,21 +49,42 @@ export interface ShopProductAfterSale {
   warranty?: string;
 }
 
+export interface ShopProductSkuSpecValue {
+  id?: number;
+  image?: string;
+  value?: string;
+}
+
 export interface ShopProductSkuSpec {
+  id?: number;
   name?: string;
   options?: string[];
-  values?: string[];
+  product_id?: number;
+  sort?: number;
+  create_time?: number;
+  values?: Array<string | ShopProductSkuSpecValue>;
 }
 
 export interface ShopProductSku {
+  activity_price?: number | null;
+  available_stock?: number | null;
   balance_available_amount?: number | null;
   green_power_amount?: number | null;
   id?: number;
   image?: string;
+  limit_buy?: number | null;
+  member_price?: number | null;
+  min_buy?: number | null;
+  original_price?: number | null;
   price?: number | null;
+  purchase_type?: string;
   score_price?: number | null;
+  sku_code?: string;
+  spec_value_ids?: number[];
+  spec_value_names?: string;
   spec_values?: string[];
   stock?: number;
+  sales?: number | null;
 }
 
 export interface ShopProductDetail extends ShopProductItem {

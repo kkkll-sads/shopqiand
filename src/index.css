@@ -5,13 +5,25 @@
 
 /* 全局字体：系统字体栈，优先使用苹方/思源 */
 @layer base {
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
+  :root {
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-right: env(safe-area-inset-right, 0px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+    --safe-left: env(safe-area-inset-left, 0px);
+  }
+
   html,
   body {
     width: 100%;
     min-height: 100%;
     margin: 0;
     display: block;
-    font-size: 12px;
     -webkit-text-size-adjust: 100% !important;
     text-size-adjust: 100% !important;
   }
@@ -21,10 +33,15 @@
       "Microsoft YaHei", "Helvetica Neue", Helvetica, Arial, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    -webkit-tap-highlight-color: transparent;
   }
 
   body {
     background: var(--bg-base);
+    overscroll-behavior-y: contain;
+    -webkit-touch-callout: none;
+    user-select: none;
+    -webkit-user-select: none;
   }
 
   form {
@@ -33,12 +50,50 @@
     display: block;
   }
 
+  button,
+  input,
+  textarea,
+  select {
+    font: inherit;
+  }
+
+  button {
+    touch-action: manipulation;
+  }
+
+  input,
+  textarea,
+  select,
+  [contenteditable="true"],
+  .selectable {
+    -webkit-touch-callout: default;
+    user-select: text;
+    -webkit-user-select: text;
+  }
+
+  img,
+  picture,
+  video,
+  canvas,
+  svg,
+  iframe {
+    display: block;
+    max-width: 100%;
+  }
+
+  img,
+  video {
+    height: auto;
+  }
+
   #root {
     position: relative;
     width: 100%;
     max-width: 750px;
     min-height: 100vh;
     margin: 0 auto;
+    padding-left: var(--safe-left);
+    padding-right: var(--safe-right);
   }
 
   #share-img {
@@ -53,36 +108,30 @@
 }
 
 @theme {
-  /* 品牌主色（用于按钮、渐变等） */
   --color-primary-start: var(--primary-start);
   --color-primary-end: var(--primary-end);
   --color-brand-start: var(--brand-start);
   --color-brand-end: var(--brand-end);
 
-  /* 功能色 */
   --color-success: var(--success);
   --color-warning: var(--warning);
   --color-info: var(--info);
 
-  /* 背景层级 */
   --color-bg-base: var(--bg-base);
   --color-bg-card: var(--bg-card);
   --color-bg-box: var(--bg-box);
   --color-bg-hover: var(--bg-hover);
   --color-bg-skeleton: var(--bg-skeleton);
 
-  /* 文字层级 */
   --color-text-main: var(--text-main);
   --color-text-sub: var(--text-sub);
   --color-text-aux: var(--text-aux);
   --color-text-price: var(--text-price);
 
-  /* 边框层级 */
   --color-border-light: var(--border-light);
   --color-border-main: var(--border-main);
   --color-border-card: var(--border-card);
 
-  /* 字体大小层级（语义化 Token） */
   --text-2xs: 10px;
   --text-xs: 11px;
   --text-s: 12px;
@@ -217,17 +266,12 @@
 }
 
 @supports (height: 100dvh) {
-  .app-viewport-height,
-  #root {
+  #root,
+  .app-min-viewport-height {
     min-height: 100dvh;
   }
 
   .app-viewport-height {
     height: 100dvh;
   }
-
-  .app-min-viewport-height {
-    min-height: 100dvh;
-  }
 }
-

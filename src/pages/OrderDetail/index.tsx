@@ -147,6 +147,36 @@ export const OrderDetailPage = () => {
     }
   };
 
+  const handleApplyAfterSale = async () => {
+    if (orderId <= 0) return;
+    if (!window.confirm('确定要提交售后申请吗？')) return;
+    showLoading('提交售后申请中...');
+    try {
+      await shopOrderApi.applyAfterSale({ order_id: orderId, reason: '买家申请退货' });
+      showToast({ message: '售后申请已提交', type: 'success' });
+      await fetchData();
+    } catch (e) {
+      showToast({ message: getErrorMessage(e) || '申请售后失败', type: 'error' });
+    } finally {
+      hideLoading();
+    }
+  };
+
+  const handleCancelAfterSale = async () => {
+    if (orderId <= 0 || !order?.after_sale_id) return;
+    if (!window.confirm('确定要取消当前售后申请吗？')) return;
+    showLoading('取消售后申请中...');
+    try {
+      await shopOrderApi.cancelAfterSale({ after_sale_id: order.after_sale_id });
+      showToast({ message: '售后申请已取消', type: 'success' });
+      await fetchData();
+    } catch (e) {
+      showToast({ message: getErrorMessage(e) || '取消售后申请失败', type: 'error' });
+    } finally {
+      hideLoading();
+    }
+  };
+
   const handleGoPay = () => {
     if (!order) return;
     const cashierParams = new URLSearchParams({
@@ -163,6 +193,11 @@ export const OrderDetailPage = () => {
 
   const hasBottomBar = !loading && !error && order &&
     (order.status === 'pending' || order.status === 'shipped' || order.status === 'completed');
+  const canApplyAfterSale = order
+    ? (order.product_type === 'physical' || order.product_type === 'mixed') &&
+      (order.status === 'shipped' || order.status === 'completed') &&
+      !order.after_sale_status
+    : false;
 
   const renderSkeleton = () => (
     <div className="p-4 space-y-3">
@@ -208,7 +243,6 @@ export const OrderDetailPage = () => {
     const stepLabels = ['下单', '付款', '发货', '完成'];
     const config = STATUS_CONFIG[order.status] ?? STATUS_CONFIG.pending;
     const StatusIcon = config.icon;
-
     return (
       <div className={`p-4 space-y-3 ${hasBottomBar ? 'pb-28' : 'pb-8'}`}>
         {/* ===== Status Card ===== */}
@@ -265,6 +299,43 @@ export const OrderDetailPage = () => {
               )}
             </div>
             <ChevronRight size={18} className="text-text-aux shrink-0" />
+          </div>
+        )}
+
+        {order.after_sale_status_text && order.after_sale_info && (
+          <div className="bg-white dark:bg-gray-900 rounded-2xl p-4 shadow-sm">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-base font-bold text-text-main">售后信息</h3>
+              <span className="text-sm font-medium text-primary-start">{order.after_sale_status_text}</span>
+            </div>
+            <div className="space-y-2.5 text-sm">
+              <div className="flex justify-between">
+                <span className="text-text-aux">售后原因</span>
+                <span className="text-text-main ml-4 text-right">{order.after_sale_info.reason || '—'}</span>
+              </div>
+              {order.after_sale_info.description ? (
+                <div className="flex justify-between">
+                  <span className="text-text-aux">问题描述</span>
+                  <span className="text-text-main ml-4 text-right">{order.after_sale_info.description}</span>
+                </div>
+              ) : null}
+              <div className="flex justify-between">
+                <span className="text-text-aux">申请时间</span>
+                <span className="text-text-main">{formatTime(order.after_sale_info.apply_time)}</span>
+              </div>
+              {order.after_sale_info.close_reason ? (
+                <div className="flex justify-between">
+                  <span className="text-text-aux">关闭原因</span>
+                  <span className="text-text-main ml-4 text-right">{order.after_sale_info.close_reason}</span>
+                </div>
+              ) : null}
+              {order.after_sale_info.admin_remark ? (
+                <div className="flex justify-between">
+                  <span className="text-text-aux">处理备注</span>
+                  <span className="text-text-main ml-4 text-right">{order.after_sale_info.admin_remark}</span>
+                </div>
+              ) : null}
+            </div>
           </div>
         )}
 
@@ -421,16 +492,25 @@ export const OrderDetailPage = () => {
 
       {!loading && !error && order?.status === 'shipped' && (
         <div className="absolute bottom-0 left-0 right-0 bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm border-t border-gray-100 dark:border-gray-800 px-4 py-3 pb-safe flex justify-end items-center gap-2.5 z-40">
-          <button
-            className="px-5 py-2 rounded-full text-sm font-medium text-text-sub border border-gray-200 dark:border-gray-700 active:bg-gray-50 dark:active:bg-gray-800 transition-colors"
-            onClick={handleCancelOrder}
-          >
-            取消订单
-          </button>
+          {order.after_sale_status === 'processing' ? (
+            <button
+              className="px-5 py-2 rounded-full text-sm font-medium text-text-sub border border-gray-200 dark:border-gray-700 active:bg-gray-50 dark:active:bg-gray-800 transition-colors"
+              onClick={handleCancelAfterSale}
+            >
+              取消申请
+            </button>
+          ) : (
+            <button
+              className="px-5 py-2 rounded-full text-sm font-medium text-text-sub border border-gray-200 dark:border-gray-700 active:bg-gray-50 dark:active:bg-gray-800 transition-colors"
+              onClick={handleApplyAfterSale}
+            >
+              申请售后
+            </button>
+          )}
           <button
             className="px-6 py-2 rounded-full text-sm font-bold text-white bg-gradient-to-r from-emerald-500 to-green-500 shadow-sm active:opacity-80 transition-opacity disabled:opacity-50"
             onClick={handleConfirmReceipt}
-            disabled={confirming || orderId <= 0}
+            disabled={confirming || orderId <= 0 || order.after_sale_status === 'processing'}
           >
             {confirming ? '确认中...' : '确认收货'}
           </button>
@@ -438,11 +518,27 @@ export const OrderDetailPage = () => {
       )}
 
       {!loading && !error && order?.status === 'completed' && (
-        <div className="absolute bottom-0 left-0 right-0 bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm border-t border-gray-100 dark:border-gray-800 px-4 py-3 pb-safe flex justify-center items-center z-40">
-          <span className="text-sm text-text-aux flex items-center gap-1.5">
-            <CheckCircle2 size={14} className="text-emerald-500" />
-            交易已完成
-          </span>
+        <div className="absolute bottom-0 left-0 right-0 bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm border-t border-gray-100 dark:border-gray-800 px-4 py-3 pb-safe flex justify-end items-center gap-2.5 z-40">
+          {order.after_sale_status === 'processing' ? (
+            <button
+              className="px-5 py-2 rounded-full text-sm font-medium text-text-sub border border-gray-200 dark:border-gray-700 active:bg-gray-50 dark:active:bg-gray-800 transition-colors"
+              onClick={handleCancelAfterSale}
+            >
+              取消申请
+            </button>
+          ) : canApplyAfterSale ? (
+            <button
+              className="px-5 py-2 rounded-full text-sm font-medium text-text-sub border border-gray-200 dark:border-gray-700 active:bg-gray-50 dark:active:bg-gray-800 transition-colors"
+              onClick={handleApplyAfterSale}
+            >
+              申请售后
+            </button>
+          ) : (
+            <span className="text-sm text-text-aux flex items-center gap-1.5">
+              <CheckCircle2 size={14} className="text-emerald-500" />
+              交易已完成
+            </span>
+          )}
         </div>
       )}
     </div>

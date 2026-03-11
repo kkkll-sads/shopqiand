@@ -1,4 +1,4 @@
-import { createApiHeaders, type ApiAuthOptions } from '../core/headers';
+﻿import { createApiHeaders, type ApiAuthOptions } from '../core/headers';
 import { http } from '../http';
 import { resolveUploadUrl } from './upload';
 
@@ -237,6 +237,11 @@ export interface GetMoneyLogDetailParams {
   id?: number;
 }
 
+export interface ChangePasswordPayload {
+  oldPassword: string;
+  newPassword: string;
+}
+
 export interface AccountMoneyLogDetail {
   accountType?: string;
   afterValue: number;
@@ -437,9 +442,9 @@ function normalizeMoneyLogDetail(payload: AccountMoneyLogDetailRaw): AccountMone
   };
 }
 
-/* ==================== 成长权益信息 ==================== */
+/* ==================== 鎴愰暱鏉冪泭淇℃伅 ==================== */
 
-/** 当前成长阶段（API 返回 snake_case） */
+/** 褰撳墠鎴愰暱闃舵锛圓PI 杩斿洖 snake_case锛?*/
 export interface GrowthRightsStageRaw {
   key?: string;
   label?: string;
@@ -448,20 +453,20 @@ export interface GrowthRightsStageRaw {
   max_days?: number | null;
 }
 
-/** 配资规则项 */
+/** 閰嶈祫瑙勫垯椤?*/
 export interface GrowthRightsFinancingRuleRaw {
   min_days?: number;
   max_days?: number | null;
   ratio?: string;
 }
 
-/** 配资规则与当前比例 */
+/** 閰嶈祫瑙勫垯涓庡綋鍓嶆瘮渚?*/
 export interface GrowthRightsFinancingRaw {
   ratio?: string;
   rules?: GrowthRightsFinancingRuleRaw[];
 }
 
-/** 成长周期模式进度（如每日1次/每日3次） */
+/** 鎴愰暱鍛ㄦ湡妯″紡杩涘害锛堝姣忔棩1娆?姣忔棩3娆★級 */
 export interface GrowthRightsModeProgressItemRaw {
   label?: string;
   growth_days?: number;
@@ -469,7 +474,7 @@ export interface GrowthRightsModeProgressItemRaw {
   summary?: { remaining_days_in_cycle?: number };
 }
 
-/** 成长周期与可解锁额度 */
+/** 鎴愰暱鍛ㄦ湡涓庡彲瑙ｉ攣棰濆害 */
 export interface GrowthRightsCycleRaw {
   active_mode?: string;
   cycle_days?: number;
@@ -481,7 +486,7 @@ export interface GrowthRightsCycleRaw {
   mode_progress?: Record<string, GrowthRightsModeProgressItemRaw>;
 }
 
-/** 成长明细日志（按天） */
+/** 鎴愰暱鏄庣粏鏃ュ織锛堟寜澶╋級 */
 export interface GrowthRightsDailyLogRaw {
   date?: string;
   trade_count?: number;
@@ -490,7 +495,7 @@ export interface GrowthRightsDailyLogRaw {
   is_activity_bonus?: boolean;
 }
 
-/** 成长权益信息 API 返回的 data 结构（snake_case） */
+/** 鎴愰暱鏉冪泭淇℃伅 API 杩斿洖鐨?data 缁撴瀯锛坰nake_case锛?*/
 export interface GrowthRightsInfoRaw {
   growth_days?: number;
   effective_trade_days?: number;
@@ -504,7 +509,7 @@ export interface GrowthRightsInfoRaw {
   profit_distribution?: Record<string, unknown>;
   daily_growth_logs?: GrowthRightsDailyLogRaw[];
   growth_start_date?: string;
-  /** 部分后端可能返回的扩展状态 */
+  /** 閮ㄥ垎鍚庣鍙兘杩斿洖鐨勬墿灞曠姸鎬?*/
   status?: {
     can_activate?: boolean;
     can_unlock_package?: boolean;
@@ -543,6 +548,17 @@ export const accountApi = {
       accountVerificationType: normalizeVerificationTypes(payload.accountVerificationType),
       userInfo: normalizeProfileUserInfo(payload.userInfo),
     };
+  },
+
+  async changePassword(
+    payload: ChangePasswordPayload,
+    options: AccountRequestOptions = {},
+  ): Promise<void> {
+    await http.post<null, ChangePasswordPayload>('/api/Account/changePassword', payload, {
+      headers: createApiHeaders(options),
+      signal: options.signal,
+      useMock: false,
+    });
   },
 
   async getAllLog(
@@ -589,7 +605,7 @@ export const accountApi = {
   },
 };
 
-/* ==================== 旧资产解锁 ==================== */
+/* ==================== 鏃ц祫浜цВ閿?==================== */
 
 export interface OldAssetsUnlockConditionsRaw {
   has_transaction?: boolean;
@@ -621,7 +637,7 @@ export interface OldAssetsUnlockResultRaw {
 
 export const oldAssetsApi = {
   /**
-   * 检查旧资产解锁状态
+   * 妫€鏌ユ棫璧勪骇瑙ｉ攣鐘舵€?
    * GET /api/Account/checkOldAssetsUnlockStatus
    */
   async checkStatus(
@@ -638,7 +654,7 @@ export const oldAssetsApi = {
   },
 
   /**
-   * 确认解锁旧资产
+   * 纭瑙ｉ攣鏃ц祫浜?
    * POST /api/Account/unlockOldAssets
    */
   async unlock(options: AccountRequestOptions = {}): Promise<OldAssetsUnlockResultRaw> {
@@ -654,7 +670,7 @@ export const oldAssetsApi = {
   },
 };
 
-/* ==================== 成长权益解锁藏品 ==================== */
+/* ==================== 鎴愰暱鏉冪泭瑙ｉ攣钘忓搧 ==================== */
 
 export interface UnlockGrowthRightsAssetResultRaw {
   unlock_count?: number | string;
@@ -694,9 +710,9 @@ function normalizeUnlockGrowthRightsAssetResult(
 }
 
 /**
- * 成长权益解锁藏品
+ * 鎴愰暱鏉冪泭瑙ｉ攣钘忓搧
  * POST /api/Account/unlockGrowthRightsAsset
- * 请求头：ba-token, ba-user-token（由 createApiHeaders 注入）
+ * 璇锋眰澶达細ba-token, ba-user-token锛堢敱 createApiHeaders 娉ㄥ叆锛?
  */
 export const growthRightsAssetApi = {
   async unlock(options: AccountRequestOptions = {}): Promise<UnlockGrowthRightsAssetResult> {
@@ -711,3 +727,4 @@ export const growthRightsAssetApi = {
     return normalizeUnlockGrowthRightsAssetResult(payload ?? {});
   },
 };
+

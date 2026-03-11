@@ -41,6 +41,10 @@ const HelpCenterPage = lazy(() => import('../pages/HelpCenter').then(m => ({ def
 const SettingsPage = lazy(() => import('../pages/Settings').then(m => ({ default: m.SettingsPage })));
 const AboutUsPage = lazy(() => import('../pages/AboutUs').then(m => ({ default: m.AboutUsPage })));
 const SecurityPage = lazy(() => import('../pages/Security').then(m => ({ default: m.SecurityPage })));
+const ChangePasswordPage = lazy(() => import('../pages/ChangePassword').then(m => ({ default: m.ChangePasswordPage })));
+const ChangePayPasswordPage = lazy(() => import('../pages/ChangePayPassword').then(m => ({ default: m.ChangePayPasswordPage })));
+const ResetPasswordBySmsPage = lazy(() => import('../pages/ResetPasswordBySms').then(m => ({ default: m.ResetPasswordBySmsPage })));
+const ResetPayPasswordBySmsPage = lazy(() => import('../pages/ResetPayPasswordBySms').then(m => ({ default: m.ResetPayPasswordBySmsPage })));
 const BillingPage = lazy(() => import('../pages/Billing').then(m => ({ default: m.BillingPage })));
 const MyCardPacksPage = lazy(() => import('../pages/MyCardPacks').then(m => ({ default: m.MyCardPacksPage })));
 const RealNameAuthPage = lazy(() => import('../pages/RealNameAuth').then(m => ({ default: m.RealNameAuthPage })));
@@ -259,6 +263,7 @@ export const router = createHashRouter([
     v7_skipActionErrorRevalidation: true,
   },
 });
+
 
 
 
