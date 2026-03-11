@@ -15,6 +15,28 @@ export interface ShopOrderPayOptions extends ApiAuthOptions {
   signal?: AbortSignal;
 }
 
+export interface ShopOrderAfterSaleInfo {
+  id: number;
+  order_id: number;
+  order_no: string;
+  type: string;
+  status: '' | 'processing' | 'completed' | 'closed';
+  status_text: string;
+  reason: string;
+  description: string;
+  images: string[];
+  admin_remark: string;
+  close_reason: string;
+  apply_time: number;
+  receive_time: number;
+  complete_time: number;
+  close_time: number;
+}
+
+export interface ShopOrderAfterSaleResult {
+  after_sale: ShopOrderAfterSaleInfo;
+}
+
 /** 商城订单支付请求参数 */
 export interface ShopOrderPayPayload {
   /** 订单 ID */
@@ -206,6 +228,12 @@ export interface ShopOrderListItem {
   status_text: string;
   /** 支付方式中文 */
   pay_type_text: string;
+  after_sale_id?: number;
+  after_sale_status?: '' | 'processing' | 'completed' | 'closed';
+  after_sale_status_text?: string;
+  after_sale_info?: ShopOrderAfterSaleInfo;
+  has_after_sale?: 0 | 1;
+  can_cancel_after_sale?: 0 | 1;
   /** 是否已评价：0=未评价, 1=已评价 */
   is_commented?: 0 | 1;
 }
@@ -356,6 +384,47 @@ export const shopOrderApi = {
         signal: options.signal,
       },
     ) as Promise<void>;
+  },
+
+  applyAfterSale(
+    payload: { order_id: number; reason: string; description?: string; images?: string[] },
+    options: ShopOrderConfirmOptions = {},
+  ): Promise<ShopOrderAfterSaleResult> {
+    return http.post<
+      ShopOrderAfterSaleResult,
+      { order_id: number; reason: string; description?: string; images?: string[] }
+    >('/api/shopOrder/applyAfterSale', payload, {
+      headers: createApiHeaders(options),
+      signal: options.signal,
+    });
+  },
+
+  cancelAfterSale(
+    payload: { after_sale_id?: number; order_id?: number },
+    options: ShopOrderConfirmOptions = {},
+  ): Promise<ShopOrderAfterSaleResult> {
+    return http.post<ShopOrderAfterSaleResult, { after_sale_id?: number; order_id?: number }>(
+      '/api/shopOrder/cancelAfterSale',
+      payload,
+      {
+        headers: createApiHeaders(options),
+        signal: options.signal,
+      },
+    );
+  },
+
+  receiveAfterSale(
+    payload: { after_sale_id?: number; order_id?: number },
+    options: ShopOrderConfirmOptions = {},
+  ): Promise<ShopOrderAfterSaleResult> {
+    return http.post<ShopOrderAfterSaleResult, { after_sale_id?: number; order_id?: number }>(
+      '/api/shopOrder/receiveAfterSale',
+      payload,
+      {
+        headers: createApiHeaders(options),
+        signal: options.signal,
+      },
+    );
   },
 
   /**
