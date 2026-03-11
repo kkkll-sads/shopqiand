@@ -1,4 +1,9 @@
-﻿import React, { useState, useEffect } from 'react';
+/**
+ * @file RightsTransfer/index.tsx - 确权转让页面
+ * @description 用户将藏品确权转让给他人的操作页面。
+ */
+
+import React, { useState, useEffect } from 'react'; // React 核心 Hook
 import { ChevronLeft, AlertCircle, ArrowRight, XCircle, ChevronDown, X, ShieldCheck, Eye, EyeOff, CheckCircle2, Info } from 'lucide-react';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';

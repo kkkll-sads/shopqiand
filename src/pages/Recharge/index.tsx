@@ -1,4 +1,9 @@
-﻿import type { ChangeEvent } from 'react';
+/**
+ * @file Recharge/index.tsx - 充值页面
+ * @description 用户充值页面，支持多种充值方式和金额选择。
+ */
+
+import type { ChangeEvent } from 'react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { LucideIcon } from 'lucide-react';
 import {

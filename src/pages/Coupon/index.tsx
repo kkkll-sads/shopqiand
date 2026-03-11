@@ -1,4 +1,9 @@
-﻿import React, { useEffect, useRef, useState } from 'react';
+/**
+ * @file Coupon/index.tsx - 优惠券页面
+ * @description 展示可领取/已领取/已过期的优惠券列表，支持领取、使用、查看详情。
+ */
+
+import React, { useEffect, useRef, useState } from 'react'; // React 核心 Hook
 import { ChevronLeft, WifiOff, AlertCircle, Info, X, Ticket } from 'lucide-react';
 import { useAppNavigate } from '../../lib/navigation';
 import { PageHeader } from '../../components/layout/PageHeader';
@@ -8,6 +13,7 @@ import { PullToRefreshContainer } from '../../components/ui/PullToRefreshContain
 import { useRouteScrollRestoration } from '../../hooks/useRouteScrollRestoration';
 import { useSessionState } from '../../hooks/useSessionState';
 
+/** 优惠券数据结构 */
 interface Coupon {
   id: string;
   type: 'discount' | 'amount';
@@ -68,6 +74,10 @@ const MOCK_COUPONS: Coupon[] = [
   }
 ];
 
+/**
+ * CouponPage - 优惠券页面
+ * 功能：Tab 切换（可领取/已领取/已过期） → 券列表 → 点击查看详情弹窗
+ */
 export const CouponPage = () => {
   const { goTo, goBack } = useAppNavigate();
 

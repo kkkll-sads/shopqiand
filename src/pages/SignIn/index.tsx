@@ -1,4 +1,9 @@
-import React from 'react';
+/**
+ * @file SignIn/index.tsx - 每日签到页面
+ * @description 用户每日签到页面，展示签到日历、连续签到奖励。
+ */
+
+import React from 'react'; // React 核心
 import SignInPageHeader from './components/SignInPageHeader';
 import SignInBalanceCard from './components/SignInBalanceCard';
 import SignInWithdrawCard from './components/SignInWithdrawCard';

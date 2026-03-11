@@ -1,4 +1,9 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+/**
+ * @file Category/index.tsx - 商品分类页面
+ * @description 左侧分类导航 + 右侧商品列表，支持无限滚动加载、下拉刷新、搜索跳转。
+ */
+
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'; // React 核心 Hook
 import {
   ChevronLeft,
   MessageCircle,
@@ -39,6 +44,7 @@ const EMPTY_PRODUCT_LIST = {
   total: 0,
 };
 
+/** 合并商品列表（按 id 去重，新数据覆盖旧数据） */
 function mergeProducts(previous: ShopProductItem[], next: ShopProductItem[]) {
   const productMap = new Map<number, ShopProductItem>();
 
@@ -53,6 +59,10 @@ function mergeProducts(previous: ShopProductItem[], next: ShopProductItem[]) {
   return Array.from(productMap.values());
 }
 
+/**
+ * CategoryPage - 商品分类页面
+ * 功能：左侧分类导航 → 右侧商品列表 → 无限滚动 → 点击跳转商品详情
+ */
 export const CategoryPage = () => {
   const { goBack, goTo } = useAppNavigate();
   const { isOffline, refreshStatus } = useNetworkStatus();

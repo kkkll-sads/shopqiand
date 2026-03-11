@@ -1,4 +1,9 @@
-import React, { useRef, useState, useCallback, useEffect } from 'react';
+/**
+ * @file Friends/index.tsx - 我的好友页面
+ * @description 展示用户团队好友列表，支持一级/二级筛选、搜索、加载更多、复制邀请码。
+ */
+
+import React, { useRef, useState, useCallback, useEffect } from 'react'; // React 核心 Hook
 import {
   ChevronLeft, Search, Copy, QrCode, UserPlus,
   Users, ShieldCheck, ShieldAlert, ChevronRight,
@@ -19,6 +24,10 @@ const FILTERS = [
   { id: 'level2', label: '二级间推', level: 2 },
 ];
 
+/**
+ * FriendsPage - 我的好友页面
+ * 功能：统计概览 → 搜索/筛选 → 好友列表 → 加载更多 → 邀请好友
+ */
 export const FriendsPage = () => {
   const { goTo, goBack } = useAppNavigate();
   const { showToast } = useFeedback();

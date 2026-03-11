@@ -1,4 +1,9 @@
-import { useMemo, useState } from 'react';
+/**
+ * @file Settings/index.tsx - 设置页面
+ * @description 应用设置页面，包括主题切换、清除缓存、关于我们、退出登录等。
+ */
+
+import { useMemo, useState } from 'react'; // React 核心 Hook
 import { Info, LogOut, Shield, Trash2 } from 'lucide-react';
 import {
   SettingsActionItem,

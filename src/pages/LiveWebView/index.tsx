@@ -1,4 +1,9 @@
-﻿import { useEffect, useMemo, useState } from 'react';
+/**
+ * @file LiveWebView/index.tsx - 直播观看页面
+ * @description 通过 iframe 或 video 元素播放直播内容，支持复制链接、浏览器打开、刷新。
+ */
+
+import { useEffect, useMemo, useState } from 'react'; // React 核心 Hook
 import { useSearchParams } from 'react-router-dom';
 import {
   Copy,
@@ -17,6 +22,7 @@ import { copyToClipboard } from '../../lib/clipboard';
 import { useAppNavigate } from '../../lib/navigation';
 import { useFeedback } from '../../components/ui/FeedbackProvider';
 
+/** 提取 URL 域名作为显示标签 */
 function getDomainLabel(url: string): string {
   try {
     return new URL(url).hostname || '第三方内容';
@@ -25,10 +31,15 @@ function getDomainLabel(url: string): string {
   }
 }
 
+/** 判断 URL 是否为媒体文件地址 */
 function looksLikeMediaUrl(url: string): boolean {
   return /\.(m3u8|mp4|webm|ogg|mov|mpd)(\?|$)/i.test(url);
 }
 
+/**
+ * LiveWebViewPage - 直播观看页
+ * 功能：加载直播流 → iframe/video 播放 → 复制链接 → 浏览器打开 → 刷新
+ */
 export const LiveWebViewPage = () => {
   const { goBack } = useAppNavigate();
   const { showToast } = useFeedback();

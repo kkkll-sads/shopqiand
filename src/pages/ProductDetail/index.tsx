@@ -1,4 +1,9 @@
-﻿import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+/**
+ * @file ProductDetail/index.tsx - 商品详情页面
+ * @description 展示商品详细信息，包括图片、价格、规格、评价、加入购物车等。
+ */
+
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'; // React 核心 Hook
 import { useParams } from 'react-router-dom';
 import { getErrorMessage } from '../../api/core/errors';
 import { addressApi, shopCartApi, shopOrderApi, shopProductApi } from '../../api';

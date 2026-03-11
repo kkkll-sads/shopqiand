@@ -1,4 +1,9 @@
-import React, { useMemo, useState } from 'react';
+/**
+ * @file PaymentResult/index.tsx - 支付结果页面
+ * @description 展示支付结果（成功/失败），支持跳转订单详情或返回首页。
+ */
+
+import React, { useMemo, useState } from 'react'; // React 核心 Hook
 import { useSearchParams } from 'react-router-dom';
 import { ChevronLeft, WifiOff, CheckCircle2, AlertCircle, Copy, HeadphonesIcon } from 'lucide-react';
 import { useAppNavigate } from '../../lib/navigation';

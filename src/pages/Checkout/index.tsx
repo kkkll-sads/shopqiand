@@ -1,4 +1,9 @@
-﻿import React, { useCallback, useEffect, useMemo, useState } from 'react';
+/**
+ * @file Checkout/index.tsx - 确认订单页面
+ * @description 展示待结算商品、收货地址选择、订单备注、提交订单并跳转收银台。
+ */
+
+import React, { useCallback, useEffect, useMemo, useState } from 'react'; // React 核心 Hook
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
   ChevronLeft,
@@ -22,6 +27,7 @@ interface CheckoutLocationState {
   cartItemIds?: number[];
 }
 
+/** 结算页商品项结构 */
 interface CheckoutProduct {
   id: number;
   title: string;
@@ -33,6 +39,7 @@ interface CheckoutProduct {
   isScorePrice: boolean;
 }
 
+/** 将购物车数据映射为结算商品列表 */
 function mapCartItems(rows: ShopCartListItem[], ids: number[]): CheckoutProduct[] {
   const idSet = new Set(ids);
   return rows
@@ -54,6 +61,10 @@ function mapCartItems(rows: ShopCartListItem[], ids: number[]): CheckoutProduct[
     });
 }
 
+/**
+ * CheckoutPage - 确认订单页面
+ * 功能：选择收货地址 → 确认商品 → 填写备注 → 提交订单 → 跳转收银台
+ */
 export const CheckoutPage = () => {
   const location = useLocation();
   const navigate = useNavigate();

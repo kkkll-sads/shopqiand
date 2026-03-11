@@ -1,4 +1,9 @@
-﻿import { useEffect, useMemo, useState } from 'react';
+/**
+ * @file Live/index.tsx - 直播页面
+ * @description 展示当前官方直播配置信息，点击进入直播观看页。
+ */
+
+import { useEffect, useMemo, useState } from 'react'; // React 核心 Hook
 import {
   ExternalLink,
   HeadphonesIcon,
@@ -16,6 +21,7 @@ import { useAppNavigate } from '../../lib/navigation';
 import { useFeedback } from '../../components/ui/FeedbackProvider';
 import { openCustomerServiceLink } from '../../lib/customerService';
 
+/** 提取 URL 域名作为显示标签 */
 function getDomainLabel(url: string): string {
   try {
     return new URL(url).hostname || '第三方内容';
@@ -24,6 +30,10 @@ function getDomainLabel(url: string): string {
   }
 }
 
+/**
+ * LivePage - 直播页面
+ * 功能：加载直播配置 → 展示标题/描述 → 点击进入观看页
+ */
 export const LivePage = () => {
   const { goBack, goTo, navigate } = useAppNavigate();
   const { showToast } = useFeedback();

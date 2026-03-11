@@ -1,4 +1,9 @@
-﻿import { Coins, CreditCard, ShieldCheck, Ticket, Wallet } from 'lucide-react';
+/**
+ * @file MyCardPacks/index.tsx - 我的卡包页面
+ * @description 展示用户已购买的会员卡列表，支持查看卡包详情和使用记录。
+ */
+
+import { Coins, CreditCard, ShieldCheck, Ticket, Wallet } from 'lucide-react';
 import { useMemo, useRef } from 'react';
 import {
   accountApi,

@@ -1,4 +1,9 @@
-import React, { useState, useEffect } from 'react';
+/**
+ * @file Invite/index.tsx - 邀请推广页面
+ * @description 展示用户专属邀请码、二维码、邀请链接，支持复制、分享、保存图片。
+ */
+
+import React, { useState, useEffect } from 'react'; // React 核心 Hook
 import { ChevronLeft, WifiOff, Copy, QrCode, Download, Share2, Link as LinkIcon, Image as ImageIcon, MessageCircle, ChevronDown, ChevronUp, AlertTriangle } from 'lucide-react';
 import { useAppNavigate } from '../../lib/navigation';
 import { ErrorState } from '../../components/ui/ErrorState';
@@ -6,6 +11,10 @@ import { useFeedback } from '../../components/ui/FeedbackProvider';
 import { copyToClipboard } from '../../lib/clipboard';
 import { teamApi, type PromotionCardData } from '../../api';
 
+/**
+ * InvitePage - 邀请推广页面
+ * 功能：展示邀请码/二维码 → 复制链接 → 分享至微信/朋友圈 → 保存图片
+ */
 export const InvitePage = () => {
   const { goBack } = useAppNavigate();
   const { showToast } = useFeedback();

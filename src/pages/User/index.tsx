@@ -1,4 +1,9 @@
-﻿import { useCallback, useEffect, useRef, useState } from 'react';
+/**
+ * @file User/index.tsx - 个人中心页面
+ * @description 用户个人中心，展示个人信息、余额、订单入口、功能菜单等。
+ */
+
+import { useCallback, useEffect, useRef, useState } from 'react'; // React 核心 Hook
 import { ChevronRight, HeadphonesIcon, LogOut, MessageSquare, Settings } from 'lucide-react';
 import { accountApi, userApi } from '../../api';
 import { messageApi } from '../../api/modules/message';

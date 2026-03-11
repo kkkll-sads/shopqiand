@@ -1,4 +1,9 @@
-﻿import { Radar } from 'lucide-react';
+/**
+ * @file Matching/index.tsx - 匹配等待页面
+ * @description 展示交易匹配中的等待动画与状态。
+ */
+
+import { Radar } from 'lucide-react';
 
 /**
  * MatchingView - 匹配中视图组件

@@ -1,4 +1,9 @@
-﻿import { useCallback, useMemo, useRef } from 'react';
+/**
+ * @file MessageCenter/index.tsx - 消息中心页面
+ * @description 展示系统消息列表，支持分类筛选、全部已读、下拉刷新。
+ */
+
+import { useCallback, useMemo, useRef } from 'react'; // React 核心 Hook
 import { CheckCircle2 } from 'lucide-react';
 import { getErrorMessage } from '../../api/core/errors';
 import { messageApi, type MessageCategory, type MessageItem } from '../../api/modules/message';

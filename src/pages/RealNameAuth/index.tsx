@@ -1,4 +1,9 @@
-﻿import { useEffect, useMemo, useRef, useState } from 'react';
+/**
+ * @file RealNameAuth/index.tsx - 实名认证页面
+ * @description 用户实名认证页面，提交身份证信息进行身份验证。
+ */
+
+import { useEffect, useMemo, useRef, useState } from 'react'; // React 核心 Hook
 import {
   AlertCircle,
   CheckCircle2,

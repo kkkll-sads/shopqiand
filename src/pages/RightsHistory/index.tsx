@@ -1,4 +1,9 @@
-﻿import { useRef, useState } from 'react';
+/**
+ * @file RightsHistory/index.tsx - 确权记录页面
+ * @description 展示用户的确权操作历史记录列表。
+ */
+
+import { useRef, useState } from 'react'; // React 核心 Hook
 import { FileText } from 'lucide-react';
 import { rightsDeclarationApi, type RightsDeclarationStatus } from '../../api';
 import { getErrorMessage } from '../../api/core/errors';

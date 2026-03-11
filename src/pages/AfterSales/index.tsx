@@ -1,4 +1,10 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+/**
+ * @file AfterSales/index.tsx - 售后服务页面
+ * @description 展示用户的售后订单列表，支持按状态筛选（全部/处理中/已完成/已关闭）、
+ *              查看售后详情、取消售后申请、跳转订单详情。
+ */
+
+import { useCallback, useEffect, useMemo, useState } from 'react'; // React 核心 Hook
 import { Clock3, PackageCheck, Slash, RefreshCw } from 'lucide-react';
 import { shopOrderApi, type ShopOrderListItem } from '../../api/modules/shopOrder';
 import { getErrorMessage } from '../../api/core/errors';
@@ -10,8 +16,10 @@ import { useRequest } from '../../hooks/useRequest';
 import { useAppNavigate } from '../../lib/navigation';
 import { resolveShopProductImageUrl } from '../../features/shop-product/utils';
 
+/** 售后状态 Tab 类型 */
 type AfterSaleTab = 'all' | 'processing' | 'completed' | 'closed';
 
+/** 各售后状态的元数据（标签、图标、颜色） */
 const STATUS_META: Record<Exclude<AfterSaleTab, 'all'>, { label: string; icon: typeof Clock3; color: string; bg: string }> = {
   processing: {
     label: '处理中',
@@ -33,6 +41,7 @@ const STATUS_META: Record<Exclude<AfterSaleTab, 'all'>, { label: string; icon: t
   },
 };
 
+/** 格式化时间戳为可读时间字符串 */
 function formatTime(timestamp?: number): string {
   if (!timestamp) return '--';
   const date = new Date(timestamp * 1000);
@@ -40,6 +49,7 @@ function formatTime(timestamp?: number): string {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
+/** 生成订单摘要文本（商品名 + 数量） */
 function getOrderSummary(order: ShopOrderListItem): string {
   const first = order.items?.[0];
   if (!first) return '商品信息待补充';
@@ -47,6 +57,10 @@ function getOrderSummary(order: ShopOrderListItem): string {
   return extraCount > 0 ? `${first.product_name} 等${extraCount + 1}件商品` : first.product_name;
 }
 
+/**
+ * AfterSalesPage - 售后服务页面
+ * 功能：Tab 切换筛选 → 售后单列表 → 展开详情 → 取消申请 / 查看订单
+ */
 export const AfterSalesPage = () => {
   const { goBack, navigate } = useAppNavigate();
   const { showToast, showLoading, hideLoading } = useFeedback();
@@ -58,6 +72,7 @@ export const AfterSalesPage = () => {
     { initialData: { list: [], total: 0, page: 1, limit: 100, balance_available: '0', score: '0' } },
   );
 
+  /** 筛选出含有售后信息的订单 */
   const afterSaleOrders = useMemo(
     () =>
       (request.data?.list ?? []).filter((order) => {
@@ -66,6 +81,7 @@ export const AfterSalesPage = () => {
     [request.data],
   );
 
+  /** 统计各状态售后单数量 */
   const stats = useMemo(() => {
     return afterSaleOrders.reduce(
       (acc, order) => {
@@ -80,11 +96,13 @@ export const AfterSalesPage = () => {
     );
   }, [afterSaleOrders]);
 
+  /** 根据当前 Tab 筛选售后订单 */
   const filteredOrders = useMemo(() => {
     if (activeTab === 'all') return afterSaleOrders;
     return afterSaleOrders.filter((order) => order.after_sale_status === activeTab);
   }, [activeTab, afterSaleOrders]);
 
+  /** Tab 切换时自动选中第一条售后单 */
   useEffect(() => {
     if (filteredOrders.length === 0) {
       setSelectedId(0);
@@ -96,11 +114,13 @@ export const AfterSalesPage = () => {
     }
   }, [filteredOrders, selectedId]);
 
+  /** 当前选中的售后订单（展开详情） */
   const selectedOrder = useMemo(
     () => filteredOrders.find((order) => order.id === selectedId) ?? filteredOrders[0] ?? null,
     [filteredOrders, selectedId],
   );
 
+  /** 取消售后申请：确认后调用取消 API 并刷新列表 */
   const handleCancelAfterSale = useCallback(
     async (order: ShopOrderListItem) => {
       if (!order.after_sale_id) return;
@@ -119,6 +139,7 @@ export const AfterSalesPage = () => {
     [hideLoading, request, showLoading, showToast],
   );
 
+  /** Tab 配置项：全部 / 处理中 / 已完成 / 已关闭 */
   const tabItems: Array<{ key: AfterSaleTab; label: string; count: number }> = [
     { key: 'all', label: '全部', count: stats.all },
     { key: 'processing', label: '处理中', count: stats.processing },

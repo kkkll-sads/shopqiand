@@ -1,4 +1,9 @@
-import { useMemo } from 'react';
+/**
+ * @file CommonPage/index.tsx - 通用内容页面
+ * @description 用于展示用户协议、隐私政策、关于我们等通用图文内容，支持 HTML 和纯文本渲染。
+ */
+
+import { useMemo } from 'react'; // React 核心 Hook
 import { commonApi, type CommonPageType } from '../../api';
 import { getErrorMessage } from '../../api/core/errors';
 import { PageHeader } from '../../components/layout/PageHeader';
@@ -7,6 +12,7 @@ import { ErrorState } from '../../components/ui/ErrorState';
 import { useNetworkStatus } from '../../hooks/useNetworkStatus';
 import { useRequest } from '../../hooks/useRequest';
 
+/** 页面类型元数据（标题映射） */
 const PAGE_META: Record<CommonPageType, { title: string }> = {
   user_agreement: { title: '用户协议' },
   privacy_policy: { title: '隐私政策' },
@@ -17,6 +23,7 @@ export interface CommonPageProps {
   pageType: CommonPageType;
 }
 
+/** 解析页面内容：支持字符串/数组/对象多种格式 */
 function resolvePageContent(value: unknown): string {
   if (typeof value === 'string') {
     return value.trim();
@@ -43,10 +50,15 @@ function resolvePageContent(value: unknown): string {
   return '';
 }
 
+/** 检测内容是否包含 HTML 标签 */
 function hasHtmlMarkup(value: string) {
   return /<\/?[a-z][\s\S]*>/i.test(value);
 }
 
+/**
+ * CommonPage - 通用内容页面组件
+ * 根据 pageType 加载对应内容（用户协议/隐私政策/关于我们）
+ */
 export function CommonPage({ pageType }: CommonPageProps) {
   const { isOffline } = useNetworkStatus();
   const pageMeta = PAGE_META[pageType];

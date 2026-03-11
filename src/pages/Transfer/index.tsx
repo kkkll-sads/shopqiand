@@ -1,4 +1,9 @@
-﻿import React, { useState, useEffect } from 'react';
+/**
+ * @file Transfer/index.tsx - 转账页面
+ * @description 用户转账页面，支持向其他用户进行余额转账。
+ */
+
+import React, { useState, useEffect } from 'react'; // React 核心 Hook
 import { ChevronLeft, AlertCircle, ArrowDownRight, ArrowRight, XCircle, Info, CheckCircle2, ChevronDown, X, ShieldCheck } from 'lucide-react';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';

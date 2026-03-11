@@ -1,4 +1,9 @@
-﻿import type { ChangeEvent } from 'react';
+/**
+ * @file Withdraw/index.tsx - 提现页面
+ * @description 用户提现页面，支持选择提现方式、输入金额、提交提现申请。
+ */
+
+import type { ChangeEvent } from 'react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { LucideIcon } from 'lucide-react';
 import {

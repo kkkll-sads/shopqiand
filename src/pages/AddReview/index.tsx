@@ -1,4 +1,9 @@
-import { useCallback, useEffect, useRef, useState, type ChangeEvent } from 'react';
+/**
+ * @file AddReview/index.tsx - 发表评价页面
+ * @description 用户对已购商品进行评价，支持星级评分、快捷标签、文字输入、图片上传（最多9张）、匿名评价。
+ */
+
+import { useCallback, useEffect, useRef, useState, type ChangeEvent } from 'react'; // React 核心 Hook & 类型
 import { useParams, useSearchParams } from 'react-router-dom';
 import {
   AlertCircle,
@@ -18,19 +23,26 @@ import { useFeedback } from '../../components/ui/FeedbackProvider';
 import { PageHeader } from '../../components/layout/PageHeader';
 import { useAppNavigate } from '../../lib/navigation';
 
+/** 快捷评价标签列表 */
 const QUICK_TAGS = ['质量好', '物流快', '服务好', '包装扎实', '正品', '性价比高', '外观不错'];
 
+/** 图片上传状态枚举 */
 type ImageStatus = 'uploading' | 'success' | 'error';
 
+/** 上传图片对象 */
 interface UploadImage {
-  errorMessage?: string;
-  file: File;
-  id: string;
-  status: ImageStatus;
-  uploaded?: UploadedFile;
-  url: string;
+  errorMessage?: string; // 上传失败时的错误信息
+  file: File; // 原始文件对象
+  id: string; // 唯一标识
+  status: ImageStatus; // 当前上传状态
+  uploaded?: UploadedFile; // 上传成功后的服务端响应
+  url: string; // 预览 URL（blob 或服务端 URL）
 }
 
+/**
+ * AddReviewPage - 发表评价页面
+ * 支持：星级评分、快捷标签、文字评价(500字)、图片上传(9张)、匿名评价
+ */
 export default function AddReviewPage() {
   const { goBack } = useAppNavigate();
   const { showToast } = useFeedback();
@@ -54,6 +66,7 @@ export default function AddReviewPage() {
   const numOrderId = orderId ? parseInt(orderId, 10) : 0;
   const numProductId = productIdParam ? parseInt(productIdParam, 10) : 0;
 
+  /** 监听网络在线/离线事件 */
   useEffect(() => {
     const handleOnline = () => setIsOffline(false);
     const handleOffline = () => setIsOffline(true);
@@ -65,6 +78,7 @@ export default function AddReviewPage() {
     };
   }, []);
 
+  /** 根据订单 ID 加载订单详情 */
   useEffect(() => {
     if (!numOrderId) {
       setLoadingOrder(false);
@@ -80,10 +94,12 @@ export default function AddReviewPage() {
     return () => { cancelled = true; };
   }, [numOrderId]);
 
+  /** 同步 images 到 ref（供卸载清理时使用） */
   useEffect(() => {
     imagesRef.current = images;
   }, [images]);
 
+  /** 组件卸载时释放所有 blob 预览 URL */
   useEffect(() => {
     return () => {
       imagesRef.current.forEach((image) => {
@@ -103,6 +119,7 @@ export default function AddReviewPage() {
     if (url.startsWith('blob:')) URL.revokeObjectURL(url);
   };
 
+  /** 上传单张图片，成功则更新 URL，失败则标记错误 */
   const uploadSingleImage = useCallback(async (image: UploadImage) => {
     try {
       const uploaded = await uploadApi.upload({ file: image.file, topic: 'review' });
@@ -126,12 +143,14 @@ export default function AddReviewPage() {
     }
   }, []);
 
+  /** 切换快捷标签选中状态 */
   const toggleTag = (tag: string) => {
     setSelectedTags((prev) =>
       prev.includes(tag) ? prev.filter((item) => item !== tag) : [...prev, tag],
     );
   };
 
+  /** 处理图片选择：创建 blob 预览并触发上传（限制最多9张） */
   const handleImageUpload = (event: ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
     if (!files?.length) return;
@@ -148,6 +167,7 @@ export default function AddReviewPage() {
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
+  /** 删除已添加的图片并释放 blob URL */
   const removeImage = (id: string) => {
     setImages((prev) => {
       const target = prev.find((item) => item.id === id);
@@ -156,6 +176,7 @@ export default function AddReviewPage() {
     });
   };
 
+  /** 重试上传失败的图片 */
   const retryUpload = (id: string) => {
     const target = images.find((item) => item.id === id);
     if (!target) return;
@@ -167,6 +188,7 @@ export default function AddReviewPage() {
     void uploadSingleImage({ ...target, errorMessage: undefined, status: 'uploading' });
   };
 
+  /** 提交评价：验证必填项 → 收集上传成功的图片 → 拼接内容 → 调用 API */
   const handleSubmit = async () => {
     if (rating === 0) {
       showToast({ message: '请先选择星级评分', type: 'warning' });

@@ -1,4 +1,9 @@
-import React, { useEffect, useRef, useState } from 'react';
+/**
+ * @file ProductQA/index.tsx - 商品问答页面
+ * @description 展示商品相关的问答列表，支持提问和查看回答。
+ */
+
+import React, { useEffect, useRef, useState } from 'react'; // React 核心 Hook
 import { ChevronLeft, MessageCircleQuestion, RefreshCcw, WifiOff } from 'lucide-react';
 import { useAppNavigate } from '../../lib/navigation';
 import { PageHeader } from '../../components/layout/PageHeader';

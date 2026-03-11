@@ -1,4 +1,9 @@
-﻿import React, { useState } from 'react';
+/**
+ * @file GrowthRights/index.tsx - 成长权益页面
+ * @description 展示用户成长权益信息，包括成长天数、待激活金、周期进度、成长阶段、配资规则、成长记录。
+ */
+
+import React, { useState } from 'react'; // React 核心 Hook
 import { TrendingUp, Calendar, Award, Activity, CheckCircle2, XCircle, Gift } from 'lucide-react';
 import { Card } from '../../components/ui/Card';
 import { Skeleton } from '../../components/ui/Skeleton';

@@ -1,4 +1,9 @@
-import React from 'react';
+/**
+ * @file DesignSystem/index.tsx - UI 设计系统展示页面
+ * @description 展示项目中使用的 UI 设计系统，包括颜色、排版、组件、标签、弹窗、底部导航、状态等。
+ */
+
+import React from 'react'; // React 核心
 import { FileX, RefreshCcw, WifiOff } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
@@ -7,6 +12,10 @@ import { Skeleton } from '../../components/ui/Skeleton';
 import { Tag } from '../../components/ui/Tag';
 import { BottomTab } from '../../components/layout/BottomTab';
 
+/**
+ * DesignSystemPage - UI 设计系统展示页
+ * 展示项目中所有基础 UI 组件和设计规范
+ */
 export const DesignSystemPage = () => {
   return (
     <div className="flex-1 overflow-y-auto no-scrollbar bg-bg-base pb-20 z-10">

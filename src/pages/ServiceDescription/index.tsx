@@ -1,4 +1,9 @@
-import React, { useEffect, useState } from 'react';
+/**
+ * @file ServiceDescription/index.tsx - 服务说明页面
+ * @description 展示平台服务说明、使用须知等内容。
+ */
+
+import React, { useEffect, useState } from 'react'; // React 核心 Hook
 import { 
   ShieldCheck, RefreshCcw, Truck, Headset, 
   ChevronDown, ChevronUp

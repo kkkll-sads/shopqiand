@@ -1,4 +1,9 @@
-﻿import { useMemo, useRef, useState } from 'react';
+/**
+ * @file Announcement/index.tsx - 公告中心页面
+ * @description 展示系统公告列表（支持置顶、按时间排序），点击查看公告详情，支持下拉刷新。
+ */
+
+import { useMemo, useRef, useState } from 'react'; // React 核心 Hook
 import { announcementApi, type AnnouncementItem } from '../../api';
 import { getErrorMessage } from '../../api/core/errors';
 import { OfflineBanner } from '../../components/layout/OfflineBanner';
@@ -12,6 +17,10 @@ import { useRouteScrollRestoration } from '../../hooks/useRouteScrollRestoration
 import { useViewScrollSnapshot } from '../../hooks/useViewScrollSnapshot';
 import { useAppNavigate } from '../../lib/navigation';
 
+/**
+ * AnnouncementPage - 公告中心页面
+ * 功能：公告列表（置顶优先、时间倒序） → 点击查看详情 → 下拉刷新
+ */
 export const AnnouncementPage = () => {
   const { goBack } = useAppNavigate();
   const { isOffline } = useNetworkStatus();
@@ -27,6 +36,7 @@ export const AnnouncementPage = () => {
     cacheKey: 'announcement:list',
   });
 
+  /** 排序后的公告列表：置顶优先，同级别按时间倒序 */
   const sortedAnnouncements = useMemo(() => {
     return [...announcements].sort((left, right) => {
       if (left.isPinned !== right.isPinned) {
@@ -37,6 +47,7 @@ export const AnnouncementPage = () => {
     });
   }, [announcements]);
 
+  /** 重试加载 */
   const retry = () => {
     void reload().catch(() => undefined);
   };
@@ -54,6 +65,7 @@ export const AnnouncementPage = () => {
     containerRef: scrollContainerRef,
   });
 
+  /** 返回处理：详情视图返回列表，列表视图返回上一页 */
   const handleBack = () => {
     if (selectedAnnouncement) {
       setSelectedAnnouncement(null);
@@ -63,6 +75,7 @@ export const AnnouncementPage = () => {
     goBack();
   };
 
+  /** 渲染加载骨架屏 */
   const renderSkeleton = () => (
     <div className="space-y-3 p-3">
       {[1, 2, 3].map((item) => (
@@ -76,6 +89,7 @@ export const AnnouncementPage = () => {
     </div>
   );
 
+  /** 渲染公告列表（加载中 / 错误 / 空状态 / 正常列表） */
   const renderList = () => {
     if (loading) {
       return renderSkeleton();
@@ -118,6 +132,7 @@ export const AnnouncementPage = () => {
     );
   };
 
+  /** 渲染公告详情视图 */
   const renderDetail = () => {
     if (!selectedAnnouncement) {
       return null;

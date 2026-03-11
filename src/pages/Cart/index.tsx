@@ -1,4 +1,9 @@
-﻿import React, { useEffect, useMemo, useRef, useState } from 'react';
+/**
+ * @file Cart/index.tsx - 购物车页面
+ * @description 展示购物车商品列表，支持全选/单选、修改数量、删除商品、去结算、编辑模式。
+ */
+
+import React, { useEffect, useMemo, useRef, useState } from 'react'; // React 核心 Hook
 import { ChevronLeft, CheckCircle2, Circle, Minus, Plus, Heart, Store, ChevronRight, WifiOff, RefreshCcw, ShoppingCart, ChevronDown } from 'lucide-react';
 import { getErrorMessage } from '../../api/core/errors';
 import { Skeleton } from '../../components/ui/Skeleton';
@@ -8,6 +13,7 @@ import { useRouteScrollRestoration } from '../../hooks/useRouteScrollRestoration
 import { useRequest } from '../../hooks/useRequest';
 import { shopCartApi, type ShopCartListItem } from '../../api/modules/shopCart';
 
+/** 购物车商品项 */
 interface CartItem {
   id: string;
   title: string;
@@ -19,6 +25,7 @@ interface CartItem {
   isScorePrice: boolean;
 }
 
+/** 购物车店铺分组 */
 interface CartStore {
   storeId: string;
   storeName: string;
@@ -27,6 +34,7 @@ interface CartStore {
   items: CartItem[];
 }
 
+/** 将 API 返回的购物车列表映射为店铺分组结构 */
 function mapCartListToStores(list: ShopCartListItem[]): CartStore[] {
   if (!list || list.length === 0) return [];
   const items: CartItem[] = list.map((row) => {
@@ -56,6 +64,10 @@ function mapCartListToStores(list: ShopCartListItem[]): CartStore[] {
   ];
 }
 
+/**
+ * CartPage - 购物车页面
+ * 功能：商品列表展示 → 全选/单选 → 修改数量 → 编辑模式删除 → 去结算
+ */
 export const CartPage = () => {
   const { goTo, goBack, navigate } = useAppNavigate();
   const { showToast } = useFeedback();

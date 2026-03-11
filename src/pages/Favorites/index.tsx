@@ -1,4 +1,9 @@
-﻿import React, { useRef, useState, useEffect } from 'react';
+/**
+ * @file Favorites/index.tsx - 我的收藏页面
+ * @description 展示用户收藏的商品列表，支持编辑模式下全选/单选取消收藏，加入购物车。
+ */
+
+import React, { useRef, useState, useEffect } from 'react'; // React 核心 Hook
 import { ChevronLeft, WifiOff, AlertCircle, ShoppingCart, CheckCircle2, Circle, Trash2, HeartOff, RefreshCcw } from 'lucide-react';
 import { useAppNavigate } from '../../lib/navigation';
 import { PageHeader } from '../../components/layout/PageHeader';
@@ -8,6 +13,10 @@ import { EmptyState } from '../../components/ui/EmptyState';
 import { PullToRefreshContainer } from '../../components/ui/PullToRefreshContainer';
 import { useRouteScrollRestoration } from '../../hooks/useRouteScrollRestoration';
 
+/**
+ * FavoritesPage - 我的收藏页面
+ * 功能：收藏列表 → 编辑模式全选/单选 → 取消收藏 → 加入购物车
+ */
 export const FavoritesPage = () => {
   const { goTo, goBack } = useAppNavigate();
   const { showToast } = useFeedback();

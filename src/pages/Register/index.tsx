@@ -1,4 +1,9 @@
-import { useState } from 'react';
+/**
+ * @file Register/index.tsx - æ³¨å†Œé¡µé¢
+ * @description ç”¨æˆ·æ³¨å†Œé¡µé¢ï¼Œæ”¯æŒæ‰‹æœºå·ã€éªŒè¯ç ã€å¯†ç ã€é‚€è¯·ç æ³¨å†Œã€‚
+ */
+
+import { useState } from 'react'; // React æ ¸å¿ƒ Hook
 import { getErrorMessage } from '../../api/core/errors';
 import { authApi } from '../../api/modules/auth';
 import {
@@ -48,27 +53,27 @@ export const RegisterPage = () => {
     const normalizedInviteCode = inviteCode.trim();
 
     if (!MOBILE_PATTERN.test(normalizedMobile)) {
-      showToast({ message: 'ÇëÊäÈëÕýÈ·µÄÊÖ»úºÅ', type: 'warning' });
+      showToast({ message: 'è¯·è¾“å…¥æ­£ç¡®çš„æ‰‹æœºå·', type: 'warning' });
       return;
     }
 
     if (!PASSWORD_PATTERN.test(normalizedPassword)) {
-      showToast({ message: 'µÇÂ¼ÃÜÂëÐèÎª 6-32 Î»×ÖÄ¸»òÊý×Ö', type: 'warning' });
+      showToast({ message: 'ç™»å½•å¯†ç éœ€ä¸º 6-32 ä½å­—æ¯æˆ–æ•°å­—', type: 'warning' });
       return;
     }
 
     if (!PASSWORD_PATTERN.test(normalizedPayPassword)) {
-      showToast({ message: 'Ö§¸¶ÃÜÂëÐèÎª 6-32 Î»×ÖÄ¸»òÊý×Ö', type: 'warning' });
+      showToast({ message: 'æ”¯ä»˜å¯†ç éœ€ä¸º 6-32 ä½å­—æ¯æˆ–æ•°å­—', type: 'warning' });
       return;
     }
 
     if (!normalizedCode) {
-      showToast({ message: 'ÇëÊäÈë¶ÌÐÅÑéÖ¤Âë', type: 'warning' });
+      showToast({ message: 'è¯·è¾“å…¥çŸ­ä¿¡éªŒè¯ç ', type: 'warning' });
       return;
     }
 
     if (!agree) {
-      showToast({ message: 'ÇëÏÈ¹´Ñ¡ÓÃ»§Ð­ÒéÓëÒþË½Õþ²ß', type: 'warning' });
+      showToast({ message: 'è¯·å…ˆå‹¾é€‰ç”¨æˆ·åè®®ä¸Žéšç§æ”¿ç­–', type: 'warning' });
       return;
     }
 
@@ -92,7 +97,7 @@ export const RegisterPage = () => {
         persistent: true,
       });
 
-      showToast({ message: '×¢²á³É¹¦', type: 'success' });
+      showToast({ message: 'æ³¨å†ŒæˆåŠŸ', type: 'success' });
       navigate(resolveAuthRedirectPath(session.routePath), { replace: true });
     } catch (error) {
       showToast({ message: getErrorMessage(error), type: 'error' });
@@ -109,10 +114,10 @@ export const RegisterPage = () => {
         <AuthFormSection
           className="mt-16"
           title="Welcome!"
-          description="»¶Ó­×¢²áÊ÷½»Ëù"
+          description="æ¬¢è¿Žæ³¨å†Œæ ‘äº¤æ‰€"
           actions={(
             <Button loading={submitting} onClick={handleSubmit}>
-              ×¢²á
+              æ³¨å†Œ
             </Button>
           )}
           footer={(
@@ -124,30 +129,30 @@ export const RegisterPage = () => {
                 onOpenPrivacy={() => navigate('/privacy_policy')}
                 mode="register"
               />
-              <AuthFooterLink text="ÒÑÓÐÕË»§£¿" accentText="È¥µÇÂ¼" onClick={() => goTo('login')} />
+              <AuthFooterLink text="å·²æœ‰è´¦æˆ·ï¼Ÿ" accentText="åŽ»ç™»å½•" onClick={() => goTo('login')} />
             </>
           )}
         >
           <Input
-            placeholder="ÇëÊäÈëÑûÇëÂë"
+            placeholder="è¯·è¾“å…¥é‚€è¯·ç "
             value={inviteCode}
             onChange={(event) => setInviteCode(event.target.value)}
           />
           <Input
-            placeholder="ÇëÊäÈëÊÖ»úºÅ"
+            placeholder="è¯·è¾“å…¥æ‰‹æœºå·"
             type="tel"
             value={mobile}
             onChange={(event) => setMobile(event.target.value)}
           />
           <Input
-            placeholder="ÇëÉèÖÃµÇÂ¼ÃÜÂë"
+            placeholder="è¯·è®¾ç½®ç™»å½•å¯†ç "
             type={showLoginPassword ? 'text' : 'password'}
             value={loginPassword}
             onChange={(event) => setLoginPassword(event.target.value)}
             rightIcon={<AuthPasswordToggle visible={showLoginPassword} onToggle={() => setShowLoginPassword((current) => !current)} />}
           />
           <Input
-            placeholder="ÇëÉèÖÃÖ§¸¶ÃÜÂë"
+            placeholder="è¯·è®¾ç½®æ”¯ä»˜å¯†ç "
             type={showPayPassword ? 'text' : 'password'}
             value={payPassword}
             onChange={(event) => setPayPassword(event.target.value)}

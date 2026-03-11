@@ -1,4 +1,9 @@
-import { useCallback, useRef, useState } from 'react';
+/**
+ * @file Order/index.tsx - 订单列表页面
+ * @description 展示商城订单和藏品交易订单，支持状态切换、搜索、下拉刷新。
+ */
+
+import { useCallback, useRef, useState } from 'react'; // React 核心 Hook
 import { shopOrderApi, type ShopOrderListItem } from '../../api';
 import { collectionTradeApi, type CollectionBuyOrder, type CollectionSellOrder } from '../../api';
 import { getErrorMessage } from '../../api/core/errors';

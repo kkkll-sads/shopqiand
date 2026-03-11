@@ -1,4 +1,9 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+/**
+ * @file ConsignmentCoupon/index.tsx - 寄售券页面
+ * @description 展示用户的寄售券列表，支持可用/已使用/已过期 Tab 切换，无限滚动加载。
+ */
+
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'; // React 核心 Hook
 import { CalendarClock, CheckCircle2, Clock3, Ticket } from 'lucide-react';
 import { userApi, type ConsignmentCoupon } from '../../api';
 import { getErrorMessage } from '../../api/core/errors';
@@ -19,8 +24,10 @@ import { useAppNavigate } from '../../lib/navigation';
 const PAGE_SIZE = 100;
 const PREFETCH_PAGE_LIMIT = 4;
 
+/** 寄售券 Tab 类型 */
 type CouponTabKey = 'available' | 'used' | 'expired';
 
+/** 单个 Tab 的加载状态 */
 interface TabState {
   availableCount: number;
   error: string | null;
@@ -94,6 +101,7 @@ const STATUS_META: Record<
   },
 };
 
+/** 初始化 Tab 状态映射 */
 function createTabStateMap(): Record<CouponTabKey, TabState> {
   return {
     available: { ...EMPTY_TAB_STATE },
@@ -102,10 +110,12 @@ function createTabStateMap(): Record<CouponTabKey, TabState> {
   };
 }
 
+/** 根据 Tab 类型返回 API 请求的 status 参数 */
 function getRequestStatus(tab: CouponTabKey): 0 | 1 {
   return tab === 'used' ? 0 : 1;
 }
 
+/** 根据 Tab 类型筛选寄售券列表 */
 function filterCouponsForTab(tab: CouponTabKey, items: ConsignmentCoupon[]) {
   if (tab === 'used') {
     return items;
@@ -114,6 +124,7 @@ function filterCouponsForTab(tab: CouponTabKey, items: ConsignmentCoupon[]) {
   return items.filter((item) => item.status === tab);
 }
 
+/** 合并去重寄售券列表 */
 function mergeUniqueCoupons(current: ConsignmentCoupon[], incoming: ConsignmentCoupon[]) {
   const merged = new Map<number, ConsignmentCoupon>();
 
@@ -128,6 +139,7 @@ function mergeUniqueCoupons(current: ConsignmentCoupon[], incoming: ConsignmentC
   return Array.from(merged.values());
 }
 
+/** 获取空状态提示文本 */
 function getEmptyMessage(tab: CouponTabKey) {
   switch (tab) {
     case 'available':
@@ -139,6 +151,7 @@ function getEmptyMessage(tab: CouponTabKey) {
   }
 }
 
+/** 获取最近到期的寄售券时间文本 */
 function getNearestExpiryText(coupons: ConsignmentCoupon[]) {
   const expiringCoupon = [...coupons]
     .filter((coupon) => typeof coupon.expireTime === 'number' && coupon.expireTime > 0)
@@ -147,6 +160,10 @@ function getNearestExpiryText(coupons: ConsignmentCoupon[]) {
   return expiringCoupon?.expireTimeText;
 }
 
+/**
+ * ConsignmentCouponPage - 寄售券页面
+ * 功能：Tab 切换 → 寄售券列表 → 无限滚动加载 → 下拉刷新
+ */
 export const ConsignmentCouponPage = () => {
   const { goBack, goTo } = useAppNavigate();
   const { isAuthenticated, session } = useAuthSession();

@@ -1,4 +1,9 @@
-﻿import { useState } from 'react';
+/**
+ * @file ChangePassword/index.tsx - 修改登录密码页面
+ * @description 用户通过输入旧密码和新密码来修改登录密码，修改成功后自动清除登录态并跳转登录页。
+ */
+
+import { useState } from 'react'; // React 核心 Hook
 import { ShieldAlert } from 'lucide-react';
 import { accountApi } from '../../api';
 import { getErrorMessage } from '../../api/core/errors';
@@ -11,6 +16,10 @@ import { Input } from '../../components/ui/Input';
 import { clearAuthSession, PASSWORD_PATTERN } from '../../lib/auth';
 import { useAppNavigate } from '../../lib/navigation';
 
+/**
+ * ChangePasswordPage - 修改登录密码页面
+ * 功能：输入旧密码 → 输入新密码 → 确认新密码 → 提交修改 → 清除登录态并跳转登录页
+ */
 export const ChangePasswordPage = () => {
   const { goBackOr, goTo } = useAppNavigate();
   const { showToast } = useFeedback();
@@ -22,6 +31,7 @@ export const ChangePasswordPage = () => {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
+  /** 提交修改密码：验证表单 → 调用 API → 清除登录态 → 跳转登录页 */
   const handleSubmit = async () => {
     const currentPassword = oldPassword.trim();
     const nextPassword = newPassword.trim();

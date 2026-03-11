@@ -1,4 +1,9 @@
-﻿import { useCallback, useEffect, useRef, useState } from 'react';
+/**
+ * @file HelpCenter/index.tsx - 客服与帮助中心页面
+ * @description 提供在线客服、自助服务、常见问题分类展示，支持下拉刷新。
+ */
+
+import { useCallback, useEffect, useRef, useState } from 'react'; // React 核心 Hook
 import {
   ChevronDown,
   ChevronUp,
@@ -30,6 +35,7 @@ import { openCustomerServiceLink } from '../../lib/customerService';
 const EMPTY_CATEGORIES = { list: [] as HelpCategory[] };
 const EMPTY_QUESTIONS = { list: [] as HelpQuestion[] };
 
+/** 帮助中心骨架屏组件 */
 function HelpCenterSkeleton() {
   return (
     <div className="space-y-4 p-4">
@@ -73,6 +79,10 @@ function HelpCenterSkeleton() {
   );
 }
 
+/**
+ * HelpCenterPage - 客服与帮助中心
+ * 功能：在线客服 → 自助服务 → 常见问题分类浏览 → FAQ 展开/收起
+ */
 export const HelpCenterPage = () => {
   const { goBackOr, goTo } = useAppNavigate();
   const { isOffline, refreshStatus } = useNetworkStatus();

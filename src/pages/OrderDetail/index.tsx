@@ -1,4 +1,9 @@
-﻿import React, { useState, useEffect, useCallback } from 'react';
+/**
+ * @file OrderDetail/index.tsx - 订单详情页面
+ * @description 展示单个订单的详细信息，包括商品、物流、支付等。
+ */
+
+import React, { useState, useEffect, useCallback } from 'react'; // React 核心 Hook
 import { useParams } from 'react-router-dom';
 import { ChevronLeft, WifiOff, MapPin, Truck, ChevronRight, Copy, Package, Clock, CreditCard, CheckCircle2, XCircle, ShoppingBag, RotateCcw } from 'lucide-react';
 import { copyToClipboard } from '../../lib/clipboard';

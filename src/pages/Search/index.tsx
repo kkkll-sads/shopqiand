@@ -1,4 +1,9 @@
-﻿import { useEffect, useMemo, useRef, useState } from 'react';
+/**
+ * @file Search/index.tsx - 搜索页面
+ * @description 商品搜索页面，支持关键词搜索、搜索历史、热门搜索推荐。
+ */
+
+import { useEffect, useMemo, useRef, useState } from 'react'; // React 核心 Hook
 import { ChevronLeft, Clock, Flame, Search as SearchIcon, Trash2, XCircle } from 'lucide-react';
 import { shopProductApi } from '../../api';
 import { OfflineBanner } from '../../components/layout/OfflineBanner';

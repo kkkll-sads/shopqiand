@@ -1,4 +1,9 @@
-﻿import { useCallback, useEffect, useRef, useState, type ChangeEvent } from 'react';
+/**
+ * @file Rights/index.tsx - 确权中心页面
+ * @description 资产确权中心，展示寄售、藏品管理、成长权益等功能。
+ */
+
+import { useCallback, useEffect, useRef, useState, type ChangeEvent } from 'react'; // React 核心 Hook
 import {
   AlertCircle,
   ChevronRight,

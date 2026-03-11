@@ -1,4 +1,9 @@
-﻿import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+/**
+ * @file SearchResult/index.tsx - 搜索结果页面
+ * @description 展示商品搜索结果列表，支持排序、筛选、无限滚动加载。
+ */
+
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'; // React 核心 Hook
 import {
   ChevronDown,
   ChevronLeft,

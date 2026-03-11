@@ -1,4 +1,9 @@
-﻿import React, { useCallback, useEffect, useRef, useState } from 'react';
+/**
+ * @file Home/index.tsx - 首页
+ * @description 应用主页面，包括轮播图、快捷入口、滚动公告、交易专区、订单状态、申购记录、弹出公告。
+ */
+
+import React, { useCallback, useEffect, useRef, useState } from 'react'; // React 核心 Hook
 import { useAppNavigate } from '../../lib/navigation';
 import { Search, Headset, Store, ShieldCheck, FileText, Volume2, Wallet, Package, Truck, WifiOff, RefreshCcw, ArrowRight, User } from 'lucide-react';
 import { Skeleton } from '../../components/ui/Skeleton';
@@ -17,6 +22,10 @@ import { openCustomerServiceLink } from '../../lib/customerService';
 
 
 
+/**
+ * HomePage - 应用首页
+ * 功能：轮播图 → 快捷入口 → 公告 → 交易专区 → 订单状态 → 申购记录
+ */
 export const HomePage = () => {
   const { goTo } = useAppNavigate();
   const { showToast } = useFeedback();

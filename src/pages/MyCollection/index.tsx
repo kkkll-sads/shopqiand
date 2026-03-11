@@ -1,4 +1,9 @@
-import { type FormEvent, useCallback, useEffect, useRef, useState } from 'react';
+/**
+ * @file MyCollection/index.tsx - 我的藏品页面
+ * @description 展示用户持有的数字藏品列表，支持搜索、筛选、无限滚动加载。
+ */
+
+import { type FormEvent, useCallback, useEffect, useRef, useState } from 'react'; // React 核心 Hook
 import { Box, RefreshCcw, Search, X } from 'lucide-react';
 import {
   collectionTradeApi,

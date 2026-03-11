@@ -1,4 +1,9 @@
-import { useCallback, useMemo } from 'react';
+/**
+ * @file ReservationDetail/index.tsx - 申购详情页面
+ * @description 展示单个申购记录的详细信息，包括状态、金额、支付信息等。
+ */
+
+import { useCallback, useMemo } from 'react'; // React 核心 Hook
 import { useParams } from 'react-router-dom';
 import { AlertCircle, CreditCard, Box, MapPin, Copy } from 'lucide-react';
 import { reservationApi } from '../../api';

@@ -1,4 +1,9 @@
-import { useEffect, useState } from 'react';
+/**
+ * @file ResetPayPasswordBySms/index.tsx - çŸ­ä¿¡é‡ç½®æ”¯ä»˜å¯†ç é¡µé¢
+ * @description é€šè¿‡æ‰‹æœºå·å’ŒçŸ­ä¿¡éªŒè¯ç é‡ç½®æ”¯ä»˜å¯†ç ã€‚
+ */
+
+import { useEffect, useState } from 'react'; // React æ ¸å¿ƒ Hook
 import { accountApi } from '../../api';
 import { getErrorMessage } from '../../api/core/errors';
 import { userApi } from '../../api/modules/user';
@@ -48,22 +53,22 @@ export const ResetPayPasswordBySmsPage = () => {
     const normalizedConfirmPassword = confirmPassword.trim();
 
     if (!MOBILE_PATTERN.test(normalizedMobile)) {
-      showToast({ message: 'ÇëÊäÈëÕıÈ·µÄÊÖ»úºÅ', type: 'warning' });
+      showToast({ message: 'è¯·è¾“å…¥æ­£ç¡®çš„æ‰‹æœºå·', type: 'warning' });
       return;
     }
 
     if (!normalizedCode) {
-      showToast({ message: 'ÇëÊäÈë¶ÌĞÅÑéÖ¤Âë', type: 'warning' });
+      showToast({ message: 'è¯·è¾“å…¥çŸ­ä¿¡éªŒè¯ç ', type: 'warning' });
       return;
     }
 
     if (!PASSWORD_PATTERN.test(normalizedPassword)) {
-      showToast({ message: 'ĞÂÖ§¸¶ÃÜÂëĞèÎª 6-32 Î»×ÖÄ¸»òÊı×Ö', type: 'warning' });
+      showToast({ message: 'æ–°æ”¯ä»˜å¯†ç éœ€ä¸º 6-32 ä½å­—æ¯æˆ–æ•°å­—', type: 'warning' });
       return;
     }
 
     if (normalizedPassword !== normalizedConfirmPassword) {
-      showToast({ message: 'Á½´ÎÊäÈëµÄĞÂÖ§¸¶ÃÜÂë²»Ò»ÖÂ', type: 'warning' });
+      showToast({ message: 'ä¸¤æ¬¡è¾“å…¥çš„æ–°æ”¯ä»˜å¯†ç ä¸ä¸€è‡´', type: 'warning' });
       return;
     }
 
@@ -74,7 +79,7 @@ export const ResetPayPasswordBySmsPage = () => {
         captcha: normalizedCode,
         newPayPassword: normalizedPassword,
       });
-      showToast({ message: 'Ö§¸¶ÃÜÂëÒÑÖØÖÃ', type: 'success' });
+      showToast({ message: 'æ”¯ä»˜å¯†ç å·²é‡ç½®', type: 'success' });
       goBackOr('settings');
     } catch (error) {
       showToast({ message: getErrorMessage(error), type: 'error' });
@@ -85,17 +90,17 @@ export const ResetPayPasswordBySmsPage = () => {
 
   return (
     <div className="flex h-full flex-1 flex-col overflow-hidden bg-bg-base">
-      <PageHeader title="ÑéÖ¤ÂëÖØÖÃÖ§¸¶ÃÜÂë" onBack={() => goBackOr('settings')} />
+      <PageHeader title="éªŒè¯ç é‡ç½®æ”¯ä»˜å¯†ç " onBack={() => goBackOr('settings')} />
       <div className="flex-1 overflow-y-auto p-4 pb-8">
         <div className="rounded-[24px] bg-bg-card px-4 pb-4 shadow-soft">
           <AuthFormSection
             actions={(
               <Button loading={submitting} onClick={handleSubmit}>
-                ÖØÖÃÖ§¸¶ÃÜÂë
+                é‡ç½®æ”¯ä»˜å¯†ç 
               </Button>
             )}
           >
-            <Input placeholder="ÇëÊäÈëÊÖ»úºÅ" type="tel" value={mobile} onChange={(event) => setMobile(event.target.value)} />
+            <Input placeholder="è¯·è¾“å…¥æ‰‹æœºå·" type="tel" value={mobile} onChange={(event) => setMobile(event.target.value)} />
             <AuthSmsField
               value={verifyCode}
               onChange={(event) => setVerifyCode(event.target.value)}
@@ -106,14 +111,14 @@ export const ResetPayPasswordBySmsPage = () => {
               onSend={() => void sendCode(mobile)}
             />
             <Input
-              placeholder="ÇëÊäÈëĞÂÖ§¸¶ÃÜÂë"
+              placeholder="è¯·è¾“å…¥æ–°æ”¯ä»˜å¯†ç "
               type={showPassword ? 'text' : 'password'}
               value={password}
               onChange={(event) => setPassword(event.target.value)}
               rightIcon={<AuthPasswordToggle visible={showPassword} onToggle={() => setShowPassword((value) => !value)} />}
             />
             <Input
-              placeholder="ÇëÔÙ´ÎÊäÈëĞÂÖ§¸¶ÃÜÂë"
+              placeholder="è¯·å†æ¬¡è¾“å…¥æ–°æ”¯ä»˜å¯†ç "
               type={showConfirmPassword ? 'text' : 'password'}
               value={confirmPassword}
               onChange={(event) => setConfirmPassword(event.target.value)}

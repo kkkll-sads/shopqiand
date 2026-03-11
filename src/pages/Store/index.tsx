@@ -1,4 +1,9 @@
-﻿import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+/**
+ * @file Store/index.tsx - 商城页面
+ * @description 商城首页，展示商品列表、分类筛选、搜索、无限滚动加载。
+ */
+
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'; // React 核心 Hook
 import {
   Award,
   CheckCircle2,

@@ -1,4 +1,9 @@
-import React from 'react';
+/**
+ * @file NotFound/index.tsx - 404 页面未找到
+ * @description 当用户访问不存在的路由时展示的 404 错误页面。
+ */
+
+import React from 'react'; // React 核心
 import { Home } from 'lucide-react';
 import { PageHeader } from '../../components/layout/PageHeader';
 import { useAppNavigate } from '../../lib/navigation';

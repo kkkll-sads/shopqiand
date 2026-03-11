@@ -1,4 +1,10 @@
-import { type FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+/**
+ * @file Billing/index.tsx - 资产明细页面
+ * @description 账户资金流水记录，支持按账户类型/收支方向/关键词筛选，
+ *              分月分组展示，无限滚动加载，点击查看流水详情。
+ */
+
+import { type FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react'; // React 核心 Hook 和类型
 import {
   ChevronRight,
   Copy,
@@ -35,10 +41,13 @@ import { useViewScrollSnapshot } from '../../hooks/useViewScrollSnapshot';
 import { copyToClipboard } from '../../lib/clipboard';
 import { useAppNavigate } from '../../lib/navigation';
 
+/** 每页加载条数 */
 const PAGE_SIZE = 20;
 
+/** 收支方向筛选类型 */
 type FlowFilter = 'all' | AccountLogFlowDirection;
 
+/** 账户类型筛选选项（全部/专项金/可提现/确权金/待激活金/消费金/绿色算力/静态收益） */
 const ACCOUNT_TYPE_OPTIONS: Array<{ key: AccountLogType; label: string }> = [
   { key: 'all', label: '全部' },
   { key: 'balance_available', label: '专项金' },
@@ -50,12 +59,14 @@ const ACCOUNT_TYPE_OPTIONS: Array<{ key: AccountLogType; label: string }> = [
   { key: 'static_income', label: '静态收益' },
 ];
 
+/** 收支方向筛选选项（全部/收入/支出） */
 const FLOW_OPTIONS: Array<{ key: FlowFilter; label: string }> = [
   { key: 'all', label: '全部' },
   { key: 'in', label: '收入' },
   { key: 'out', label: '支出' },
 ];
 
+/** 账户类型名称映射 */
 const ACCOUNT_TYPE_LABELS: Record<string, string> = {
   balance_available: '专项金',
   green_power: '绿色算力',
@@ -66,6 +77,7 @@ const ACCOUNT_TYPE_LABELS: Record<string, string> = {
   withdrawable_money: '可提现收益',
 };
 
+/** 业务类型名称映射（流水类型的中文显示名） */
 const BIZ_TYPE_LABELS: Record<string, string> = {
   balance_transfer: '余额划转',
   blind_box_diff_refund: '差价退款',
@@ -108,12 +120,14 @@ const BIZ_TYPE_LABELS: Record<string, string> = {
   withdraw_reject: '提现驳回退款',
 };
 
+/** 明细拆分字段名称映射 */
 const BREAKDOWN_LABELS: Record<string, string> = {
   consume_amount: '消费金分配',
   income_amount: '收益分配',
   principal_amount: '本金分配',
 };
 
+/** 格式化金额数值 */
 function formatMoney(value: number | string | undefined, fractionDigits = 2) {
   const nextValue = typeof value === 'string' ? Number(value) : value;
   if (typeof nextValue !== 'number' || !Number.isFinite(nextValue)) {
@@ -127,11 +141,13 @@ function formatMoney(value: number | string | undefined, fractionDigits = 2) {
   });
 }
 
+/** 格式化带符号的金额（+/-） */
 function formatSignedMoney(value: number) {
   const prefix = value > 0 ? '+' : '';
   return `${prefix}${formatMoney(value)}`;
 }
 
+/** 格式化账户类型标签 */
 function formatAccountTypeLabel(type: string | undefined) {
   if (!type) {
     return '账户资金';
@@ -140,6 +156,7 @@ function formatAccountTypeLabel(type: string | undefined) {
   return ACCOUNT_TYPE_LABELS[type] || type;
 }
 
+/** 格式化业务类型标签 */
 function formatBizTypeLabel(type: string | undefined) {
   if (!type) {
     return '资产明细';
@@ -148,6 +165,7 @@ function formatBizTypeLabel(type: string | undefined) {
   return BIZ_TYPE_LABELS[type] || type;
 }
 
+/** 根据金额正负返回对应的样式类名 */
 function getAmountClassName(amount: number) {
   if (amount > 0) {
     return 'text-green-600';
@@ -160,6 +178,7 @@ function getAmountClassName(amount: number) {
   return 'text-text-sub';
 }
 
+/** 从流水记录提取月份标签（用于分组显示） */
 function getMonthLabel(item: AccountLogItem) {
   const timestamp = item.createTime;
   if (typeof timestamp === 'number' && Number.isFinite(timestamp) && timestamp > 0) {
@@ -178,6 +197,7 @@ function getMonthLabel(item: AccountLogItem) {
   return '最近';
 }
 
+/** 构建查询参数 */
 function buildQueryParams(
   accountType: AccountLogType,
   flowFilter: FlowFilter,
@@ -196,6 +216,7 @@ function buildQueryParams(
   };
 }
 
+/** 构建明细拆分条目（用于详情页展示） */
 function buildBreakdownEntries(breakdown: Record<string, unknown> | undefined) {
   if (!breakdown) {
     return [];
@@ -271,6 +292,7 @@ function buildBreakdownEntries(breakdown: Record<string, unknown> | undefined) {
   return entries;
 }
 
+/** 判断是否还有更多数据 */
 function getNextHasMore(response: AccountLogList) {
   if (response.list.length === 0) {
     return false;
@@ -279,6 +301,10 @@ function getNextHasMore(response: AccountLogList) {
   return response.currentPage * response.perPage < response.total;
 }
 
+/**
+ * BillingPage - 资产明细页面
+ * 功能：账户类型/收支方向/关键词筛选 → 分月分组流水列表 → 无限滚动 → 点击查看详情
+ */
 export function BillingPage() {
   const { goBack, goTo } = useAppNavigate();
   const { isAuthenticated } = useAuthSession();

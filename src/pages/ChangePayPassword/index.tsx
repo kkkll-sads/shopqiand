@@ -1,4 +1,9 @@
-﻿import { useState } from 'react';
+/**
+ * @file ChangePayPassword/index.tsx - 修改支付密码页面
+ * @description 用户通过输入旧支付密码和新支付密码来修改支付密码，支持跳转重置支付密码页。
+ */
+
+import { useState } from 'react'; // React 核心 Hook
 import { KeyRound, ShieldAlert } from 'lucide-react';
 import { getErrorMessage } from '../../api/core/errors';
 import { userApi } from '../../api/modules/user';
@@ -15,6 +20,10 @@ import { Input } from '../../components/ui/Input';
 import { PASSWORD_PATTERN } from '../../lib/auth';
 import { useAppNavigate } from '../../lib/navigation';
 
+/**
+ * ChangePayPasswordPage - 修改支付密码页面
+ * 功能：输入旧支付密码 → 输入新密码 → 确认新密码 → 提交修改
+ */
 export const ChangePayPasswordPage = () => {
   const { goBackOr, navigate } = useAppNavigate();
   const { showToast } = useFeedback();
@@ -26,6 +35,7 @@ export const ChangePayPasswordPage = () => {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
+  /** 提交修改支付密码：验证表单 → 调用 API */
   const handleSubmit = async () => {
     const currentPassword = oldPassword.trim();
     const nextPassword = newPassword.trim();

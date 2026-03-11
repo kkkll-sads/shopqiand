@@ -1,4 +1,9 @@
-import React, { useCallback, useRef, useState } from 'react';
+/**
+ * @file Address/index.tsx - 地址管理页面
+ * @description 收货地址的增删改查，支持地址列表浏览、新增/编辑地址、设为默认、删除地址、地区选择器。
+ */
+
+import React, { useCallback, useRef, useState } from 'react'; // React 核心 Hook
 import { ChevronLeft, Edit, Trash2, Check, ChevronRight } from 'lucide-react';
 import { addressApi, type AddressItem } from '../../api/modules/address';
 import { getErrorMessage } from '../../api/core/errors';
@@ -9,14 +14,16 @@ import { EmptyState } from '../../components/ui/EmptyState';
 import { useRouteScrollRestoration } from '../../hooks/useRouteScrollRestoration';
 import { RegionPickerSheet } from '../../components/biz/RegionPickerSheet';
 
+/** 地址表单数据结构 */
 interface AddressForm {
-  name: string;
-  phone: string;
-  region: string;
-  detail: string;
-  isDefault: boolean;
+  name: string; // 收货人姓名
+  phone: string; // 手机号码
+  region: string; // 所在地区（省/市/区）
+  detail: string; // 详细地址
+  isDefault: boolean; // 是否设为默认地址
 }
 
+/** 空表单初始值 */
 const emptyForm: AddressForm = {
   name: '',
   phone: '',
@@ -25,6 +32,10 @@ const emptyForm: AddressForm = {
   isDefault: false,
 };
 
+/**
+ * AddressPage - 地址管理页面
+ * 功能：地址列表浏览、新增/编辑地址、设置默认、删除地址、地区选择器
+ */
 export const AddressPage = () => {
   const { goBack } = useAppNavigate();
   const { showToast } = useFeedback();
@@ -43,6 +54,7 @@ export const AddressPage = () => {
   const listScrollContainerRef = useRef<HTMLDivElement>(null);
   const listScrollTopRef = useRef(0);
 
+  /** 加载地址列表数据 */
   const fetchData = useCallback(async () => {
     setLoading(true);
     setError(false);
@@ -71,6 +83,7 @@ export const AddressPage = () => {
     restoreWhen: view === 'list' && !loading && !error,
   });
 
+  /** 返回处理：编辑视图返回列表，列表视图返回上一页 */
   const handleBack = () => {
     if (view === 'edit') {
       setView('list');
@@ -84,6 +97,7 @@ export const AddressPage = () => {
     goBack();
   };
 
+  /** 点击编辑地址：保存滚动位置，填充表单数据，切换到编辑视图 */
   const handleEdit = (addr: AddressItem) => {
     listScrollTopRef.current = listScrollContainerRef.current?.scrollTop ?? 0;
     setEditingAddress(addr);
@@ -98,6 +112,7 @@ export const AddressPage = () => {
     setView('edit');
   };
 
+  /** 点击新增地址：清空表单，切换到编辑视图 */
   const handleAdd = () => {
     listScrollTopRef.current = listScrollContainerRef.current?.scrollTop ?? 0;
     setEditingAddress(null);
@@ -106,6 +121,7 @@ export const AddressPage = () => {
     setView('edit');
   };
 
+  /** 表单验证：检查姓名、手机号格式、地区、详细地址 */
   const validateForm = (): boolean => {
     const errors: Record<string, string> = {};
     if (!formData.name.trim()) errors.name = '收货人姓名不能为空';
@@ -120,6 +136,7 @@ export const AddressPage = () => {
     return Object.keys(errors).length === 0;
   };
 
+  /** 保存地址：验证通过后调用新增或编辑 API */
   const handleSave = async () => {
     if (!validateForm() || saving) return;
 
@@ -157,6 +174,7 @@ export const AddressPage = () => {
     }
   };
 
+  /** 删除地址：确认后调用删除 API */
   const handleDelete = async () => {
     if (!editingAddress || deleting) return;
     if (!window.confirm('确定删除该地址吗？')) return;
@@ -176,6 +194,7 @@ export const AddressPage = () => {
     }
   };
 
+  /** 设置默认地址 */
   const handleSetDefault = async (addr: AddressItem) => {
     if (addr.is_default) return;
     try {
@@ -187,6 +206,7 @@ export const AddressPage = () => {
     }
   };
 
+  /** 渲染页面顶部导航栏 */
   const renderHeader = (title: string) => (
     <div className="relative z-40 shrink-0 border-b border-border-light bg-white dark:bg-gray-900">
       <div className="flex h-12 items-center justify-between px-3 pt-safe">
@@ -201,6 +221,7 @@ export const AddressPage = () => {
     </div>
   );
 
+  /** 渲染加载骨架屏 */
   const renderSkeleton = () => (
     <div className="space-y-3 p-4">
       {[1, 2, 3].map((i) => (
@@ -218,6 +239,7 @@ export const AddressPage = () => {
     </div>
   );
 
+  /** 渲染地址列表视图 */
   const renderList = () => {
     if (loading) return renderSkeleton();
     if (error) return <ErrorState onRetry={fetchData} message="加载失败" />;
@@ -288,6 +310,7 @@ export const AddressPage = () => {
     );
   };
 
+  /** 表单是否有效（用于控制保存按钮状态） */
   const isFormValid =
     formData.name.trim() &&
     formData.phone.trim() &&
@@ -295,6 +318,7 @@ export const AddressPage = () => {
     formData.region.trim() &&
     formData.detail.trim();
 
+  /** 渲染编辑视图：新增/编辑地址表单 */
   const renderEdit = () => (
     <div className="relative flex h-full flex-1 flex-col bg-bg-base">
       <div className="flex-1 overflow-y-auto pb-24 no-scrollbar">

@@ -1,4 +1,9 @@
-import { useEffect } from 'react';
+/**
+ * @file Security/index.tsx - 安全中心页面
+ * @description 用户安全设置页面，管理登录密码、支付密码、实名认证等。
+ */
+
+import { useEffect } from 'react'; // React 核心 Hook
 import { Lock, Smartphone } from 'lucide-react';
 import { accountApi } from '../../api';
 import { SettingsActionItem, SettingsNotice, SettingsSection } from '../../components/biz/settings/SettingsSection';

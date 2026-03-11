@@ -1,4 +1,9 @@
-import { useEffect, useMemo, useState } from 'react';
+/**
+ * @file Login/index.tsx - ç™»å½•é¡µé¢
+ * @description ç”¨æˆ·ç™»å½•é¡µé¢ï¼Œæ”¯æŒæ‰‹æœºå·+å¯†ç ç™»å½•ã€‚
+ */
+
+import { useEffect, useMemo, useState } from 'react'; // React æ ¸å¿ƒ Hook
 import { getErrorMessage } from '../../api/core/errors';
 import { authApi, type CheckInConfig, type LoginTab } from '../../api/modules/auth';
 import {
@@ -25,8 +30,8 @@ import {
 import { useAppNavigate } from '../../lib/navigation';
 
 const TAB_LABELS: Record<LoginTab, string> = {
-  login: 'ÃÜÂëµÇÂ¼',
-  sms_login: 'ÑéÖ¤ÂëµÇÂ¼',
+  login: 'å¯†ç ç™»å½•',
+  sms_login: 'éªŒè¯ç ç™»å½•',
 };
 
 function isLoginTab(value: string): value is LoginTab {
@@ -127,7 +132,7 @@ export const LoginPage = () => {
 
   const handleSubmit = async () => {
     if (!agree) {
-      showToast({ message: 'ÇëÏÈ¹´Ñ¡ÓÃ»§Ğ­ÒéÓëÒşË½Õş²ß', type: 'warning' });
+      showToast({ message: 'è¯·å…ˆå‹¾é€‰ç”¨æˆ·åè®®ä¸éšç§æ”¿ç­–', type: 'warning' });
       return;
     }
 
@@ -142,12 +147,12 @@ export const LoginPage = () => {
         const normalizedPassword = password.trim();
 
         if (!normalizedUsername) {
-          showToast({ message: 'ÇëÊäÈëÓÃ»§Ãû»òÊÖ»úºÅ', type: 'warning' });
+          showToast({ message: 'è¯·è¾“å…¥ç”¨æˆ·åæˆ–æ‰‹æœºå·', type: 'warning' });
           return;
         }
 
         if (!PASSWORD_PATTERN.test(normalizedPassword)) {
-          showToast({ message: 'µÇÂ¼ÃÜÂëĞèÎª 6-32 Î»×ÖÄ¸»òÊı×Ö', type: 'warning' });
+          showToast({ message: 'ç™»å½•å¯†ç éœ€ä¸º 6-32 ä½å­—æ¯æˆ–æ•°å­—', type: 'warning' });
           return;
         }
 
@@ -166,12 +171,12 @@ export const LoginPage = () => {
         const normalizedCode = verifyCode.trim();
 
         if (!MOBILE_PATTERN.test(normalizedMobile)) {
-          showToast({ message: 'ÇëÊäÈëÕıÈ·µÄÊÖ»úºÅ', type: 'warning' });
+          showToast({ message: 'è¯·è¾“å…¥æ­£ç¡®çš„æ‰‹æœºå·', type: 'warning' });
           return;
         }
 
         if (!normalizedCode) {
-          showToast({ message: 'ÇëÊäÈë¶ÌĞÅÑéÖ¤Âë', type: 'warning' });
+          showToast({ message: 'è¯·è¾“å…¥çŸ­ä¿¡éªŒè¯ç ', type: 'warning' });
           return;
         }
 
@@ -193,7 +198,7 @@ export const LoginPage = () => {
         persistent: remember,
       });
 
-      showToast({ message: 'µÇÂ¼³É¹¦', type: 'success' });
+      showToast({ message: 'ç™»å½•æˆåŠŸ', type: 'success' });
       navigate(resolveAuthRedirectPath(session.routePath), { replace: true });
     } catch (error) {
       showToast({ message: getErrorMessage(error), type: 'error' });
@@ -210,19 +215,19 @@ export const LoginPage = () => {
         <AuthFormSection
           className="mt-16"
           title="Hello!"
-          description="»¶Ó­µÇÂ¼Ê÷½»Ëù"
+          description="æ¬¢è¿ç™»å½•æ ‘äº¤æ‰€"
           headerExtra={tabItems.length > 0 ? <AuthTabs items={tabItems} value={currentTab} onChange={handleTabChange} /> : null}
           auxiliary={(
             <div className="flex items-center justify-between">
-              <Checkbox checked={remember} onChange={() => setRemember((current) => !current)} label="¼Ç×¡ÃÜÂë" />
+              <Checkbox checked={remember} onChange={() => setRemember((current) => !current)} label="è®°ä½å¯†ç " />
               <Button type="button" variant="ghost" size="sm" fullWidth={false} className="px-0 text-[12px] text-text-sub" onClick={() => navigate('/forgot-password')}>
-                Íü¼ÇÃÜÂë
+                å¿˜è®°å¯†ç 
               </Button>
             </div>
           )}
           actions={(
             <Button loading={submitting} onClick={handleSubmit}>
-              µÇÂ¼
+              ç™»å½•
             </Button>
           )}
           footer={(
@@ -234,19 +239,19 @@ export const LoginPage = () => {
                 onOpenPrivacy={() => navigate('/privacy_policy')}
                 mode="login"
               />
-              <AuthFooterLink text="Ã»ÓĞÕË»§£¿" accentText="µã»÷×¢²á" onClick={() => goTo('register')} />
+              <AuthFooterLink text="æ²¡æœ‰è´¦æˆ·ï¼Ÿ" accentText="ç‚¹å‡»æ³¨å†Œ" onClick={() => goTo('register')} />
             </>
           )}
         >
           {currentTab === 'login' ? (
             <>
               <Input
-                placeholder="ÇëÊäÈëÓÃ»§Ãû»òÊÖ»úºÅ"
+                placeholder="è¯·è¾“å…¥ç”¨æˆ·åæˆ–æ‰‹æœºå·"
                 value={username}
                 onChange={(event) => setUsername(event.target.value)}
               />
               <Input
-                placeholder="ÇëÊäÈëµÇÂ¼ÃÜÂë"
+                placeholder="è¯·è¾“å…¥ç™»å½•å¯†ç "
                 type={showPassword ? 'text' : 'password'}
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
@@ -256,7 +261,7 @@ export const LoginPage = () => {
           ) : (
             <>
               <Input
-                placeholder="ÇëÊäÈëÊÖ»úºÅ"
+                placeholder="è¯·è¾“å…¥æ‰‹æœºå·"
                 type="tel"
                 value={mobile}
                 onChange={(event) => setMobile(event.target.value)}

@@ -1,4 +1,9 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+/**
+ * @file Reviews/index.tsx - 商品评价列表页面
+ * @description 展示商品的用户评价列表，支持筛选、分页加载。
+ */
+
+import { useEffect, useMemo, useRef, useState } from 'react'; // React 核心 Hook
 import { MessageCircle, RefreshCcw, Star, ThumbsUp, X } from 'lucide-react';
 import { useParams } from 'react-router-dom';
 import {

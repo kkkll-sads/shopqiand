@@ -1,4 +1,10 @@
-﻿import React, { useState, useEffect, useMemo } from 'react';
+/**
+ * @file Cashier/index.tsx - 收银台页面
+ * @description 订单支付页面，支持余额支付、消费金支付、混合支付，
+ *              包含支付倒计时、支付方式选择、支付失败重试弹窗。
+ */
+
+import React, { useState, useEffect, useMemo } from 'react'; // React 核心 Hook
 import { useSearchParams } from 'react-router-dom';
 import {
   ChevronLeft,
@@ -32,6 +38,10 @@ interface PaymentMethod {
   bg: string;
 }
 
+/**
+ * CashierPage - 收银台页面
+ * 功能：显示应付金额 → 选择支付方式 → 确认支付 → 跳转结果页
+ */
 export const CashierPage = () => {
   const [searchParams] = useSearchParams();
   const { goBack, navigate } = useAppNavigate();

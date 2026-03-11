@@ -1,4 +1,9 @@
-﻿import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+/**
+ * @file PaymentAccounts/index.tsx - 支付账户管理页面
+ * @description 管理用户银行卡等支付账户，支持添加、删除、设为默认。
+ */
+
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'; // React 核心 Hook
 import type { ChangeEvent } from 'react';
 import type { LucideIcon } from 'lucide-react';
 import {

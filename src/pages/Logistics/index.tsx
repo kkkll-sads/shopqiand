@@ -1,4 +1,9 @@
-﻿import React, { useState, useEffect } from 'react';
+/**
+ * @file Logistics/index.tsx - 物流详情页面
+ * @description 展示订单物流信息，包括物流轨迹、快递公司、运单号等。
+ */
+
+import React, { useState, useEffect } from 'react'; // React 核心 Hook
 import { ChevronLeft, WifiOff, RefreshCcw, Copy, Package, MapPin, Phone, HeadphonesIcon, CheckCircle2, Truck } from 'lucide-react';
 import { Skeleton } from '../../components/ui/Skeleton';
 import { useAppNavigate } from '../../lib/navigation';
