@@ -29,3 +29,4 @@ export * from './modules/team';
 export * from './modules/upload';
 export * from './modules/user';
 export * from './modules/accountTransfer';
+export * from './modules/userCollection';

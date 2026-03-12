@@ -461,7 +461,7 @@ export const RealNameAuthPage = () => {
                 value={name}
                 onChange={(event) => setName(event.target.value)}
                 placeholder="请输入真实姓名"
-                className="h-12 w-full rounded-2xl border border-border-light bg-bg-base px-4 text-sm text-text-main outline-none transition-colors placeholder:text-text-aux focus:border-orange-400"
+                className="h-12 w-full rounded-2xl border border-border-light bg-bg-base px-4 text-lg text-text-main outline-none transition-colors placeholder:text-text-aux focus:border-orange-400"
               />
             </div>
 
@@ -474,7 +474,7 @@ export const RealNameAuthPage = () => {
                   setIdNumber(event.target.value.replace(/\s+/g, '').toUpperCase())
                 }
                 placeholder="请输入身份证号"
-                className="h-12 w-full rounded-2xl border border-border-light bg-bg-base px-4 text-sm text-text-main outline-none transition-colors placeholder:text-text-aux focus:border-orange-400"
+                className="h-12 w-full rounded-2xl border border-border-light bg-bg-base px-4 text-lg text-text-main outline-none transition-colors placeholder:text-text-aux focus:border-orange-400"
               />
             </div>
           </div>

@@ -667,7 +667,7 @@ export const SearchResultPage = () => {
                   value={minPrice}
                   onChange={(event) => setMinPrice(event.target.value)}
                   placeholder="最低价"
-                  className="h-8 w-[45%] rounded-full border border-transparent bg-bg-card px-4 text-sm text-text-main outline-none focus:border-primary-start/30"
+                  className="h-8 w-[45%] rounded-full border border-transparent bg-bg-card px-4 text-lg text-text-main outline-none focus:border-primary-start/30"
                 />
                 <span className="text-text-aux">-</span>
                 <input
@@ -675,7 +675,7 @@ export const SearchResultPage = () => {
                   value={maxPrice}
                   onChange={(event) => setMaxPrice(event.target.value)}
                   placeholder="最高价"
-                  className="h-8 w-[45%] rounded-full border border-transparent bg-bg-card px-4 text-sm text-text-main outline-none focus:border-primary-start/30"
+                  className="h-8 w-[45%] rounded-full border border-transparent bg-bg-card px-4 text-lg text-text-main outline-none focus:border-primary-start/30"
                 />
               </div>
             </div>

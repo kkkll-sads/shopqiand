@@ -20,6 +20,7 @@ export interface RequestOptions<TBody = unknown>
   extends Omit<RequestInit, 'body' | 'headers' | 'method' | 'signal'> {
   body?: TBody;
   headers?: HeadersInit;
+  isSuccessCode?: (code: EnvelopeCode) => boolean;
   method?: HttpMethod;
   query?: QueryParams;
   responseType?: 'json' | 'text' | 'blob';
@@ -355,7 +356,11 @@ export class HttpClient {
             signal: controller.signal,
             url,
           });
-          return this.unwrapPayload<TResponse>(payload, 200);
+          return this.unwrapPayload<TResponse>(
+            payload,
+            200,
+            options.isSuccessCode ?? this.options.isSuccessCode,
+          );
         }
       }
 
@@ -373,7 +378,11 @@ export class HttpClient {
         throw this.toApiError(payload, response.status);
       }
 
-      return this.unwrapPayload<TResponse>(payload, response.status);
+      return this.unwrapPayload<TResponse>(
+        payload,
+        response.status,
+        options.isSuccessCode ?? this.options.isSuccessCode,
+      );
     } catch (error) {
       if (timedOut) {
         throw new ApiError('Request timed out.', { code: 'REQUEST_TIMEOUT' });
@@ -517,11 +526,15 @@ export class HttpClient {
     return new ApiError('Request failed.', { details: payload, status });
   }
 
-  private unwrapPayload<TResponse>(payload: unknown, status: number): TResponse {
+  private unwrapPayload<TResponse>(
+    payload: unknown,
+    status: number,
+    isSuccessCode: (code: EnvelopeCode) => boolean,
+  ): TResponse {
     if (isEnvelope<TResponse>(payload)) {
-      const isPrimarySuccess = this.options.isSuccessCode(payload.code);
+      const isPrimarySuccess = isSuccessCode(payload.code);
       const isBizSuccess =
-        payload.biz_code == null ? true : this.options.isSuccessCode(payload.biz_code);
+        payload.biz_code == null ? true : isSuccessCode(payload.biz_code);
 
       if (!isPrimarySuccess || !isBizSuccess) {
         if (shouldRedirectToLogin(status, getBizCode(payload))) {

@@ -971,7 +971,7 @@ export function RechargePage() {
                   onChange={(event) => setRemark(event.target.value.slice(0, 500))}
                   rows={3}
                   placeholder="备注转账时间、付款账户等信息（选填）"
-                  className="mt-4 w-full resize-none rounded-2xl border border-border-light bg-bg-base px-4 py-3 text-sm text-text-main outline-none placeholder:text-text-aux focus:border-primary-start"
+                  className="mt-4 w-full resize-none rounded-2xl border border-border-light bg-bg-base px-4 py-3 text-lg text-text-main outline-none placeholder:text-text-aux focus:border-primary-start"
                 />
                 </Card>
               ) : (
@@ -982,7 +982,7 @@ export function RechargePage() {
                     onChange={(event) => setRemark(event.target.value.slice(0, 500))}
                     rows={3}
                     placeholder="备注订单信息（选填）"
-                    className="mt-4 w-full resize-none rounded-2xl border border-border-light bg-bg-base px-4 py-3 text-sm text-text-main outline-none placeholder:text-text-aux focus:border-primary-start"
+                    className="mt-4 w-full resize-none rounded-2xl border border-border-light bg-bg-base px-4 py-3 text-lg text-text-main outline-none placeholder:text-text-aux focus:border-primary-start"
                   />
                 </Card>
               )}
@@ -1113,4 +1113,3 @@ export function RechargePage() {
     </div>
   );
 }
-

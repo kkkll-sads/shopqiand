@@ -413,7 +413,7 @@ export const PreOrderPage = () => {
             if (value === '' || numVal < min) onChange(min);
             else if (numVal > max) onChange(max);
           }}
-          className="w-14 h-full text-center text-md font-medium text-text-main bg-white dark:bg-gray-900 outline-none"
+          className="w-14 h-full text-center text-lg font-medium text-text-main bg-white dark:bg-gray-900 outline-none"
         />
         <div className="w-px h-full bg-border-light" />
         <button
@@ -893,7 +893,7 @@ const PreviewSheet: React.FC<PreviewSheetProps> = ({
         <input type="text" value={value}
           onChange={(e) => { const val = e.target.value.replace(/[^\d]/g, ''); onChange(val === '' ? '' : parseInt(val, 10)); }}
           onBlur={() => { const nv = typeof value === 'number' ? value : parseInt(value || '0', 10); if (value === '' || nv < min) onChange(min); else if (nv > max) onChange(max); }}
-          className="w-14 h-full text-center text-md font-medium text-text-main bg-white dark:bg-gray-900 outline-none" />
+          className="w-14 h-full text-center text-lg font-medium text-text-main bg-white dark:bg-gray-900 outline-none" />
         <div className="w-px h-full bg-border-light" />
         <button
           onClick={() => { if (numVal >= max) { onMaxReached?.(); } else { onChange(numVal + 1); } }}

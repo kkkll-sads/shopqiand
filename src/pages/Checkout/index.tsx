@@ -344,7 +344,7 @@ export const CheckoutPage = () => {
             <input
               type="text"
               placeholder="选填，建议留言前先与商家沟通确认"
-              className="flex-1 text-right text-base text-text-main outline-none placeholder:text-text-aux"
+                    className="flex-1 text-right text-lg text-text-main outline-none placeholder:text-text-aux"
               value={buyerRemark}
               onChange={(e) => setBuyerRemark(e.target.value)}
             />

@@ -280,7 +280,7 @@ export function ServiceFeeRechargePage() {
               onChange={(event) => setRemark(event.target.value.slice(0, 200))}
               rows={3}
               placeholder="备注信息（选填）"
-              className="mt-4 w-full resize-none rounded-2xl border border-border-light bg-bg-base px-4 py-3 text-sm text-text-main outline-none placeholder:text-text-aux focus:border-primary-start"
+                    className="mt-4 w-full resize-none rounded-2xl border border-border-light bg-bg-base px-4 py-3 text-lg text-text-main outline-none placeholder:text-text-aux focus:border-primary-start"
             />
           </Card>
 

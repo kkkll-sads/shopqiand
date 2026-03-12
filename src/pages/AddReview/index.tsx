@@ -316,7 +316,7 @@ export default function AddReviewPage() {
             value={content}
             onChange={(event) => setContent(event.target.value.slice(0, 500))}
             placeholder="说说你的使用感受，帮助其他用户了解商品情况"
-            className="h-32 w-full resize-none bg-transparent text-md text-text-main outline-none placeholder:text-text-aux"
+                  className="h-32 w-full resize-none bg-transparent text-lg text-text-main outline-none placeholder:text-text-aux"
           />
           <div className="mb-4 text-right text-sm text-text-aux">{content.length}/500</div>
 

@@ -82,7 +82,7 @@ const ACCOUNT_OWNER_OPTIONS: Array<{
 const USDT_NETWORK_OPTIONS = ['TRC20', 'ERC20', 'BEP20', 'OMNI'] as const;
 
 const fieldClassName =
-  'h-12 w-full rounded-2xl border border-border-light bg-bg-base px-4 text-sm text-text-main outline-none transition-colors placeholder:text-text-aux focus:border-primary-start';
+  'h-12 w-full rounded-2xl border border-border-light bg-bg-base px-4 text-lg text-text-main outline-none transition-colors placeholder:text-text-aux focus:border-primary-start';
 
 function createEmptyForm(realName = ''): PaymentAccountFormState {
   return {

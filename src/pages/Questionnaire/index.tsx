@@ -162,7 +162,7 @@ export function QuestionnairePage() {
               value={title}
               onChange={(event) => setTitle(event.target.value.slice(0, TITLE_MAX))}
               placeholder="请输入问卷标题"
-              className="w-full bg-transparent text-base text-text-main outline-none placeholder:text-text-aux"
+                    className="w-full bg-transparent text-lg text-text-main outline-none placeholder:text-text-aux"
             />
           </div>
           <div className="mt-2 text-right text-xs text-text-aux">{title.length}/{TITLE_MAX}</div>
@@ -176,7 +176,7 @@ export function QuestionnairePage() {
               onChange={(event) => setContent(event.target.value.slice(0, CONTENT_MAX))}
               rows={6}
               placeholder="请详细描述你的建议或反馈内容"
-              className="w-full resize-none bg-transparent text-base leading-7 text-text-main outline-none placeholder:text-text-aux"
+                    className="w-full resize-none bg-transparent text-lg leading-7 text-text-main outline-none placeholder:text-text-aux"
             />
           </div>
           <div className="mt-2 flex items-center justify-between text-xs text-text-aux">

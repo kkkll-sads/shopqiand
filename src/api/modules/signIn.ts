@@ -1,6 +1,9 @@
 import { createApiHeaders } from '../core/headers';
 import { http } from '../http';
 
+const isSignInSuccessCode = (code: number | string) =>
+  code === 0 || code === '0' || code === 1 || code === '1';
+
 // ==================== Types ====================
 
 export interface SignInRuleItem {
@@ -122,6 +125,7 @@ export const signInApi = {
   async getRules(signal?: AbortSignal): Promise<SignInRulesData> {
     return http.get<SignInRulesData>('/api/SignIn/rules', {
       headers: createApiHeaders(),
+      isSuccessCode: isSignInSuccessCode,
       signal,
     });
   },
@@ -133,6 +137,7 @@ export const signInApi = {
   async getInfo(signal?: AbortSignal): Promise<SignInInfoData> {
     return http.get<SignInInfoData>('/api/SignIn/info', {
       headers: createApiHeaders(),
+      isSuccessCode: isSignInSuccessCode,
       signal,
     });
   },
@@ -142,8 +147,9 @@ export const signInApi = {
    * POST /api/SignIn/do
    */
   async doSignIn(signal?: AbortSignal): Promise<SignInDoData> {
-    return http.post<SignInDoData>('/api/SignIn/do', {
+    return http.post<SignInDoData>('/api/SignIn/do', undefined, {
       headers: createApiHeaders(),
+      isSuccessCode: isSignInSuccessCode,
       signal,
     });
   },
@@ -155,6 +161,7 @@ export const signInApi = {
   async getProgress(signal?: AbortSignal): Promise<SignInProgressData> {
     return http.get<SignInProgressData>('/api/SignIn/progress', {
       headers: createApiHeaders(),
+      isSuccessCode: isSignInSuccessCode,
       signal,
     });
   },
@@ -169,8 +176,11 @@ export const signInApi = {
     signal?: AbortSignal,
   ): Promise<SignInRecordsData> {
     return http.post<SignInRecordsData>('/api/SignIn/records', {
-      body: { page, page_size: pageSize },
+      page,
+      page_size: pageSize,
+    }, {
       headers: createApiHeaders(),
+      isSuccessCode: isSignInSuccessCode,
       signal,
     });
   },

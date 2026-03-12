@@ -82,7 +82,7 @@ export const ProductAddressFormSheet = ({
               placeholder="名字"
               value={value.name}
               onChange={(e) => onChange({ name: e.target.value })}
-              className="h-11 w-full rounded-2xl border border-border-light bg-bg-base px-4 text-base text-text-main outline-none placeholder:text-text-aux"
+                className="h-11 w-full rounded-2xl border border-border-light bg-bg-base px-4 text-lg text-text-main outline-none placeholder:text-text-aux"
             />
             {errors.name ? <div className="mt-1 text-xs text-primary-start">{errors.name}</div> : null}
           </div>
@@ -95,7 +95,7 @@ export const ProductAddressFormSheet = ({
               maxLength={11}
               value={value.phone}
               onChange={(e) => onChange({ phone: e.target.value.replace(/\D/g, '') })}
-              className="h-11 w-full rounded-2xl border border-border-light bg-bg-base px-4 text-base text-text-main outline-none placeholder:text-text-aux"
+                className="h-11 w-full rounded-2xl border border-border-light bg-bg-base px-4 text-lg text-text-main outline-none placeholder:text-text-aux"
             />
             {errors.phone ? <div className="mt-1 text-xs text-primary-start">{errors.phone}</div> : null}
           </div>
@@ -121,7 +121,7 @@ export const ProductAddressFormSheet = ({
               placeholder="小区楼栋 / 门牌号"
               value={value.detail}
               onChange={(e) => onChange({ detail: e.target.value })}
-              className="h-20 w-full resize-none rounded-2xl border border-border-light bg-bg-base px-4 py-3 text-base text-text-main outline-none placeholder:text-text-aux"
+                className="h-20 w-full resize-none rounded-2xl border border-border-light bg-bg-base px-4 py-3 text-lg text-text-main outline-none placeholder:text-text-aux"
             />
             {errors.detail ? <div className="mt-1 text-xs text-primary-start">{errors.detail}</div> : null}
           </div>

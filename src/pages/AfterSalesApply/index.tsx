@@ -407,7 +407,7 @@ export const AfterSalesApplyPage = () => {
               value={description}
               onChange={(event) => setDescription(event.target.value.slice(0, 200))}
               placeholder="请详细说明商品问题、期望处理方式、收到货的状态等，方便平台更快审核。"
-              className="h-32 w-full resize-none rounded-[24px] border border-border-light bg-bg-base px-4 py-4 text-sm leading-6 text-text-main outline-none placeholder:text-text-aux"
+                    className="h-32 w-full resize-none rounded-[24px] border border-border-light bg-bg-base px-4 py-4 text-lg leading-6 text-text-main outline-none placeholder:text-text-aux"
             />
           </div>
 

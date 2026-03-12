@@ -97,6 +97,7 @@ export const VIEW_TO_PATH: Record<string, string> = {
   agent_auth: '/agent-auth',
   billing: '/billing',
   my_collection: '/my-collection',
+  my_collection_detail: '/my-collection/detail/0',
   my_card_packs: '/my-card-packs',
   accumulated_rights: '/accumulated-rights',
   growth_rights: '/growth_rights',

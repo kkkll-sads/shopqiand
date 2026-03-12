@@ -318,7 +318,7 @@ export const ProductQAPage = () => {
                   }}
                   placeholder="请输入你想了解的问题，至少 4 个字"
                   rows={5}
-                  className="w-full resize-none bg-transparent text-base leading-7 text-text-main outline-none placeholder:text-text-aux"
+                  className="w-full resize-none bg-transparent text-lg leading-7 text-text-main outline-none placeholder:text-text-aux"
                 />
                 <div className="mt-3 flex items-center justify-between text-sm text-text-sub">
                   <span>问题会公开展示，请避免填写隐私信息</span>

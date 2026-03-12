@@ -428,7 +428,7 @@ export function RightsPage() {
                   placeholder="请输入备注信息（选填）"
                   value={remark}
                   onChange={(event) => setRemark(event.target.value.slice(0, 200))}
-                  className="h-24 w-full resize-none rounded-xl border border-transparent bg-gray-50 p-3 text-md text-text-main outline-none transition-colors focus:border-red-500 focus:bg-white dark:bg-gray-800 dark:focus:bg-bg-card"
+                  className="h-24 w-full resize-none rounded-xl border border-transparent bg-gray-50 p-3 text-lg text-text-main outline-none transition-colors focus:border-red-500 focus:bg-white dark:bg-gray-800 dark:focus:bg-bg-card"
                 />
                 <span className="absolute bottom-3 right-3 text-sm text-gray-400 dark:text-gray-500">
                   {remark.length}/200

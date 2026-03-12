@@ -17,6 +17,7 @@ export type AccountLogType =
   | 'pending_activation_gold';
 
 export type AccountLogFlowDirection = 'in' | 'out';
+export type AccountLogViewMode = 'merged' | 'normal';
 
 interface AccountBalanceOverviewRaw {
   balance_available?: string;
@@ -108,6 +109,9 @@ interface AccountLogItemRaw {
   flow_no?: string;
   id?: number | string;
   image_snapshot?: string;
+  is_merged?: boolean | number | string;
+  merge_key?: string;
+  merge_row_count?: number | string;
   memo?: string;
   title_snapshot?: string;
 }
@@ -133,7 +137,10 @@ interface AccountMoneyLogDetailRaw {
   flow_no?: string;
   id?: number | string;
   image_snapshot?: string;
+  is_merged?: boolean | number | string;
   item_id?: number | string;
+  merge_key?: string;
+  merge_row_count?: number | string;
   memo?: string;
   title_snapshot?: string;
   user_collection_id?: number | string;
@@ -228,6 +235,9 @@ export interface AccountLogItem {
   flowNo?: string;
   id: number;
   imageSnapshot?: string;
+  isMerged: boolean;
+  mergeKey?: string;
+  mergeRowCount?: number;
   memo?: string;
   titleSnapshot?: string;
 }
@@ -248,11 +258,14 @@ export interface GetAccountLogListParams {
   page?: number;
   startTime?: number;
   type?: AccountLogType;
+  viewMode?: AccountLogViewMode;
 }
 
 export interface GetMoneyLogDetailParams {
   flowNo?: string;
   id?: number;
+  mergeKey?: string;
+  viewMode?: AccountLogViewMode;
 }
 
 export interface ChangePasswordPayload {
@@ -291,7 +304,10 @@ export interface AccountMoneyLogDetail {
   flowNo?: string;
   id: number;
   imageSnapshot?: string;
+  isMerged: boolean;
   itemId?: number;
+  mergeKey?: string;
+  mergeRowCount?: number;
   memo?: string;
   titleSnapshot?: string;
   userCollectionId?: number;
@@ -344,6 +360,23 @@ function readOptionalTimestamp(value: number | string | undefined): number | und
 
   const nextValue = typeof value === 'string' ? Number(value) : value;
   return typeof nextValue === 'number' && Number.isFinite(nextValue) ? nextValue : undefined;
+}
+
+function readBoolean(value: boolean | number | string | undefined): boolean {
+  if (typeof value === 'boolean') {
+    return value;
+  }
+
+  if (typeof value === 'number') {
+    return value === 1;
+  }
+
+  if (typeof value === 'string') {
+    const normalized = value.trim().toLowerCase();
+    return normalized === '1' || normalized === 'true' || normalized === 'yes';
+  }
+
+  return false;
 }
 
 function readBreakdown(value: unknown): Record<string, unknown> | undefined {
@@ -460,6 +493,9 @@ function normalizeLogItem(payload: AccountLogItemRaw): AccountLogItem {
     flowNo: readOptionalString(payload.flow_no),
     id: readNumber(payload.id),
     imageSnapshot: payload.image_snapshot ? resolveUploadUrl(payload.image_snapshot) : undefined,
+    isMerged: readBoolean(payload.is_merged),
+    mergeKey: readOptionalString(payload.merge_key),
+    mergeRowCount: payload.merge_row_count == null ? undefined : readNumber(payload.merge_row_count),
     memo: readOptionalString(payload.memo),
     titleSnapshot: readOptionalString(payload.title_snapshot),
   };
@@ -480,7 +516,10 @@ function normalizeMoneyLogDetail(payload: AccountMoneyLogDetailRaw): AccountMone
     flowNo: readOptionalString(payload.flow_no),
     id: readNumber(payload.id),
     imageSnapshot: payload.image_snapshot ? resolveUploadUrl(payload.image_snapshot) : undefined,
+    isMerged: readBoolean(payload.is_merged),
     itemId: payload.item_id == null ? undefined : readNumber(payload.item_id),
+    mergeKey: readOptionalString(payload.merge_key),
+    mergeRowCount: payload.merge_row_count == null ? undefined : readNumber(payload.merge_row_count),
     memo: readOptionalString(payload.memo),
     titleSnapshot: readOptionalString(payload.title_snapshot),
     userCollectionId:
@@ -651,11 +690,13 @@ export const accountApi = {
     };
   },
 
-  async getAllLog(
+  async getLogList(
     params: GetAccountLogListParams = {},
     options: AccountRequestOptions = {},
   ): Promise<AccountLogList> {
-    const payload = await http.get<AccountLogListRaw>('/api/Account/allLog', {
+    const payload = await http.get<AccountLogListRaw>(
+      params.viewMode === 'merged' ? '/api/Account/mergedLog' : '/api/Account/allLog',
+      {
       headers: createApiHeaders(options),
       query: {
         biz_type: params.bizType,
@@ -666,9 +707,11 @@ export const accountApi = {
         page: params.page,
         start_time: params.startTime,
         type: params.type,
+        view_mode: params.viewMode,
       },
       signal: options.signal,
-    });
+      },
+    );
 
     return {
       currentPage: readNumber(payload.current_page, 1),
@@ -676,6 +719,26 @@ export const accountApi = {
       perPage: readNumber(payload.per_page, params.limit ?? 10),
       total: readNumber(payload.total),
     };
+  },
+
+  async getAllLog(
+    params: GetAccountLogListParams = {},
+    options: AccountRequestOptions = {},
+  ): Promise<AccountLogList> {
+    return this.getLogList({
+      ...params,
+      viewMode: 'normal',
+    }, options);
+  },
+
+  async getMergedLog(
+    params: GetAccountLogListParams = {},
+    options: AccountRequestOptions = {},
+  ): Promise<AccountLogList> {
+    return this.getLogList({
+      ...params,
+      viewMode: 'merged',
+    }, options);
   },
 
   async getMoneyLogDetail(
@@ -687,6 +750,8 @@ export const accountApi = {
       query: {
         flow_no: params.flowNo,
         id: params.id,
+        merge_key: params.mergeKey,
+        view_mode: params.viewMode,
       },
       signal: options.signal,
     });

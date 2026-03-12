@@ -26,6 +26,7 @@ import {
   type AccountLogItem,
   type AccountLogList,
   type AccountLogType,
+  type AccountLogViewMode,
   type AccountMoneyLogDetail,
 } from '../../api';
 import { getErrorMessage } from '../../api/core/errors';
@@ -54,13 +55,21 @@ const PAGE_SIZE = 20;
 /** 收支方向筛选类型 */
 type FlowFilter = 'all' | AccountLogFlowDirection;
 
-/** 账户类型筛选选项（全部/专项金/可提现/确权金/待激活金/消费金/绿色算力/静态收益） */
+type BillingCategorySection = 'quick' | 'account' | 'business';
+
+interface BillingCategoryOption {
+  key: string;
+  label: string;
+  section: BillingCategorySection;
+}
+
+/** 账户类型筛选选项（全部/供应链专项金/可调度收益/确权金/待激活确权金/消费金/绿色算力/静态收益） */
 const ACCOUNT_TYPE_OPTIONS: Array<{ key: AccountLogType; label: string }> = [
   { key: 'all', label: '全部' },
-  { key: 'balance_available', label: '专项金' },
-  { key: 'withdrawable_money', label: '可提现' },
+  { key: 'balance_available', label: '供应链专项金' },
+  { key: 'withdrawable_money', label: '可调度收益' },
   { key: 'service_fee_balance', label: '确权金' },
-  { key: 'pending_activation_gold', label: '待激活金' },
+  { key: 'pending_activation_gold', label: '待激活确权金' },
   { key: 'score', label: '消费金' },
   { key: 'green_power', label: '绿色算力' },
   { key: 'static_income', label: '静态收益' },
@@ -73,15 +82,21 @@ const FLOW_OPTIONS: Array<{ key: FlowFilter; label: string }> = [
   { key: 'out', label: '支出' },
 ];
 
+/** 流水视图模式（合并流水 / 正常流水） */
+const LOG_VIEW_MODE_OPTIONS: Array<{ key: AccountLogViewMode; label: string }> = [
+  { key: 'merged', label: '合并流水' },
+  { key: 'normal', label: '正常流水' },
+];
+
 /** 账户类型名称映射 */
 const ACCOUNT_TYPE_LABELS: Record<string, string> = {
-  balance_available: '专项金',
+  balance_available: '供应链专项金',
   green_power: '绿色算力',
   pending_activation_gold: '待激活确权金',
   score: '消费金',
   service_fee_balance: '确权金',
   static_income: '静态收益',
-  withdrawable_money: '可提现收益',
+  withdrawable_money: '可调度收益',
 };
 
 /** 业务类型名称映射（流水类型的中文显示名） */
@@ -126,6 +141,85 @@ const BIZ_TYPE_LABELS: Record<string, string> = {
   withdraw: '提现',
   withdraw_reject: '提现驳回退款',
 };
+
+const RECORD_CATEGORY_BIZ_TYPES = {
+  consignment_record: { label: '寄售记录', bizType: 'matching_seller_income' },
+  rights_record: { label: '确权记录', bizType: 'blind_box_reserve' },
+  transfer_record: { label: '划转记录', bizType: 'balance_transfer' },
+  recharge_record: { label: '充值记录', bizType: 'recharge' },
+  service_fee_recharge_record: { label: '确权金充值', bizType: 'service_fee_recharge' },
+  withdraw_record: { label: '提现记录', bizType: 'withdraw' },
+  mining_dividend_record: { label: '矿机分红', bizType: 'mining_dividend' },
+} as const;
+
+type BillingRecordCategory = keyof typeof RECORD_CATEGORY_BIZ_TYPES;
+
+const BILLING_CATEGORY_SECTION_LABELS: Record<BillingCategorySection, string> = {
+  account: '按账户筛选',
+  business: '按业务筛选',
+  quick: '常用分类',
+};
+
+const ACCOUNT_CATEGORY_OPTIONS: BillingCategoryOption[] = ACCOUNT_TYPE_OPTIONS.filter((option) => option.key !== 'all').map(
+  (option) => ({
+    key: option.key,
+    label: option.label,
+    section: 'account',
+  }),
+);
+
+const ALL_BILLING_CATEGORY_OPTIONS: BillingCategoryOption[] = [
+  { key: 'all', label: '全部分类', section: 'quick' },
+  ...Object.entries(RECORD_CATEGORY_BIZ_TYPES).map(([key, config]) => ({
+    key,
+    label: config.label,
+    section: 'quick' as const,
+  })),
+  ...ACCOUNT_CATEGORY_OPTIONS,
+  ...Object.entries(BIZ_TYPE_LABELS).map(([key, label]) => ({
+    key,
+    label,
+    section: 'business' as const,
+  })),
+];
+
+const ACCOUNT_CATEGORY_KEY_SET = new Set(ACCOUNT_CATEGORY_OPTIONS.map((option) => option.key));
+
+function getBillingCategoryOptions(sceneBizType?: string): BillingCategoryOption[] {
+  if (sceneBizType) {
+    return [{ key: 'all', label: '全部账户', section: 'account' }, ...ACCOUNT_CATEGORY_OPTIONS];
+  }
+
+  return ALL_BILLING_CATEGORY_OPTIONS;
+}
+
+function resolveBillingCategoryQuery(category: string, sceneBizType?: string) {
+  const query: { bizType?: string; type?: AccountLogType } = {};
+
+  if (sceneBizType) {
+    query.bizType = sceneBizType;
+  }
+
+  if (!category || category === 'all') {
+    return query;
+  }
+
+  if (!sceneBizType && category in RECORD_CATEGORY_BIZ_TYPES) {
+    query.bizType = RECORD_CATEGORY_BIZ_TYPES[category as BillingRecordCategory].bizType;
+    return query;
+  }
+
+  if (!sceneBizType && category in BIZ_TYPE_LABELS) {
+    query.bizType = category;
+    return query;
+  }
+
+  if (ACCOUNT_CATEGORY_KEY_SET.has(category)) {
+    query.type = category as AccountLogType;
+  }
+
+  return query;
+}
 
 /** 明细拆分字段名称映射 */
 const BREAKDOWN_LABELS: Record<string, string> = {
@@ -278,21 +372,22 @@ function getMonthLabel(item: AccountLogItem) {
 
 /** 构建查询参数 */
 function buildQueryParams(
-  accountType: AccountLogType,
-  bizType: string | undefined,
+  viewMode: AccountLogViewMode,
+  categoryQuery: { bizType?: string; type?: AccountLogType },
   flowFilter: FlowFilter,
   keyword: string,
   page: number,
 ) {
   return {
-    bizType,
+    bizType: categoryQuery.bizType,
     endTime: undefined,
     flowDirection: flowFilter === 'all' ? undefined : flowFilter,
     keyword: keyword || undefined,
     limit: PAGE_SIZE,
     page,
     startTime: undefined,
-    type: accountType === 'all' ? undefined : accountType,
+    type: categoryQuery.type,
+    viewMode,
   };
 }
 
@@ -398,9 +493,13 @@ export function BillingPage() {
   const sceneConfig = getBillingSceneConfig(scene);
   const sessionNamespace = scene === 'all' ? 'billing-page' : `billing-page:${scene}`;
 
-  const [accountType, setAccountType] = useSessionState<AccountLogType>(
-    `${sessionNamespace}:account-type`,
+  const [category, setCategory] = useSessionState<string>(
+    `${sessionNamespace}:category`,
     'all',
+  );
+  const [viewMode, setViewMode] = useSessionState<AccountLogViewMode>(
+    `${sessionNamespace}:view-mode`,
+    'merged',
   );
   const [flowFilter, setFlowFilter] = useSessionState<FlowFilter>(
     `${sessionNamespace}:flow-filter`,
@@ -415,12 +514,52 @@ export function BillingPage() {
   const [loadMoreError, setLoadMoreError] = useState<string | null>(null);
   const [paginationNotice, setPaginationNotice] = useState<string | null>(null);
   const [selectedLog, setSelectedLog] = useState<AccountLogItem | null>(null);
+  const [categoryPanelOpen, setCategoryPanelOpen] = useState(false);
+  const [categorySearch, setCategorySearch] = useState('');
+  const categoryOptions = useMemo(() => getBillingCategoryOptions(sceneConfig.bizType), [sceneConfig.bizType]);
+  const selectedCategoryQuery = useMemo(
+    () => resolveBillingCategoryQuery(category, sceneConfig.bizType),
+    [category, sceneConfig.bizType],
+  );
+  const selectedCategoryLabel = useMemo(
+    () => categoryOptions.find((option) => option.key === category)?.label ?? categoryOptions[0]?.label ?? '全部分类',
+    [category, categoryOptions],
+  );
+  const filteredCategoryOptions = useMemo(() => {
+    const keyword = categorySearch.trim().toLowerCase();
+    if (!keyword) {
+      return categoryOptions;
+    }
+
+    return categoryOptions.filter(
+      (option) => option.label.toLowerCase().includes(keyword) || option.key.toLowerCase().includes(keyword),
+    );
+  }, [categoryOptions, categorySearch]);
+  const groupedCategoryOptions = useMemo(() => {
+    const groups = new Map<BillingCategorySection, BillingCategoryOption[]>();
+    filteredCategoryOptions.forEach((option) => {
+      const current = groups.get(option.section) ?? [];
+      current.push(option);
+      groups.set(option.section, current);
+    });
+
+    return Array.from(groups.entries()).map(([section, options]) => ({
+      options,
+      section,
+    }));
+  }, [filteredCategoryOptions]);
 
   useEffect(() => {
     setDraftKeyword(keyword);
   }, [keyword]);
 
-  const queryKey = `${scene}:${accountType}:${flowFilter}:${keyword}`;
+  useEffect(() => {
+    if (!categoryOptions.some((option) => option.key === category)) {
+      setCategory('all');
+    }
+  }, [category, categoryOptions, setCategory]);
+
+  const queryKey = `${scene}:${viewMode}:${category}:${flowFilter}:${keyword}`;
 
   useEffect(() => {
     queryKeyRef.current = queryKey;
@@ -438,8 +577,8 @@ export function BillingPage() {
     reload: reloadList,
   } = useRequest(
     async (signal) => {
-      const response = await accountApi.getAllLog(
-        buildQueryParams(accountType, sceneConfig.bizType, flowFilter, keyword, 1),
+      const response = await accountApi.getLogList(
+        buildQueryParams(viewMode, selectedCategoryQuery, flowFilter, keyword, 1),
         { signal },
       );
 
@@ -452,7 +591,7 @@ export function BillingPage() {
       return response;
     },
     {
-      deps: [accountType, flowFilter, keyword, isAuthenticated, sceneConfig.bizType],
+      deps: [category, flowFilter, isAuthenticated, keyword, selectedCategoryQuery.bizType, selectedCategoryQuery.type, viewMode],
       keepPreviousData: false,
       manual: !isAuthenticated,
     },
@@ -468,12 +607,17 @@ export function BillingPage() {
     (signal) =>
       selectedLog
         ? accountApi.getMoneyLogDetail(
-            { flowNo: selectedLog.flowNo, id: selectedLog.id },
+            {
+              flowNo: selectedLog.flowNo,
+              id: selectedLog.id,
+              mergeKey: selectedLog.mergeKey,
+              viewMode: selectedLog.isMerged ? 'merged' : 'normal',
+            },
             { signal },
           )
         : Promise.resolve(undefined),
     {
-      deps: [isAuthenticated, selectedLog?.flowNo, selectedLog?.id],
+      deps: [isAuthenticated, selectedLog?.flowNo, selectedLog?.id, selectedLog?.mergeKey, selectedLog?.isMerged],
       keepPreviousData: false,
       manual: !isAuthenticated || !selectedLog,
     },
@@ -497,8 +641,8 @@ export function BillingPage() {
     setLoadMoreError(null);
 
     try {
-      const response = await accountApi.getAllLog(
-        buildQueryParams(accountType, sceneConfig.bizType, flowFilter, keyword, nextPage),
+      const response = await accountApi.getLogList(
+        buildQueryParams(viewMode, selectedCategoryQuery, flowFilter, keyword, nextPage),
       );
 
       if (queryKeyRef.current !== requestKey) {
@@ -523,7 +667,7 @@ export function BillingPage() {
         setLoadingMore(false);
       }
     }
-  }, [accountType, flowFilter, hasMore, isAuthenticated, keyword, loadingMore, page, sceneConfig.bizType]);
+  }, [category, flowFilter, hasMore, isAuthenticated, keyword, loadingMore, page, selectedCategoryQuery, viewMode]);
 
   useInfiniteScroll({
     disabled: Boolean(selectedLog) || isOffline || Boolean(loadMoreError) || Boolean(paginationNotice),
@@ -565,7 +709,7 @@ export function BillingPage() {
     containerRef: scrollContainerRef,
     enabled: isAuthenticated && !selectedLog,
     namespace: `${sessionNamespace}:scroll`,
-    restoreDeps: [accountType, flowFilter, keyword, logs.length, listLoading],
+    restoreDeps: [category, flowFilter, keyword, logs.length, listLoading, viewMode],
     restoreWhen: isAuthenticated && !selectedLog && !listLoading,
   });
 
@@ -615,6 +759,16 @@ export function BillingPage() {
   const handleClearKeyword = () => {
     setDraftKeyword('');
     setKeyword('');
+  };
+
+  const closeCategoryPanel = () => {
+    setCategoryPanelOpen(false);
+    setCategorySearch('');
+  };
+
+  const handleCategorySelect = (nextCategory: string) => {
+    setCategory(nextCategory);
+    closeCategoryPanel();
   };
 
   const renderHeader = () => (
@@ -674,7 +828,7 @@ export function BillingPage() {
               value={draftKeyword}
               onChange={(event) => setDraftKeyword(event.target.value)}
               placeholder="搜索备注或业务说明"
-              className="h-11 w-full rounded-2xl border border-border-light bg-bg-base pl-10 pr-10 text-sm text-text-main outline-none placeholder:text-text-aux"
+                className="h-11 w-full rounded-2xl border border-border-light bg-bg-base pl-10 pr-10 text-lg text-text-main outline-none placeholder:text-text-aux"
             />
             {draftKeyword ? (
               <button
@@ -696,20 +850,118 @@ export function BillingPage() {
         </form>
 
         <div className="mt-3 flex min-w-0 gap-2 overflow-x-auto overflow-y-hidden no-scrollbar overscroll-x-contain">
-          {ACCOUNT_TYPE_OPTIONS.map((option) => (
+          {LOG_VIEW_MODE_OPTIONS.map((option) => (
             <button
               key={option.key}
               type="button"
-              onClick={() => setAccountType(option.key)}
+              onClick={() => setViewMode(option.key)}
               className={`shrink-0 whitespace-nowrap rounded-full px-4 py-2 text-sm font-medium transition-colors ${
-                accountType === option.key
-                  ? 'bg-primary-start text-white'
+                viewMode === option.key
+                  ? 'bg-gray-900 text-white dark:bg-white dark:text-gray-900'
                   : 'bg-bg-base text-text-sub'
               }`}
             >
               {option.label}
             </button>
           ))}
+        </div>
+
+        <div className="relative mt-3">
+          {categoryPanelOpen ? (
+            <button
+              type="button"
+              aria-label="关闭分类面板"
+              onClick={closeCategoryPanel}
+              className="fixed inset-0 z-20 bg-black/20 backdrop-blur-[1px]"
+            />
+          ) : null}
+
+          <button
+            type="button"
+            onClick={() => setCategoryPanelOpen((current) => !current)}
+            className="relative z-30 flex w-full items-center justify-between rounded-[22px] border border-border-light bg-bg-card px-4 py-3 text-left shadow-soft transition-all active:scale-[0.99]"
+          >
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <span className="inline-flex rounded-full bg-primary-start/[0.08] px-2.5 py-1 text-xs font-medium text-primary-start">
+                  分类
+                </span>
+                <span className="truncate text-sm font-semibold text-text-main">{selectedCategoryLabel}</span>
+              </div>
+              <div className="mt-1 text-xs text-text-aux">
+                {sceneConfig.bizType ? '当前场景下按账户类型细分' : '常用分类、账户分类和业务分类'}
+              </div>
+            </div>
+            <ChevronRight
+              size={18}
+              className={`shrink-0 text-text-aux transition-transform duration-200 ${
+                categoryPanelOpen ? 'rotate-90' : 'rotate-0'
+              }`}
+            />
+          </button>
+
+          {categoryPanelOpen ? (
+            <div className="absolute inset-x-0 top-full z-30 mt-2 overflow-hidden rounded-[26px] border border-border-light bg-bg-card shadow-[0_18px_40px_rgba(15,23,42,0.12)]">
+              <div className="border-b border-border-light px-4 py-4">
+                <div className="text-sm font-semibold text-text-main">选择分类</div>
+                <div className="mt-1 text-xs text-text-aux">支持搜索账户名称和业务类型</div>
+                <div className="relative mt-3 flex h-10 items-center overflow-hidden rounded-2xl border border-border-light bg-bg-base">
+                  <Search size={15} className="pointer-events-none absolute left-3 text-text-aux" />
+                  <input
+                    value={categorySearch}
+                    onChange={(event) => setCategorySearch(event.target.value)}
+                    placeholder="搜索分类"
+                    className="h-full w-full bg-transparent pl-9 pr-9 text-sm text-text-main outline-none placeholder:text-text-aux"
+                  />
+                  {categorySearch ? (
+                    <button
+                      type="button"
+                      onClick={() => setCategorySearch('')}
+                      className="absolute right-3 text-text-aux"
+                      aria-label="清空分类搜索"
+                    >
+                      <X size={14} />
+                    </button>
+                  ) : null}
+                </div>
+              </div>
+
+              <div className="max-h-[58vh] overflow-y-auto px-2 py-3">
+                {groupedCategoryOptions.length ? (
+                  groupedCategoryOptions.map((group) => (
+                    <div key={group.section} className="pb-3 last:pb-0">
+                      <div className="px-3 pb-2 text-[11px] font-medium tracking-[0.04em] text-text-aux">
+                        {BILLING_CATEGORY_SECTION_LABELS[group.section]}
+                      </div>
+                      <div className="space-y-1">
+                        {group.options.map((option) => {
+                          const active = category === option.key;
+
+                          return (
+                            <button
+                              key={option.key}
+                              type="button"
+                              onClick={() => handleCategorySelect(option.key)}
+                              className={`flex w-full items-center justify-between rounded-2xl px-3 py-3 text-left text-sm transition-colors ${
+                                active
+                                  ? 'bg-primary-start/[0.08] text-primary-start'
+                                  : 'text-text-main active:bg-bg-base'
+                              }`}
+                            >
+                              <span className="pr-3 font-medium">{option.label}</span>
+                              {active ? <span className="text-xs font-semibold">已选</span> : null}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="px-3 py-8 text-center text-sm text-text-aux">没有匹配的分类</div>
+                )}
+              </div>
+            </div>
+          ) : null}
         </div>
 
         <div className="mt-3 flex min-w-0 gap-2 overflow-x-auto overflow-y-hidden no-scrollbar overscroll-x-contain">
@@ -729,7 +981,9 @@ export function BillingPage() {
           ))}
         </div>
 
-        <div className="mt-3 text-xs text-text-aux">共 {total} 条记录</div>
+        <div className="mt-3 text-xs text-text-aux">
+          当前为 {viewMode === 'merged' ? '合并流水' : '正常流水'} · {selectedCategoryLabel} · 共 {total} 条记录
+        </div>
       </div>
     );
   };
@@ -816,7 +1070,7 @@ export function BillingPage() {
     if (!logs.length) {
       return (
         <EmptyState
-          message={keyword ? '没有找到匹配的资产记录' : sceneConfig.emptyMessage}
+          message={keyword ? '没有找到匹配的资金记录' : sceneConfig.emptyMessage}
         />
       );
     }
@@ -838,83 +1092,82 @@ export function BillingPage() {
                 const FlowIcon = flowMeta.icon;
                 const beforeValueText = formatMoney(item.beforeValue);
                 const afterValueText = formatMoney(item.afterValue);
-                const detailReference = item.flowNo || `记录 #${item.id}`;
+                const bizLabel = formatBizTypeLabel(item.bizType);
+                const memoText = item.memo?.trim();
+                const titleText = memoText || bizLabel;
+                const subtitleText = memoText && memoText !== bizLabel ? bizLabel : undefined;
+                const detailReference =
+                  item.isMerged && item.mergeKey
+                    ? `合并键 ${item.mergeKey}`
+                    : item.flowNo || `记录 #${item.id}`;
 
                 return (
                   <button
                     key={`${item.id}-${item.flowNo ?? item.createTime ?? index}`}
                     type="button"
                     onClick={() => setSelectedLog(item)}
-                    className="group relative w-full overflow-hidden rounded-[28px] border border-border-light/80 bg-bg-card/95 p-4 text-left shadow-[0_18px_40px_rgba(17,24,39,0.06)] transition-all duration-200 active:scale-[0.985] active:shadow-[0_12px_28px_rgba(17,24,39,0.08)]"
+                    className="group w-full rounded-2xl border border-border-light/80 bg-bg-card px-4 py-3.5 text-left shadow-[0_8px_22px_rgba(15,23,42,0.05)] transition-all duration-200 active:scale-[0.99] active:bg-bg-base/55 active:shadow-[0_4px_12px_rgba(15,23,42,0.06)]"
                   >
-                    <div className={`pointer-events-none absolute inset-x-0 top-0 h-24 bg-gradient-to-br ${tone.accentClassName}`} />
-                    <div className="pointer-events-none absolute top-[-32px] right-[-12px] h-28 w-28 rounded-full bg-white/50 blur-3xl dark:bg-white/[0.05]" />
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className={`inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-medium ${tone.badgeClassName}`}>
+                            {accountLabel}
+                          </span>
+                          {item.isMerged ? (
+                            <span className="inline-flex items-center rounded-md bg-amber-500/10 px-2 py-0.5 text-[11px] font-medium text-amber-700 ring-1 ring-amber-500/12 dark:bg-amber-500/16 dark:text-amber-300">
+                              {item.mergeRowCount && item.mergeRowCount > 1
+                                ? `合并 ${item.mergeRowCount} 笔`
+                                : '合并流水'}
+                            </span>
+                          ) : null}
+                        </div>
 
-                    <div className="relative flex items-start gap-3.5">
-                      <div
-                        className={`mt-0.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ring-1 ring-white/65 ${tone.iconClassName}`}
-                      >
-                        <Wallet size={18} />
+                        <div className="mt-2 line-clamp-1 text-[15px] font-semibold text-text-main">
+                          {titleText}
+                        </div>
+
+                        <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-text-aux">
+                          {subtitleText ? <span className="line-clamp-1">{subtitleText}</span> : null}
+                          <span className="inline-flex items-center gap-1">
+                            <Clock3 size={12} />
+                            <span>{item.createTimeText || '--'}</span>
+                          </span>
+                        </div>
                       </div>
 
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="min-w-0">
-                            <div className="truncate text-[15px] font-semibold tracking-[0.01em] text-text-main">
-                              {formatBizTypeLabel(item.bizType)}
-                            </div>
-                            <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
-                              <span className="inline-flex items-center gap-1 rounded-full bg-black/[0.035] px-2.5 py-1 text-text-aux dark:bg-white/[0.05]">
-                                <Clock3 size={12} />
-                                <span className="truncate">{item.createTimeText || detailReference}</span>
-                              </span>
-                              <span className={`inline-flex items-center rounded-full px-2.5 py-1 font-medium ${tone.badgeClassName}`}>
-                                {accountLabel}
-                              </span>
-                            </div>
+                      <div className="flex shrink-0 items-start gap-2">
+                        <div className="text-right">
+                          <div
+                            className={`text-lg font-bold tracking-[-0.02em] font-[DINAlternate-Bold,Roboto,sans-serif] ${getAmountClassName(item.amount)}`}
+                          >
+                            {formatSignedMoney(item.amount)}
                           </div>
-
-                          <div className="shrink-0 text-right">
-                            <div className={`text-xl font-semibold tracking-[-0.03em] ${getAmountClassName(item.amount)}`}>
-                              {formatSignedMoney(item.amount)}
-                            </div>
-                            <div className={`mt-1 inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium ${flowMeta.badgeClassName}`}>
-                              <FlowIcon size={12} />
-                              <span>{flowMeta.label}</span>
-                            </div>
+                          <div
+                            className={`mt-1 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium ${flowMeta.badgeClassName}`}
+                          >
+                            <FlowIcon size={11} />
+                            <span>{flowMeta.label}</span>
                           </div>
                         </div>
 
-                        <div className="mt-3 rounded-3xl border border-white/70 bg-white/78 p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.82)] backdrop-blur-sm dark:border-white/[0.06] dark:bg-white/[0.04]">
-                          <div className="line-clamp-2 text-sm leading-6 text-text-sub">
-                            {item.memo || accountLabel}
-                          </div>
-
-                          <div className="mt-3 grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2">
-                            <div className="min-w-0 rounded-2xl bg-bg-base/85 px-3 py-2.5">
-                              <div className="text-[11px] text-text-aux">变动前</div>
-                              <div className="mt-1 truncate text-sm font-semibold text-text-main">
-                                {beforeValueText}
-                              </div>
-                            </div>
-                            <div className="flex h-8 w-8 items-center justify-center rounded-full border border-border-light/70 bg-bg-card text-text-aux shadow-[0_6px_18px_rgba(15,23,42,0.08)]">
-                              <MoveRight size={14} />
-                            </div>
-                            <div className="min-w-0 rounded-2xl bg-bg-base/85 px-3 py-2.5 text-right">
-                              <div className="text-[11px] text-text-aux">变动后</div>
-                              <div className="mt-1 truncate text-sm font-semibold text-text-main">
-                                {afterValueText}
-                              </div>
-                            </div>
-                          </div>
+                        <div className="pt-0.5 text-text-disabled transition-transform duration-200 group-active:translate-x-0.5">
+                          <ChevronRight size={16} />
                         </div>
+                      </div>
+                    </div>
 
-                        <div className="mt-3 flex items-center justify-between gap-3">
-                          <div className="min-w-0 truncate text-xs text-text-aux">{detailReference}</div>
-                          <div className="inline-flex items-center gap-1 text-sm font-medium text-text-sub transition-transform duration-200 group-active:translate-x-0.5">
-                            <span>查看详情</span>
-                            <ChevronRight size={15} />
-                          </div>
+                    <div className="mt-3 border-t border-border-light/70 pt-2.5">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div className="min-w-0 flex-1 truncate text-[11px] text-text-aux">{detailReference}</div>
+                        <div className="inline-flex max-w-full items-center gap-2 rounded-full bg-bg-base px-3 py-1.5 text-xs text-text-sub">
+                          <span className="shrink-0 text-text-aux">变动前</span>
+                          <span className="truncate font-medium text-text-main">{beforeValueText}</span>
+                          <MoveRight size={12} className="shrink-0 text-text-disabled" />
+                          <span className="shrink-0 text-text-aux">变动后</span>
+                          <span className={`truncate font-medium ${getAmountClassName(item.amount)}`}>
+                            {afterValueText}
+                          </span>
                         </div>
                       </div>
                     </div>
@@ -1027,10 +1280,20 @@ export function BillingPage() {
           </div>
 
           <div className="space-y-4">
+            {renderDetailRow('流水模式', (detail?.isMerged ?? selectedLog.isMerged) ? '合并流水' : '正常流水')}
             {renderDetailRow('账户类型', formatAccountTypeLabel(detail?.accountType || selectedLog.accountType))}
             {renderDetailRow('业务类型', formatBizTypeLabel(detail?.bizType || selectedLog.bizType))}
             {renderDetailRow('创建时间', detail?.createTimeText || selectedLog.createTimeText)}
             {renderDetailRow('备注说明', detail?.memo || selectedLog.memo)}
+            {(detail?.mergeRowCount ?? selectedLog.mergeRowCount) ? (
+              renderDetailRow('合并笔数', `${detail?.mergeRowCount ?? selectedLog.mergeRowCount} 笔`)
+            ) : null}
+            {(detail?.mergeKey || selectedLog.mergeKey) ? (
+              renderDetailRow('合并键', detail?.mergeKey || selectedLog.mergeKey, {
+                copyable: true,
+                successMessage: '合并键已复制',
+              })
+            ) : null}
             {renderDetailRow('流水号', detail?.flowNo || selectedLog.flowNo, {
               copyable: true,
               successMessage: '流水号已复制',

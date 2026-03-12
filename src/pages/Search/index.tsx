@@ -251,7 +251,7 @@ export const SearchPage = () => {
               onChange={(event) => setQuery(event.target.value)}
               onFocus={() => setIsFocused(true)}
               placeholder="搜索商品 / 分类"
-              className="w-full border-none bg-transparent text-base text-text-main outline-none placeholder:text-text-aux"
+                  className="w-full border-none bg-transparent text-lg text-text-main outline-none placeholder:text-text-aux"
             />
             {query && (
               <button

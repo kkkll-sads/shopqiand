@@ -224,7 +224,7 @@ export const FriendsPage = () => {
                 placeholder="搜索手机号/昵称/ID"
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
-                className="flex-1 bg-transparent text-md outline-none text-text-main placeholder:text-text-aux min-w-0"
+                  className="flex-1 bg-transparent text-lg outline-none text-text-main placeholder:text-text-aux min-w-0"
               />
               {searchQuery && (
                 <button onClick={() => setSearchQuery('')} className="p-1 text-text-aux active:text-text-sub shrink-0">

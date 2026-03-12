@@ -67,6 +67,7 @@ const RightsHistoryPage = lazy(() => import('../pages/RightsHistory').then(m => 
 const AccumulatedRightsPage = lazy(() => import('../pages/AccumulatedRights').then(m => ({ default: m.AccumulatedRightsPage })));
 const GrowthRightsPage = lazy(() => import('../pages/GrowthRights/Page').then(m => ({ default: m.GrowthRightsPage })));
 const MyCollectionPage = lazy(() => import('../pages/MyCollection').then(m => ({ default: m.MyCollectionPage })));
+const MyCollectionDetailPage = lazy(() => import('../pages/MyCollectionDetail').then(m => ({ default: m.MyCollectionDetailPage })));
 const RechargePage = lazy(() => import('../pages/Recharge').then(m => ({ default: m.RechargePage })));
 const ServiceFeeRechargePage = lazy(() => import('../pages/ServiceFeeRecharge').then(m => ({ default: m.ServiceFeeRechargePage })));
 const TransferPage = lazy(() => import('../pages/Transfer').then(m => ({ default: m.TransferPage })));
@@ -235,6 +236,7 @@ export const router = createHashRouter([
       { path: 'consignment-voucher', element: <Lazy><ConsignmentCouponPage /></Lazy> },
       { path: 'billing', element: <Lazy><BillingPage /></Lazy> },
       { path: 'my-collection', element: <Lazy><MyCollectionPage /></Lazy> },
+      { path: 'my-collection/detail/:id', element: <Lazy><MyCollectionDetailPage /></Lazy> },
       { path: 'my-card-packs', element: <Lazy><MyCardPacksPage /></Lazy> },
       { path: 'accumulated-rights', element: <Lazy><AccumulatedRightsPage /></Lazy> },
       { path: 'growth_rights', element: <Lazy><GrowthRightsPage /></Lazy> },

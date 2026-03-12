@@ -1,10 +1,10 @@
 /**
- * @file MyCollection/index.tsx - 我的藏品页面
- * @description 展示用户持有的数字藏品列表，支持搜索、筛选、无限滚动加载。
+ * @file MyCollection/index.tsx
+ * @description 展示用户持有的数字藏品列表，支持搜索、状态筛选和无限滚动。
  */
 
-import { type FormEvent, useCallback, useEffect, useRef, useState } from 'react'; // React 核心 Hook
-import { Box, RefreshCcw, Search, X } from 'lucide-react';
+import { type FormEvent, useCallback, useEffect, useRef, useState } from 'react';
+import { Box, ChevronRight, RefreshCcw, Search, X } from 'lucide-react';
 import {
   collectionTradeApi,
   type MyCollectionItem,
@@ -37,7 +37,7 @@ const EMPTY_RESPONSE: MyCollectionResponse = {
 const STATUS_TABS: Array<{ key: MyCollectionStatus; label: string }> = [
   { key: 'holding', label: '持有中' },
   { key: 'consigned', label: '寄售中' },
-  { key: 'mining', label: '矿机中' },
+  { key: 'mining', label: '运行中' },
   { key: 'sold', label: '已售出' },
   { key: 'failed', label: '寄售失败' },
   { key: 'all', label: '全部' },
@@ -75,7 +75,7 @@ function isSoldItem(item: MyCollectionItem): boolean {
 }
 
 function isMiningItem(item: MyCollectionItem): boolean {
-  return item.mining_status === 1 || item.status_text === '矿机运行中';
+  return item.mining_status === 1 || item.status_text === '运行中';
 }
 
 function getStatusBadgeClass(item: MyCollectionItem): string {
@@ -108,13 +108,19 @@ function getPrimaryTimeMeta(item: MyCollectionItem): { label: string; value: str
   }
 
   if (isMiningItem(item)) {
-    return { label: '矿机启动', value: item.mining_start_time_text || item.create_time_text || '--' };
+    return { label: '启动时间', value: item.mining_start_time_text || item.create_time_text || '--' };
   }
 
   return { label: '入藏时间', value: item.create_time_text || '--' };
 }
 
-function CollectionCard({ item }: { item: MyCollectionItem }) {
+function CollectionCard({
+  item,
+  onClick,
+}: {
+  item: MyCollectionItem;
+  onClick?: () => void;
+}) {
   const sold = isSoldItem(item);
   const failed = isFailedItem(item);
   const zoneLabel = item.price_zone || item.zone_name || '--';
@@ -126,16 +132,32 @@ function CollectionCard({ item }: { item: MyCollectionItem }) {
   const thirdValue = sold
     ? formatSignedAmount(item.profit_amount)
     : failed
-      ? `¥${formatMoney(item.service_fee)}`
+      ? `￥${formatMoney(item.service_fee)}`
       : `${item.transaction_count} 次`;
-  const fourthLabel = sold ? '到账拆分' : failed ? '流拍次数' : '流拍次数';
+  const fourthLabel = sold ? '到账拆分' : '流拍次数';
   const fourthValue = sold
-    ? `可提现 ¥${formatMoney(item.payout_total_withdrawable)} / 消费金 ¥${formatMoney(item.payout_total_consume)}`
+    ? `可提现 ￥${formatMoney(item.payout_total_withdrawable)} / 消费金 ￥${formatMoney(item.payout_total_consume)}`
     : `${item.fail_count} 次`;
   const timeMeta = getPrimaryTimeMeta(item);
+  const interactive = typeof onClick === 'function';
 
   return (
-    <Card className="overflow-hidden p-0 shadow-sm">
+    <Card
+      className={`overflow-hidden p-0 shadow-sm transition ${interactive ? 'cursor-pointer active:scale-[0.995]' : ''}`}
+      onClick={onClick}
+      onKeyDown={(event) => {
+        if (!interactive) {
+          return;
+        }
+
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          onClick();
+        }
+      }}
+      role={interactive ? 'button' : undefined}
+      tabIndex={interactive ? 0 : undefined}
+    >
       <div className="flex gap-3 border-b border-border-light px-4 py-4">
         <div className="h-24 w-24 shrink-0 overflow-hidden rounded-2xl bg-bg-base">
           {item.image ? (
@@ -170,7 +192,7 @@ function CollectionCard({ item }: { item: MyCollectionItem }) {
               </span>
               <div className="mt-3 text-[11px] text-text-aux">{primaryPriceLabel}</div>
               <div className="mt-1 text-xl font-bold leading-none text-text-main">
-                ¥{formatMoney(primaryPriceValue)}
+                ￥{formatMoney(primaryPriceValue)}
               </div>
             </div>
           </div>
@@ -178,7 +200,7 @@ function CollectionCard({ item }: { item: MyCollectionItem }) {
           <div className="grid grid-cols-2 gap-2 text-[12px]">
             <div className="rounded-2xl bg-bg-base px-3 py-2.5">
               <div className="text-text-aux">{secondaryLabel}</div>
-              <div className="mt-1 font-semibold text-text-main">¥{formatMoney(secondaryValue)}</div>
+              <div className="mt-1 font-semibold text-text-main">￥{formatMoney(secondaryValue)}</div>
             </div>
             <div className="rounded-2xl bg-bg-base px-3 py-2.5">
               <div className="text-text-aux">{thirdLabel}</div>
@@ -206,9 +228,15 @@ function CollectionCard({ item }: { item: MyCollectionItem }) {
           </span>
         </div>
         <div className="flex items-center justify-between gap-4">
-          <span className="text-text-aux">哈希</span>
+          <span className="text-text-aux">Hash</span>
           <span className="truncate text-right font-mono text-text-main">{formatHash(item.hash)}</span>
         </div>
+        {interactive ? (
+          <div className="flex items-center justify-end gap-1 pt-1 text-[12px] font-medium text-primary-start">
+            <span>查看持有凭证</span>
+            <ChevronRight size={14} />
+          </div>
+        ) : null}
       </div>
     </Card>
   );
@@ -242,7 +270,7 @@ function CollectionListSkeleton() {
 }
 
 export const MyCollectionPage = () => {
-  const { goBackOr } = useAppNavigate();
+  const { goBackOr, navigate } = useAppNavigate();
   const { isOffline, refreshStatus } = useNetworkStatus();
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
@@ -359,6 +387,15 @@ export const MyCollectionPage = () => {
     setKeyword('');
   }, []);
 
+  const handleOpenDetail = useCallback((item: MyCollectionItem) => {
+    const targetId = item.user_collection_id || item.id;
+    if (!targetId) {
+      return;
+    }
+
+    navigate(`/my-collection/detail/${targetId}`);
+  }, [navigate]);
+
   const total = firstRequest.data?.total ?? items.length;
 
   const renderLoadMore = () => {
@@ -400,7 +437,12 @@ export const MyCollectionPage = () => {
     }
 
     if (firstRequest.error && items.length === 0) {
-      return <ErrorState message={getErrorMessage(firstRequest.error)} onRetry={() => void firstRequest.reload()} />;
+      return (
+        <ErrorState
+          message={getErrorMessage(firstRequest.error)}
+          onRetry={() => void firstRequest.reload()}
+        />
+      );
     }
 
     if (items.length === 0) {
@@ -416,7 +458,7 @@ export const MyCollectionPage = () => {
       <div className="space-y-3 p-4 pb-8">
         {items.map((item) => (
           <div key={`${item.consignment_id || item.user_collection_id || item.id}-${item.status_text}`}>
-            <CollectionCard item={item} />
+            <CollectionCard item={item} onClick={() => handleOpenDetail(item)} />
           </div>
         ))}
 
@@ -441,7 +483,7 @@ export const MyCollectionPage = () => {
               value={draftKeyword}
               onChange={(event) => setDraftKeyword(event.target.value)}
               placeholder="搜索藏品标题"
-              className="h-11 w-full rounded-2xl border border-border-light bg-bg-base pl-10 pr-10 text-[14px] text-text-main outline-none placeholder:text-text-aux"
+              className="h-11 w-full rounded-2xl border border-border-light bg-bg-base pl-10 pr-10 text-lg text-text-main outline-none placeholder:text-text-aux"
             />
             {draftKeyword ? (
               <button
@@ -471,9 +513,7 @@ export const MyCollectionPage = () => {
                 type="button"
                 onClick={() => setActiveStatus(tab.key)}
                 className={`shrink-0 rounded-full px-4 py-2 text-[13px] font-medium transition ${
-                  active
-                    ? 'bg-primary-start text-white'
-                    : 'bg-bg-base text-text-sub'
+                  active ? 'bg-primary-start text-white' : 'bg-bg-base text-text-sub'
                 }`}
               >
                 {tab.label}

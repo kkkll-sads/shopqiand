@@ -257,7 +257,7 @@ export const AgentAuthPage = () => {
                         value={companyName}
                         onChange={(event) => setCompanyName(event.target.value)}
                         placeholder="请输入企业名称"
-                        className="h-12 w-full rounded-2xl border border-border-light bg-bg-base px-4 text-sm text-text-main outline-none transition-colors placeholder:text-text-aux focus:border-orange-400"
+                  className="h-12 w-full rounded-2xl border border-border-light bg-bg-base px-4 text-lg text-text-main outline-none transition-colors placeholder:text-text-aux focus:border-orange-400"
                       />
                     </label>
 
@@ -271,7 +271,7 @@ export const AgentAuthPage = () => {
                         value={legalPerson}
                         onChange={(event) => setLegalPerson(event.target.value)}
                         placeholder="请输入法人姓名"
-                        className="h-12 w-full rounded-2xl border border-border-light bg-bg-base px-4 text-sm text-text-main outline-none transition-colors placeholder:text-text-aux focus:border-orange-400"
+                  className="h-12 w-full rounded-2xl border border-border-light bg-bg-base px-4 text-lg text-text-main outline-none transition-colors placeholder:text-text-aux focus:border-orange-400"
                       />
                     </label>
 
@@ -287,7 +287,7 @@ export const AgentAuthPage = () => {
                           setLegalIdNumber(event.target.value.replace(/\s+/g, '').toUpperCase())
                         }
                         placeholder="请输入法人证件号"
-                        className="h-12 w-full rounded-2xl border border-border-light bg-bg-base px-4 text-sm text-text-main outline-none transition-colors placeholder:text-text-aux focus:border-orange-400"
+                  className="h-12 w-full rounded-2xl border border-border-light bg-bg-base px-4 text-lg text-text-main outline-none transition-colors placeholder:text-text-aux focus:border-orange-400"
                       />
                     </label>
                   </div>
