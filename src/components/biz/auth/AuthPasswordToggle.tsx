@@ -12,7 +12,7 @@ export const AuthPasswordToggle = ({ visible, onToggle }: AuthPasswordToggleProp
   return (
     <button
       type="button"
-      aria-label={visible ? 'Òþ²ØÃÜÂë' : 'ÏÔÊ¾ÃÜÂë'}
+      aria-label={visible ? 'éšè—å¯†ç ' : 'æ˜¾ç¤ºå¯†ç '}
       onClick={onToggle}
       className={toggleClassName}
     >

@@ -28,7 +28,7 @@ export const AuthSmsField = ({
   canSend,
   sending = false,
   message,
-  placeholder = '«Î ‰»Î—È÷§¬Î',
+  placeholder = '\u8BF7\u8F93\u5165\u9A8C\u8BC1\u7801',
   inputClassName = '',
   buttonClassName = '',
   inputProps,

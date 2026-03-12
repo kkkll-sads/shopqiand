@@ -48,7 +48,7 @@ export const AuthTopBar = ({ onBack, showSupport = true }: AuthTopBarProps) => {
           onClick={handleOpenSupport}
         >
           <Headset size={14} />
-          ┐═╖■
+          ховцЬН
         </Button>
       ) : (
         <div aria-hidden="true" />
