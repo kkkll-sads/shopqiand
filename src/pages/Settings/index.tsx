@@ -189,7 +189,6 @@ export const SettingsPage = () => {
           <SettingsSection>
             <SettingsActionItem
               label="注销账户"
-              description={showCancelAccountForm ? '正在填写注销信息' : '提交账户密码进行二次确认，可填写注销原因'}
               icon={<UserX size={18} />}
               variant="danger"
               hideChevron={showCancelAccountForm}

@@ -112,7 +112,9 @@ export const UserPage = () => {
 
   const profileUserInfo = isLoggedIn ? (profile?.userInfo ?? session?.userInfo) : undefined;
   const userInfo = (profileUserInfo ?? {}) as Record<string, unknown>;
-  const displayName = String(userInfo.nickname ?? userInfo.username ?? userInfo.mobile ?? '会员用户');
+  // 已实名用户优先显示真实姓名，否则回退到昵称 → 用户名 → 手机号
+  const realName = userInfo.is_real_name === 1 && userInfo.real_name ? String(userInfo.real_name) : '';
+  const displayName = realName || String(userInfo.nickname ?? userInfo.username ?? userInfo.mobile ?? '会员用户');
   const displayUid = String(userInfo.uid ?? userInfo.id ?? '--');
   const displayAvatar =
     typeof userInfo.avatar === 'string' && userInfo.avatar.trim() ? userInfo.avatar.trim() : '';
