@@ -6,10 +6,14 @@
 
 import { type FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react'; // React 核心 Hook 和类型
 import {
+  ArrowDownLeft,
+  ArrowUpRight,
   ChevronRight,
+  Clock3,
   Copy,
   FileText,
   Loader2,
+  MoveRight,
   RefreshCcw,
   Search,
   Wallet,
@@ -175,7 +179,7 @@ function getAmountClassName(amount: number) {
   }
 
   if (amount < 0) {
-    return 'text-text-main';
+    return 'text-primary-start';
   }
 
   return 'text-text-sub';
@@ -185,30 +189,72 @@ function getAccountTone(type: string | undefined) {
   switch (type) {
     case 'withdrawable_money':
       return {
-        badgeClassName: 'bg-emerald-50 text-emerald-700',
-        iconClassName: 'bg-emerald-50 text-emerald-600',
+        accentClassName: 'from-emerald-500/16 via-emerald-400/6 to-transparent',
+        badgeClassName:
+          'bg-emerald-500/12 text-emerald-700 ring-1 ring-emerald-500/12 dark:bg-emerald-500/16 dark:text-emerald-300',
+        iconClassName:
+          'bg-[linear-gradient(145deg,rgba(16,185,129,0.16),rgba(255,255,255,0.98))] text-emerald-600 shadow-[0_12px_30px_rgba(16,185,129,0.18)]',
       };
     case 'service_fee_balance':
       return {
-        badgeClassName: 'bg-violet-50 text-violet-700',
-        iconClassName: 'bg-violet-50 text-violet-600',
+        accentClassName: 'from-violet-500/18 via-fuchsia-500/6 to-transparent',
+        badgeClassName:
+          'bg-violet-500/12 text-violet-700 ring-1 ring-violet-500/12 dark:bg-violet-500/16 dark:text-violet-300',
+        iconClassName:
+          'bg-[linear-gradient(145deg,rgba(139,92,246,0.16),rgba(255,255,255,0.98))] text-violet-600 shadow-[0_12px_30px_rgba(139,92,246,0.2)]',
       };
     case 'score':
       return {
-        badgeClassName: 'bg-sky-50 text-sky-700',
-        iconClassName: 'bg-sky-50 text-sky-600',
+        accentClassName: 'from-sky-500/16 via-cyan-400/6 to-transparent',
+        badgeClassName:
+          'bg-sky-500/12 text-sky-700 ring-1 ring-sky-500/12 dark:bg-sky-500/16 dark:text-sky-300',
+        iconClassName:
+          'bg-[linear-gradient(145deg,rgba(14,165,233,0.15),rgba(255,255,255,0.98))] text-sky-600 shadow-[0_12px_30px_rgba(14,165,233,0.2)]',
       };
     case 'green_power':
       return {
-        badgeClassName: 'bg-lime-50 text-lime-700',
-        iconClassName: 'bg-lime-50 text-lime-600',
+        accentClassName: 'from-lime-500/20 via-emerald-400/6 to-transparent',
+        badgeClassName:
+          'bg-lime-500/14 text-lime-700 ring-1 ring-lime-500/14 dark:bg-lime-500/16 dark:text-lime-300',
+        iconClassName:
+          'bg-[linear-gradient(145deg,rgba(132,204,22,0.18),rgba(255,255,255,0.98))] text-lime-700 shadow-[0_12px_30px_rgba(132,204,22,0.2)]',
       };
     default:
       return {
-        badgeClassName: 'bg-rose-50 text-rose-700',
-        iconClassName: 'bg-rose-50 text-rose-600',
+        accentClassName: 'from-primary-start/18 via-primary-start/5 to-transparent',
+        badgeClassName:
+          'bg-primary-start/10 text-primary-start ring-1 ring-primary-start/10 dark:bg-primary-start/16 dark:text-red-300',
+        iconClassName:
+          'bg-[linear-gradient(145deg,rgba(233,59,59,0.15),rgba(255,255,255,0.98))] text-primary-start shadow-[0_12px_30px_rgba(233,59,59,0.18)]',
       };
   }
+}
+
+function getFlowMeta(amount: number) {
+  if (amount > 0) {
+    return {
+      badgeClassName:
+        'bg-emerald-500/10 text-emerald-700 ring-1 ring-emerald-500/12 dark:bg-emerald-500/16 dark:text-emerald-300',
+      icon: ArrowDownLeft,
+      label: '收入',
+    };
+  }
+
+  if (amount < 0) {
+    return {
+      badgeClassName:
+        'bg-primary-start/10 text-primary-start ring-1 ring-primary-start/12 dark:bg-primary-start/16 dark:text-red-300',
+      icon: ArrowUpRight,
+      label: '支出',
+    };
+  }
+
+  return {
+    badgeClassName:
+      'bg-slate-500/10 text-slate-600 ring-1 ring-slate-500/12 dark:bg-slate-500/16 dark:text-slate-300',
+    icon: MoveRight,
+    label: '平账',
+  };
 }
 
 /** 从流水记录提取月份标签（用于分组显示） */
@@ -776,70 +822,106 @@ export function BillingPage() {
     }
 
     return (
-      <div className="space-y-6 px-4 pb-10 pt-6">
+      <div className="space-y-7 px-4 pb-10 pt-5">
         {groupedLogs.map((group) => (
-          <div key={group.label}>
-            <div className="mb-3 ml-1 text-base font-bold text-text-main">{group.label}</div>
-            <Card className="overflow-hidden border border-border-light/80 bg-bg-card/95 p-0">
-              {group.rows.map((item, index) => (
-                (() => {
-                  const accountLabel = formatAccountTypeLabel(item.accountType);
-                  const tone = getAccountTone(item.accountType);
-                  const beforeValueText = formatMoney(item.beforeValue);
-                  const afterValueText = formatMoney(item.afterValue);
+          <div key={group.label} className="space-y-3">
+            <div className="flex items-center gap-3 px-1">
+              <div className="text-base font-bold tracking-[0.01em] text-text-main">{group.label}</div>
+              <div className="h-px flex-1 bg-gradient-to-r from-primary-start/14 via-primary-start/6 to-transparent" />
+            </div>
 
-                  return (
-                    <button
-                      key={`${item.id}-${item.flowNo ?? item.createTime ?? index}`}
-                      type="button"
-                      onClick={() => setSelectedLog(item)}
-                      className={`flex w-full items-start justify-between gap-4 px-4 py-3.5 text-left transition-colors active:bg-bg-base ${
-                        index < group.rows.length - 1 ? 'border-b border-border-light' : ''
-                      }`}
-                    >
+            <div className="space-y-3">
+              {group.rows.map((item, index) => {
+                const accountLabel = formatAccountTypeLabel(item.accountType);
+                const tone = getAccountTone(item.accountType);
+                const flowMeta = getFlowMeta(item.amount);
+                const FlowIcon = flowMeta.icon;
+                const beforeValueText = formatMoney(item.beforeValue);
+                const afterValueText = formatMoney(item.afterValue);
+                const detailReference = item.flowNo || `记录 #${item.id}`;
+
+                return (
+                  <button
+                    key={`${item.id}-${item.flowNo ?? item.createTime ?? index}`}
+                    type="button"
+                    onClick={() => setSelectedLog(item)}
+                    className="group relative w-full overflow-hidden rounded-[28px] border border-border-light/80 bg-bg-card/95 p-4 text-left shadow-[0_18px_40px_rgba(17,24,39,0.06)] transition-all duration-200 active:scale-[0.985] active:shadow-[0_12px_28px_rgba(17,24,39,0.08)]"
+                  >
+                    <div className={`pointer-events-none absolute inset-x-0 top-0 h-24 bg-gradient-to-br ${tone.accentClassName}`} />
+                    <div className="pointer-events-none absolute top-[-32px] right-[-12px] h-28 w-28 rounded-full bg-white/50 blur-3xl dark:bg-white/[0.05]" />
+
+                    <div className="relative flex items-start gap-3.5">
+                      <div
+                        className={`mt-0.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ring-1 ring-white/65 ${tone.iconClassName}`}
+                      >
+                        <Wallet size={18} />
+                      </div>
+
                       <div className="min-w-0 flex-1">
-                          <div className="truncate text-sm font-medium text-text-main">
-                            {formatBizTypeLabel(item.bizType)}
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <div className="truncate text-[15px] font-semibold tracking-[0.01em] text-text-main">
+                              {formatBizTypeLabel(item.bizType)}
+                            </div>
+                            <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
+                              <span className="inline-flex items-center gap-1 rounded-full bg-black/[0.035] px-2.5 py-1 text-text-aux dark:bg-white/[0.05]">
+                                <Clock3 size={12} />
+                                <span className="truncate">{item.createTimeText || detailReference}</span>
+                              </span>
+                              <span className={`inline-flex items-center rounded-full px-2.5 py-1 font-medium ${tone.badgeClassName}`}>
+                                {accountLabel}
+                              </span>
+                            </div>
                           </div>
-                          <div className="mt-1 line-clamp-2 text-sm text-text-sub">
+
+                          <div className="shrink-0 text-right">
+                            <div className={`text-xl font-semibold tracking-[-0.03em] ${getAmountClassName(item.amount)}`}>
+                              {formatSignedMoney(item.amount)}
+                            </div>
+                            <div className={`mt-1 inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium ${flowMeta.badgeClassName}`}>
+                              <FlowIcon size={12} />
+                              <span>{flowMeta.label}</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="mt-3 rounded-3xl border border-white/70 bg-white/78 p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.82)] backdrop-blur-sm dark:border-white/[0.06] dark:bg-white/[0.04]">
+                          <div className="line-clamp-2 text-sm leading-6 text-text-sub">
                             {item.memo || accountLabel}
                           </div>
-                          <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
-                            <span className="truncate text-text-aux">
-                              {item.createTimeText || item.flowNo || `记录 #${item.id}`}
-                            </span>
-                            <span className={`rounded-full px-2 py-0.5 ${tone.badgeClassName}`}>
-                              {accountLabel}
-                            </span>
-                          </div>
-                          <div className="mt-3 grid grid-cols-2 gap-2">
-                            <div className="rounded-2xl border border-border-light bg-bg-base px-3 py-2">
+
+                          <div className="mt-3 grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2">
+                            <div className="min-w-0 rounded-2xl bg-bg-base/85 px-3 py-2.5">
                               <div className="text-[11px] text-text-aux">变动前</div>
-                              <div className="mt-1 text-sm font-medium text-text-main">
+                              <div className="mt-1 truncate text-sm font-semibold text-text-main">
                                 {beforeValueText}
                               </div>
                             </div>
-                            <div className="rounded-2xl border border-border-light bg-bg-base px-3 py-2">
+                            <div className="flex h-8 w-8 items-center justify-center rounded-full border border-border-light/70 bg-bg-card text-text-aux shadow-[0_6px_18px_rgba(15,23,42,0.08)]">
+                              <MoveRight size={14} />
+                            </div>
+                            <div className="min-w-0 rounded-2xl bg-bg-base/85 px-3 py-2.5 text-right">
                               <div className="text-[11px] text-text-aux">变动后</div>
-                              <div className="mt-1 text-sm font-medium text-text-main">
+                              <div className="mt-1 truncate text-sm font-semibold text-text-main">
                                 {afterValueText}
                               </div>
                             </div>
                           </div>
-                      </div>
-                      <div className="flex shrink-0 items-center self-start pt-0.5">
-                        <div className="mr-2 text-right">
-                          <div className={`text-base font-semibold ${getAmountClassName(item.amount)}`}>
-                            {formatSignedMoney(item.amount)}
+                        </div>
+
+                        <div className="mt-3 flex items-center justify-between gap-3">
+                          <div className="min-w-0 truncate text-xs text-text-aux">{detailReference}</div>
+                          <div className="inline-flex items-center gap-1 text-sm font-medium text-text-sub transition-transform duration-200 group-active:translate-x-0.5">
+                            <span>查看详情</span>
+                            <ChevronRight size={15} />
                           </div>
                         </div>
-                        <ChevronRight size={16} className="text-text-aux" />
                       </div>
-                    </button>
-                  );
-                })()
-              ))}
-            </Card>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
           </div>
         ))}
 
