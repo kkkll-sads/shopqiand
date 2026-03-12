@@ -233,6 +233,15 @@ export interface ResetPayPasswordBySmsPayload {
   newPayPassword: string;
 }
 
+export interface UpdateAvatarPayload {
+  avatar: string;
+  avatarUrl?: string;
+}
+
+export interface UpdateNicknamePayload {
+  nickname: string;
+}
+
 function readOptionalString(value: string | undefined) {
   if (typeof value !== 'string') {
     return undefined;
@@ -555,6 +564,51 @@ export const userApi = {
         signal: options.signal,
       },
     );
+  },
+
+  async updateAvatar(
+    payload: UpdateAvatarPayload,
+    options: UserRequestOptions = {},
+  ): Promise<void> {
+    const avatar = payload.avatar.trim();
+    const avatarUrl = payload.avatarUrl?.trim() ?? '';
+
+    if (!avatar && !avatarUrl) {
+      throw new Error('头像地址不能为空');
+    }
+
+    await http.post<null, Record<string, string>>(
+      '/api/User/updateAvatar',
+      {
+        avatar: avatar || avatarUrl,
+        avatar_url: avatarUrl,
+      },
+      {
+        headers: createApiHeaders(options),
+        signal: options.signal,
+        useMock: false,
+      },
+    );
+  },
+
+  async updateNickname(
+    payload: UpdateNicknamePayload,
+    options: UserRequestOptions = {},
+  ): Promise<void> {
+    const nickname = payload.nickname.trim();
+
+    if (!nickname) {
+      throw new Error('昵称不能为空');
+    }
+
+    const formData = new FormData();
+    formData.append('nickname', nickname);
+
+    await http.post<null, FormData>('/api/User/updateNickname', formData, {
+      headers: createApiHeaders(options),
+      signal: options.signal,
+      useMock: false,
+    });
   },
 
   async updatePayPassword(

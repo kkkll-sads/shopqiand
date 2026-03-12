@@ -63,6 +63,23 @@ export const ReservationCard: React.FC<ReservationCardProps> = ({ item, onClick 
           </span>
         </div>
 
+        {isMixed && (
+          <div className="flex flex-col gap-1 rounded-md bg-white/70 px-2.5 py-2 dark:bg-gray-900/30">
+            <div className="flex justify-between text-[11px] text-gray-500 dark:text-gray-400">
+              <span className="flex items-center before:mr-1.5 before:h-1 before:w-1 before:rounded-full before:bg-gray-300 before:content-['']">
+                冻结专项金
+              </span>
+              <span className="font-mono">{formatReservationAmount(item.freeze_balance_available)}</span>
+            </div>
+            <div className="flex justify-between text-[11px] text-gray-500 dark:text-gray-400">
+              <span className="flex items-center before:mr-1.5 before:h-1 before:w-1 before:rounded-full before:bg-gray-300 before:content-['']">
+                冻结待激活确权金
+              </span>
+              <span className="font-mono">{formatReservationAmount(item.freeze_pending_activation_gold)}</span>
+            </div>
+          </div>
+        )}
+
         {/* 2. 撮合成功后的 实际支付 与 退还差价 */}
         {isMatched && (
           <>

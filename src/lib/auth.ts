@@ -222,6 +222,39 @@ export function clearAuthSession() {
   dispatchAuthSessionChange();
 }
 
+export function patchAuthSessionUserInfo(patch: Partial<UserInfo>) {
+  const storages = getBrowserStorages();
+  if (!storages) {
+    return;
+  }
+
+  const storage = storages.session.getItem(AUTH_SESSION_STORAGE_KEY)
+    ? storages.session
+    : storages.local.getItem(AUTH_SESSION_STORAGE_KEY)
+      ? storages.local
+      : null;
+
+  if (!storage) {
+    return;
+  }
+
+  const currentSession = safeParse(storage.getItem(AUTH_SESSION_STORAGE_KEY));
+  if (!currentSession) {
+    return;
+  }
+
+  const nextSession: AuthSession = {
+    ...currentSession,
+    userInfo: {
+      ...(currentSession.userInfo ?? {}),
+      ...patch,
+    },
+  };
+
+  writeSessionToStorage(storage, nextSession);
+  dispatchAuthSessionChange();
+}
+
 export function persistAuthRedirectPath(path: string) {
   const storages = getBrowserStorages();
   const nextPath = resolveSafeRedirectPath(path);

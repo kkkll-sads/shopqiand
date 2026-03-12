@@ -81,6 +81,37 @@ export interface ShopOrderDetailResponse extends ShopOrderListItem {
   score: string;
 }
 
+export interface ShopOrderLogisticsTimelineItem {
+  time: string;
+  content: string;
+  zone: string;
+  is_latest: boolean;
+}
+
+export interface ShopOrderLogisticsResponse {
+  order_id: number;
+  order_no: string;
+  shipping_company: string;
+  shipping_company_code: string;
+  shipping_no: string;
+  recipient_name: string;
+  recipient_phone: string;
+  recipient_address: string;
+  requires_phone_suffix: boolean;
+  receiver_phone_suffix: string;
+  query_success: boolean;
+  query_error_code: number;
+  query_message: string;
+  status: string;
+  status_text: string;
+  status_detail: string;
+  status_detail_text: string;
+  status_is_final: boolean;
+  last_update_time: string;
+  timeline: ShopOrderLogisticsTimelineItem[];
+  provider: string;
+}
+
 /** 支付方式筛选 */
 export type PendingPayType = 'money' | 'score' | 'combined';
 
@@ -210,6 +241,9 @@ export interface ShopOrderListItem {
   recipient_address: string;
   shipping_no: string;
   shipping_company: string;
+  shipping_company_display?: string;
+  shipping_company_raw?: string;
+  shipping_company_code?: string;
   remark: string;
   source: string;
   admin_remark: string;
@@ -368,6 +402,20 @@ export const shopOrderApi = {
     signal?: AbortSignal,
   ): Promise<ShopOrderDetailResponse> {
     return http.get<ShopOrderDetailResponse>('/api/shopOrder/detail', {
+      query: params,
+      signal,
+    });
+  },
+
+  /**
+   * 订单物流详情
+   * GET /api/shopOrder/logistics
+   */
+  logistics(
+    params: { id?: number; order_no?: string },
+    signal?: AbortSignal,
+  ): Promise<ShopOrderLogisticsResponse> {
+    return http.get<ShopOrderLogisticsResponse>('/api/shopOrder/logistics', {
       query: params,
       signal,
     });

@@ -1,12 +1,13 @@
 import React from 'react';
 import {
-  Settings,
-  MessageSquare,
+  Award,
+  ChevronRight,
+  Gem,
   HeadphonesIcon,
+  MessageSquare,
+  Settings,
   Sprout,
   UserCheck,
-  Gem,
-  Award,
 } from 'lucide-react';
 import type { AccountProfileUserInfo } from '../../../api/modules/account';
 
@@ -18,6 +19,7 @@ export interface ProfileHeaderProps {
   displayId: string;
   unreadCount: number;
   onNavigate: (viewId: string) => void;
+  onEditProfile: () => void;
   onOpenHelp: () => void;
 }
 
@@ -29,6 +31,7 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
   displayId,
   unreadCount,
   onNavigate,
+  onEditProfile,
   onOpenHelp,
 }) => {
   const userInfoRecord = (userInfo ?? {}) as Record<string, unknown>;
@@ -54,14 +57,43 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
     userInfoRecord.agentLevelText ?? userInfoRecord.agent_level_text ?? '',
   );
 
-  // 代理等级徽标颜色：L0灰 L1绿 L2蓝 L3紫 L4金 L5红
   const levelColors: Record<number, { bg: string; border: string; text: string; dot: string }> = {
-    0: { bg: 'bg-slate-50 dark:bg-slate-800/40', border: 'border-slate-200 dark:border-slate-700', text: 'text-slate-600 dark:text-slate-300', dot: 'from-slate-400 to-slate-500' },
-    1: { bg: 'bg-emerald-50 dark:bg-emerald-900/20', border: 'border-emerald-200 dark:border-emerald-800/40', text: 'text-emerald-700 dark:text-emerald-400', dot: 'from-emerald-400 to-emerald-600' },
-    2: { bg: 'bg-blue-50 dark:bg-blue-900/20', border: 'border-blue-200 dark:border-blue-800/40', text: 'text-blue-700 dark:text-blue-400', dot: 'from-blue-400 to-blue-600' },
-    3: { bg: 'bg-purple-50 dark:bg-purple-900/20', border: 'border-purple-200 dark:border-purple-800/40', text: 'text-purple-700 dark:text-purple-400', dot: 'from-purple-400 to-purple-600' },
-    4: { bg: 'bg-amber-50 dark:bg-amber-900/20', border: 'border-amber-200 dark:border-amber-800/40', text: 'text-amber-700 dark:text-amber-400', dot: 'from-amber-400 to-amber-600' },
-    5: { bg: 'bg-rose-50 dark:bg-rose-900/20', border: 'border-rose-200 dark:border-rose-800/40', text: 'text-rose-700 dark:text-rose-400', dot: 'from-rose-400 to-rose-600' },
+    0: {
+      bg: 'bg-slate-50 dark:bg-slate-800/40',
+      border: 'border-slate-200 dark:border-slate-700',
+      text: 'text-slate-600 dark:text-slate-300',
+      dot: 'from-slate-400 to-slate-500',
+    },
+    1: {
+      bg: 'bg-emerald-50 dark:bg-emerald-900/20',
+      border: 'border-emerald-200 dark:border-emerald-800/40',
+      text: 'text-emerald-700 dark:text-emerald-400',
+      dot: 'from-emerald-400 to-emerald-600',
+    },
+    2: {
+      bg: 'bg-blue-50 dark:bg-blue-900/20',
+      border: 'border-blue-200 dark:border-blue-800/40',
+      text: 'text-blue-700 dark:text-blue-400',
+      dot: 'from-blue-400 to-blue-600',
+    },
+    3: {
+      bg: 'bg-purple-50 dark:bg-purple-900/20',
+      border: 'border-purple-200 dark:border-purple-800/40',
+      text: 'text-purple-700 dark:text-purple-400',
+      dot: 'from-purple-400 to-purple-600',
+    },
+    4: {
+      bg: 'bg-amber-50 dark:bg-amber-900/20',
+      border: 'border-amber-200 dark:border-amber-800/40',
+      text: 'text-amber-700 dark:text-amber-400',
+      dot: 'from-amber-400 to-amber-600',
+    },
+    5: {
+      bg: 'bg-rose-50 dark:bg-rose-900/20',
+      border: 'border-rose-200 dark:border-rose-800/40',
+      text: 'text-rose-700 dark:text-rose-400',
+      dot: 'from-rose-400 to-rose-600',
+    },
   };
   const lc = levelColors[agentLevel] ?? levelColors[0];
 
@@ -74,52 +106,76 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
   const UserTypeIcon = statusMeta.icon;
 
   return (
-    <div className="pt-2 pb-2 px-6 relative z-10 text-text-main">
+    <div className="relative z-10 px-6 pb-2 pt-2 text-text-main">
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-16 h-16 rounded-full bg-primary-start/10 border-2 border-white flex items-center justify-center text-xl font-bold text-primary-start overflow-hidden shadow-sm">
+        <button
+          type="button"
+          onClick={onEditProfile}
+          className="flex min-w-0 items-center gap-3 rounded-[28px] pr-2 text-left transition-opacity active:opacity-70"
+        >
+          <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-full border-2 border-white bg-primary-start/10 text-xl font-bold text-primary-start shadow-sm">
             {displayAvatarUrl ? (
-              <img src={displayAvatarUrl} alt="用户头像" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+              <img
+                src={displayAvatarUrl}
+                alt="用户头像"
+                className="h-full w-full object-cover"
+                referrerPolicy="no-referrer"
+              />
             ) : (
               displayAvatarText || '用'
             )}
           </div>
 
-          <div className="flex flex-col gap-1">
-            <h2 className="text-xl font-bold text-text-main leading-tight">{displayName}</h2>
+          <div className="flex min-w-0 flex-col gap-1">
+            <div className="flex items-center gap-1.5">
+              <h2 className="max-w-[132px] truncate text-xl font-bold leading-tight text-text-main">
+                {displayName}
+              </h2>
+              <span className="inline-flex items-center gap-0.5 rounded-full bg-bg-card px-2 py-0.5 text-[11px] font-medium text-text-sub shadow-sm">
+                编辑资料
+                <ChevronRight size={12} />
+              </span>
+            </div>
 
             <div className="flex items-center gap-1.5">
-              <div className="flex items-center whitespace-nowrap rounded-full px-1.5 py-px bg-bg-card border border-border-light shadow-sm">
-                <div className="w-3 h-3 rounded-full bg-gradient-to-br from-primary-start to-primary-end flex items-center justify-center mr-0.5">
-                  <UserTypeIcon size={7} className="text-white fill-current" />
+              <div className="flex items-center whitespace-nowrap rounded-full border border-border-light bg-bg-card px-1.5 py-px shadow-sm">
+                <div className="mr-0.5 flex h-3 w-3 items-center justify-center rounded-full bg-gradient-to-br from-primary-start to-primary-end">
+                  <UserTypeIcon size={7} className="fill-current text-white" />
                 </div>
                 <span className="text-[9px] font-bold text-text-sub">{userTypeText || displayId}</span>
               </div>
 
-              {/* 代理等级徽标 */}
               {agentLevelText.length > 0 && agentLevel >= 0 && (
-                <div className={`flex items-center whitespace-nowrap rounded-full px-1.5 py-px border ${lc.bg} ${lc.border}`}>
-                  <div className={`w-3 h-3 rounded-full bg-gradient-to-br ${lc.dot} flex items-center justify-center mr-0.5`}>
+                <div
+                  className={`flex items-center whitespace-nowrap rounded-full border px-1.5 py-px ${lc.bg} ${lc.border}`}
+                >
+                  <div
+                    className={`mr-0.5 flex h-3 w-3 items-center justify-center rounded-full bg-gradient-to-br ${lc.dot}`}
+                  >
                     <Award size={7} className="text-white" />
                   </div>
                   <span className={`text-[9px] font-bold ${lc.text}`}>{agentLevelText}</span>
                 </div>
               )}
+
               {agentReviewStatus === 1 && (
-                <div className="flex items-center bg-red-50 dark:bg-red-900/20 whitespace-nowrap rounded-full px-1.5 py-px border border-red-100 dark:border-red-800/40">
-                  <Award size={8} className="text-red-500 mr-0.5" />
+                <div className="flex items-center whitespace-nowrap rounded-full border border-red-100 bg-red-50 px-1.5 py-px dark:border-red-800/40 dark:bg-red-900/20">
+                  <Award size={8} className="mr-0.5 text-red-500" />
                   <span className="text-[9px] font-bold text-red-600 dark:text-red-400">代理</span>
                 </div>
               )}
+
               {agentReviewStatus === 0 && (
-                <div className="flex items-center bg-yellow-50 dark:bg-yellow-900/20 whitespace-nowrap rounded-full px-1.5 py-px border border-yellow-100 dark:border-yellow-800/40">
-                  <Award size={8} className="text-yellow-600 mr-0.5" />
-                  <span className="text-[9px] font-bold text-yellow-700 dark:text-yellow-400">待审核</span>
+                <div className="flex items-center whitespace-nowrap rounded-full border border-yellow-100 bg-yellow-50 px-1.5 py-px dark:border-yellow-800/40 dark:bg-yellow-900/20">
+                  <Award size={8} className="mr-0.5 text-yellow-600" />
+                  <span className="text-[9px] font-bold text-yellow-700 dark:text-yellow-400">
+                    待审核
+                  </span>
                 </div>
               )}
             </div>
           </div>
-        </div>
+        </button>
 
         <div className="flex items-center gap-5">
           <button
@@ -127,17 +183,17 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
             className="flex flex-col items-center text-text-main active:opacity-70"
           >
             <HeadphonesIcon size={26} strokeWidth={1.5} />
-            <span className="text-[10px] mt-0.5 font-medium">客服</span>
+            <span className="mt-0.5 text-[10px] font-medium">客服</span>
           </button>
 
           <button
             onClick={() => onNavigate('message_center')}
-            className="flex flex-col items-center text-text-main active:opacity-70 relative"
+            className="relative flex flex-col items-center text-text-main active:opacity-70"
           >
             <MessageSquare size={26} strokeWidth={1.5} />
-            <span className="text-[10px] mt-0.5 font-medium">消息</span>
+            <span className="mt-0.5 text-[10px] font-medium">消息</span>
             {unreadCount > 0 && (
-              <span className="absolute -top-2 -right-3 min-w-[16px] h-4 flex items-center justify-center rounded-full bg-red-500 text-white text-[10px] font-bold px-1 leading-none border border-white">
+              <span className="absolute -right-3 -top-2 flex h-4 min-w-[16px] items-center justify-center rounded-full border border-white bg-red-500 px-1 text-[10px] font-bold leading-none text-white">
                 {unreadCount > 99 ? '99+' : unreadCount}
               </span>
             )}
@@ -148,7 +204,7 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
             className="flex flex-col items-center text-text-main active:opacity-70"
           >
             <Settings size={26} strokeWidth={1.5} />
-            <span className="text-[10px] mt-0.5 font-medium">设置</span>
+            <span className="mt-0.5 text-[10px] font-medium">设置</span>
           </button>
         </div>
       </div>

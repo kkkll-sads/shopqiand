@@ -9,7 +9,7 @@ interface MallOrderCardProps {
   order: ShopOrderListItem;
   onOpenOrderDetail: () => void;
   onCopy: (text: string) => void;
-  onOpenLogistics: () => void;
+  onOpenLogistics: (order: ShopOrderListItem) => void;
   onOpenCashier: () => void;
   onCancelOrder?: (orderId: number, cancelReason?: string) => void | Promise<void>;
   onCancelAfterSale?: (orderId: number, afterSaleId?: number) => void | Promise<void>;
@@ -52,7 +52,7 @@ function getOrderActions(order: ShopOrderListItem) {
   return {
     showPay: status === 'pending',
     showCancel: status === 'pending',
-    showLogistics: status === 'shipped',
+    showLogistics: status === 'shipped' || status === 'completed',
     showRefund: canApplyAfterSale,
     showCancelAfterSale: afterSaleStatus === 'processing' && order.can_cancel_after_sale === 1,
     showConfirm: status === 'shipped' && afterSaleStatus !== 'processing',
@@ -206,7 +206,7 @@ export const MallOrderCard: FC<MallOrderCardProps> = ({
               variant="secondary"
               fullWidth={false}
               className={ACTION_BTN}
-              onClick={onOpenLogistics}
+              onClick={() => onOpenLogistics(order)}
             >
               查看物流
             </Button>

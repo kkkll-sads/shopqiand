@@ -110,8 +110,14 @@ export const UserPage = () => {
     });
   }, [isLoggedIn, location.hash, location.pathname, location.search, navigate]);
 
-  const profileUserInfo = isLoggedIn ? (profile?.userInfo ?? session?.userInfo) : undefined;
-  const userInfo = (profileUserInfo ?? {}) as Record<string, unknown>;
+  const profileUserInfo = isLoggedIn ? profile?.userInfo : undefined;
+  const mergedProfileUserInfo = isLoggedIn
+    ? {
+        ...(profile?.userInfo ?? {}),
+        ...(session?.userInfo ?? {}),
+      }
+    : undefined;
+  const userInfo = (mergedProfileUserInfo ?? {}) as Record<string, unknown>;
   // 已实名用户优先显示真实姓名，否则回退到昵称 → 用户名 → 手机号
   const isVerified = userInfo.isRealName === true || userInfo.is_real_name === 1;
   const verifiedName = String(
@@ -195,13 +201,14 @@ export const UserPage = () => {
     return (
       <div className="relative z-10 pt-4 pb-2">
         <ProfileHeader
-          userInfo={profileUserInfo ?? null}
+          userInfo={mergedProfileUserInfo ?? null}
           displayName={displayName}
           displayAvatarText={(displayName || '用').slice(0, 1)}
           displayAvatarUrl={displayAvatar}
           displayId={displayUid}
           unreadCount={unreadTotal}
           onNavigate={goTo}
+          onEditProfile={() => goTo('edit_profile')}
           onOpenHelp={openSupport}
         />
       </div>

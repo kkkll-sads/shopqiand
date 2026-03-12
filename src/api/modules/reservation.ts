@@ -195,9 +195,34 @@ export interface ReservationPreviewResponse {
   message: string;
 }
 
+export type ReservationAgreementType = 'purchase_rules' | 'risk_notice';
+
+export interface ReservationAgreementResponse {
+  type: ReservationAgreementType;
+  title: string;
+  content: string;
+  config_name?: string;
+  tip?: string;
+}
+
 /* ==================== API ==================== */
 
 export const reservationApi = {
+  /**
+   * 获取预约申购协议文案
+   * GET /api/collectionReservation/agreement
+   */
+  async getAgreement(type: ReservationAgreementType, signal?: AbortSignal) {
+    return http.get<ReservationAgreementResponse>(
+      '/api/collectionReservation/agreement',
+      {
+        headers: createApiHeaders(),
+        query: { type },
+        signal,
+      },
+    );
+  },
+
   /**
    * 预约记录详情
    * GET /api/collectionReservation/reservationDetail

@@ -108,6 +108,7 @@ export interface CollectionDetailResponse {
   session?: CollectionSessionSummary;
   /** 用户余额信息 */
   user: CollectionUserInfo;
+  mixed_payment?: CollectionMixedPaymentInfo;
   /** 算力配置 */
   config: CollectionConfig;
 }
@@ -170,3 +171,13 @@ export const collectionItemApi = {
     return response;
   },
 };
+
+export interface CollectionMixedPaymentInfo {
+  enabled: boolean;
+  eligible: boolean;
+  available: boolean;
+  reason: string;
+  ratio: string;
+  remaining_times: number;
+  allow_fallback_balance_only: boolean;
+}

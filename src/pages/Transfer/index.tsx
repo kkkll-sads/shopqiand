@@ -1,93 +1,209 @@
-/**
- * @file Transfer/index.tsx - 转账页面
- * @description 用户转账页面，支持向其他用户进行余额转账。
- */
-
-import React, { useState, useEffect } from 'react'; // React 核心 Hook
-import { AlertCircle, ArrowDownRight, ArrowRight, CheckCircle2, ChevronDown, FileText, Info, ShieldCheck, X, XCircle } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import {
+  AlertCircle,
+  ArrowRight,
+  CheckCircle2,
+  ChevronDown,
+  FileText,
+  ShieldCheck,
+  WifiOff,
+  X,
+  XCircle,
+} from 'lucide-react';
+import {
+  accountTransferApi,
+  type AccountTransferSummary,
+  type AccountTransferTargetAccount,
+} from '../../api';
+import { getErrorMessage, isAbortError } from '../../api/core/errors';
+import { WalletPageHeader } from '../../components/layout/WalletPageHeader';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
-import { useAppNavigate } from '../../lib/navigation';
-import { WalletPageHeader } from '../../components/layout/WalletPageHeader';
+import { EmptyState } from '../../components/ui/EmptyState';
+import { ErrorState } from '../../components/ui/ErrorState';
 import { useFeedback } from '../../components/ui/FeedbackProvider';
 import { PullToRefreshContainer } from '../../components/ui/PullToRefreshContainer';
+import { useAuthSession } from '../../hooks/useAuthSession';
+import { useNetworkStatus } from '../../hooks/useNetworkStatus';
+import { useRouteScrollRestoration } from '../../hooks/useRouteScrollRestoration';
 import { getBillingPath } from '../../lib/billing';
+import { useAppNavigate } from '../../lib/navigation';
 
-// Mock Data
-const MOCK_DATA = {
-  sourceAccount: {
-    name: '专项金',
-    available: 10000.00,
-    frozen: 2500.00,
-  },
-  targetAccounts: [
-    { id: 'confirmation', name: '确权金', balance: 500.00, feeRate: 0.01, desc: '用于资产确权' },
-    { id: 'consumption', name: '消费金', balance: 1200.00, feeRate: 0, desc: '用于商城消费，无手续费' },
-    { id: 'withdrawable', name: '可提现余额', balance: 8800.00, feeRate: 0.02, desc: '可直接提现至银行卡' },
-  ],
-  rules: {
-    minAmount: 100,
-    dailyLimit: 50000,
-    dailyCountLimit: 5,
-    remainingCount: 3,
-    arrivalText: '预计实时到账'
-  }
-};
+function formatMoney(value: number, fractionDigits = 2) {
+  return value.toLocaleString('zh-CN', {
+    maximumFractionDigits: fractionDigits,
+    minimumFractionDigits: fractionDigits,
+    useGrouping: false,
+  });
+}
+
+function formatRate(value: number) {
+  const percent = value * 100;
+  const fractionDigits = Number.isInteger(percent) ? 0 : 2;
+  return `${percent.toFixed(fractionDigits)}%`;
+}
 
 export function TransferPage() {
   const { goBack, goTo } = useAppNavigate();
-  const { showToast } = useFeedback();
+  const { isAuthenticated } = useAuthSession();
+  const { isOffline, refreshStatus } = useNetworkStatus();
+  const { showConfirm, showToast } = useFeedback();
+
+  const [summary, setSummary] = useState<AccountTransferSummary | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [isOffline, setIsOffline] = useState(!navigator.onLine);
-  const [error, setError] = useState<string | null>(null);
-  
+  const [error, setError] = useState<Error | null>(null);
   const [amount, setAmount] = useState('');
-  const [selectedTargetId, setSelectedTargetId] = useState('consumption');
+  const [selectedTargetId, setSelectedTargetId] = useState('');
   const [showTargetSelector, setShowTargetSelector] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
 
-  useEffect(() => {
-    const handleOnline = () => setIsOffline(false);
-    const handleOffline = () => setIsOffline(true);
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-
-    // Simulate loading
-    const timer = setTimeout(() => {
+  const loadSummary = async (signal?: AbortSignal) => {
+    if (!isAuthenticated) {
+      setSummary(null);
+      setError(null);
       setIsLoading(false);
-    }, 300);
+      setSelectedTargetId('');
+      return;
+    }
 
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-      clearTimeout(timer);
-    };
-  }, []);
+    setIsLoading(true);
+    setError(null);
 
-  const handleGoBack = () => {
-    goBack();
+    try {
+      const response = await accountTransferApi.summary('special', { signal });
+      setSummary(response);
+      setSelectedTargetId((current) => {
+        if (current && response.targetAccounts.some((item) => item.id === current)) {
+          return current;
+        }
+        return response.targetAccounts[0]?.id ?? '';
+      });
+    } catch (nextError) {
+      if (isAbortError(nextError)) {
+        return;
+      }
+      setSummary(null);
+      setSelectedTargetId('');
+      setError(nextError instanceof Error ? nextError : new Error('加载划转信息失败'));
+    } finally {
+      if (!signal?.aborted) {
+        setIsLoading(false);
+      }
+    }
   };
 
-  const handleRefresh = async () => {
-    setError(null);
-    setIsLoading(true);
+  useEffect(() => {
+    const controller = new AbortController();
+    void loadSummary(controller.signal);
+    return () => controller.abort();
+  }, [isAuthenticated]);
 
-    await new Promise((resolve) => {
-      window.setTimeout(() => {
-        setIsLoading(false);
-        resolve(undefined);
-      }, 300);
-    });
+  useRouteScrollRestoration({
+    containerRef: scrollContainerRef,
+    enabled: isAuthenticated,
+    namespace: 'transfer-page',
+    restoreDeps: [isAuthenticated, isLoading, Boolean(error), selectedTargetId],
+    restoreWhen: isAuthenticated && !isLoading && !error && !showTargetSelector,
+  });
+
+  const handleRefresh = async () => {
+    refreshStatus();
+    await loadSummary();
   };
 
   const handleGoHistory = () => {
     goTo(getBillingPath('transfer'));
   };
 
+  const handleAmountChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const nextValue = event.target.value;
+    if (nextValue === '' || /^\d*\.?\d{0,2}$/.test(nextValue)) {
+      setAmount(nextValue);
+    }
+  };
+
+  const sourceAccount = summary?.sourceAccount ?? null;
+  const selectedTarget =
+    summary?.targetAccounts.find((item) => item.id === selectedTargetId) ?? summary?.targetAccounts[0] ?? null;
+  const numAmount = Number(amount);
+  const fee = selectedTarget ? numAmount * selectedTarget.feeRate : 0;
+  const actualArrival = Math.max(0, numAmount - fee);
+  const unmetConditions = (summary?.conditions ?? []).filter((item) => !item.isMet);
+  const hasUnmetConditions = unmetConditions.length > 0;
+  const isAmountExceed = sourceAccount ? numAmount > sourceAccount.available : false;
+  const minAmount = selectedTarget?.minAmount ?? 0;
+  const isAmountTooLow = numAmount > 0 && minAmount > 0 && numAmount < minAmount;
+  const willExceedDailyLimit =
+    Boolean(selectedTarget) &&
+    numAmount > 0 &&
+    (selectedTarget?.dailyLimit ?? 0) > 0 &&
+    numAmount + (selectedTarget?.todayAmount ?? 0) > (selectedTarget?.dailyLimit ?? 0);
+  const isNoCount =
+    selectedTarget?.remainingCount != null && selectedTarget.remainingCount <= 0;
+
+  const isSubmitDisabled =
+    !selectedTarget ||
+    !amount ||
+    !Number.isFinite(numAmount) ||
+    numAmount <= 0 ||
+    isOffline ||
+    isAmountExceed ||
+    isAmountTooLow ||
+    willExceedDailyLimit ||
+    isNoCount ||
+    hasUnmetConditions ||
+    isSubmitting;
+
+  const handleSelectAll = () => {
+    if (!sourceAccount) {
+      return;
+    }
+    setAmount(sourceAccount.available.toFixed(2));
+  };
+
+  const handleSubmit = async () => {
+    if (!selectedTarget || isSubmitDisabled) {
+      return;
+    }
+
+    const confirmed = await showConfirm({
+      title: '确认划转',
+      message: `确认将 ¥${formatMoney(numAmount)} 划转至${selectedTarget.name}吗？`,
+      confirmText: '确认划转',
+      cancelText: '取消',
+    });
+
+    if (!confirmed) {
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const result = await accountTransferApi.submit({
+        scene: 'special',
+        targetAccount: selectedTarget.id,
+        amount: numAmount,
+      });
+      showToast({
+        message: `已划转 ¥${formatMoney(result.actualAmount)} 至${result.targetName}`,
+        type: 'success',
+        duration: 3000,
+      });
+      setAmount('');
+      await loadSummary();
+      goBack();
+    } catch (nextError) {
+      showToast({ message: getErrorMessage(nextError), type: 'error', duration: 3000 });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const renderHeader = () => (
     <WalletPageHeader
       title="专项金划转"
-      onBack={handleGoBack}
+      onBack={goBack}
       action={{
         icon: FileText,
         label: '划转记录',
@@ -96,301 +212,357 @@ export function TransferPage() {
     />
   );
 
-  const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = e.target.value;
-    if (val === '' || /^\d*\.?\d{0,2}$/.test(val)) {
-      setAmount(val);
-    }
-  };
+  const renderSkeleton = () => (
+    <div className="space-y-4 p-4">
+      <div className="h-32 rounded-2xl bg-white animate-pulse dark:bg-gray-800" />
+      <div className="h-48 rounded-2xl bg-white animate-pulse dark:bg-gray-800" />
+      <div className="h-32 rounded-2xl bg-white animate-pulse dark:bg-gray-800" />
+    </div>
+  );
 
-  const handleSelectAll = () => {
-    setAmount(MOCK_DATA.sourceAccount.available.toString());
-  };
-
-  const handleSubmit = () => {
-    if (isSubmitDisabled) return;
-    setIsSubmitting(true);
-    setTimeout(() => {
-      setIsSubmitting(false);
-      showToast({ message: `成功划转 ¥${amount} 至 ${selectedTarget?.name}`, type: 'success' });
-      setAmount('');
-      handleGoBack();
-    }, 300);
-  };
-
-  const selectedTarget = MOCK_DATA.targetAccounts.find(t => t.id === selectedTargetId) || MOCK_DATA.targetAccounts[0];
-  const numAmount = Number(amount);
-  
-  const fee = numAmount * selectedTarget.feeRate;
-  const actualArrival = numAmount - fee;
-
-  const isAmountExceed = numAmount > MOCK_DATA.sourceAccount.available;
-  const isAmountTooLow = numAmount > 0 && numAmount < MOCK_DATA.rules.minAmount;
-  const isNoCount = MOCK_DATA.rules.remainingCount <= 0;
-  
-  const isSubmitDisabled = 
-    !amount || 
-    numAmount <= 0 || 
-    isAmountExceed || 
-    isAmountTooLow || 
-    isNoCount || 
-    isSubmitting;
-
-  if (isLoading) {
-    return (
-      <div className="h-full flex flex-col bg-bg-hover dark:bg-gray-900">
-        {renderHeader()}
-        <div className="p-4 space-y-4">
-          <div className="h-32 bg-white dark:bg-gray-800 rounded-2xl animate-pulse" />
-          <div className="h-48 bg-white dark:bg-gray-800 rounded-2xl animate-pulse" />
-          <div className="h-32 bg-white dark:bg-gray-800 rounded-2xl animate-pulse" />
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="h-full flex flex-col bg-bg-hover dark:bg-gray-900">
-        {renderHeader()}
-        <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
-          <AlertCircle size={48} className="text-red-500 mb-4" />
-          <h3 className="text-lg font-medium text-text-main mb-2">加载失败</h3>
-          <p className="text-text-sub mb-6">{error}</p>
-          <Button onClick={() => window.location.reload()} className="w-32">重试</Button>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="h-full flex flex-col bg-bg-hover dark:bg-gray-900 relative">
-      {renderHeader()}
-
-      {isOffline && (
-        <div className="bg-orange-50 text-orange-500 text-base px-4 py-2 flex items-center dark:bg-orange-500/15 dark:text-orange-300">
-          <AlertCircle size={14} className="mr-1.5 flex-shrink-0" />
+  const renderOfflineBanner = () =>
+    isOffline ? (
+      <div className="flex items-center justify-between bg-orange-50 px-4 py-2 text-base text-orange-500 dark:bg-orange-500/15 dark:text-orange-300">
+        <div className="flex items-center">
+          <WifiOff size={14} className="mr-1.5 shrink-0" />
           <span>当前网络不可用，请检查网络设置</span>
         </div>
-      )}
+        <button
+          type="button"
+          onClick={() => {
+            void handleRefresh();
+          }}
+          className="rounded bg-bg-card px-2 py-1 text-sm font-medium text-text-main shadow-soft"
+        >
+          刷新
+        </button>
+      </div>
+    ) : null;
 
-      {/* Main Content */}
-      <div className="flex-1 overflow-y-auto pb-[100px]">
-        <div className="p-4 space-y-3">
-          
-          {/* Account Overview Card */}
-          <Card className="p-4 bg-gradient-to-br from-red-50 to-white dark:from-gray-900 dark:to-gray-900 border-none relative overflow-hidden">
-            <div className="absolute right-0 top-0 w-24 h-24 bg-red-100 dark:bg-transparent rounded-full blur-2xl -mr-10 -mt-10 pointer-events-none"></div>
-            
-            <div className="flex items-center justify-between mb-4 relative z-10">
-              <div className="flex-1">
-                <div className="text-base text-text-sub mb-1">转出账户</div>
-                <div className="text-xl font-bold text-text-main">{MOCK_DATA.sourceAccount.name}</div>
-                <div className="text-sm text-text-sub mt-1">
-                  可用: <span className="font-mono text-text-main">¥{MOCK_DATA.sourceAccount.available.toFixed(2)}</span>
-                </div>
-              </div>
-              
-              <div className="px-4 flex flex-col items-center justify-center">
-                <div className="w-8 h-8 rounded-full bg-white dark:bg-gray-900 shadow-sm flex items-center justify-center text-brand-red dark:text-red-300">
-                  <ArrowRight size={16} />
-                </div>
-              </div>
+  const renderContent = () => {
+    if (!isAuthenticated) {
+      return (
+        <EmptyState
+          message="登录后才能发起专项金划转"
+          actionText="去登录"
+          actionVariant="primary"
+          onAction={() => goTo('login')}
+        />
+      );
+    }
 
-              <div className="flex-1 text-right">
-                <div className="text-base text-text-sub mb-1">转入账户</div>
-                <div 
-                  className="text-xl font-bold text-text-main flex items-center justify-end cursor-pointer active:opacity-70"
-                  onClick={() => setShowTargetSelector(true)}
-                >
-                  {selectedTarget.name}
-                  <ChevronDown size={16} className="ml-1 text-text-sub" />
-                </div>
-                <div className="text-sm text-text-sub mt-1">
-                  余额: <span className="font-mono text-text-main">¥{selectedTarget.balance.toFixed(2)}</span>
-                </div>
+    if (isLoading && !summary) {
+      return renderSkeleton();
+    }
+
+    if (error && !summary) {
+      return <ErrorState message={getErrorMessage(error)} onRetry={() => void handleRefresh()} />;
+    }
+
+    if (!summary || !sourceAccount || !selectedTarget) {
+      return <EmptyState message="暂无可用划转账户" />;
+    }
+
+    return (
+      <div className="space-y-3 p-4">
+        <Card className="relative overflow-hidden border-none bg-gradient-to-br from-red-50 to-white p-4 dark:from-gray-900 dark:to-gray-900">
+          <div className="pointer-events-none absolute top-0 right-0 -mt-10 -mr-10 h-24 w-24 rounded-full bg-red-100 blur-2xl dark:bg-transparent" />
+
+          <div className="relative z-10 mb-4 flex items-center justify-between">
+            <div className="flex-1">
+              <div className="mb-1 text-base text-text-sub">转出账户</div>
+              <div className="text-xl font-bold text-text-main">{sourceAccount.name}</div>
+              <div className="mt-1 text-sm text-text-sub">
+                可用: <span className="font-mono text-text-main">¥{formatMoney(sourceAccount.available)}</span>
               </div>
             </div>
-            
-            <div className="pt-3 border-t border-border-light/50 flex items-center justify-between text-sm">
-              <span className="text-text-sub">专项金冻结金额</span>
-              <span className="font-mono text-text-main">¥{MOCK_DATA.sourceAccount.frozen.toFixed(2)}</span>
-            </div>
-          </Card>
 
-          {/* Transfer Amount Card */}
-          <Card className="p-4">
-            <h3 className="text-lg font-medium text-text-main mb-4">划转金额</h3>
-            
-            <div className={`flex items-center border-b pb-2 mb-3 transition-colors ${isAmountExceed ? 'border-red-500' : 'border-border-light'}`}>
-              <span className="text-5xl font-medium text-text-main mr-2">¥</span>
-              <input
-                type="text"
-                inputMode="decimal"
-                value={amount}
-                onChange={handleAmountChange}
-                placeholder="请输入划转金额"
-                className="flex-1 min-w-0 text-6xl font-bold text-text-main bg-transparent outline-none placeholder:text-gray-300 dark:placeholder:text-gray-600 font-mono"
-              />
-              {amount && (
-                <button 
-                  onClick={() => setAmount('')}
-                  className="p-1 text-gray-300 hover:text-gray-400 dark:text-gray-600 dark:hover:text-gray-500 mr-2 shrink-0"
-                >
-                  <XCircle size={20} />
-                </button>
-              )}
-              <button 
-                onClick={handleSelectAll}
-                className="text-md font-medium text-brand-red active:opacity-70 pl-3 border-l border-border-light whitespace-nowrap shrink-0"
+            <div className="flex flex-col items-center justify-center px-4">
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-brand-red shadow-sm dark:bg-gray-900 dark:text-red-300">
+                <ArrowRight size={16} />
+              </div>
+            </div>
+
+            <div className="flex-1 text-right">
+              <div className="mb-1 text-base text-text-sub">转入账户</div>
+              <button
+                type="button"
+                onClick={() => setShowTargetSelector(true)}
+                className="flex w-full items-center justify-end text-right text-xl font-bold text-text-main active:opacity-70"
               >
-                全部
+                <span className="truncate">{selectedTarget.name}</span>
+                <ChevronDown size={16} className="ml-1 shrink-0 text-text-sub" />
               </button>
+              <div className="mt-1 text-sm text-text-sub">
+                余额: <span className="font-mono text-text-main">¥{formatMoney(selectedTarget.balance)}</span>
+              </div>
             </div>
+          </div>
 
-            {/* Error Messages */}
-            {isAmountExceed && (
-              <div className="text-sm text-red-500 mb-3 flex items-center">
-                <AlertCircle size={12} className="mr-1" />
-                输入金额超过可用余额
-              </div>
-            )}
-            {isAmountTooLow && (
-              <div className="text-sm text-red-500 mb-3 flex items-center">
-                <AlertCircle size={12} className="mr-1" />
-                最低划转金额为 ¥{MOCK_DATA.rules.minAmount}
-              </div>
-            )}
+          <div className="flex items-center justify-between border-t border-border-light/50 pt-3 text-sm">
+            <span className="text-text-sub">专项金冻结金额</span>
+            <span className="font-mono text-text-main">¥{formatMoney(sourceAccount.frozen)}</span>
+          </div>
+        </Card>
 
-            {/* Rules */}
-            <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3 space-y-2">
+        <Card className="p-4">
+          <h3 className="mb-4 text-lg font-medium text-text-main">划转金额</h3>
+
+          <div className={`mb-3 flex items-center border-b pb-2 transition-colors ${isAmountExceed ? 'border-red-500' : 'border-border-light'}`}>
+            <span className="mr-2 text-5xl font-medium text-text-main">¥</span>
+            <input
+              type="text"
+              inputMode="decimal"
+              value={amount}
+              onChange={handleAmountChange}
+              placeholder="请输入划转金额"
+              className="min-w-0 flex-1 bg-transparent text-6xl font-bold text-text-main outline-none placeholder:text-gray-300 dark:placeholder:text-gray-600 font-mono"
+            />
+            {amount ? (
+              <button
+                type="button"
+                onClick={() => setAmount('')}
+                className="mr-2 shrink-0 p-1 text-gray-300 hover:text-gray-400 dark:text-gray-600 dark:hover:text-gray-500"
+              >
+                <XCircle size={20} />
+              </button>
+            ) : null}
+            <button
+              type="button"
+              onClick={handleSelectAll}
+              className="shrink-0 whitespace-nowrap border-l border-border-light pl-3 text-md font-medium text-brand-red active:opacity-70"
+            >
+              全部
+            </button>
+          </div>
+
+          {isAmountExceed ? (
+            <div className="mb-3 flex items-center text-sm text-red-500">
+              <AlertCircle size={12} className="mr-1" />
+              输入金额超过可用余额
+            </div>
+          ) : null}
+
+          {isAmountTooLow ? (
+            <div className="mb-3 flex items-center text-sm text-red-500">
+              <AlertCircle size={12} className="mr-1" />
+              最低划转金额为 ¥{formatMoney(minAmount)}
+            </div>
+          ) : null}
+
+          {willExceedDailyLimit ? (
+            <div className="mb-3 flex items-center text-sm text-red-500">
+              <AlertCircle size={12} className="mr-1" />
+              今日累计划转金额将超过日限额
+            </div>
+          ) : null}
+
+          {isNoCount ? (
+            <div className="mb-3 flex items-center text-sm text-red-500">
+              <AlertCircle size={12} className="mr-1" />
+              今日划转次数已达上限
+            </div>
+          ) : null}
+
+          <div className="space-y-2 rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50">
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-text-sub">手续费率</span>
+              <span className="font-medium text-text-main">{formatRate(selectedTarget.feeRate)}</span>
+            </div>
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-text-sub">到账时间</span>
+              <span className="font-medium text-text-main">{selectedTarget.arrivalText}</span>
+            </div>
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-text-sub">今日剩余次数</span>
+              <span className={`font-medium ${isNoCount ? 'text-red-500' : 'text-text-main'}`}>
+                {selectedTarget.remainingCount == null ? '--' : selectedTarget.remainingCount} /{' '}
+                {selectedTarget.dailyCountLimit || '--'}
+              </span>
+            </div>
+            {selectedTarget.dailyLimit > 0 ? (
               <div className="flex items-center justify-between text-sm">
-                <span className="text-text-sub">手续费率</span>
-                <span className="text-text-main font-medium">{selectedTarget.feeRate * 100}%</span>
-              </div>
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-text-sub">到账时间</span>
-                <span className="text-text-main font-medium">{MOCK_DATA.rules.arrivalText}</span>
-              </div>
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-text-sub">今日剩余次数</span>
-                <span className={`font-medium ${isNoCount ? 'text-red-500' : 'text-text-main'}`}>
-                  {MOCK_DATA.rules.remainingCount} / {MOCK_DATA.rules.dailyCountLimit}
+                <span className="text-text-sub">日限额</span>
+                <span className="font-medium text-text-main">
+                  ¥{formatMoney(selectedTarget.todayAmount)} / ¥{formatMoney(selectedTarget.dailyLimit)}
                 </span>
               </div>
+            ) : null}
+          </div>
+        </Card>
+
+        {summary.conditions.length > 0 ? (
+          <Card className="p-4">
+            <h3 className="mb-3 text-lg font-medium text-text-main">
+              划转条件
+              {hasUnmetConditions ? (
+                <span className="ml-2 text-sm font-normal text-red-500 dark:text-red-300">存在未满足条件</span>
+              ) : null}
+            </h3>
+            <div className="space-y-3">
+              {summary.conditions.map((condition) => (
+                <div key={condition.key} className="flex items-start">
+                  {condition.isMet ? (
+                    <CheckCircle2 size={16} className="mr-2 mt-0.5 shrink-0 text-green-500" />
+                  ) : (
+                    <div className="mr-2 mt-0.5 h-4 w-4 shrink-0 rounded-full border-2 border-gray-300 dark:border-gray-600" />
+                  )}
+                  <span className={`text-base ${condition.isMet ? 'text-text-main' : 'text-text-sub'}`}>
+                    {condition.text}
+                  </span>
+                </div>
+              ))}
             </div>
           </Card>
+        ) : null}
 
-          {/* Confirmation Info Card */}
-          {numAmount > 0 && !isAmountExceed && !isAmountTooLow && (
-            <Card className="p-4 animate-in fade-in slide-in-from-bottom-4 duration-300">
-              <h3 className="text-lg font-medium text-text-main mb-3">确认信息</h3>
-              <div className="space-y-3">
-                <div className="flex items-center justify-between text-base">
-                  <span className="text-text-sub">划转金额</span>
-                  <span className="text-text-main font-mono">¥{numAmount.toFixed(2)}</span>
-                </div>
-                {fee > 0 && (
-                  <div className="flex items-center justify-between text-base">
-                    <span className="text-text-sub">手续费</span>
-                    <span className="text-orange-500 font-mono">-¥{fee.toFixed(2)}</span>
-                  </div>
-                )}
-                <div className="pt-3 border-t border-border-light flex items-center justify-between">
-                  <span className="text-md font-medium text-text-main">实际到账</span>
-                  <span className="text-3xl font-bold text-brand-red font-mono">¥{actualArrival.toFixed(2)}</span>
-                </div>
+        {numAmount > 0 && !isAmountExceed && !isAmountTooLow && !willExceedDailyLimit ? (
+          <Card className="p-4 animate-in fade-in slide-in-from-bottom-4 duration-300">
+            <h3 className="mb-3 text-lg font-medium text-text-main">确认信息</h3>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between text-base">
+                <span className="text-text-sub">划转金额</span>
+                <span className="font-mono text-text-main">¥{formatMoney(numAmount)}</span>
               </div>
-            </Card>
-          )}
+              {fee > 0 ? (
+                <div className="flex items-center justify-between text-base">
+                  <span className="text-text-sub">手续费</span>
+                  <span className="font-mono text-orange-500">-¥{formatMoney(fee)}</span>
+                </div>
+              ) : null}
+              <div className="flex items-center justify-between border-t border-border-light pt-3">
+                <span className="text-md font-medium text-text-main">实际到账</span>
+                <span className="font-mono text-3xl font-bold text-brand-red">¥{formatMoney(actualArrival)}</span>
+              </div>
+            </div>
+          </Card>
+        ) : null}
 
-          {/* Security Hint */}
-          <div className="flex items-start px-2 py-1 mt-2">
-            <ShieldCheck size={14} className="text-green-500 mr-1.5 mt-0.5 flex-shrink-0" />
-            <span className="text-sm text-text-sub leading-relaxed">
-              资金划转操作不可逆，请仔细核对转入账户及金额。如遇问题请联系客服。
-            </span>
-          </div>
-
+        <div className="mt-2 flex items-start px-2 py-1">
+          <ShieldCheck size={14} className="mr-1.5 mt-0.5 shrink-0 text-green-500" />
+          <span className="text-sm leading-relaxed text-text-sub">
+            资金划转操作不可逆，请仔细核对转入账户及金额。如遇问题请联系客服。
+          </span>
         </div>
       </div>
+    );
+  };
 
-      {/* Bottom Fixed Bar */}
-      <div className="absolute bottom-0 left-0 right-0 bg-white dark:bg-gray-800 border-t border-border-light px-4 py-3 pb-safe shadow-[0_-4px_16px_rgba(0,0,0,0.05)] dark:shadow-[0_-4px_16px_rgba(0,0,0,0.2)] z-20">
-        <Button 
-          className={`w-full h-12 rounded-full font-medium text-xl ${
-            isSubmitDisabled 
-              ? 'bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500' 
-              : 'bg-gradient-to-r from-brand-start to-brand-end text-white shadow-md shadow-red-500/20 active:scale-[0.98]'
-          }`}
-          disabled={isSubmitDisabled}
-          onClick={handleSubmit}
-        >
-          {isSubmitting ? '处理中...' : '确认划转'}
-        </Button>
-      </div>
+  const renderTargetSelector = () => {
+    if (!showTargetSelector || !summary) {
+      return null;
+    }
 
-      {/* Target Account Selector Modal */}
-      {showTargetSelector && (
-        <div className="absolute inset-0 z-50 flex flex-col justify-end">
-          <div 
-            className="absolute inset-0 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200"
-            onClick={() => setShowTargetSelector(false)}
-          />
-          <div className="bg-white dark:bg-gray-800 rounded-t-2xl relative z-10 animate-in slide-in-from-bottom-full duration-300 pb-safe">
-            <div className="flex items-center justify-between p-4 border-b border-border-light">
-              <h3 className="text-xl font-medium text-text-main">选择转入账户</h3>
-              <button 
-                onClick={() => setShowTargetSelector(false)}
-                className="p-1 text-text-sub hover:text-text-main"
-              >
-                <X size={20} />
-              </button>
-            </div>
-            <div className="p-2 max-h-[60vh] overflow-y-auto">
-              {MOCK_DATA.targetAccounts.map((account) => {
-                const isSelected = selectedTargetId === account.id;
-                return (
-                  <div 
-                    key={account.id}
-                    onClick={() => {
-                      setSelectedTargetId(account.id);
-                      setShowTargetSelector(false);
-                    }}
-                    className={`p-4 mb-2 rounded-xl flex items-center justify-between cursor-pointer transition-colors ${
-                      isSelected 
-                        ? 'bg-red-50 dark:bg-red-500/12 border border-brand-red/30 dark:border-red-500/30' 
-                        : 'bg-white dark:bg-gray-900 border border-transparent active:bg-gray-50 dark:active:bg-gray-800'
+    return (
+      <div className="absolute inset-0 z-50 flex flex-col justify-end">
+        <div
+          className="absolute inset-0 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200"
+          onClick={() => setShowTargetSelector(false)}
+        />
+        <div className="relative z-10 rounded-t-2xl bg-white pb-safe animate-in slide-in-from-bottom-full duration-300 dark:bg-gray-800">
+          <div className="flex items-center justify-between border-b border-border-light p-4">
+            <h3 className="text-xl font-medium text-text-main">选择转入账户</h3>
+            <button
+              type="button"
+              onClick={() => setShowTargetSelector(false)}
+              className="p-1 text-text-sub hover:text-text-main"
+            >
+              <X size={20} />
+            </button>
+          </div>
+          <div className="max-h-[60vh] overflow-y-auto p-2">
+            {summary.targetAccounts.map((account: AccountTransferTargetAccount) => {
+              const isSelected = selectedTargetId === account.id;
+              return (
+                <button
+                  key={account.id}
+                  type="button"
+                  onClick={() => {
+                    setSelectedTargetId(account.id);
+                    setShowTargetSelector(false);
+                  }}
+                  className={`mb-2 flex w-full items-center justify-between rounded-xl p-4 text-left transition-colors ${
+                    isSelected
+                      ? 'border border-brand-red/30 bg-red-50 dark:border-red-500/30 dark:bg-red-500/12'
+                      : 'border border-transparent bg-white active:bg-gray-50 dark:bg-gray-900 dark:active:bg-gray-800'
+                  }`}
+                >
+                  <div>
+                    <div className="mb-1 flex items-center">
+                      <span className="mr-2 text-lg font-medium text-text-main">{account.name}</span>
+                      {account.feeRate === 0 ? (
+                        <span className="rounded-sm bg-green-100 px-1.5 py-0.5 text-xs text-green-600 dark:bg-green-500/15 dark:text-green-300">
+                          免手续费
+                        </span>
+                      ) : null}
+                    </div>
+                    <div className="mb-1 text-sm text-text-sub">{account.desc}</div>
+                    <div className="text-sm text-text-sub">
+                      当前余额: <span className="font-mono text-text-main">¥{formatMoney(account.balance)}</span>
+                    </div>
+                  </div>
+                  <div
+                    className={`flex h-5 w-5 items-center justify-center rounded-full border ${
+                      isSelected ? 'border-brand-red bg-brand-red' : 'border-gray-300 dark:border-gray-600'
                     }`}
                   >
-                    <div>
-                      <div className="flex items-center mb-1">
-                        <span className="text-lg font-medium text-text-main mr-2">{account.name}</span>
-                        {account.feeRate === 0 && (
-                          <span className="text-xs bg-green-100 text-green-600 px-1.5 py-0.5 rounded-sm dark:bg-green-500/15 dark:text-green-300">免手续费</span>
-                        )}
-                      </div>
-                      <div className="text-sm text-text-sub mb-1">{account.desc}</div>
-                      <div className="text-sm text-text-sub">
-                        当前余额: <span className="font-mono text-text-main">¥{account.balance.toFixed(2)}</span>
-                      </div>
-                    </div>
-                    <div className={`w-5 h-5 rounded-full border flex items-center justify-center ${
-                      isSelected 
-                        ? 'border-brand-red bg-brand-red' 
-                        : 'border-gray-300 dark:border-gray-600'
-                    }`}>
-                      {isSelected && <CheckCircle2 size={14} className="text-white" />}
-                    </div>
+                    {isSelected ? <CheckCircle2 size={14} className="text-white" /> : null}
                   </div>
-                );
-              })}
-            </div>
+                </button>
+              );
+            })}
           </div>
         </div>
+      </div>
+    );
+  };
+
+  return (
+    <div className="relative flex h-full flex-col bg-bg-hover dark:bg-gray-900">
+      {renderHeader()}
+      {renderOfflineBanner()}
+
+      {isAuthenticated ? (
+        <PullToRefreshContainer
+          className="flex-1"
+          onRefresh={handleRefresh}
+          disabled={showTargetSelector || isSubmitting}
+        >
+          <div ref={scrollContainerRef} className="flex-1 overflow-y-auto pb-[100px]">
+            {renderContent()}
+          </div>
+        </PullToRefreshContainer>
+      ) : (
+        <div ref={scrollContainerRef} className="flex-1 overflow-y-auto pb-[100px]">
+          {renderContent()}
+        </div>
       )}
+
+      {isAuthenticated && summary && selectedTarget ? (
+        <div className="absolute right-0 bottom-0 left-0 z-20 border-t border-border-light bg-white px-4 py-3 pb-safe shadow-[0_-4px_16px_rgba(0,0,0,0.05)] dark:bg-gray-800 dark:shadow-[0_-4px_16px_rgba(0,0,0,0.2)]">
+          <div className="mb-3 flex items-center justify-between">
+            <span className="text-md text-text-sub">实际到账</span>
+            <span className="font-mono text-4xl font-bold text-brand-red">
+              {numAmount > 0 && !isAmountExceed && !isAmountTooLow && !willExceedDailyLimit
+                ? `¥${formatMoney(actualArrival)}`
+                : '¥0.00'}
+            </span>
+          </div>
+          <Button
+            className={`h-12 w-full rounded-full text-xl font-medium ${
+              isSubmitDisabled
+                ? 'bg-gray-200 text-gray-400 dark:bg-gray-700 dark:text-gray-500'
+                : 'bg-gradient-to-r from-brand-start to-brand-end text-white shadow-md shadow-red-500/20 active:scale-[0.98]'
+            }`}
+            disabled={isSubmitDisabled}
+            onClick={() => void handleSubmit()}
+          >
+            {isSubmitting ? '处理中...' : '确认划转'}
+          </Button>
+        </div>
+      ) : null}
+
+      {renderTargetSelector()}
     </div>
   );
 }
-
-

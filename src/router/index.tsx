@@ -32,14 +32,17 @@ const AfterSalesPage = lazy(() => import('../pages/AfterSales').then(m => ({ def
 const AfterSalesApplyPage = lazy(() => import('../pages/AfterSalesApply/index').then(m => ({ default: m.AfterSalesApplyPage })));
 const CouponPage = lazy(() => import('../pages/Coupon').then(m => ({ default: m.CouponPage })));
 const ActivityCenterPage = lazy(() => import('../pages/ActivityCenter').then(m => ({ default: m.ActivityCenterPage })));
+const QuestionnairePage = lazy(() => import('../pages/Questionnaire').then(m => ({ default: m.QuestionnairePage })));
 const ConsignmentCouponPage = lazy(() => import('../pages/ConsignmentCoupon').then(m => ({ default: m.ConsignmentCouponPage })));
 const AddressPage = lazy(() => import('../pages/Address').then(m => ({ default: m.AddressPage })));
 const PaymentAccountsPage = lazy(() => import('../pages/PaymentAccounts').then(m => ({ default: m.PaymentAccountsPage })));
 const FavoritesPage = lazy(() => import('../pages/Favorites').then(m => ({ default: m.FavoritesPage })));
 const MessageCenterPage = lazy(() => import('../pages/MessageCenter').then(m => ({ default: m.MessageCenterPage })));
 const AnnouncementPage = lazy(() => import('../pages/Announcement').then(m => ({ default: m.AnnouncementPage })));
+const AnnouncementDetailPage = lazy(() => import('../pages/AnnouncementDetail').then(m => ({ default: m.AnnouncementDetailPage })));
 const HelpCenterPage = lazy(() => import('../pages/HelpCenter').then(m => ({ default: m.HelpCenterPage })));
 const SettingsPage = lazy(() => import('../pages/Settings').then(m => ({ default: m.SettingsPage })));
+const EditProfilePage = lazy(() => import('../pages/EditProfile').then(m => ({ default: m.EditProfilePage })));
 const AboutUsPage = lazy(() => import('../pages/AboutUs').then(m => ({ default: m.AboutUsPage })));
 const SecurityPage = lazy(() => import('../pages/Security').then(m => ({ default: m.SecurityPage })));
 const AgentAuthPage = lazy(() => import('../pages/AgentAuth').then(m => ({ default: m.AgentAuthPage })));
@@ -212,6 +215,7 @@ export const router = createHashRouter([
       // ========== 用户资产 ==========
       { path: 'coupon', element: <Lazy><CouponPage /></Lazy> },
       { path: 'activity-center', element: <Lazy><ActivityCenterPage /></Lazy> },
+      { path: 'questionnaire', element: <Lazy><QuestionnairePage /></Lazy> },
       { path: 'consignment-voucher', element: <Lazy><ConsignmentCouponPage /></Lazy> },
       { path: 'billing', element: <Lazy><BillingPage /></Lazy> },
       { path: 'my-collection', element: <Lazy><MyCollectionPage /></Lazy> },
@@ -236,6 +240,7 @@ export const router = createHashRouter([
       { path: 'friends', element: <Lazy><FriendsPage /></Lazy> },
       { path: 'invite', element: <Lazy><InvitePage /></Lazy> },
       { path: 'settings', element: <Lazy><SettingsPage /></Lazy> },
+      { path: 'edit-profile', element: <Lazy><EditProfilePage /></Lazy> },
       { path: 'security', element: <Lazy><SecurityPage /></Lazy> },
       { path: 'auth/real-name', element: <Lazy><RealNameAuthPage /></Lazy> },
       { path: 'agent-auth', element: <Lazy><AgentAuthPage /></Lazy> },
@@ -246,6 +251,8 @@ export const router = createHashRouter([
 
       // ========== 信息页面 ==========
       { path: 'announcement', element: <Lazy><AnnouncementPage /></Lazy> },
+      { path: 'announcement/:id', element: <Lazy><AnnouncementDetailPage /></Lazy> },
+      { path: 'news/:id', element: <Lazy><AnnouncementDetailPage /></Lazy> },
       { path: 'help', element: <Lazy><HelpCenterPage /></Lazy> },
       { path: 'help_center', element: <Lazy><HelpCenterPage /></Lazy> },
       { path: 'about', element: <Lazy><AboutUsPage /></Lazy> },

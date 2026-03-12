@@ -30,6 +30,7 @@ export const ForceAnnouncementModal: React.FC<ForceAnnouncementModalProps> = ({
 }) => {
   const [isScrolledToBottom, setIsScrolledToBottom] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const hasHtmlMarkup = /<\/?[a-z][\s\S]*>/i.test(item?.content ?? '');
 
   const checkScroll = () => {
     if (!scrollRef.current) return;
@@ -98,9 +99,16 @@ export const ForceAnnouncementModal: React.FC<ForceAnnouncementModalProps> = ({
           onScroll={checkScroll}
           className="px-5 overflow-y-auto no-scrollbar flex-1 relative min-h-0"
         >
-          <div className="text-md text-gray-700 dark:text-gray-300 leading-relaxed pb-4 whitespace-pre-wrap">
-            {item.content || ''}
-          </div>
+          {hasHtmlMarkup ? (
+            <div
+              className="pb-4 text-md leading-relaxed text-gray-700 dark:text-gray-300 [&_a]:break-all [&_a]:text-primary-start [&_img]:mx-auto [&_img]:my-4 [&_img]:max-w-full [&_p]:mb-4 [&_table]:w-full [&_td]:border [&_td]:border-gray-200 [&_td]:p-2 [&_th]:border [&_th]:border-gray-200 [&_th]:p-2 [&_ul]:mb-4 [&_ul]:list-disc [&_ul]:pl-5 dark:[&_td]:border-gray-700 dark:[&_th]:border-gray-700"
+              dangerouslySetInnerHTML={{ __html: item.content || '' }}
+            />
+          ) : (
+            <div className="pb-4 text-md whitespace-pre-wrap leading-relaxed text-gray-700 dark:text-gray-300">
+              {item.content || ''}
+            </div>
+          )}
         </div>
 
         <div className="px-5 shrink-0 pb-4 pt-2 relative">

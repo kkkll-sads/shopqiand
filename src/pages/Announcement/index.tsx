@@ -1,12 +1,7 @@
-/**
- * @file Announcement/index.tsx - 公告中心页面
- * @description 展示系统公告列表（支持置顶、按时间排序），点击查看公告详情，支持下拉刷新。
- */
-
-import { useMemo, useRef, useState } from 'react'; // React 核心 Hook
-import { announcementApi, type AnnouncementItem } from '../../api';
+import { useMemo, useRef } from 'react';
+import { ArrowRight, BellRing, Clock3 } from 'lucide-react';
+import { announcementApi } from '../../api';
 import { getErrorMessage } from '../../api/core/errors';
-import { OfflineBanner } from '../../components/layout/OfflineBanner';
 import { PageHeader } from '../../components/layout/PageHeader';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { ErrorState } from '../../components/ui/ErrorState';
@@ -14,17 +9,32 @@ import { PullToRefreshContainer } from '../../components/ui/PullToRefreshContain
 import { useNetworkStatus } from '../../hooks/useNetworkStatus';
 import { useRequest } from '../../hooks/useRequest';
 import { useRouteScrollRestoration } from '../../hooks/useRouteScrollRestoration';
-import { useViewScrollSnapshot } from '../../hooks/useViewScrollSnapshot';
 import { useAppNavigate } from '../../lib/navigation';
 
-/**
- * AnnouncementPage - 公告中心页面
- * 功能：公告列表（置顶优先、时间倒序） → 点击查看详情 → 下拉刷新
- */
+function AnnouncementSkeleton() {
+  return (
+    <div className="space-y-4 px-4 py-4">
+      <div className="rounded-[28px] bg-white p-5 shadow-soft">
+        <div className="mb-3 h-6 w-32 animate-pulse rounded-2xl bg-border-light" />
+        <div className="mb-3 h-8 w-4/5 animate-pulse rounded-2xl bg-border-light" />
+        <div className="h-4 w-2/5 animate-pulse rounded-xl bg-border-light" />
+      </div>
+      {[0, 1, 2].map((item) => (
+        <div key={item} className="rounded-[28px] bg-white p-5 shadow-soft">
+          <div className="mb-4 h-5 w-20 animate-pulse rounded-full bg-border-light" />
+          <div className="mb-3 h-6 w-4/5 animate-pulse rounded-2xl bg-border-light" />
+          <div className="mb-3 h-4 w-2/5 animate-pulse rounded-xl bg-border-light" />
+          <div className="mb-2 h-4 animate-pulse rounded-xl bg-border-light" />
+          <div className="h-4 w-11/12 animate-pulse rounded-xl bg-border-light" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export const AnnouncementPage = () => {
-  const { goBack } = useAppNavigate();
+  const { goBackOr, navigate } = useAppNavigate();
   const { isOffline } = useNetworkStatus();
-  const [selectedAnnouncement, setSelectedAnnouncement] = useState<AnnouncementItem | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
 
   const {
@@ -36,67 +46,40 @@ export const AnnouncementPage = () => {
     cacheKey: 'announcement:list',
   });
 
-  /** 排序后的公告列表：置顶优先，同级别按时间倒序 */
-  const sortedAnnouncements = useMemo(() => {
-    return [...announcements].sort((left, right) => {
-      if (left.isPinned !== right.isPinned) {
-        return Number(right.isPinned) - Number(left.isPinned);
-      }
+  const sortedAnnouncements = useMemo(
+    () =>
+      [...announcements].sort((left, right) => {
+        if (left.isPinned !== right.isPinned) {
+          return Number(right.isPinned) - Number(left.isPinned);
+        }
 
-      return right.time.localeCompare(left.time);
-    });
-  }, [announcements]);
+        if (left.sortOrder !== right.sortOrder) {
+          return right.sortOrder - left.sortOrder;
+        }
 
-  /** 重试加载 */
-  const retry = () => {
-    void reload().catch(() => undefined);
-  };
+        return right.timestamp - left.timestamp;
+      }),
+    [announcements],
+  );
 
   useRouteScrollRestoration({
     containerRef: scrollContainerRef,
-    enabled: !selectedAnnouncement,
     namespace: 'announcement-page',
     restoreDeps: [loading, sortedAnnouncements.length],
-    restoreWhen: !selectedAnnouncement && !loading && !error,
+    restoreWhen: !loading && !error,
   });
 
-  useViewScrollSnapshot({
-    active: !selectedAnnouncement,
-    containerRef: scrollContainerRef,
-  });
-
-  /** 返回处理：详情视图返回列表，列表视图返回上一页 */
-  const handleBack = () => {
-    if (selectedAnnouncement) {
-      setSelectedAnnouncement(null);
-      return;
-    }
-
-    goBack();
+  const handleRefresh = async () => {
+    await reload().catch(() => undefined);
   };
 
-  /** 渲染加载骨架屏 */
-  const renderSkeleton = () => (
-    <div className="space-y-3 p-3">
-      {[1, 2, 3].map((item) => (
-        <div key={item} className="animate-pulse rounded-xl bg-white p-4 dark:bg-gray-900">
-          <div className="mb-3 h-4 w-3/4 rounded bg-gray-200 dark:bg-gray-800" />
-          <div className="mb-3 h-3 w-1/4 rounded bg-gray-200 dark:bg-gray-800" />
-          <div className="mb-2 h-3 w-full rounded bg-gray-200 dark:bg-gray-800" />
-          <div className="h-3 w-2/3 rounded bg-gray-200 dark:bg-gray-800" />
-        </div>
-      ))}
-    </div>
-  );
-
-  /** 渲染公告列表（加载中 / 错误 / 空状态 / 正常列表） */
-  const renderList = () => {
-    if (loading) {
-      return renderSkeleton();
+  const renderBody = () => {
+    if (loading && sortedAnnouncements.length === 0) {
+      return <AnnouncementSkeleton />;
     }
 
     if (error) {
-      return <ErrorState message={getErrorMessage(error)} onRetry={retry} />;
+      return <ErrorState message={getErrorMessage(error)} onRetry={() => void reload().catch(() => undefined)} />;
     }
 
     if (sortedAnnouncements.length === 0) {
@@ -104,100 +87,76 @@ export const AnnouncementPage = () => {
     }
 
     return (
-      <div className="space-y-3 p-3 pb-safe">
+      <div className="space-y-4 px-4 py-4 pb-8">
+        <section className="relative overflow-hidden rounded-[28px] border border-white/60 bg-white shadow-[0_18px_44px_rgba(15,23,42,0.08)]">
+          <div className="absolute inset-y-0 right-0 w-32 bg-[radial-gradient(circle_at_center,rgba(255,106,92,0.18),transparent_70%)]" />
+          <div className="relative flex items-start justify-between gap-4 px-5 py-5">
+            <div>
+              <div className="inline-flex items-center gap-2 rounded-full bg-[#fff1ee] px-3 py-1 text-[12px] font-medium text-[#db5b38]">
+                <BellRing size={13} />
+                <span>公告中心</span>
+              </div>
+              <h2 className="mt-3 text-[22px] font-bold text-text-main">查看平台最新通知与规则说明</h2>
+              <p className="mt-2 text-[13px] leading-6 text-text-sub">
+                当前共 {sortedAnnouncements.length} 条公告，点击卡片可进入详情页查看完整内容。
+              </p>
+            </div>
+          </div>
+        </section>
+
         {sortedAnnouncements.map((item) => (
           <button
             key={item.id}
             type="button"
-            className="block w-full rounded-xl bg-white p-4 text-left transition-colors active:bg-gray-50 dark:bg-gray-900 dark:active:bg-gray-800"
-            onClick={() => setSelectedAnnouncement(item)}
+            onClick={() => navigate(`/announcement/${item.id}`)}
+            className="group block w-full rounded-[28px] border border-white/60 bg-white px-5 py-5 text-left shadow-[0_16px_36px_rgba(15,23,42,0.06)] transition-transform active:scale-[0.99]"
           >
-            <div className="mb-2 flex items-start">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="rounded-full bg-[#fff4ef] px-3 py-1 text-[12px] font-medium text-[#da5a38]">
+                {item.typeText}
+              </span>
               {item.isPinned && (
-                <span className="mt-0.5 mr-2 shrink-0 rounded-sm bg-[#ffe4e4] px-1.5 py-0.5 text-xs font-medium text-text-price">
+                <span className="rounded-full bg-[#fff7df] px-3 py-1 text-[12px] font-medium text-[#b7791f]">
                   置顶
                 </span>
               )}
-              <h3 className="line-clamp-2 text-lg font-medium leading-snug text-gray-900 dark:text-gray-100">
-                {item.title}
-              </h3>
+              {item.isRead && (
+                <span className="rounded-full bg-bg-base px-3 py-1 text-[12px] text-text-aux">已读</span>
+              )}
             </div>
-            <div className="mb-2 text-sm text-gray-400 dark:text-gray-500">{item.time}</div>
-            <p className="line-clamp-2 text-base leading-relaxed text-gray-600 dark:text-gray-400">
-              {item.summary}
+
+            <h3 className="mt-4 line-clamp-2 text-[18px] font-semibold leading-8 text-text-main">
+              {item.title}
+            </h3>
+
+            <div className="mt-3 inline-flex items-center gap-1 text-[12px] text-text-aux">
+              <Clock3 size={12} />
+              <span>{item.time || '未设置发布时间'}</span>
+            </div>
+
+            <p className="mt-4 line-clamp-3 text-[14px] leading-7 text-text-sub">
+              {item.summary || '点击查看公告详情'}
             </p>
+
+            <div className="mt-5 inline-flex items-center gap-1 text-[13px] font-medium text-primary-start">
+              <span>查看详情</span>
+              <ArrowRight size={14} className="transition-transform group-active:translate-x-0.5" />
+            </div>
           </button>
         ))}
       </div>
     );
   };
 
-  /** 渲染公告详情视图 */
-  const renderDetail = () => {
-    if (!selectedAnnouncement) {
-      return null;
-    }
-
-    return (
-      <div className="relative flex h-full flex-1 flex-col bg-white dark:bg-gray-900">
-        <div className="flex-1 overflow-y-auto p-5 pb-24">
-          <h2 className="mb-3 text-4xl font-bold leading-snug text-gray-900 dark:text-gray-100">
-            {selectedAnnouncement.title}
-          </h2>
-          <div className="mb-6 border-b border-gray-100 pb-4 text-base text-gray-400 dark:border-gray-800 dark:text-gray-500">
-            发布时间：{selectedAnnouncement.time}
-          </div>
-          <div className="whitespace-pre-wrap text-lg leading-loose text-gray-700 dark:text-gray-300">
-            {selectedAnnouncement.content}
-          </div>
-        </div>
-        <div className="absolute right-0 bottom-0 left-0 z-40 border-t border-gray-100 bg-white px-4 py-3 pb-safe dark:border-gray-800 dark:bg-gray-900">
-          <button
-            type="button"
-            onClick={() => setSelectedAnnouncement(null)}
-            className="h-[40px] w-full rounded-full bg-gradient-to-r from-brand-start to-brand-end text-lg font-medium text-white transition-opacity active:opacity-80"
-          >
-            我知道了
-          </button>
-        </div>
-      </div>
-    );
-  };
-
   return (
-    <div className="relative flex h-full flex-1 flex-col overflow-hidden bg-bg-hover dark:bg-gray-950">
-      {isOffline && (
-        <OfflineBanner
-          center
-          message="网络连接已断开，请检查网络设置"
-          className="sticky top-0 z-50 bg-[#ffe4e4] text-text-price"
-        />
-      )}
+    <div className="flex h-full flex-1 flex-col overflow-hidden bg-bg-base">
+      <PageHeader title="公告中心" onBack={() => goBackOr('home')} offline={isOffline} onRefresh={handleRefresh} />
 
-      <PageHeader
-        title={selectedAnnouncement ? '公告详情' : '公告中心'}
-        onBack={handleBack}
-        className="border-b border-gray-100 bg-white dark:border-gray-800 dark:bg-gray-900"
-        contentClassName="h-11 px-3"
-        titleClassName="text-2xl font-medium text-gray-900 dark:text-gray-100"
-        backButtonClassName="text-gray-900 dark:text-gray-100"
-      />
-
-      <PullToRefreshContainer
-        className="relative flex-1 overflow-y-auto no-scrollbar"
-        onRefresh={async () => {
-          await reload().catch(() => undefined);
-        }}
-        disabled={isOffline || Boolean(selectedAnnouncement)}
-      >
-        <div ref={scrollContainerRef}>
-          {selectedAnnouncement ? renderDetail() : renderList()}
+      <PullToRefreshContainer onRefresh={handleRefresh} disabled={isOffline || loading}>
+        <div ref={scrollContainerRef} className="flex-1 overflow-y-auto no-scrollbar">
+          {renderBody()}
         </div>
       </PullToRefreshContainer>
     </div>
   );
 };
-
-
-
-

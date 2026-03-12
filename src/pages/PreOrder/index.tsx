@@ -12,6 +12,7 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import {
+  ArrowRight,
   HelpCircle,
   Image as ImageIcon,
   Check,
@@ -28,6 +29,7 @@ import { ErrorState } from '../../components/ui/ErrorState';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { PageHeader } from '../../components/layout/PageHeader';
 import { PullToRefreshContainer } from '../../components/ui/PullToRefreshContainer';
+import { ReservationAgreementDialog } from '../../components/biz/ReservationAgreementDialog';
 import { useAppNavigate } from '../../lib/navigation';
 import { useRequest } from '../../hooks/useRequest';
 import {
@@ -35,6 +37,7 @@ import {
   reservationApi,
   type CollectionZone,
   type CollectionDetailResponse,
+  type ReservationAgreementType,
   type ReservationPreviewResponse,
 } from '../../api';
 import { resolveUploadUrl } from '../../api/modules/upload';
@@ -42,8 +45,130 @@ import { getErrorMessage } from '../../api/core/errors';
 import { WheelPicker, type WheelPickerItem } from '../../components/ui/WheelPicker';
 import { useFeedback } from '../../components/ui/FeedbackProvider';
 
+function roundCurrency(value: number) {
+  return Math.round((Math.max(0, value) + Number.EPSILON) * 100) / 100;
+}
+
+function formatCurrencyAmount(value: number) {
+  const normalized = roundCurrency(value);
+  return normalized.toLocaleString('zh-CN', {
+    useGrouping: false,
+    minimumFractionDigits: Number.isInteger(normalized) ? 0 : 2,
+    maximumFractionDigits: 2,
+  });
+}
+
+function parseMixedPaymentRatio(ratio?: string) {
+  const match = `${ratio ?? ''}`.trim().match(/^(\d+)\s*:\s*(\d+)$/);
+  const balanceWeight = Math.max(0, Number.parseInt(match?.[1] ?? '9', 10));
+  const pendingWeight = Math.max(0, Number.parseInt(match?.[2] ?? '1', 10));
+
+  if (balanceWeight === 0 && pendingWeight === 0) {
+    return { balanceWeight: 9, pendingWeight: 1, ratioText: '9:1' };
+  }
+
+  return {
+    balanceWeight,
+    pendingWeight,
+    ratioText: `${balanceWeight}:${pendingWeight}`,
+  };
+}
+
+function resolveReservationFundingPlan(options: {
+  totalAmount: number;
+  balanceAvailable: number;
+  pendingActivationGold: number;
+  canUseMixedPayment: boolean;
+  ratio?: string;
+  allowFallbackBalanceOnly: boolean;
+}) {
+  const totalAmount = roundCurrency(options.totalAmount);
+  const balanceAvailable = roundCurrency(options.balanceAvailable);
+  const pendingActivationGold = roundCurrency(options.pendingActivationGold);
+
+  if (totalAmount <= 0) {
+    return {
+      ok: true,
+      useMixedPayment: false,
+      balanceAmount: 0,
+      pendingAmount: 0,
+      shortageAmount: 0,
+      fallbackToBalanceOnly: false,
+      requiresPendingActivationGold: false,
+      pendingRequiredAmount: 0,
+      pendingShortageAmount: 0,
+    };
+  }
+
+  if (options.canUseMixedPayment) {
+    const { balanceWeight, pendingWeight } = parseMixedPaymentRatio(options.ratio);
+    const weightTotal = Math.max(1, balanceWeight + pendingWeight);
+    const pendingRequiredAmount = roundCurrency(totalAmount * (pendingWeight / weightTotal));
+    const balanceAmount = roundCurrency(totalAmount - pendingRequiredAmount);
+    const pendingShortageAmount = roundCurrency(Math.max(0, pendingRequiredAmount - pendingActivationGold));
+    const useMixedPayment = pendingRequiredAmount > 0;
+
+    if (useMixedPayment && pendingShortageAmount <= 0 && balanceAmount <= balanceAvailable) {
+      return {
+        ok: true,
+        useMixedPayment: true,
+        balanceAmount,
+        pendingAmount: pendingRequiredAmount,
+        shortageAmount: 0,
+        fallbackToBalanceOnly: false,
+        requiresPendingActivationGold: false,
+        pendingRequiredAmount,
+        pendingShortageAmount: 0,
+      };
+    }
+
+    if (options.allowFallbackBalanceOnly && balanceAvailable >= totalAmount) {
+      return {
+        ok: true,
+        useMixedPayment: false,
+        balanceAmount: totalAmount,
+        pendingAmount: 0,
+        shortageAmount: 0,
+        fallbackToBalanceOnly: true,
+        requiresPendingActivationGold: false,
+        pendingRequiredAmount,
+        pendingShortageAmount,
+      };
+    }
+
+    return {
+      ok: false,
+      useMixedPayment: false,
+      balanceAmount,
+      pendingAmount: pendingRequiredAmount,
+      shortageAmount: roundCurrency(Math.max(0, balanceAmount - balanceAvailable)),
+      fallbackToBalanceOnly: false,
+      requiresPendingActivationGold: pendingShortageAmount > 0,
+      pendingRequiredAmount,
+      pendingShortageAmount,
+    };
+  }
+
+  return {
+    ok: balanceAvailable >= totalAmount,
+    useMixedPayment: false,
+    balanceAmount: totalAmount,
+    pendingAmount: 0,
+    shortageAmount: roundCurrency(Math.max(0, totalAmount - balanceAvailable)),
+    fallbackToBalanceOnly: false,
+    requiresPendingActivationGold: false,
+    pendingRequiredAmount: 0,
+    pendingShortageAmount: 0,
+  };
+}
+
+const RESERVATION_AGREEMENT_TITLES: Record<ReservationAgreementType, string> = {
+  purchase_rules: '预约申购规则',
+  risk_notice: '风险提示书',
+};
+
 export const PreOrderPage = () => {
-  const { goBack } = useAppNavigate();
+  const { goBack, goTo } = useAppNavigate();
   const { id } = useParams();
   const [searchParams] = useSearchParams();
 
@@ -57,6 +182,7 @@ export const PreOrderPage = () => {
   const [extraHashrate, setExtraHashrate] = useState<number | string>(0);
   const [agreed, setAgreed] = useState(true);
   const [showZonePicker, setShowZonePicker] = useState(false);
+  const [activeAgreementType, setActiveAgreementType] = useState<ReservationAgreementType | null>(null);
 
   // 预约预览
   const [showPreview, setShowPreview] = useState(false);
@@ -98,6 +224,24 @@ export const PreOrderPage = () => {
   const userInfo = detailData?.user;
   const config = detailData?.config;
 
+  const {
+    data: agreementData,
+    error: agreementError,
+    loading: agreementLoading,
+    reload: reloadAgreement,
+  } = useRequest(
+    async (signal) => {
+      if (!activeAgreementType) return null;
+      return reservationApi.getAgreement(activeAgreementType, signal);
+    },
+    {
+      cacheKey: activeAgreementType ? `reservation-agreement:${activeAgreementType}` : undefined,
+      deps: [activeAgreementType],
+      keepPreviousData: false,
+      manual: !activeAgreementType,
+    },
+  );
+
   /* ---- 表单逻辑 ---- */
   const numQuantity = typeof quantity === 'number' ? quantity : parseInt(quantity || '0', 10);
   const numExtraHashrate = typeof extraHashrate === 'number' ? extraHashrate : parseInt(extraHashrate || '0', 10);
@@ -109,8 +253,42 @@ export const PreOrderPage = () => {
   const unitPrice = selectedZone ? selectedZone.max_price : 0;
   const subtotal = unitPrice * numQuantity;
   const hashrateCost = config ? config.base_hashrate_cost * numQuantity + numExtraHashrate : 0;
-  const canAfford = userInfo ? subtotal <= userInfo.balance_available : true;
+  const mixedPaymentInfo = detailData?.mixed_payment;
+  const supportsMixedPayment =
+    mixedPaymentInfo?.enabled === true || detailData?.is_mixed_pay_available === true || detailData?.session?.is_mixed_pay_available === true;
+  const mixedPaymentRemainingTimes = Number(mixedPaymentInfo?.remaining_times ?? -1);
+  const exceedsMixedPaymentTimes =
+    mixedPaymentInfo?.available === true &&
+    mixedPaymentRemainingTimes > 0 &&
+    numQuantity > mixedPaymentRemainingTimes;
+  const balanceAvailable = Number(userInfo?.balance_available ?? 0);
+  const pendingActivationGold = Number(userInfo?.pending_activation_gold ?? 0);
+  const fundingPlan = resolveReservationFundingPlan({
+    totalAmount: subtotal,
+    balanceAvailable,
+    pendingActivationGold,
+    canUseMixedPayment:
+      mixedPaymentInfo?.available === true &&
+      Boolean(mixedPaymentInfo?.ratio) &&
+      !exceedsMixedPaymentTimes,
+    ratio: mixedPaymentInfo?.ratio,
+    allowFallbackBalanceOnly: mixedPaymentInfo?.allow_fallback_balance_only ?? true,
+  });
+  const canAfford = userInfo ? fundingPlan.ok : true;
   const hasEnoughPower = userInfo ? hashrateCost <= userInfo.green_power : true;
+  const balanceProblemTitle = fundingPlan.requiresPendingActivationGold ? '待激活确权金不足' : '余额不足';
+  const balanceProblemDescription = fundingPlan.requiresPendingActivationGold
+    ? `当前预约需待激活确权金 ¥${formatCurrencyAmount(fundingPlan.pendingRequiredAmount)}，当前可用 ¥${formatCurrencyAmount(pendingActivationGold)}。`
+    : exceedsMixedPaymentTimes
+      ? `当前申购数量已超过混合支付剩余次数 ${mixedPaymentRemainingTimes} 次，本次需专项金全额支付，还差 ¥${formatCurrencyAmount(fundingPlan.shortageAmount)}。`
+    : `${supportsMixedPayment ? '当前可用资金不足' : '当前专项金不足'}，还差 ¥${formatCurrencyAmount(fundingPlan.shortageAmount)}`;
+  const showRechargeGuide = !fundingPlan.ok && !fundingPlan.requiresPendingActivationGold;
+  const mixedPaymentHint =
+    supportsMixedPayment && exceedsMixedPaymentTimes
+      ? `当前申购数量已超过混合支付剩余次数 ${mixedPaymentRemainingTimes} 次，本次按专项金支付。`
+      : supportsMixedPayment && mixedPaymentInfo?.available === false && mixedPaymentInfo?.reason === 'daily_limit_reached'
+        ? '今日混合支付次数已用完，本次按专项金支付。'
+      : '';
 
   const canSubmit =
     selectedZone &&
@@ -124,16 +302,26 @@ export const PreOrderPage = () => {
   const submitButtonText = previewLoading
     ? '预览中...'
     : !canAfford
-      ? '余额不足'
+        ? (fundingPlan.requiresPendingActivationGold ? '待激活确权金不足' : '余额不足')
       : !hasEnoughPower
         ? '算力不足'
         : !agreed
           ? '请先同意协议'
-          : '确认预约';
+          : fundingPlan.fallbackToBalanceOnly || exceedsMixedPaymentTimes
+            ? '已切换专项金支付'
+            : '确认预约';
 
   const handleRefresh = useCallback(async () => {
     await reload().catch(() => undefined);
   }, [reload]);
+
+  const openAgreement = useCallback((type: ReservationAgreementType) => {
+    setActiveAgreementType(type);
+  }, []);
+
+  const closeAgreement = useCallback(() => {
+    setActiveAgreementType(null);
+  }, []);
 
   /** 点击「确认预约」→ 调用预约预览 API */
   const handleSubmit = useCallback(async () => {
@@ -244,7 +432,7 @@ export const PreOrderPage = () => {
                     <h2 className="text-xl font-bold text-text-main leading-tight mb-2">
                        {detailData?.package_name || '资产申购'}
                     </h2>
-                    {detailData?.session?.is_mixed_pay_available === true && (
+                    {supportsMixedPayment && (
                       <div className="flex items-center space-x-1.5 flex-wrap gap-y-1">
                         <span className="text-xs text-orange-500 border border-orange-500/30 px-2 py-0.5 rounded-sm bg-orange-50/50">
                           支持混合支付
@@ -290,8 +478,22 @@ export const PreOrderPage = () => {
                 >
                   {agreed && <Check size={12} className="text-white" />}
                 </button>
-                <div className="text-sm text-text-sub leading-snug">
-                  我已阅读并同意 <span className="text-blue-500">《预约申购规则》</span> <span className="text-blue-500">《风险提示书》</span>
+                <div className="flex flex-wrap items-center gap-x-1 text-sm text-text-sub leading-snug">
+                  <span>我已阅读并同意</span>
+                  <button
+                    type="button"
+                    onClick={() => openAgreement('purchase_rules')}
+                    className="text-blue-500 active:opacity-70"
+                  >
+                    《预约申购规则》
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => openAgreement('risk_notice')}
+                    className="text-blue-500 active:opacity-70"
+                  >
+                    《风险提示书》
+                  </button>
                 </div>
               </div>
             </div>
@@ -301,27 +503,84 @@ export const PreOrderPage = () => {
 
       {/* 底部固定栏 */}
       {!loading && selectedZone && selectedZone.stock > 0 && (
-        <div className="absolute bottom-0 left-0 right-0 bg-white dark:bg-gray-900 border-t border-border-light px-4 py-3 pb-safe z-40 shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
+        <div className="absolute bottom-0 left-0 right-0 z-40 border-t border-border-light bg-white/95 px-4 py-3 pb-safe shadow-[0_-10px_30px_rgba(15,23,42,0.08)] backdrop-blur dark:border-white/10 dark:bg-[#090b10]/95">
           {/* 余额信息 */}
           {userInfo && (
-            <div className="flex items-center justify-between text-sm mb-3">
-              <div className="flex items-center text-text-sub">
-                <Wallet size={14} className="mr-1" />
-                <span>余额 <span className="text-text-main font-medium">¥{userInfo.balance_available.toLocaleString('zh-CN', { useGrouping: false })}</span></span>
+            <div className="mb-3 rounded-[22px] border border-border-light/70 bg-bg-base/90 p-3 shadow-sm dark:border-white/10 dark:bg-white/[0.04]">
+              <div className={`grid gap-2 ${supportsMixedPayment ? 'grid-cols-3' : 'grid-cols-2'}`}>
+                <div className="rounded-2xl border border-border-light/60 bg-white px-3 py-2.5 dark:border-white/10 dark:bg-white/[0.04]">
+                  <div className="mb-1 flex items-center text-[11px] text-text-sub dark:text-white/60">
+                    <Wallet size={14} className="mr-1.5 text-primary-start" />
+                    <span>专项金</span>
+                  </div>
+                  <div className="text-sm font-bold text-text-main dark:text-white">¥{formatCurrencyAmount(balanceAvailable)}</div>
+                </div>
+
+                {supportsMixedPayment && (
+                  <div className="rounded-2xl border border-border-light/60 bg-white px-3 py-2.5 dark:border-white/10 dark:bg-white/[0.04]">
+                    <div className="mb-1 flex items-center text-[11px] text-text-sub dark:text-white/60">
+                      <Tag size={14} className="mr-1.5 text-amber-500 dark:text-amber-300" />
+                      <span>待激活确权金</span>
+                    </div>
+                    <div className="text-sm font-bold text-text-main dark:text-white">¥{formatCurrencyAmount(pendingActivationGold)}</div>
+                  </div>
+                )}
+
+                <div className="rounded-2xl border border-border-light/60 bg-white px-3 py-2.5 dark:border-white/10 dark:bg-white/[0.04]">
+                  <div className="mb-1 flex items-center text-[11px] text-text-sub dark:text-white/60">
+                    <Zap size={14} className="mr-1.5 text-primary-start" />
+                    <span>绿色算力</span>
+                  </div>
+                  <div className="text-sm font-bold text-primary-start dark:text-[#ff8d85]">{formatCurrencyAmount(userInfo.green_power)}</div>
+                </div>
               </div>
-              <div className="flex items-center text-text-sub">
-                <Zap size={14} className="mr-1" />
-                <span>算力 <span className="text-primary-start font-medium">{userInfo.green_power}</span></span>
-              </div>
+
+              {supportsMixedPayment ? (
+                <div className="mt-3 rounded-2xl bg-[#FFF7F4] px-3 py-2 text-xs text-text-sub dark:bg-white/[0.05] dark:text-white/65">
+                  {fundingPlan.useMixedPayment
+                    ? `预计冻结：专项金 ¥${formatCurrencyAmount(fundingPlan.balanceAmount)} + 待激活确权金 ¥${formatCurrencyAmount(fundingPlan.pendingAmount)}`
+                    : fundingPlan.fallbackToBalanceOnly || exceedsMixedPaymentTimes
+                      ? exceedsMixedPaymentTimes
+                        ? `申购数量超过混合支付剩余次数 ${mixedPaymentRemainingTimes} 次，已切换专项金支付。`
+                        : '待激活确权金不足，已切换专项金支付。'
+                      : '当前按专项金校验冻结金额。'}
+                </div>
+              ) : null}
             </div>
           )}
+          {mixedPaymentHint ? (
+            <div className="mb-3 rounded-[18px] border border-amber-200 bg-amber-50/90 px-3 py-2.5 text-xs leading-5 text-amber-700 dark:border-amber-400/20 dark:bg-amber-500/10 dark:text-amber-100/85">
+              {mixedPaymentHint}
+            </div>
+          ) : null}
+
+          {!canAfford ? (
+            <div className="mb-3 flex items-center justify-between gap-3 rounded-[18px] border border-red-100 bg-red-50/90 px-3 py-3 dark:border-red-400/15 dark:bg-red-500/10">
+              <div className="min-w-0">
+                <div className="text-sm font-semibold text-primary-start">{balanceProblemTitle}</div>
+                <div className="mt-1 text-xs leading-5 text-primary-start/75 dark:text-red-100/70">{balanceProblemDescription}</div>
+              </div>
+              {showRechargeGuide ? (
+                <button
+                  type="button"
+                  onClick={() => goTo('recharge')}
+                  className="inline-flex shrink-0 items-center rounded-full border border-primary-start/25 bg-white px-3 py-2 text-sm font-medium text-primary-start transition-opacity active:opacity-80 dark:bg-white/[0.06]"
+                >
+                  去充值
+                  <ArrowRight size={14} className="ml-1" />
+                </button>
+              ) : null}
+            </div>
+          ) : null}
+
           <button
+            type="button"
             disabled={!canSubmit || previewLoading}
             onClick={handleSubmit}
             className={`w-full h-[48px] rounded-full text-lg font-bold text-white shadow-sm transition-all ${
               canSubmit && !previewLoading
                 ? 'bg-gradient-to-r from-primary-start to-primary-end active:opacity-80'
-                : 'bg-border-light text-text-aux cursor-not-allowed'
+                : 'bg-border-light text-text-aux cursor-not-allowed dark:bg-white/10 dark:text-white/45'
             }`}
           >
             {previewLoading ? (
@@ -335,6 +594,18 @@ export const PreOrderPage = () => {
           </button>
         </div>
       )}
+
+      <ReservationAgreementDialog
+        isOpen={activeAgreementType !== null}
+        title={agreementData?.title || (activeAgreementType ? RESERVATION_AGREEMENT_TITLES[activeAgreementType] : '协议内容')}
+        content={agreementData?.content || ''}
+        loading={agreementLoading}
+        error={agreementError ? getErrorMessage(agreementError) : ''}
+        onRetry={() => {
+          void reloadAgreement().catch(() => undefined);
+        }}
+        onClose={closeAgreement}
+      />
 
       {/* 预约预览弹窗 */}
       {showPreview && (
@@ -551,22 +822,23 @@ const PreviewSheet: React.FC<PreviewSheetProps> = ({
     };
   }, [handleDragMove, handleDragEnd]);
 
-
-  /** 混合支付时的数量上限 */
-  const mixedMaxQuantity = previewData?.mixed_payment?.enabled && previewData.mixed_payment.remaining_times > 0
-    ? Math.min(maxQuantity, previewData.mixed_payment.remaining_times)
-    : maxQuantity;
-
-  /** 数量变更拦截 */
+  /** 数量变更提示 */
   const handleQuantityChange = useCallback((val: number | string) => {
     const n = typeof val === 'number' ? val : parseInt(val || '0', 10);
-    if (previewData?.mixed_payment?.enabled && previewData.mixed_payment.remaining_times > 0 && n > previewData.mixed_payment.remaining_times) {
-      showTip(`混合支付剩余次数为 ${previewData.mixed_payment.remaining_times} 次，无法选择更多数量`);
-      setQuantity(previewData.mixed_payment.remaining_times);
-      return;
+    const remainingTimes = Number(previewData?.mixed_payment?.remaining_times ?? -1);
+
+    if (
+      previewData?.mixed_payment?.enabled &&
+      previewData?.mixed_payment?.available &&
+      remainingTimes > 0 &&
+      n > remainingTimes &&
+      numQuantity <= remainingTimes
+    ) {
+      showTip(`当前申购数量已超过混合支付剩余次数 ${remainingTimes} 次，将自动切换为专项金支付`);
     }
+
     setQuantity(val);
-  }, [previewData, setQuantity, showTip]);
+  }, [numQuantity, previewData, setQuantity, showTip]);
 
   const Stepper = ({
     value, onChange, min = 0, max = 9999, onMaxReached,
@@ -634,12 +906,7 @@ const PreviewSheet: React.FC<PreviewSheetProps> = ({
                   value={quantity}
                   onChange={handleQuantityChange}
                   min={1}
-                  max={mixedMaxQuantity}
-                  onMaxReached={() => {
-                    if (previewData?.mixed_payment?.enabled && previewData.mixed_payment.remaining_times > 0) {
-                      showTip(`混合支付剩余次数为 ${previewData.mixed_payment.remaining_times} 次，无法选择更多数量`);
-                    }
-                  }}
+                  max={maxQuantity}
                 />
               </div>
             </Card>

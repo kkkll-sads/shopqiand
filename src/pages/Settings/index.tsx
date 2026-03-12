@@ -4,7 +4,7 @@
  */
 
 import { useState } from 'react';
-import { AlertTriangle, Info, LogOut, Moon, Shield, Sun, Trash2, UserX } from 'lucide-react';
+import { AlertTriangle, Info, LogOut, Moon, Shield, Sun, Trash2, User, UserX } from 'lucide-react';
 import { accountApi } from '../../api';
 import { getErrorMessage } from '../../api/core/errors';
 import { AuthPasswordToggle } from '../../components/biz/auth';
@@ -155,6 +155,12 @@ export const SettingsPage = () => {
           </SettingsSection>
 
           <SettingsSection>
+            <SettingsActionItem
+              label="编辑资料"
+              description="修改 APP 昵称和头像"
+              icon={<User size={18} />}
+              onClick={() => goTo('edit_profile')}
+            />
             <SettingsActionItem
               label="账户与安全"
               description="查看绑定手机号、密码和安全说明"

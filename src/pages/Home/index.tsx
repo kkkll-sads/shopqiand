@@ -314,7 +314,7 @@ export const HomePage = () => {
                           <img
                             src={imageUrl}
                             alt={banner.title || '轮播图'}
-                            className="absolute inset-0 h-full w-full object-contain"
+                            className="absolute inset-0 h-full w-full object-cover object-center"
                             loading="lazy"
                           />
                         ) : (
@@ -553,8 +553,9 @@ export const HomePage = () => {
           onClose={handlePopupClose}
           onRetry={() => void popupRequest.reload()}
           onViewDetail={() => {
+            const currentAnnouncement = unreadPopups[showPopupIndex];
             handlePopupClose();
-            goTo('announcement');
+            goTo(currentAnnouncement ? `/announcement/${currentAnnouncement.id}` : 'announcement');
           }}
         />
       )}

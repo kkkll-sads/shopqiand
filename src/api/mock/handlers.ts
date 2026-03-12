@@ -14,7 +14,80 @@ function readValue(value: unknown) {
   return typeof value === 'string' ? value.trim() : '';
 }
 
+const mockAnnouncements = [
+  {
+    id: 101,
+    title: '平台系统升级通知',
+    content:
+      '<p>为了提升稳定性，平台将于今晚 23:30 至次日 01:00 进行服务升级。</p><p>升级期间部分页面可能短暂不可用，请提前做好安排。</p>',
+    type: 'normal',
+    type_text: '平台公告',
+    sort: 99,
+    createtime: '2026-03-12 10:00:00',
+    is_read: false,
+  },
+  {
+    id: 102,
+    title: '提货与发货时效说明',
+    content:
+      '<p>工作日 17:00 前完成支付的订单，将优先安排当日发货。</p><p>节假日期间时效可能顺延，具体以物流信息为准。</p>',
+    type: 'normal',
+    type_text: '平台公告',
+    sort: 0,
+    createtime: '2026-03-10 15:20:00',
+    is_read: true,
+  },
+];
+
 export const mockHandlers: MockHandlerMap = {
+  'GET /api/Announcement/index': ({ url }) => {
+    const type = url.searchParams.get('type');
+    const list = type ? mockAnnouncements.filter((item) => item.type === type) : mockAnnouncements;
+
+    return {
+      code: 1,
+      message: 'ok',
+      data: {
+        list,
+        total: list.length,
+        current_page: 1,
+        last_page: 1,
+      },
+    };
+  },
+
+  'GET /api/Announcement/detail': ({ url }) => {
+    const id = Number(url.searchParams.get('id') || '0');
+    const announcement = mockAnnouncements.find((item) => item.id === id);
+
+    if (!announcement) {
+      return {
+        code: 0,
+        message: '公告不存在',
+        data: null,
+      };
+    }
+
+    return {
+      code: 1,
+      message: 'ok',
+      data: { announcement },
+    };
+  },
+
+  'GET /api/Announcement/scroll': () => ({
+    code: 1,
+    message: 'ok',
+    data: {
+      list: mockAnnouncements.map((item) => ({
+        id: item.id,
+        title: item.title,
+        type: item.type,
+        is_read: item.is_read,
+      })),
+    },
+  }),
+
   // ─── 公告弹窗 ───
   'GET /api/Announcement/popup': () => ({
     code: 1,

@@ -301,7 +301,7 @@ export const OrderDetailPage = () => {
             </div>
             <div className="flex-1 min-w-0 pr-2">
               <p className="text-base font-medium text-text-main leading-snug line-clamp-1">
-                {order.shipping_company} {order.shipping_no}
+                {order.shipping_company_display || order.shipping_company} {order.shipping_no}
               </p>
               {order.ship_time > 0 && (
                 <p className="text-xs text-text-aux mt-0.5">{formatTime(order.ship_time)}</p>

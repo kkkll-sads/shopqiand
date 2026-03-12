@@ -26,7 +26,7 @@ interface OrderListContentProps {
   onCopy: (text: string) => void;
   onOpenMallOrderDetail: (orderId: number) => void;
   onOpenCollectibleDetail: (order: SelectedOrder) => void;
-  onOpenLogistics: () => void;
+  onOpenLogistics: (order: ShopOrderListItem) => void;
   onOpenCashier: (order: ShopOrderListItem) => void;
   /** 取消商城订单 */
   onCancelMallOrder?: (orderId: number, cancelReason?: string) => void | Promise<void>;

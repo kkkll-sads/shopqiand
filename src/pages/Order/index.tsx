@@ -300,7 +300,7 @@ export const OrderPage = () => {
             orderId != null ? navigate(`/order/detail/${orderId}`) : goTo('order_detail')
           )}
           onOpenCollectibleDetail={(order) => setSelectedOrder(order)}
-          onOpenLogistics={() => goTo('logistics')}
+          onOpenLogistics={(order) => navigate(`/logistics/${order.id}`)}
           onOpenCashier={(order) => {
             const cashierParams = new URLSearchParams({
               order_id: String(order.id),

@@ -1,3 +1,4 @@
+import { useEffect, useMemo, useRef, useState, type TouchEvent } from 'react';
 import { ChevronRight, ShieldCheck } from 'lucide-react';
 import type { ShopProductDetail } from '../../../api/modules/shopProduct';
 import { Badge } from '../../../components/ui/Badge';
@@ -21,6 +22,10 @@ interface ProductOverviewSectionProps {
   selectedSummary: string;
 }
 
+const AUTO_PLAY_INTERVAL = 4500;
+const SWIPE_THRESHOLD = 56;
+const SWIPE_LOCK_DISTANCE = 10;
+
 export const ProductOverviewSection = ({
   loading,
   onOpenServiceDescription,
@@ -29,30 +34,212 @@ export const ProductOverviewSection = ({
   quantity,
   selectedSummary,
 }: ProductOverviewSectionProps) => {
-  const gallery = product
-    ? [product.thumbnail, ...(product.images ?? [])]
-        .map((image) => resolveShopProductImageUrl(image))
-        .filter(Boolean)
-        .filter((image, index, source) => source.indexOf(image) === index)
-    : [];
+  const gallery = useMemo(
+    () =>
+      product
+        ? [product.thumbnail, ...(product.images ?? [])]
+            .map((image) => resolveShopProductImageUrl(image))
+            .filter(Boolean)
+            .filter((image, index, source) => source.indexOf(image) === index)
+        : [],
+    [product],
+  );
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [dragOffset, setDragOffset] = useState(0);
+  const [isInteracting, setIsInteracting] = useState(false);
+  const carouselRef = useRef<HTMLDivElement | null>(null);
+  const touchStartXRef = useRef(0);
+  const touchStartYRef = useRef(0);
+  const dragDistanceRef = useRef(0);
+  const isHorizontalSwipeRef = useRef(false);
 
   const serviceItems = buildShopProductServiceItems(product);
+  const productDescription = buildShopProductDescription(product);
+  const hasMultipleImages = gallery.length > 1;
+  const currentImageIndex = gallery.length > 0 ? activeIndex + 1 : 1;
+  const totalImages = Math.max(gallery.length, 1);
+
+  useEffect(() => {
+    setActiveIndex(0);
+    setDragOffset(0);
+    setIsInteracting(false);
+  }, [product?.id]);
+
+  useEffect(() => {
+    setActiveIndex((current) => {
+      if (!gallery.length) {
+        return 0;
+      }
+      return Math.min(current, gallery.length - 1);
+    });
+  }, [gallery.length]);
+
+  useEffect(() => {
+    if (!hasMultipleImages || isInteracting) {
+      return undefined;
+    }
+
+    const timer = window.setInterval(() => {
+      setActiveIndex((current) => (current + 1) % gallery.length);
+    }, AUTO_PLAY_INTERVAL);
+
+    return () => window.clearInterval(timer);
+  }, [gallery.length, hasMultipleImages, isInteracting]);
+
+  const resetSwipeState = () => {
+    setDragOffset(0);
+    setIsInteracting(false);
+    dragDistanceRef.current = 0;
+    isHorizontalSwipeRef.current = false;
+  };
+
+  const handleTouchStart = (event: TouchEvent<HTMLDivElement>) => {
+    if (!hasMultipleImages) {
+      return;
+    }
+
+    const touch = event.touches[0];
+    touchStartXRef.current = touch.clientX;
+    touchStartYRef.current = touch.clientY;
+    dragDistanceRef.current = 0;
+    isHorizontalSwipeRef.current = false;
+    setIsInteracting(true);
+  };
+
+  const handleTouchMove = (event: TouchEvent<HTMLDivElement>) => {
+    if (!hasMultipleImages || event.touches.length === 0) {
+      return;
+    }
+
+    const touch = event.touches[0];
+    const deltaX = touch.clientX - touchStartXRef.current;
+    const deltaY = touch.clientY - touchStartYRef.current;
+
+    if (!isHorizontalSwipeRef.current) {
+      if (
+        Math.abs(deltaX) < SWIPE_LOCK_DISTANCE &&
+        Math.abs(deltaY) < SWIPE_LOCK_DISTANCE
+      ) {
+        return;
+      }
+
+      if (Math.abs(deltaY) > Math.abs(deltaX)) {
+        return;
+      }
+
+      isHorizontalSwipeRef.current = true;
+    }
+
+    if (event.cancelable) {
+      event.preventDefault();
+    }
+
+    const width = carouselRef.current?.clientWidth ?? window.innerWidth;
+    const maxOffset = width * 0.24;
+    dragDistanceRef.current = deltaX;
+    setDragOffset(Math.max(-maxOffset, Math.min(maxOffset, deltaX)));
+  };
+
+  const handleTouchEnd = () => {
+    if (!hasMultipleImages) {
+      return;
+    }
+
+    if (isHorizontalSwipeRef.current) {
+      const width = carouselRef.current?.clientWidth ?? window.innerWidth;
+      const threshold = Math.max(SWIPE_THRESHOLD, width * 0.12);
+
+      if (dragDistanceRef.current <= -threshold) {
+        setActiveIndex((current) => (current + 1) % gallery.length);
+      } else if (dragDistanceRef.current >= threshold) {
+        setActiveIndex((current) => (current - 1 + gallery.length) % gallery.length);
+      }
+    }
+
+    resetSwipeState();
+  };
 
   return (
     <>
       {loading ? (
         <Skeleton className="aspect-square w-full" />
       ) : (
-        <div className="relative aspect-square w-full bg-white dark:bg-gray-900">
-          <img
-            src={gallery[0]}
-            alt={product?.name || '商品'}
-            className="h-full w-full object-cover"
-            referrerPolicy="no-referrer"
-          />
-          <div className="absolute bottom-4 right-4 rounded-full bg-black/40 px-2 py-1 text-s text-white backdrop-blur-sm">
-            1 / {gallery.length || 1}
-          </div>
+        <div
+          ref={carouselRef}
+          className="relative aspect-square w-full overflow-hidden bg-white dark:bg-gray-900"
+          onTouchCancel={handleTouchEnd}
+          onTouchEnd={handleTouchEnd}
+          onTouchMove={handleTouchMove}
+          onTouchStart={handleTouchStart}
+          role="group"
+          aria-roledescription="carousel"
+          aria-label={`${product?.name || '商品'}主图`}
+          style={{ touchAction: hasMultipleImages ? 'pan-y' : undefined }}
+        >
+          {gallery.length > 0 ? (
+            <>
+              <div
+                className="flex h-full"
+                style={{
+                  transform: `translateX(calc(-${activeIndex * 100}% + ${dragOffset}px))`,
+                  transitionDuration: isInteracting ? '0ms' : '320ms',
+                  transitionProperty: 'transform',
+                  transitionTimingFunction: 'cubic-bezier(0.22, 1, 0.36, 1)',
+                }}
+              >
+                {gallery.map((image, index) => (
+                  <div key={`${image}-${index}`} className="h-full w-full shrink-0">
+                    <img
+                      src={image}
+                      alt={`${product?.name || '商品'} ${index + 1}`}
+                      className="h-full w-full object-cover"
+                      loading={index === 0 ? 'eager' : 'lazy'}
+                      referrerPolicy="no-referrer"
+                    />
+                  </div>
+                ))}
+              </div>
+
+              {hasMultipleImages && (
+                <div className="pointer-events-none absolute inset-x-0 bottom-4 z-10 flex items-center justify-between px-4">
+                  <div className="pointer-events-auto flex items-center gap-2">
+                    {gallery.map((image, index) => {
+                      const isActive = index === activeIndex;
+                      return (
+                        <button
+                          key={`${image}-dot-${index}`}
+                          type="button"
+                          aria-label={`切换到第 ${index + 1} 张主图`}
+                          aria-pressed={isActive}
+                          onClick={() => {
+                            setActiveIndex(index);
+                            setDragOffset(0);
+                            setIsInteracting(false);
+                          }}
+                          className={`h-2 rounded-full transition-all duration-300 ${
+                            isActive ? 'w-6 bg-white' : 'w-2 bg-white/45'
+                          }`}
+                        />
+                      );
+                    })}
+                  </div>
+                  <div className="rounded-full bg-black/40 px-2 py-1 text-s text-white backdrop-blur-sm">
+                    {currentImageIndex} / {totalImages}
+                  </div>
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="flex h-full items-center justify-center text-base text-text-aux">
+              暂无商品图片
+            </div>
+          )}
+
+          {!hasMultipleImages && gallery.length > 0 && (
+            <div className="absolute bottom-4 right-4 rounded-full bg-black/40 px-2 py-1 text-s text-white backdrop-blur-sm">
+              {currentImageIndex} / {totalImages}
+            </div>
+          )}
         </div>
       )}
 
@@ -99,10 +286,8 @@ export const ProductOverviewSection = ({
           <h1 className="mb-2 line-clamp-2 text-xl font-bold leading-snug text-text-main">
             {product?.name || '商品详情'}
           </h1>
-          {buildShopProductDescription(product) && (
-            <p className="mb-3 text-base text-text-sub">
-              {buildShopProductDescription(product)}
-            </p>
+          {productDescription && (
+            <p className="mb-3 text-base text-text-sub">{productDescription}</p>
           )}
           <div className="flex items-center space-x-4 text-s text-text-aux">
             <span>销量 {product?.sales ?? 0}</span>
