@@ -26,12 +26,13 @@ import { ErrorState } from '../../components/ui/ErrorState';
 import { useFeedback } from '../../components/ui/FeedbackProvider';
 import { Input } from '../../components/ui/Input';
 import { Skeleton } from '../../components/ui/Skeleton';
-import { PageHeader } from '../../components/layout/PageHeader';
+import { WalletPageHeader } from '../../components/layout/WalletPageHeader';
 import { PullToRefreshContainer } from '../../components/ui/PullToRefreshContainer';
 import { useAuthSession } from '../../hooks/useAuthSession';
 import { useNetworkStatus } from '../../hooks/useNetworkStatus';
 import { useRequest } from '../../hooks/useRequest';
 import { useRouteScrollRestoration } from '../../hooks/useRouteScrollRestoration';
+import { getBillingPath } from '../../lib/billing';
 import { useAppNavigate } from '../../lib/navigation';
 
 const MIN_WITHDRAW_AMOUNT = 10;
@@ -254,17 +255,14 @@ export const WithdrawPage = () => {
   };
 
   const renderHeader = () => (
-    <PageHeader
+    <WalletPageHeader
       title="收益提现"
       onBack={goBack}
-      rightAction={
-        <button
-          className="p-1 -mr-1 text-text-main active:opacity-70"
-          onClick={() => goTo('billing')}
-        >
-          <FileText size={20} />
-        </button>
-      }
+      action={{
+        icon: FileText,
+        label: '提现记录',
+        onClick: () => goTo(getBillingPath('withdraw')),
+      }}
     />
   );
 

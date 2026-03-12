@@ -1,0 +1,58 @@
+export type BillingScene = 'all' | 'recharge' | 'service_fee_recharge' | 'transfer' | 'withdraw';
+
+export interface BillingSceneConfig {
+  bizType?: string;
+  emptyMessage: string;
+  intro: string;
+  title: string;
+}
+
+const BILLING_SCENE_CONFIGS: Record<BillingScene, BillingSceneConfig> = {
+  all: {
+    emptyMessage: '暂无资产明细记录',
+    intro: '按账户类型、收支方向和关键词查看完整资产流水。',
+    title: '资产明细',
+  },
+  recharge: {
+    bizType: 'recharge',
+    emptyMessage: '暂无充值记录',
+    intro: '查看专项金充值申请、到账流水和处理状态。',
+    title: '充值记录',
+  },
+  service_fee_recharge: {
+    bizType: 'service_fee_recharge',
+    emptyMessage: '暂无确权金记录',
+    intro: '查看确权金充值来源、金额和到账流水。',
+    title: '确权金记录',
+  },
+  transfer: {
+    bizType: 'transfer',
+    emptyMessage: '暂无划转记录',
+    intro: '查看账户之间的余额划转记录、到账状态和流水明细。',
+    title: '划转记录',
+  },
+  withdraw: {
+    bizType: 'withdraw',
+    emptyMessage: '暂无提现记录',
+    intro: '查看收益提现申请、到账金额和审核状态。',
+    title: '提现记录',
+  },
+};
+
+export function resolveBillingScene(value: string | null | undefined): BillingScene {
+  if (!value) {
+    return 'all';
+  }
+
+  return value in BILLING_SCENE_CONFIGS
+    ? (value as BillingScene)
+    : 'all';
+}
+
+export function getBillingSceneConfig(scene: BillingScene): BillingSceneConfig {
+  return BILLING_SCENE_CONFIGS[scene];
+}
+
+export function getBillingPath(scene: BillingScene = 'all'): string {
+  return scene === 'all' ? '/billing' : `/billing?scene=${scene}`;
+}

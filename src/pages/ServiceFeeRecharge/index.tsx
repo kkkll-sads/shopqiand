@@ -3,7 +3,7 @@ import { AlertCircle, CreditCard, FileText, ShieldCheck, Wallet } from 'lucide-r
 import { accountApi } from '../../api';
 import { getErrorMessage } from '../../api/core/errors';
 import { OfflineBanner } from '../../components/layout/OfflineBanner';
-import { PageHeader } from '../../components/layout/PageHeader';
+import { WalletPageHeader } from '../../components/layout/WalletPageHeader';
 import { Card } from '../../components/ui/Card';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { ErrorState } from '../../components/ui/ErrorState';
@@ -12,6 +12,7 @@ import { Skeleton } from '../../components/ui/Skeleton';
 import { useAuthSession } from '../../hooks/useAuthSession';
 import { useNetworkStatus } from '../../hooks/useNetworkStatus';
 import { useRequest } from '../../hooks/useRequest';
+import { getBillingPath } from '../../lib/billing';
 import { useAppNavigate } from '../../lib/navigation';
 
 type RechargeSource = 'balance_available' | 'withdrawable_money';
@@ -131,19 +132,14 @@ export function ServiceFeeRechargePage() {
   };
 
   const renderHeader = () => (
-    <PageHeader
+    <WalletPageHeader
       title="确权金充值"
       onBack={goBack}
-      rightAction={
-        <button
-          type="button"
-          className="flex items-center text-sm text-text-sub active:opacity-70"
-          onClick={() => goTo('billing')}
-        >
-          <FileText size={16} className="mr-1" />
-          明细
-        </button>
-      }
+      action={{
+        icon: FileText,
+        label: '充值明细',
+        onClick: () => goTo(getBillingPath('service_fee_recharge')),
+      }}
     />
   );
 

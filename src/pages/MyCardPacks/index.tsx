@@ -12,7 +12,7 @@ import {
   type MembershipCardProduct,
 } from '../../api';
 import { getErrorMessage } from '../../api/core/errors';
-import { PageHeader } from '../../components/layout/PageHeader';
+import { WalletPageHeader } from '../../components/layout/WalletPageHeader';
 import { Card } from '../../components/ui/Card';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { ErrorState } from '../../components/ui/ErrorState';
@@ -356,12 +356,16 @@ export function MyCardPacksPage() {
 
   return (
     <div className="flex h-full flex-1 flex-col bg-bg-base">
-      <PageHeader
+      <WalletPageHeader
         title="我的卡包"
         onBack={goBack}
         offline={isOffline}
         onRefresh={handleRefresh}
-        rightAction={isAuthenticated ? <button type="button" className="flex items-center text-sm text-text-sub" onClick={() => goTo('recharge')}><Wallet size={16} className="mr-1" />充值</button> : null}
+        action={isAuthenticated ? {
+          icon: Wallet,
+          label: '去充值',
+          onClick: () => goTo('recharge'),
+        } : undefined}
       />
       <PullToRefreshContainer onRefresh={handleRefresh}>
         <div ref={scrollContainerRef} className="flex-1 overflow-y-auto no-scrollbar">

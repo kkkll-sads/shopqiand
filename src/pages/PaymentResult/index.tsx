@@ -12,6 +12,7 @@ import {
   WifiOff,
 } from 'lucide-react';
 import { shopOrderApi, rechargeApi } from '../../api';
+import { getBillingPath } from '../../lib/billing';
 import { useAppNavigate } from '../../lib/navigation';
 import { copyToClipboard } from '../../lib/clipboard';
 import { useFeedback } from '../../components/ui/FeedbackProvider';
@@ -276,7 +277,7 @@ export const PaymentResultPage = () => {
         accentClass: 'text-[#f59e0b]',
         amountClass: 'text-[#e50019]',
         primaryText: '查看充值记录',
-        primaryAction: () => goTo('billing'),
+        primaryAction: () => goTo(getBillingPath('recharge')),
         secondaryText: '返回专项金',
         secondaryAction: () => goTo('recharge'),
       },
@@ -291,7 +292,7 @@ export const PaymentResultPage = () => {
         accentClass: 'text-[#16a34a]',
         amountClass: 'text-[#e50019]',
         primaryText: '查看充值记录',
-        primaryAction: () => goTo('billing'),
+        primaryAction: () => goTo(getBillingPath('recharge')),
         secondaryText: '继续充值',
         secondaryAction: () => goTo('recharge'),
       },

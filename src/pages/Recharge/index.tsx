@@ -34,6 +34,7 @@ import {
 } from '../../api';
 import { getErrorMessage } from '../../api/core/errors';
 import { OfflineBanner } from '../../components/layout/OfflineBanner';
+import { WalletPageHeader } from '../../components/layout/WalletPageHeader';
 import { Card } from '../../components/ui/Card';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { ErrorState } from '../../components/ui/ErrorState';
@@ -43,9 +44,9 @@ import { useAuthSession } from '../../hooks/useAuthSession';
 import { useNetworkStatus } from '../../hooks/useNetworkStatus';
 import { useRequest } from '../../hooks/useRequest';
 import { useRouteScrollRestoration } from '../../hooks/useRouteScrollRestoration';
+import { getBillingPath } from '../../lib/billing';
 import { copyToClipboard } from '../../lib/clipboard';
 import { useAppNavigate } from '../../lib/navigation';
-import { PageHeader } from '../../components/layout/PageHeader';
 import { PullToRefreshContainer } from '../../components/ui/PullToRefreshContainer';
 
 const QUICK_AMOUNTS = [500, 1000, 2000, 5000, 10000];
@@ -499,20 +500,19 @@ export function RechargePage() {
     });
   };
 
+  const handleOpenRechargeRecords = () => {
+    navigate(getBillingPath('recharge'));
+  };
+
   const renderHeader = () => (
-    <PageHeader
+    <WalletPageHeader
       title="专项金充值"
       onBack={goBack}
-      rightAction={
-        <button
-          type="button"
-          className="flex items-center text-sm text-text-sub active:opacity-70"
-          onClick={() => goTo('billing')}
-        >
-          <FileText size={16} className="mr-1" />
-          记录
-        </button>
-      }
+      action={{
+        icon: FileText,
+        label: '充值记录',
+        onClick: handleOpenRechargeRecords,
+      }}
     />
   );
 
@@ -993,7 +993,7 @@ export function RechargePage() {
               <button
                 type="button"
                 className="flex items-center text-sm text-text-sub active:opacity-70"
-                onClick={() => goTo('billing')}
+                onClick={handleOpenRechargeRecords}
               >
                 查看更多
                 <FileText size={14} className="ml-1" />
@@ -1111,6 +1111,5 @@ export function RechargePage() {
     </div>
   );
 }
-
 
 

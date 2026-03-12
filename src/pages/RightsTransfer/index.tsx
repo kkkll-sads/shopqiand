@@ -4,13 +4,14 @@
  */
 
 import React, { useState, useEffect } from 'react'; // React 核心 Hook
-import { ChevronLeft, AlertCircle, ArrowRight, XCircle, ChevronDown, X, ShieldCheck, Eye, EyeOff, CheckCircle2, Info } from 'lucide-react';
+import { AlertCircle, ArrowRight, CheckCircle2, ChevronDown, Eye, EyeOff, FileText, Info, ShieldCheck, X, XCircle } from 'lucide-react';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { useAppNavigate } from '../../lib/navigation';
-import { PageHeader } from '../../components/layout/PageHeader';
+import { WalletPageHeader } from '../../components/layout/WalletPageHeader';
 import { useFeedback } from '../../components/ui/FeedbackProvider';
 import { PullToRefreshContainer } from '../../components/ui/PullToRefreshContainer';
+import { getBillingPath } from '../../lib/billing';
 
 // Mock Data
 const MOCK_DATA = {
@@ -34,7 +35,7 @@ const MOCK_DATA = {
 };
 
 export function RightsTransferPage() {
-  const { goBack } = useAppNavigate();
+  const { goBack, goTo } = useAppNavigate();
   const { showToast } = useFeedback();
   const [isLoading, setIsLoading] = useState(true);
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
@@ -81,8 +82,20 @@ export function RightsTransferPage() {
   };
 
   const handleGoHistory = () => {
-    showToast({ message: '跳转到划转记录', type: 'info' });
+    goTo(getBillingPath('transfer'));
   };
+
+  const renderHeader = () => (
+    <WalletPageHeader
+      title="确权金划转"
+      onBack={handleGoBack}
+      action={{
+        icon: FileText,
+        label: '划转记录',
+        onClick: handleGoHistory,
+      }}
+    />
+  );
 
   const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
@@ -129,13 +142,7 @@ export function RightsTransferPage() {
   if (isLoading) {
     return (
       <div className="h-full flex flex-col bg-bg-hover dark:bg-gray-900">
-        <div className="h-12 flex items-center px-4 bg-white dark:bg-gray-800">
-          <div className="w-6 h-6 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
-          <div className="flex-1 flex justify-center">
-            <div className="w-24 h-5 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
-          </div>
-          <div className="w-6 h-6" />
-        </div>
+        {renderHeader()}
         <div className="p-4 space-y-4">
           <div className="h-32 bg-white dark:bg-gray-800 rounded-2xl animate-pulse" />
           <div className="h-48 bg-white dark:bg-gray-800 rounded-2xl animate-pulse" />
@@ -148,13 +155,7 @@ export function RightsTransferPage() {
   if (error) {
     return (
       <div className="h-full flex flex-col bg-bg-hover dark:bg-gray-900">
-        <div className="h-12 flex items-center px-4 bg-white dark:bg-gray-800">
-          <button onClick={handleGoBack} className="p-1 -ml-1 text-text-main">
-            <ChevronLeft size={24} />
-          </button>
-          <div className="flex-1 text-center font-medium text-2xl text-text-main">确权金划转</div>
-          <div className="w-6" />
-        </div>
+        {renderHeader()}
         <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
           <AlertCircle size={48} className="text-red-500 mb-4" />
           <h3 className="text-lg font-medium text-text-main mb-2">加载失败</h3>
@@ -167,16 +168,7 @@ export function RightsTransferPage() {
 
   return (
     <div className="h-full flex flex-col bg-bg-hover dark:bg-gray-900 relative">
-      {/* Header */}
-      <div className="h-12 flex items-center px-4 bg-white dark:bg-gray-800 sticky top-0 z-10">
-        <button onClick={handleGoBack} className="p-1 -ml-1 text-text-main active:opacity-70 transition-opacity">
-          <ChevronLeft size={24} />
-        </button>
-        <div className="flex-1 text-center font-medium text-2xl text-text-main">确权金划转</div>
-        <button onClick={handleGoHistory} className="text-md text-text-sub active:opacity-70 transition-opacity">
-          划转记录
-        </button>
-      </div>
+      {renderHeader()}
 
       {isOffline && (
         <div className="bg-orange-50 text-orange-500 text-base px-4 py-2 flex items-center dark:bg-orange-500/15 dark:text-orange-300">

@@ -19,8 +19,8 @@ export interface ToastOptions {
 }
 
 export interface LoadingHUDOptions {
-  message?: string;
-  subMessage?: string;
+  message?: React.ReactNode;
+  subMessage?: React.ReactNode;
   timeout?: number; // default 15000
   onCancel?: () => void;
   cancelable?: boolean;

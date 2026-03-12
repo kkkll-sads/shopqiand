@@ -49,6 +49,16 @@ function formatMinuteClock(seconds: number) {
   return `${minutes}:${remain}`;
 }
 
+function AnimatedEllipsis() {
+  return (
+    <span aria-hidden="true" className="ml-1 inline-flex items-center text-current">
+      <span className="animate-pulse [animation-delay:-0.24s]">.</span>
+      <span className="animate-pulse [animation-delay:-0.12s]">.</span>
+      <span className="animate-pulse">.</span>
+    </span>
+  );
+}
+
 const RechargeCashierView = ({
   amount,
   orderNo,
@@ -71,7 +81,6 @@ const RechargeCashierView = ({
   const [opening, setOpening] = useState(false);
   const [hasOpenedPay, setHasOpenedPay] = useState(false);
   const [pollState, setPollState] = useState<'idle' | 'polling' | 'done'>('idle');
-  const [pollCount, setPollCount] = useState(0);
   const [pollResult, setPollResult] = useState<'pending' | 'success' | 'failure' | null>(null);
 
   useEffect(() => {
@@ -79,7 +88,6 @@ const RechargeCashierView = ({
     setHasOpenedPay(false);
     setOpening(false);
     setPollState('idle');
-    setPollCount(0);
     setPollResult(null);
     pollAbortRef.current?.abort();
     if (windowCheckRef.current) {
@@ -95,7 +103,6 @@ const RechargeCashierView = ({
     pollAbortRef.current?.abort();
     pollAbortRef.current = null;
     setPollState('idle');
-    setPollCount(0);
     setPollResult(null);
 
     if (showCancelToast) {
@@ -116,13 +123,10 @@ const RechargeCashierView = ({
     const abort = new AbortController();
     pollAbortRef.current = abort;
     setPollState('polling');
-    setPollCount(0);
     setPollResult(null);
 
     for (let i = 0; i < maxAttempts; i++) {
       if (abort.signal.aborted) break;
-
-      setPollCount(i + 1);
 
       try {
         const detail = await rechargeApi.detail(
@@ -285,7 +289,12 @@ const RechargeCashierView = ({
 
     showLoading({
       message: '查询支付结果中...',
-      subMessage: `正在确认支付结果 (${Math.max(pollCount, 1)}/5)，可取消后稍后再查`,
+      subMessage: (
+        <span className="inline-flex items-center">
+          正在确认支付结果
+          <AnimatedEllipsis />
+        </span>
+      ),
       cancelable: true,
       onCancel: () => cancelPolling(),
       timeout: 20000,
@@ -294,7 +303,7 @@ const RechargeCashierView = ({
     return () => {
       hideLoading();
     };
-  }, [cancelPolling, hideLoading, isPolling, pollCount, showLoading]);
+  }, [cancelPolling, hideLoading, isPolling, showLoading]);
 
   const primaryAction = isFailureState
     ? {

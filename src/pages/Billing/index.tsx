@@ -8,12 +8,14 @@ import { type FormEvent, useCallback, useEffect, useMemo, useRef, useState } fro
 import {
   ChevronRight,
   Copy,
+  FileText,
   Loader2,
   RefreshCcw,
   Search,
   Wallet,
   X,
 } from 'lucide-react';
+import { useSearchParams } from 'react-router-dom';
 import {
   accountApi,
   type AccountLogFlowDirection,
@@ -24,7 +26,7 @@ import {
 } from '../../api';
 import { getErrorMessage } from '../../api/core/errors';
 import { OfflineBanner } from '../../components/layout/OfflineBanner';
-import { PageHeader } from '../../components/layout/PageHeader';
+import { WalletPageHeader } from '../../components/layout/WalletPageHeader';
 import { Card } from '../../components/ui/Card';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { ErrorState } from '../../components/ui/ErrorState';
@@ -38,6 +40,7 @@ import { useRequest } from '../../hooks/useRequest';
 import { useRouteScrollRestoration } from '../../hooks/useRouteScrollRestoration';
 import { useSessionState } from '../../hooks/useSessionState';
 import { useViewScrollSnapshot } from '../../hooks/useViewScrollSnapshot';
+import { getBillingPath, getBillingSceneConfig, resolveBillingScene } from '../../lib/billing';
 import { copyToClipboard } from '../../lib/clipboard';
 import { useAppNavigate } from '../../lib/navigation';
 
@@ -178,6 +181,36 @@ function getAmountClassName(amount: number) {
   return 'text-text-sub';
 }
 
+function getAccountTone(type: string | undefined) {
+  switch (type) {
+    case 'withdrawable_money':
+      return {
+        badgeClassName: 'bg-emerald-50 text-emerald-700',
+        iconClassName: 'bg-emerald-50 text-emerald-600',
+      };
+    case 'service_fee_balance':
+      return {
+        badgeClassName: 'bg-violet-50 text-violet-700',
+        iconClassName: 'bg-violet-50 text-violet-600',
+      };
+    case 'score':
+      return {
+        badgeClassName: 'bg-sky-50 text-sky-700',
+        iconClassName: 'bg-sky-50 text-sky-600',
+      };
+    case 'green_power':
+      return {
+        badgeClassName: 'bg-lime-50 text-lime-700',
+        iconClassName: 'bg-lime-50 text-lime-600',
+      };
+    default:
+      return {
+        badgeClassName: 'bg-rose-50 text-rose-700',
+        iconClassName: 'bg-rose-50 text-rose-600',
+      };
+  }
+}
+
 /** 从流水记录提取月份标签（用于分组显示） */
 function getMonthLabel(item: AccountLogItem) {
   const timestamp = item.createTime;
@@ -200,12 +233,13 @@ function getMonthLabel(item: AccountLogItem) {
 /** 构建查询参数 */
 function buildQueryParams(
   accountType: AccountLogType,
+  bizType: string | undefined,
   flowFilter: FlowFilter,
   keyword: string,
   page: number,
 ) {
   return {
-    bizType: undefined,
+    bizType,
     endTime: undefined,
     flowDirection: flowFilter === 'all' ? undefined : flowFilter,
     keyword: keyword || undefined,
@@ -306,24 +340,28 @@ function getNextHasMore(response: AccountLogList) {
  * 功能：账户类型/收支方向/关键词筛选 → 分月分组流水列表 → 无限滚动 → 点击查看详情
  */
 export function BillingPage() {
-  const { goBack, goTo } = useAppNavigate();
+  const { goBack, goTo, navigate } = useAppNavigate();
   const { isAuthenticated } = useAuthSession();
   const { isOffline, refreshStatus } = useNetworkStatus();
   const { showToast } = useFeedback();
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
   const queryKeyRef = useRef('');
+  const [searchParams] = useSearchParams();
+  const scene = resolveBillingScene(searchParams.get('scene'));
+  const sceneConfig = getBillingSceneConfig(scene);
+  const sessionNamespace = scene === 'all' ? 'billing-page' : `billing-page:${scene}`;
 
   const [accountType, setAccountType] = useSessionState<AccountLogType>(
-    'billing-page:account-type',
+    `${sessionNamespace}:account-type`,
     'all',
   );
   const [flowFilter, setFlowFilter] = useSessionState<FlowFilter>(
-    'billing-page:flow-filter',
+    `${sessionNamespace}:flow-filter`,
     'all',
   );
   const [draftKeyword, setDraftKeyword] = useState('');
-  const [keyword, setKeyword] = useSessionState('billing-page:keyword', '');
+  const [keyword, setKeyword] = useSessionState(`${sessionNamespace}:keyword`, '');
   const [items, setItems] = useState<AccountLogItem[]>([]);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(false);
@@ -336,7 +374,7 @@ export function BillingPage() {
     setDraftKeyword(keyword);
   }, [keyword]);
 
-  const queryKey = `${accountType}:${flowFilter}:${keyword}`;
+  const queryKey = `${scene}:${accountType}:${flowFilter}:${keyword}`;
 
   useEffect(() => {
     queryKeyRef.current = queryKey;
@@ -355,7 +393,7 @@ export function BillingPage() {
   } = useRequest(
     async (signal) => {
       const response = await accountApi.getAllLog(
-        buildQueryParams(accountType, flowFilter, keyword, 1),
+        buildQueryParams(accountType, sceneConfig.bizType, flowFilter, keyword, 1),
         { signal },
       );
 
@@ -368,7 +406,7 @@ export function BillingPage() {
       return response;
     },
     {
-      deps: [accountType, flowFilter, keyword, isAuthenticated],
+      deps: [accountType, flowFilter, keyword, isAuthenticated, sceneConfig.bizType],
       keepPreviousData: false,
       manual: !isAuthenticated,
     },
@@ -414,7 +452,7 @@ export function BillingPage() {
 
     try {
       const response = await accountApi.getAllLog(
-        buildQueryParams(accountType, flowFilter, keyword, nextPage),
+        buildQueryParams(accountType, sceneConfig.bizType, flowFilter, keyword, nextPage),
       );
 
       if (queryKeyRef.current !== requestKey) {
@@ -439,7 +477,7 @@ export function BillingPage() {
         setLoadingMore(false);
       }
     }
-  }, [accountType, flowFilter, hasMore, isAuthenticated, keyword, loadingMore, page]);
+  }, [accountType, flowFilter, hasMore, isAuthenticated, keyword, loadingMore, page, sceneConfig.bizType]);
 
   useInfiniteScroll({
     disabled: Boolean(selectedLog) || isOffline || Boolean(loadMoreError) || Boolean(paginationNotice),
@@ -480,7 +518,7 @@ export function BillingPage() {
   useRouteScrollRestoration({
     containerRef: scrollContainerRef,
     enabled: isAuthenticated && !selectedLog,
-    namespace: 'billing-page',
+    namespace: `${sessionNamespace}:scroll`,
     restoreDeps: [accountType, flowFilter, keyword, logs.length, listLoading],
     restoreWhen: isAuthenticated && !selectedLog && !listLoading,
   });
@@ -534,20 +572,23 @@ export function BillingPage() {
   };
 
   const renderHeader = () => (
-    <PageHeader
-      title={selectedLog ? '明细详情' : '资产明细'}
+    <WalletPageHeader
+      title={selectedLog ? '明细详情' : sceneConfig.title}
       onBack={handleBack}
-      rightAction={
-        !selectedLog ? (
-          <button
-            type="button"
-            className="flex items-center text-sm text-text-sub active:opacity-70"
-            onClick={() => goTo('recharge')}
-          >
-            <Wallet size={16} className="mr-1" />
-            充值
-          </button>
-        ) : null
+      action={
+        selectedLog
+          ? undefined
+          : scene === 'all'
+            ? {
+                icon: Wallet,
+                label: '去充值',
+                onClick: () => goTo('recharge'),
+              }
+            : {
+                icon: FileText,
+                label: '全部明细',
+                onClick: () => navigate(getBillingPath('all')),
+              }
       }
     />
   );
@@ -559,6 +600,24 @@ export function BillingPage() {
 
     return (
       <div className="z-10 shrink-0 border-b border-border-light bg-bg-card px-4 pb-4 pt-2">
+        {scene !== 'all' ? (
+          <div className="mb-4 rounded-2xl border border-primary-start/12 bg-primary-start/[0.05] p-4">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <div className="text-sm font-medium text-text-main">{sceneConfig.title}</div>
+                <div className="mt-1 text-xs leading-5 text-text-sub">{sceneConfig.intro}</div>
+              </div>
+              <button
+                type="button"
+                onClick={() => navigate(getBillingPath('all'))}
+                className="shrink-0 rounded-full bg-bg-card px-3 py-1.5 text-xs font-medium text-primary-start shadow-soft active:opacity-70"
+              >
+                查看全部
+              </button>
+            </div>
+          </div>
+        ) : null}
+
         <form onSubmit={handleSearchSubmit} className="flex h-auto shrink-0 gap-2">
           <div className="relative flex h-11 flex-1 items-center overflow-hidden">
             <Search
@@ -711,7 +770,7 @@ export function BillingPage() {
     if (!logs.length) {
       return (
         <EmptyState
-          message={keyword ? '没有找到匹配的资产记录' : '暂无资产明细记录'}
+          message={keyword ? '没有找到匹配的资产记录' : sceneConfig.emptyMessage}
         />
       );
     }
@@ -721,39 +780,53 @@ export function BillingPage() {
         {groupedLogs.map((group) => (
           <div key={group.label}>
             <div className="mb-3 ml-1 text-base font-bold text-text-main">{group.label}</div>
-            <Card className="overflow-hidden p-0">
+            <Card className="overflow-hidden border border-border-light/80 bg-bg-card/95 p-0">
               {group.rows.map((item, index) => (
-                <button
-                  key={`${item.id}-${item.flowNo ?? item.createTime ?? index}`}
-                  type="button"
-                  onClick={() => setSelectedLog(item)}
-                  className={`flex w-full items-center justify-between px-4 py-3 text-left transition-colors active:bg-bg-base ${
-                    index < group.rows.length - 1 ? 'border-b border-border-light' : ''
-                  }`}
-                >
-                  <div className="min-w-0 flex-1">
-                    <div className="truncate text-sm font-medium text-text-main">
-                      {formatBizTypeLabel(item.bizType)}
-                    </div>
-                    <div className="mt-1 line-clamp-2 text-sm text-text-sub">
-                      {item.memo || formatAccountTypeLabel(item.accountType)}
-                    </div>
-                    <div className="mt-1 truncate text-xs text-text-aux">
-                      {item.createTimeText || item.flowNo || `记录 #${item.id}`}
-                    </div>
-                  </div>
-                  <div className="ml-3 flex shrink-0 items-center">
-                    <div className="mr-2 text-right">
-                      <div className={`text-sm font-semibold ${getAmountClassName(item.amount)}`}>
-                        {formatSignedMoney(item.amount)}
+                (() => {
+                  const accountLabel = formatAccountTypeLabel(item.accountType);
+                  const tone = getAccountTone(item.accountType);
+
+                  return (
+                    <button
+                      key={`${item.id}-${item.flowNo ?? item.createTime ?? index}`}
+                      type="button"
+                      onClick={() => setSelectedLog(item)}
+                      className={`flex w-full items-center justify-between px-4 py-3.5 text-left transition-colors active:bg-bg-base ${
+                        index < group.rows.length - 1 ? 'border-b border-border-light' : ''
+                      }`}
+                    >
+                      <div className="flex min-w-0 flex-1 items-center">
+                        <div className={`mr-3 flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl text-sm font-semibold ${tone.iconClassName}`}>
+                          {accountLabel.slice(0, 1)}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="truncate text-sm font-medium text-text-main">
+                            {formatBizTypeLabel(item.bizType)}
+                          </div>
+                          <div className="mt-1 line-clamp-2 text-sm text-text-sub">
+                            {item.memo || accountLabel}
+                          </div>
+                          <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
+                            <span className="truncate text-text-aux">
+                              {item.createTimeText || item.flowNo || `记录 #${item.id}`}
+                            </span>
+                            <span className={`rounded-full px-2 py-0.5 ${tone.badgeClassName}`}>
+                              {accountLabel}
+                            </span>
+                          </div>
+                        </div>
                       </div>
-                      <div className="mt-1 text-xs text-text-aux">
-                        {formatAccountTypeLabel(item.accountType)}
+                      <div className="ml-3 flex shrink-0 items-center">
+                        <div className="mr-2 text-right">
+                          <div className={`text-base font-semibold ${getAmountClassName(item.amount)}`}>
+                            {formatSignedMoney(item.amount)}
+                          </div>
+                        </div>
+                        <ChevronRight size={16} className="text-text-aux" />
                       </div>
-                    </div>
-                    <ChevronRight size={16} className="text-text-aux" />
-                  </div>
-                </button>
+                    </button>
+                  );
+                })()
               ))}
             </Card>
           </div>

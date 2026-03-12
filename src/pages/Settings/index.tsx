@@ -4,7 +4,7 @@
  */
 
 import { useState } from 'react';
-import { AlertTriangle, LogOut, Moon, Shield, Sun, Trash2, UserX } from 'lucide-react';
+import { AlertTriangle, Info, LogOut, Moon, Shield, Sun, Trash2, UserX } from 'lucide-react';
 import { accountApi } from '../../api';
 import { getErrorMessage } from '../../api/core/errors';
 import { AuthPasswordToggle } from '../../components/biz/auth';
@@ -180,6 +180,7 @@ export const SettingsPage = () => {
             <SettingsActionItem
               label="关于我们"
               description="当前应用版本"
+              icon={<Info size={18} />}
               value={formatVersionLabel(CURRENT_APP_VERSION)}
               onClick={() => goTo('about')}
             />
