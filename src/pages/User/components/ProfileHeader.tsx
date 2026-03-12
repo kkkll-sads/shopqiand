@@ -88,7 +88,7 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
           <div className="flex flex-col gap-1">
             <h2 className="text-xl font-bold text-text-main leading-tight">{displayName}</h2>
 
-            <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex items-center gap-2">
               <div className="flex items-center rounded-full px-2 py-0.5 bg-bg-card border border-border-light shadow-sm">
                 <div className="w-3.5 h-3.5 rounded-full bg-gradient-to-br from-primary-start to-primary-end flex items-center justify-center mr-1">
                   <UserTypeIcon size={8} className="text-white fill-current" />
