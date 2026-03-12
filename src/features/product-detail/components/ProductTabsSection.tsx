@@ -26,6 +26,8 @@ export const ProductTabsSection = ({
 }: ProductTabsSectionProps) => {
   const specs = buildShopProductSpecs(product);
   const serviceItems = buildShopProductServiceItems(product);
+  const description = buildShopProductDescription(product);
+  const detailImages = (product?.detail_images ?? []).filter(Boolean);
   const parameterRows =
     specs.length > 0
       ? specs
@@ -34,16 +36,18 @@ export const ProductTabsSection = ({
           { name: '购买方式', value: product ? getShopProductPurchaseTag(product) : '--' },
           { name: '库存', value: String(product?.stock ?? 0) },
           { name: '销量', value: String(product?.sales ?? 0) },
+          { name: '商品类型', value: product?.is_physical === '1' ? '实体商品' : '虚拟商品' },
         ];
 
   return (
-    <div className="mt-4 bg-white pb-4 dark:bg-gray-900">
-      <div className="sticky top-12 z-30 flex border-b border-border-light bg-white dark:bg-gray-900">
+    <div className="mt-2 bg-white pb-4">
+      <div className="sticky top-12 z-30 flex border-b border-[#f0f0f0] bg-white">
         {PRODUCT_DETAIL_TABS.map((tab) => (
           <button
             key={tab.id}
+            type="button"
             onClick={() => onChange(tab.id)}
-            className={`relative flex-1 py-3 text-md font-medium ${
+            className={`relative flex-1 py-3 text-sm font-medium ${
               activeTab === tab.id ? 'text-primary-start' : 'text-text-main'
             }`}
           >
@@ -57,51 +61,65 @@ export const ProductTabsSection = ({
 
       <div className="p-4">
         {loading ? (
-          <div className="space-y-4">
-            <Skeleton className="h-48 w-full" />
-            <Skeleton className="h-48 w-full" />
+          <div className="space-y-3">
+            <Skeleton className="h-32 w-full rounded-xl" />
+            <Skeleton className="h-32 w-full rounded-xl" />
           </div>
         ) : activeTab === 'details' ? (
-          <div className="space-y-3">
-            {(product?.detail_images ?? []).length > 0 ? (
-              product?.detail_images.map((image) => (
-                <img
-                  key={image}
-                  src={resolveShopProductImageUrl(image)}
-                  alt={product.name}
-                  className="w-full rounded-lg"
-                  referrerPolicy="no-referrer"
-                />
-              ))
+          <div className="space-y-4">
+            {description ? (
+              <div className="rounded-xl border border-[#ececec] bg-[#fafafa] px-4 py-4 text-sm leading-7 text-text-sub">
+                {description}
+              </div>
+            ) : null}
+
+            {detailImages.length > 0 ? (
+              <div className="overflow-hidden rounded-xl border border-[#ececec] bg-white">
+                {detailImages.map((image) => (
+                  <img
+                    key={image}
+                    src={resolveShopProductImageUrl(image)}
+                    alt={product?.name || '商品详情'}
+                    className="w-full"
+                    referrerPolicy="no-referrer"
+                  />
+                ))}
+              </div>
             ) : (
-              <div className="rounded-xl border border-border-light bg-bg-base p-4 text-sm leading-6 text-text-sub">
-                {buildShopProductDescription(product)}
+              <div className="rounded-xl border border-[#ececec] bg-[#fafafa] px-4 py-6 text-center text-sm text-text-sub">
+                暂无图文详情
               </div>
             )}
           </div>
         ) : activeTab === 'params' ? (
-          <div className="overflow-hidden rounded-lg border border-border-light">
+          <div className="overflow-hidden rounded-xl border border-[#ececec]">
             {parameterRows.map((item, index) => (
               <div
                 key={`${item.name}-${index}`}
-                className={`flex text-sm ${
-                  index < parameterRows.length - 1 ? 'border-b border-border-light' : ''
+                className={`flex min-h-[44px] text-sm ${
+                  index < parameterRows.length - 1 ? 'border-b border-[#f0f0f0]' : ''
                 }`}
               >
-                <div className="w-1/3 bg-bg-base p-2 text-text-sub">{item.name}</div>
-                <div className="w-2/3 p-2 text-text-main">{item.value}</div>
+                <div className="flex w-[112px] shrink-0 items-center bg-[#fafafa] px-4 text-text-sub">
+                  {item.name}
+                </div>
+                <div className="flex flex-1 items-center px-4 text-text-main">{item.value}</div>
               </div>
             ))}
           </div>
         ) : (
-          <div className="space-y-4 text-base text-text-main">
-            {serviceItems.map((item) => (
-              <div key={item}>
-                <h4 className="mb-1 flex items-center font-bold">
-                  <ShieldCheck size={14} className="mr-1 text-primary-start" />
-                  服务说明
-                </h4>
-                <p className="text-sm text-text-sub">{item}</p>
+          <div className="space-y-3">
+            {serviceItems.map((item, index) => (
+              <div key={item} className="rounded-xl border border-[#ececec] bg-[#fafafa] px-4 py-3">
+                <div className="flex items-start gap-3">
+                  <div className="mt-0.5 rounded-full bg-[#fff3ef] p-2 text-primary-start">
+                    <ShieldCheck size={14} />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="text-sm font-medium text-text-main">售后保障 {index + 1}</div>
+                    <p className="mt-1 text-sm leading-6 text-text-sub">{item}</p>
+                  </div>
+                </div>
               </div>
             ))}
           </div>

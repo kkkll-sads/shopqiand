@@ -117,7 +117,7 @@ function GridProductSkeleton() {
       {Array.from({ length: 6 }).map((_, index) => (
         <div
           key={index}
-          className="overflow-hidden rounded-2xl border border-border-light bg-bg-card shadow-soft"
+          className="overflow-hidden rounded-xl border border-[#ececec] bg-white"
         >
           <Skeleton className="aspect-square w-full rounded-none" />
           <div className="space-y-2 p-3">
@@ -496,10 +496,10 @@ export const StorePage = () => {
                         <button
                           key={item.flash_sale_product_id}
                           type="button"
-                          className="flex w-[100px] shrink-0 flex-col text-left active:opacity-70"
+                          className="flex w-[112px] shrink-0 flex-col rounded-xl border border-[#ececec] bg-white p-2 text-left active:opacity-70"
                           onClick={() => goTo(buildShopProductPath(item.product_id))}
                         >
-                          <div className="mb-2 aspect-square overflow-hidden rounded-xl border border-border-light bg-bg-card shadow-sm">
+                          <div className="mb-2 aspect-square overflow-hidden rounded-lg border border-[#f0f0f0] bg-[#f7f7f7]">
                             <img
                               src={resolveUploadUrl(item.thumbnail)}
                               alt={item.product_name}
@@ -507,8 +507,8 @@ export const StorePage = () => {
                               referrerPolicy="no-referrer"
                             />
                           </div>
-                          <div className="mb-1 line-clamp-1 text-sm text-text-main">{item.product_name}</div>
-                          <div className="mb-1 text-lg font-bold leading-none text-primary-start">
+                          <div className="mb-1 line-clamp-2 min-h-[36px] text-[13px] leading-[18px] text-text-main">{item.product_name}</div>
+                          <div className="mb-1 text-lg font-semibold leading-none text-primary-start">
                             ¥{item.flash_price}
                           </div>
                           <div className="flex items-center justify-between gap-2">
@@ -549,10 +549,10 @@ export const StorePage = () => {
                         <button
                           key={item.id}
                           type="button"
-                          className="flex w-[100px] shrink-0 flex-col text-left active:opacity-70"
+                          className="flex w-[112px] shrink-0 flex-col rounded-xl border border-[#ececec] bg-white p-2 text-left active:opacity-70"
                           onClick={() => goTo(buildShopProductPath(item.id))}
                         >
-                          <div className="mb-2 aspect-square overflow-hidden rounded-xl border border-border-light bg-bg-card shadow-sm">
+                          <div className="mb-2 aspect-square overflow-hidden rounded-lg border border-[#f0f0f0] bg-[#f7f7f7]">
                             <img
                               src={resolveShopProductImageUrl(item.thumbnail)}
                               alt={item.name}
@@ -560,7 +560,7 @@ export const StorePage = () => {
                               referrerPolicy="no-referrer"
                             />
                           </div>
-                          <div className="mb-1 line-clamp-1 text-sm text-text-main">{item.name}</div>
+                          <div className="mb-1 line-clamp-2 min-h-[36px] text-[13px] leading-[18px] text-text-main">{item.name}</div>
                           <ShopProductPriceDisplay
                             className="mb-1"
                             product={item}
@@ -611,7 +611,7 @@ export const StorePage = () => {
                         key={item.id}
                         role="button"
                         tabIndex={0}
-                        className="flex flex-col overflow-hidden rounded-2xl border border-border-light bg-bg-card text-left shadow-soft active:opacity-70 cursor-pointer"
+                        className="flex cursor-pointer flex-col overflow-hidden rounded-xl border border-[#ececec] bg-white text-left active:opacity-70"
                         onClick={() => goTo(buildShopProductPath(item.id))}
                       >
                         <div className="relative">
@@ -622,15 +622,15 @@ export const StorePage = () => {
                             referrerPolicy="no-referrer"
                           />
                           {(item.purchase_type === 'score' || item.purchase_type === 'both') && (
-                            <span className={`absolute bottom-0 left-0 rounded-tr px-1 py-0.5 text-[9px] font-medium leading-none text-white ${
-                              item.purchase_type === 'score' ? 'bg-amber-500' : 'bg-gradient-to-r from-amber-500 to-primary-start'
+                            <span className={`absolute bottom-3 left-3 rounded-md px-1.5 py-0.5 text-[10px] font-medium leading-none text-white ${
+                              item.purchase_type === 'score' ? 'bg-amber-500' : 'bg-primary-start'
                             }`}>
                               {item.purchase_type === 'score' ? '消费金' : '混合支付'}
                             </span>
                           )}
                         </div>
                         <div className="flex flex-1 flex-col p-3">
-                          <div className="mb-2 line-clamp-2 text-base leading-tight text-text-main">
+                          <div className="mb-2 line-clamp-2 text-[14px] leading-[20px] text-text-main">
                             {item.name}
                           </div>
                           <div className="mt-auto flex items-end justify-between gap-3">
@@ -643,7 +643,7 @@ export const StorePage = () => {
                             <button
                               type="button"
                               aria-label={`查看 ${item.name} 购物车入口`}
-                              className="flex h-7 w-7 items-center justify-center rounded-full border border-border-light bg-bg-base text-text-main active:bg-border-light"
+                              className="flex h-8 w-8 items-center justify-center rounded-full bg-[#f5f5f5] text-text-main active:bg-[#ececec]"
                               onClick={(event) => {
                                 event.stopPropagation();
                                 goTo('cart');

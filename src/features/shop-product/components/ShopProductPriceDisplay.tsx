@@ -18,7 +18,7 @@ function ScorePriceChip({
 }) {
   return (
     <span
-      className={`inline-flex max-w-full items-center rounded-full border border-[#efb8ab] bg-[#fff4f0] text-[#d9482e] shadow-[inset_0_1px_0_rgba(255,255,255,0.88)] ${
+      className={`inline-flex max-w-full items-center rounded-md border border-[#f1c8be] bg-[#fff6f2] text-[#d9482e] ${
         compact ? 'px-1.5 py-0.5' : 'px-2 py-0.75'
       }`}
     >
@@ -46,7 +46,7 @@ function SecondaryLabel({
 }) {
   return (
     <span
-      className={`inline-flex items-center rounded-full border border-border-light bg-bg-base text-text-sub ${
+      className={`inline-flex items-center rounded-md border border-[#e5e7eb] bg-white text-text-sub ${
         compact ? 'px-1.5 py-0.5 text-[10px]' : 'px-2 py-0.75 text-[11px]'
       }`}
     >

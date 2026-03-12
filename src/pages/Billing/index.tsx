@@ -4,20 +4,23 @@
  *              分月分组展示，无限滚动加载，点击查看流水详情。
  */
 
-import { type FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react'; // React 核心 Hook 和类型
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'; // React 核心 Hook 和类型
 import {
-  ArrowDownLeft,
-  ArrowUpRight,
+  ArrowLeft,
+  Calendar,
+  Check,
   ChevronRight,
-  Clock3,
   Copy,
   FileText,
+  Hash,
   Loader2,
-  MoveRight,
-  RefreshCcw,
+  Package,
+  Receipt,
   Search,
-  Wallet,
+  TrendingDown,
+  TrendingUp,
   X,
+  type LucideIcon,
 } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
 import {
@@ -31,10 +34,7 @@ import {
 } from '../../api';
 import { getErrorMessage } from '../../api/core/errors';
 import { OfflineBanner } from '../../components/layout/OfflineBanner';
-import { WalletPageHeader } from '../../components/layout/WalletPageHeader';
-import { Card } from '../../components/ui/Card';
 import { EmptyState } from '../../components/ui/EmptyState';
-import { ErrorState } from '../../components/ui/ErrorState';
 import { useFeedback } from '../../components/ui/FeedbackProvider';
 import { PullToRefreshContainer } from '../../components/ui/PullToRefreshContainer';
 import { Skeleton } from '../../components/ui/Skeleton';
@@ -54,8 +54,10 @@ const PAGE_SIZE = 20;
 
 /** 收支方向筛选类型 */
 type FlowFilter = 'all' | AccountLogFlowDirection;
+type RangeFilter = 'all' | 'today' | '7days' | '30days';
 
 type BillingCategorySection = 'quick' | 'account' | 'business';
+type BillingFilterDropdown = 'category' | 'flow' | 'range';
 
 interface BillingCategoryOption {
   key: string;
@@ -82,10 +84,11 @@ const FLOW_OPTIONS: Array<{ key: FlowFilter; label: string }> = [
   { key: 'out', label: '支出' },
 ];
 
-/** 流水视图模式（合并流水 / 正常流水） */
-const LOG_VIEW_MODE_OPTIONS: Array<{ key: AccountLogViewMode; label: string }> = [
-  { key: 'merged', label: '合并流水' },
-  { key: 'normal', label: '正常流水' },
+const RANGE_OPTIONS: Array<{ key: RangeFilter; label: string }> = [
+  { key: 'all', label: '全部时间' },
+  { key: 'today', label: '今天' },
+  { key: '7days', label: '近7天' },
+  { key: '30days', label: '近30天' },
 ];
 
 /** 账户类型名称映射 */
@@ -279,113 +282,95 @@ function getAmountClassName(amount: number) {
   return 'text-text-sub';
 }
 
-function getAccountTone(type: string | undefined) {
+function getLegacyAccountTagClassName(type: string | undefined) {
   switch (type) {
-    case 'withdrawable_money':
-      return {
-        accentClassName: 'from-emerald-500/16 via-emerald-400/6 to-transparent',
-        badgeClassName:
-          'bg-emerald-500/12 text-emerald-700 ring-1 ring-emerald-500/12 dark:bg-emerald-500/16 dark:text-emerald-300',
-        iconClassName:
-          'bg-[linear-gradient(145deg,rgba(16,185,129,0.16),rgba(255,255,255,0.98))] text-emerald-600 shadow-[0_12px_30px_rgba(16,185,129,0.18)]',
-      };
-    case 'service_fee_balance':
-      return {
-        accentClassName: 'from-violet-500/18 via-fuchsia-500/6 to-transparent',
-        badgeClassName:
-          'bg-violet-500/12 text-violet-700 ring-1 ring-violet-500/12 dark:bg-violet-500/16 dark:text-violet-300',
-        iconClassName:
-          'bg-[linear-gradient(145deg,rgba(139,92,246,0.16),rgba(255,255,255,0.98))] text-violet-600 shadow-[0_12px_30px_rgba(139,92,246,0.2)]',
-      };
-    case 'score':
-      return {
-        accentClassName: 'from-sky-500/16 via-cyan-400/6 to-transparent',
-        badgeClassName:
-          'bg-sky-500/12 text-sky-700 ring-1 ring-sky-500/12 dark:bg-sky-500/16 dark:text-sky-300',
-        iconClassName:
-          'bg-[linear-gradient(145deg,rgba(14,165,233,0.15),rgba(255,255,255,0.98))] text-sky-600 shadow-[0_12px_30px_rgba(14,165,233,0.2)]',
-      };
     case 'green_power':
-      return {
-        accentClassName: 'from-lime-500/20 via-emerald-400/6 to-transparent',
-        badgeClassName:
-          'bg-lime-500/14 text-lime-700 ring-1 ring-lime-500/14 dark:bg-lime-500/16 dark:text-lime-300',
-        iconClassName:
-          'bg-[linear-gradient(145deg,rgba(132,204,22,0.18),rgba(255,255,255,0.98))] text-lime-700 shadow-[0_12px_30px_rgba(132,204,22,0.2)]',
-      };
+      return 'bg-emerald-50 text-emerald-600';
+    case 'balance_available':
+      return 'bg-blue-50 text-blue-600';
+    case 'withdrawable_money':
+      return 'bg-indigo-50 text-indigo-600';
+    case 'service_fee_balance':
+      return 'bg-amber-50 text-amber-600';
+    case 'score':
+      return 'bg-purple-50 text-purple-600';
+    case 'pending_activation_gold':
+      return 'bg-orange-50 text-orange-600';
     default:
-      return {
-        accentClassName: 'from-primary-start/18 via-primary-start/5 to-transparent',
-        badgeClassName:
-          'bg-primary-start/10 text-primary-start ring-1 ring-primary-start/10 dark:bg-primary-start/16 dark:text-red-300',
-        iconClassName:
-          'bg-[linear-gradient(145deg,rgba(233,59,59,0.15),rgba(255,255,255,0.98))] text-primary-start shadow-[0_12px_30px_rgba(233,59,59,0.18)]',
-      };
+      return 'bg-gray-100 text-gray-500';
   }
 }
 
-function getFlowMeta(amount: number) {
+function getLegacyListAmountClassName(type: string | undefined, amount: number) {
+  if (type === 'green_power') {
+    return amount >= 0 ? 'text-emerald-500' : 'text-emerald-600';
+  }
+
   if (amount > 0) {
-    return {
-      badgeClassName:
-        'bg-emerald-500/10 text-emerald-700 ring-1 ring-emerald-500/12 dark:bg-emerald-500/16 dark:text-emerald-300',
-      icon: ArrowDownLeft,
-      label: '收入',
-    };
+    return 'text-red-600';
   }
 
   if (amount < 0) {
-    return {
-      badgeClassName:
-        'bg-primary-start/10 text-primary-start ring-1 ring-primary-start/12 dark:bg-primary-start/16 dark:text-red-300',
-      icon: ArrowUpRight,
-      label: '支出',
-    };
+    return 'text-gray-900';
   }
 
-  return {
-    badgeClassName:
-      'bg-slate-500/10 text-slate-600 ring-1 ring-slate-500/12 dark:bg-slate-500/16 dark:text-slate-300',
-    icon: MoveRight,
-    label: '平账',
-  };
+  return 'text-gray-500';
 }
 
-/** 从流水记录提取月份标签（用于分组显示） */
-function getMonthLabel(item: AccountLogItem) {
-  const timestamp = item.createTime;
-  if (typeof timestamp === 'number' && Number.isFinite(timestamp) && timestamp > 0) {
-    const date = new Date(timestamp > 1_000_000_000_000 ? timestamp : timestamp * 1000);
-    if (!Number.isNaN(date.getTime())) {
-      return `${date.getFullYear()}年${String(date.getMonth() + 1).padStart(2, '0')}月`;
-    }
+function getLegacyBalanceAfterClassName(type: string | undefined, amount: number) {
+  if (type === 'green_power') {
+    return amount >= 0 ? 'text-emerald-500' : 'text-emerald-600';
   }
 
-  const text = item.createTimeText?.trim();
-  const matched = text?.match(/(\d{4})[-/.年](\d{1,2})/);
-  if (matched) {
-    return `${matched[1]}年${matched[2].padStart(2, '0')}月`;
-  }
-
-  return '最近';
+  return amount >= 0 ? 'text-red-500' : 'text-gray-600';
 }
 
 /** 构建查询参数 */
+function buildTimeRange(range: RangeFilter): { endTime?: number; startTime?: number } {
+  const now = Math.floor(Date.now() / 1000);
+
+  switch (range) {
+    case 'today': {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      return {
+        endTime: now,
+        startTime: Math.floor(today.getTime() / 1000),
+      };
+    }
+    case '7days':
+      return {
+        endTime: now,
+        startTime: now - 7 * 24 * 3600,
+      };
+    case '30days':
+      return {
+        endTime: now,
+        startTime: now - 30 * 24 * 3600,
+      };
+    default:
+      return {};
+  }
+}
+
 function buildQueryParams(
   viewMode: AccountLogViewMode,
   categoryQuery: { bizType?: string; type?: AccountLogType },
   flowFilter: FlowFilter,
+  rangeFilter: RangeFilter,
   keyword: string,
   page: number,
 ) {
+  const timeRange = buildTimeRange(rangeFilter);
+
   return {
     bizType: categoryQuery.bizType,
-    endTime: undefined,
+    endTime: timeRange.endTime,
     flowDirection: flowFilter === 'all' ? undefined : flowFilter,
     keyword: keyword || undefined,
     limit: PAGE_SIZE,
     page,
-    startTime: undefined,
+    startTime: timeRange.startTime,
     type: categoryQuery.type,
     viewMode,
   };
@@ -497,12 +482,16 @@ export function BillingPage() {
     `${sessionNamespace}:category`,
     'all',
   );
-  const [viewMode, setViewMode] = useSessionState<AccountLogViewMode>(
+  const [viewMode] = useSessionState<AccountLogViewMode>(
     `${sessionNamespace}:view-mode`,
     'merged',
   );
   const [flowFilter, setFlowFilter] = useSessionState<FlowFilter>(
     `${sessionNamespace}:flow-filter`,
+    'all',
+  );
+  const [rangeFilter, setRangeFilter] = useSessionState<RangeFilter>(
+    `${sessionNamespace}:range-filter`,
     'all',
   );
   const [draftKeyword, setDraftKeyword] = useState('');
@@ -514,7 +503,8 @@ export function BillingPage() {
   const [loadMoreError, setLoadMoreError] = useState<string | null>(null);
   const [paginationNotice, setPaginationNotice] = useState<string | null>(null);
   const [selectedLog, setSelectedLog] = useState<AccountLogItem | null>(null);
-  const [categoryPanelOpen, setCategoryPanelOpen] = useState(false);
+  const [copiedDetailField, setCopiedDetailField] = useState<string | null>(null);
+  const [activeDropdown, setActiveDropdown] = useState<BillingFilterDropdown | null>(null);
   const [categorySearch, setCategorySearch] = useState('');
   const categoryOptions = useMemo(() => getBillingCategoryOptions(sceneConfig.bizType), [sceneConfig.bizType]);
   const selectedCategoryQuery = useMemo(
@@ -525,19 +515,54 @@ export function BillingPage() {
     () => categoryOptions.find((option) => option.key === category)?.label ?? categoryOptions[0]?.label ?? '全部分类',
     [category, categoryOptions],
   );
-  const filteredCategoryOptions = useMemo(() => {
-    const keyword = categorySearch.trim().toLowerCase();
-    if (!keyword) {
+  const selectedFlowLabel = useMemo(
+    () => FLOW_OPTIONS.find((option) => option.key === flowFilter)?.label ?? '全部',
+    [flowFilter],
+  );
+  const selectedRangeLabel = useMemo(
+    () => RANGE_OPTIONS.find((option) => option.key === rangeFilter)?.label ?? '全部时间',
+    [rangeFilter],
+  );
+  const currentDropdownOptions = useMemo(() => {
+    if (activeDropdown === 'category') {
       return categoryOptions;
     }
 
-    return categoryOptions.filter(
+    if (activeDropdown === 'flow') {
+      return FLOW_OPTIONS.map((option) => ({
+        key: option.key,
+        label: option.label,
+        section: 'quick' as const,
+      }));
+    }
+
+    if (activeDropdown === 'range') {
+      return RANGE_OPTIONS.map((option) => ({
+        key: option.key,
+        label: option.label,
+        section: 'quick' as const,
+      }));
+    }
+
+    return [];
+  }, [activeDropdown, categoryOptions]);
+  const filteredDropdownOptions = useMemo(() => {
+    if (activeDropdown !== 'category') {
+      return currentDropdownOptions;
+    }
+
+    const keyword = categorySearch.trim().toLowerCase();
+    if (!keyword) {
+      return currentDropdownOptions;
+    }
+
+    return currentDropdownOptions.filter(
       (option) => option.label.toLowerCase().includes(keyword) || option.key.toLowerCase().includes(keyword),
     );
-  }, [categoryOptions, categorySearch]);
+  }, [activeDropdown, categorySearch, currentDropdownOptions]);
   const groupedCategoryOptions = useMemo(() => {
     const groups = new Map<BillingCategorySection, BillingCategoryOption[]>();
-    filteredCategoryOptions.forEach((option) => {
+    filteredDropdownOptions.forEach((option) => {
       const current = groups.get(option.section) ?? [];
       current.push(option);
       groups.set(option.section, current);
@@ -547,11 +572,37 @@ export function BillingPage() {
       options,
       section,
     }));
-  }, [filteredCategoryOptions]);
+  }, [filteredDropdownOptions]);
+  const activeDropdownValue = useMemo(() => {
+    if (activeDropdown === 'category') {
+      return category;
+    }
+
+    if (activeDropdown === 'flow') {
+      return flowFilter;
+    }
+
+    if (activeDropdown === 'range') {
+      return rangeFilter;
+    }
+
+    return '';
+  }, [activeDropdown, category, flowFilter, rangeFilter]);
 
   useEffect(() => {
     setDraftKeyword(keyword);
   }, [keyword]);
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      const nextKeyword = draftKeyword.trim();
+      if (nextKeyword !== keyword) {
+        setKeyword(nextKeyword);
+      }
+    }, 300);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [draftKeyword, keyword, setKeyword]);
 
   useEffect(() => {
     if (!categoryOptions.some((option) => option.key === category)) {
@@ -559,7 +610,14 @@ export function BillingPage() {
     }
   }, [category, categoryOptions, setCategory]);
 
-  const queryKey = `${scene}:${viewMode}:${category}:${flowFilter}:${keyword}`;
+  useEffect(() => {
+    if (selectedLog) {
+      setActiveDropdown(null);
+      setCategorySearch('');
+    }
+  }, [selectedLog]);
+
+  const queryKey = `${scene}:${viewMode}:${category}:${flowFilter}:${rangeFilter}:${keyword}`;
 
   useEffect(() => {
     queryKeyRef.current = queryKey;
@@ -578,7 +636,7 @@ export function BillingPage() {
   } = useRequest(
     async (signal) => {
       const response = await accountApi.getLogList(
-        buildQueryParams(viewMode, selectedCategoryQuery, flowFilter, keyword, 1),
+        buildQueryParams(viewMode, selectedCategoryQuery, flowFilter, rangeFilter, keyword, 1),
         { signal },
       );
 
@@ -591,7 +649,7 @@ export function BillingPage() {
       return response;
     },
     {
-      deps: [category, flowFilter, isAuthenticated, keyword, selectedCategoryQuery.bizType, selectedCategoryQuery.type, viewMode],
+      deps: [category, flowFilter, isAuthenticated, keyword, rangeFilter, selectedCategoryQuery.bizType, selectedCategoryQuery.type, viewMode],
       keepPreviousData: false,
       manual: !isAuthenticated,
     },
@@ -642,7 +700,7 @@ export function BillingPage() {
 
     try {
       const response = await accountApi.getLogList(
-        buildQueryParams(viewMode, selectedCategoryQuery, flowFilter, keyword, nextPage),
+        buildQueryParams(viewMode, selectedCategoryQuery, flowFilter, rangeFilter, keyword, nextPage),
       );
 
       if (queryKeyRef.current !== requestKey) {
@@ -667,7 +725,7 @@ export function BillingPage() {
         setLoadingMore(false);
       }
     }
-  }, [category, flowFilter, hasMore, isAuthenticated, keyword, loadingMore, page, selectedCategoryQuery, viewMode]);
+  }, [category, flowFilter, hasMore, isAuthenticated, keyword, loadingMore, page, rangeFilter, selectedCategoryQuery, viewMode]);
 
   useInfiniteScroll({
     disabled: Boolean(selectedLog) || isOffline || Boolean(loadMoreError) || Boolean(paginationNotice),
@@ -679,22 +737,6 @@ export function BillingPage() {
   });
 
   const logs = items;
-  const total = firstPage?.total ?? items.length;
-  const groupedLogs = useMemo(() => {
-    const groups = new Map<string, AccountLogItem[]>();
-
-    logs.forEach((item) => {
-      const label = getMonthLabel(item);
-      const group = groups.get(label) ?? [];
-      group.push(item);
-      groups.set(label, group);
-    });
-
-    return Array.from(groups.entries()).map(([label, rows]) => ({
-      label,
-      rows,
-    }));
-  }, [logs]);
 
   const detailBreakdownEntries = useMemo(() => {
     const source = {
@@ -709,7 +751,7 @@ export function BillingPage() {
     containerRef: scrollContainerRef,
     enabled: isAuthenticated && !selectedLog,
     namespace: `${sessionNamespace}:scroll`,
-    restoreDeps: [category, flowFilter, keyword, logs.length, listLoading, viewMode],
+    restoreDeps: [category, flowFilter, keyword, logs.length, listLoading, rangeFilter, viewMode],
     restoreWhen: isAuthenticated && !selectedLog && !listLoading,
   });
 
@@ -741,7 +783,7 @@ export function BillingPage() {
   const handleCopy = async (text: string | undefined, successMessage = '已复制') => {
     const nextValue = text?.trim();
     if (!nextValue) {
-      return;
+      return false;
     }
 
     const ok = await copyToClipboard(nextValue);
@@ -749,11 +791,19 @@ export function BillingPage() {
       message: ok ? successMessage : '复制失败，请稍后重试',
       type: ok ? 'success' : 'error',
     });
+    return ok;
   };
 
-  const handleSearchSubmit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    setKeyword(draftKeyword.trim());
+  const handleDetailFieldCopy = async (fieldKey: string, text: string | undefined, successMessage = '已复制') => {
+    const ok = await handleCopy(text, successMessage);
+    if (!ok) {
+      return;
+    }
+
+    setCopiedDetailField(fieldKey);
+    window.setTimeout(() => {
+      setCopiedDetailField((current) => (current === fieldKey ? null : current));
+    }, 2000);
   };
 
   const handleClearKeyword = () => {
@@ -761,36 +811,54 @@ export function BillingPage() {
     setKeyword('');
   };
 
-  const closeCategoryPanel = () => {
-    setCategoryPanelOpen(false);
+  const closeDropdownPanel = () => {
+    setActiveDropdown(null);
     setCategorySearch('');
   };
 
-  const handleCategorySelect = (nextCategory: string) => {
-    setCategory(nextCategory);
-    closeCategoryPanel();
+  const toggleDropdown = (nextDropdown: BillingFilterDropdown) => {
+    setActiveDropdown((current) => {
+      if (current === nextDropdown) {
+        setCategorySearch('');
+        return null;
+      }
+
+      if (nextDropdown !== 'category') {
+        setCategorySearch('');
+      }
+
+      return nextDropdown;
+    });
+  };
+
+  const handleFilterSelect = (value: string) => {
+    if (activeDropdown === 'category') {
+      setCategory(value);
+    } else if (activeDropdown === 'flow') {
+      setFlowFilter(value as FlowFilter);
+    } else if (activeDropdown === 'range') {
+      setRangeFilter(value as RangeFilter);
+    }
+
+    closeDropdownPanel();
   };
 
   const renderHeader = () => (
-    <WalletPageHeader
-      title={selectedLog ? '明细详情' : sceneConfig.title}
-      onBack={handleBack}
-      action={
-        selectedLog
-          ? undefined
-          : scene === 'all'
-            ? {
-                icon: Wallet,
-                label: '去充值',
-                onClick: () => goTo('recharge'),
-              }
-            : {
-                icon: FileText,
-                label: '全部明细',
-                onClick: () => navigate(getBillingPath('all')),
-              }
-      }
-    />
+    <div className="shrink-0 bg-white">
+      <div className="relative flex items-center border-b border-gray-100 px-4 py-3 pt-safe">
+        <button
+          type="button"
+          onClick={handleBack}
+          className="absolute left-4 z-10 p-1 text-gray-600 active:opacity-70"
+          aria-label="返回"
+        >
+          <ArrowLeft size={20} />
+        </button>
+        <h1 className="w-full text-center text-lg font-bold text-gray-800">
+          {selectedLog ? '资金明细详情' : scene === 'all' ? '历史记录' : sceneConfig.title}
+        </h1>
+      </div>
+    </div>
   );
 
   const renderFilters = () => {
@@ -799,18 +867,18 @@ export function BillingPage() {
     }
 
     return (
-      <div className="z-10 shrink-0 border-b border-border-light bg-bg-card px-4 pb-4 pt-2">
+      <div className="z-20 shrink-0 bg-white">
         {scene !== 'all' ? (
-          <div className="mb-4 rounded-2xl border border-primary-start/12 bg-primary-start/[0.05] p-4">
-            <div className="flex items-start justify-between gap-3">
+          <div className="border-b border-gray-100 bg-gray-50/70 px-4 py-3">
+            <div className="flex items-start justify-between gap-3 rounded-xl border border-gray-100 bg-white px-3.5 py-3">
               <div>
-                <div className="text-sm font-medium text-text-main">{sceneConfig.title}</div>
-                <div className="mt-1 text-xs leading-5 text-text-sub">{sceneConfig.intro}</div>
+                <div className="text-sm font-medium text-gray-800">{sceneConfig.title}</div>
+                <div className="mt-1 text-xs leading-5 text-gray-500">{sceneConfig.intro}</div>
               </div>
               <button
                 type="button"
                 onClick={() => navigate(getBillingPath('all'))}
-                className="shrink-0 rounded-full bg-bg-card px-3 py-1.5 text-xs font-medium text-primary-start shadow-soft active:opacity-70"
+                className="shrink-0 rounded-full bg-red-50 px-3 py-1.5 text-xs font-medium text-red-600 active:opacity-70"
               >
                 查看全部
               </button>
@@ -818,195 +886,179 @@ export function BillingPage() {
           </div>
         ) : null}
 
-        <form onSubmit={handleSearchSubmit} className="flex h-auto shrink-0 gap-2">
-          <div className="relative flex h-11 flex-1 items-center overflow-hidden">
+        <div className="border-b border-gray-100 bg-gray-50/60 px-4 py-2">
+          <div className="relative flex h-10 items-center overflow-hidden rounded-xl border border-gray-100 bg-white">
             <Search
               size={16}
-              className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-text-aux"
+              className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
             />
             <input
               value={draftKeyword}
               onChange={(event) => setDraftKeyword(event.target.value)}
-              placeholder="搜索备注或业务说明"
-                className="h-11 w-full rounded-2xl border border-border-light bg-bg-base pl-10 pr-10 text-lg text-text-main outline-none placeholder:text-text-aux"
+              placeholder="搜索备注、业务说明..."
+              className="h-full w-full bg-transparent pl-10 pr-10 text-sm text-gray-700 outline-none placeholder:text-gray-400"
             />
             {draftKeyword ? (
               <button
                 type="button"
                 onClick={handleClearKeyword}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-text-aux"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"
                 aria-label="清空搜索"
               >
                 <X size={16} />
               </button>
             ) : null}
           </div>
-          <button
-            type="submit"
-            className="h-11 shrink-0 whitespace-nowrap rounded-2xl bg-primary-start px-4 text-sm font-medium text-white"
-          >
-            搜索
-          </button>
-        </form>
-
-        <div className="mt-3 flex min-w-0 gap-2 overflow-x-auto overflow-y-hidden no-scrollbar overscroll-x-contain">
-          {LOG_VIEW_MODE_OPTIONS.map((option) => (
-            <button
-              key={option.key}
-              type="button"
-              onClick={() => setViewMode(option.key)}
-              className={`shrink-0 whitespace-nowrap rounded-full px-4 py-2 text-sm font-medium transition-colors ${
-                viewMode === option.key
-                  ? 'bg-gray-900 text-white dark:bg-white dark:text-gray-900'
-                  : 'bg-bg-base text-text-sub'
-              }`}
-            >
-              {option.label}
-            </button>
-          ))}
         </div>
 
-        <div className="relative mt-3">
-          {categoryPanelOpen ? (
+        <div className="relative">
+          {activeDropdown ? (
             <button
               type="button"
-              aria-label="关闭分类面板"
-              onClick={closeCategoryPanel}
-              className="fixed inset-0 z-20 bg-black/20 backdrop-blur-[1px]"
+              aria-label="关闭筛选面板"
+              onClick={closeDropdownPanel}
+              className="fixed inset-0 z-20 bg-black/45"
             />
           ) : null}
 
-          <button
-            type="button"
-            onClick={() => setCategoryPanelOpen((current) => !current)}
-            className="relative z-30 flex w-full items-center justify-between rounded-[22px] border border-border-light bg-bg-card px-4 py-3 text-left shadow-soft transition-all active:scale-[0.99]"
-          >
-            <div className="min-w-0">
-              <div className="flex items-center gap-2">
-                <span className="inline-flex rounded-full bg-primary-start/[0.08] px-2.5 py-1 text-xs font-medium text-primary-start">
-                  分类
-                </span>
-                <span className="truncate text-sm font-semibold text-text-main">{selectedCategoryLabel}</span>
-              </div>
-              <div className="mt-1 text-xs text-text-aux">
-                {sceneConfig.bizType ? '当前场景下按账户类型细分' : '常用分类、账户分类和业务分类'}
-              </div>
+          <div className="relative z-30 border-b border-gray-100 bg-white px-3 py-2">
+            <div className="flex gap-2 overflow-x-auto scrollbar-none">
+              {[
+                { key: 'category' as const, label: '分类', value: selectedCategoryLabel },
+                { key: 'flow' as const, label: '收支', value: selectedFlowLabel },
+                { key: 'range' as const, label: '时间', value: selectedRangeLabel },
+              ].map((item) => (
+                <button
+                  key={item.key}
+                  type="button"
+                  onClick={() => toggleDropdown(item.key)}
+                  className={`flex shrink-0 items-center gap-1 rounded-full border px-3 py-2 text-sm transition-all ${
+                    activeDropdown === item.key
+                      ? 'border-red-200 bg-red-50 text-red-600'
+                      : 'border-gray-200 bg-white text-gray-600'
+                  }`}
+                >
+                  <span className="text-gray-400">{item.label}</span>
+                  <span className="max-w-[7rem] truncate font-medium text-current">{item.value}</span>
+                  <span
+                    className={`text-[10px] text-current transition-transform duration-200 ${
+                      activeDropdown === item.key ? 'rotate-180' : ''
+                    }`}
+                  >
+                    ▾
+                  </span>
+                </button>
+              ))}
             </div>
-            <ChevronRight
-              size={18}
-              className={`shrink-0 text-text-aux transition-transform duration-200 ${
-                categoryPanelOpen ? 'rotate-90' : 'rotate-0'
-              }`}
-            />
-          </button>
+          </div>
 
-          {categoryPanelOpen ? (
-            <div className="absolute inset-x-0 top-full z-30 mt-2 overflow-hidden rounded-[26px] border border-border-light bg-bg-card shadow-[0_18px_40px_rgba(15,23,42,0.12)]">
-              <div className="border-b border-border-light px-4 py-4">
-                <div className="text-sm font-semibold text-text-main">选择分类</div>
-                <div className="mt-1 text-xs text-text-aux">支持搜索账户名称和业务类型</div>
-                <div className="relative mt-3 flex h-10 items-center overflow-hidden rounded-2xl border border-border-light bg-bg-base">
-                  <Search size={15} className="pointer-events-none absolute left-3 text-text-aux" />
-                  <input
-                    value={categorySearch}
-                    onChange={(event) => setCategorySearch(event.target.value)}
-                    placeholder="搜索分类"
-                    className="h-full w-full bg-transparent pl-9 pr-9 text-sm text-text-main outline-none placeholder:text-text-aux"
-                  />
-                  {categorySearch ? (
-                    <button
-                      type="button"
-                      onClick={() => setCategorySearch('')}
-                      className="absolute right-3 text-text-aux"
-                      aria-label="清空分类搜索"
-                    >
-                      <X size={14} />
-                    </button>
-                  ) : null}
+          {activeDropdown ? (
+            <div className="absolute inset-x-0 top-full z-30 rounded-b-[22px] bg-white px-4 pb-4 pt-3 shadow-[0_10px_30px_rgba(0,0,0,0.12)]">
+              {activeDropdown === 'category' ? (
+                <div className="pb-3">
+                  <div className="relative flex h-10 items-center overflow-hidden rounded-xl border border-gray-100 bg-gray-50">
+                    <Search size={15} className="pointer-events-none absolute left-3 text-gray-400" />
+                    <input
+                      value={categorySearch}
+                      onChange={(event) => setCategorySearch(event.target.value)}
+                      placeholder="搜索分类"
+                      className="h-full w-full bg-transparent pl-9 pr-9 text-sm text-gray-700 outline-none placeholder:text-gray-400"
+                    />
+                    {categorySearch ? (
+                      <button
+                        type="button"
+                        onClick={() => setCategorySearch('')}
+                        className="absolute right-3 text-gray-400"
+                        aria-label="清空分类搜索"
+                      >
+                        <X size={14} />
+                      </button>
+                    ) : null}
+                  </div>
                 </div>
-              </div>
+              ) : null}
 
-              <div className="max-h-[58vh] overflow-y-auto px-2 py-3">
-                {groupedCategoryOptions.length ? (
-                  groupedCategoryOptions.map((group) => (
-                    <div key={group.section} className="pb-3 last:pb-0">
-                      <div className="px-3 pb-2 text-[11px] font-medium tracking-[0.04em] text-text-aux">
-                        {BILLING_CATEGORY_SECTION_LABELS[group.section]}
-                      </div>
-                      <div className="space-y-1">
-                        {group.options.map((option) => {
-                          const active = category === option.key;
+              {activeDropdown === 'category' ? (
+                groupedCategoryOptions.length ? (
+                  <div className="max-h-[55vh] overflow-y-auto">
+                    {groupedCategoryOptions.map((group) => (
+                      <div key={group.section} className="pb-3 last:pb-0">
+                        <div className="px-1 pb-2 text-[11px] text-gray-400">
+                          {BILLING_CATEGORY_SECTION_LABELS[group.section]}
+                        </div>
+                        <div className="space-y-1">
+                          {group.options.map((option) => {
+                            const active = activeDropdownValue === option.key;
 
-                          return (
-                            <button
-                              key={option.key}
-                              type="button"
-                              onClick={() => handleCategorySelect(option.key)}
-                              className={`flex w-full items-center justify-between rounded-2xl px-3 py-3 text-left text-sm transition-colors ${
-                                active
-                                  ? 'bg-primary-start/[0.08] text-primary-start'
-                                  : 'text-text-main active:bg-bg-base'
-                              }`}
-                            >
-                              <span className="pr-3 font-medium">{option.label}</span>
-                              {active ? <span className="text-xs font-semibold">已选</span> : null}
-                            </button>
-                          );
-                        })}
+                            return (
+                              <button
+                                key={option.key}
+                                type="button"
+                                onClick={() => handleFilterSelect(option.key)}
+                                className={`flex w-full items-center justify-between rounded-xl px-3 py-3 text-left text-sm transition-all ${
+                                  active
+                                    ? 'bg-red-50 font-medium text-red-600'
+                                    : 'text-gray-700 active:bg-gray-50'
+                                }`}
+                              >
+                                <span className="pr-3">{option.label}</span>
+                                {active ? <span className="text-xs font-semibold">✓</span> : null}
+                              </button>
+                            );
+                          })}
+                        </div>
                       </div>
-                    </div>
-                  ))
+                    ))}
+                  </div>
                 ) : (
-                  <div className="px-3 py-8 text-center text-sm text-text-aux">没有匹配的分类</div>
-                )}
-              </div>
+                  <div className="py-8 text-center text-sm text-gray-400">没有匹配的分类</div>
+                )
+              ) : (
+                <div className="space-y-1">
+                  {currentDropdownOptions.map((option) => {
+                    const active = activeDropdownValue === option.key;
+
+                    return (
+                      <button
+                        key={option.key}
+                        type="button"
+                        onClick={() => handleFilterSelect(option.key)}
+                        className={`flex w-full items-center justify-between rounded-xl px-3 py-3 text-left text-sm transition-all ${
+                          active ? 'bg-red-50 font-medium text-red-600' : 'text-gray-700 active:bg-gray-50'
+                        }`}
+                      >
+                        <span>{option.label}</span>
+                        {active ? <span className="text-xs font-semibold">✓</span> : null}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           ) : null}
-        </div>
-
-        <div className="mt-3 flex min-w-0 gap-2 overflow-x-auto overflow-y-hidden no-scrollbar overscroll-x-contain">
-          {FLOW_OPTIONS.map((option) => (
-            <button
-              key={option.key}
-              type="button"
-              onClick={() => setFlowFilter(option.key)}
-              className={`shrink-0 whitespace-nowrap rounded-full px-4 py-2 text-sm font-medium transition-colors ${
-                flowFilter === option.key
-                  ? 'bg-red-50 text-primary-start ring-1 ring-primary-start/20 dark:bg-red-500/12 dark:text-red-300'
-                  : 'bg-bg-base text-text-sub'
-              }`}
-            >
-              {option.label}
-            </button>
-          ))}
-        </div>
-
-        <div className="mt-3 text-xs text-text-aux">
-          当前为 {viewMode === 'merged' ? '合并流水' : '正常流水'} · {selectedCategoryLabel} · 共 {total} 条记录
         </div>
       </div>
     );
   };
 
   const renderListSkeleton = () => (
-    <div className="space-y-6 p-4">
-      {[1, 2].map((group) => (
-        <div key={group} className="space-y-3">
-          <Skeleton className="h-5 w-24" />
-          <Card className="space-y-4 p-4">
-            {[1, 2, 3].map((row) => (
-              <div key={row} className="flex items-center justify-between">
-                <div className="space-y-2">
-                  <Skeleton className="h-4 w-28" />
-                  <Skeleton className="h-3 w-40" />
-                </div>
-                <div className="space-y-2 text-right">
-                  <Skeleton className="ml-auto h-4 w-16" />
-                  <Skeleton className="ml-auto h-3 w-12" />
-                </div>
-              </div>
-            ))}
-          </Card>
+    <div className="space-y-3 p-3">
+      {[1, 2, 3].map((row) => (
+        <div key={row} className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0 flex-1 space-y-2">
+              <Skeleton className="h-4 w-14 rounded-md" />
+              <Skeleton className="h-4 w-32" />
+              <Skeleton className="h-3 w-28" />
+            </div>
+            <div className="space-y-2 text-right">
+              <Skeleton className="ml-auto h-5 w-20" />
+              <Skeleton className="ml-auto h-4 w-4 rounded-full" />
+            </div>
+          </div>
+          <div className="mt-3 border-t border-gray-100 pt-3">
+            <Skeleton className="ml-auto h-4 w-32 rounded-full" />
+          </div>
         </div>
       ))}
     </div>
@@ -1014,43 +1066,30 @@ export function BillingPage() {
 
   const renderLoadMore = () => {
     if (paginationNotice) {
-      return <span className="text-amber-600">{paginationNotice}</span>;
-    }
-
-    if (loadingMore) {
-      return (
-        <span className="inline-flex items-center">
-          <RefreshCcw size={14} className="mr-2 animate-spin" />
-          加载中...
-        </span>
-      );
+      return <span className="text-xs text-amber-500">{paginationNotice}</span>;
     }
 
     if (loadMoreError) {
       return (
         <button
           type="button"
-          className="rounded-full border border-border-light px-4 py-2 text-text-main"
+          className="text-xs text-red-500 underline-offset-2 active:opacity-70"
           onClick={() => void loadMore()}
         >
-          加载失败，点击重试
+          加载失败，点此重试
         </button>
       );
     }
 
-    if (hasMore) {
-      return (
-        <button
-          type="button"
-          onClick={() => void loadMore()}
-          className="rounded-full border border-border-light bg-bg-card px-6 py-2 text-sm text-text-main active:opacity-70"
-        >
-          加载更多
-        </button>
-      );
+    if (loadingMore) {
+      return <span className="text-xs text-gray-400">加载中...</span>;
     }
 
-    return <span className="text-text-aux">已加载全部</span>;
+    if (!hasMore && logs.length > 5) {
+      return <span className="text-xs text-gray-300">- 到底了 -</span>;
+    }
+
+    return hasMore ? <span className="text-xs text-gray-300">继续下滑加载</span> : null;
   };
 
   const renderLogList = () => {
@@ -1060,153 +1099,137 @@ export function BillingPage() {
 
     if (listError && !logs.length) {
       return (
-        <ErrorState
-          message={getErrorMessage(listError)}
-          onRetry={() => void reloadList().catch(() => undefined)}
-        />
+        <div className="flex flex-col items-center justify-center py-20 text-red-400">
+          <span className="text-xs">{getErrorMessage(listError)}</span>
+          <button
+            type="button"
+            onClick={() => void reloadList().catch(() => undefined)}
+            className="mt-3 rounded-full bg-red-50 px-4 py-2 text-xs font-medium text-red-600 active:opacity-80"
+          >
+            重新加载
+          </button>
+        </div>
       );
     }
 
     if (!logs.length) {
       return (
-        <EmptyState
-          message={keyword ? '没有找到匹配的资金记录' : sceneConfig.emptyMessage}
-        />
+        <div className="flex flex-col items-center justify-center py-20 text-gray-400">
+          <div className="mb-3 flex h-16 w-16 items-center justify-center rounded-full bg-gray-100">
+            <FileText size={24} className="text-gray-300" />
+          </div>
+          <span className="text-xs text-gray-400">
+            {keyword ? '没有找到匹配的资金记录' : sceneConfig.emptyMessage}
+          </span>
+        </div>
       );
     }
 
     return (
-      <div className="space-y-7 px-4 pb-10 pt-5">
-        {groupedLogs.map((group) => (
-          <div key={group.label} className="space-y-3">
-            <div className="flex items-center gap-3 px-1">
-              <div className="text-base font-bold tracking-[0.01em] text-text-main">{group.label}</div>
-              <div className="h-px flex-1 bg-gradient-to-r from-primary-start/14 via-primary-start/6 to-transparent" />
-            </div>
+      <div className="space-y-3 p-3 pb-10">
+        {logs.map((item, index) => {
+          const accountLabel = formatAccountTypeLabel(item.accountType);
+          const beforeValueText = formatMoney(item.beforeValue);
+          const afterValueText = formatMoney(item.afterValue);
+          const bizLabel = formatBizTypeLabel(item.bizType);
+          const memoText = item.memo?.trim();
+          const titleText = memoText || bizLabel;
+          const subtitleText = memoText && memoText !== bizLabel ? bizLabel : undefined;
 
-            <div className="space-y-3">
-              {group.rows.map((item, index) => {
-                const accountLabel = formatAccountTypeLabel(item.accountType);
-                const tone = getAccountTone(item.accountType);
-                const flowMeta = getFlowMeta(item.amount);
-                const FlowIcon = flowMeta.icon;
-                const beforeValueText = formatMoney(item.beforeValue);
-                const afterValueText = formatMoney(item.afterValue);
-                const bizLabel = formatBizTypeLabel(item.bizType);
-                const memoText = item.memo?.trim();
-                const titleText = memoText || bizLabel;
-                const subtitleText = memoText && memoText !== bizLabel ? bizLabel : undefined;
-                const detailReference =
-                  item.isMerged && item.mergeKey
-                    ? `合并键 ${item.mergeKey}`
-                    : item.flowNo || `记录 #${item.id}`;
+          return (
+            <button
+              key={`${item.id}-${item.flowNo ?? item.createTime ?? index}`}
+              type="button"
+              onClick={() => setSelectedLog(item)}
+              className="group w-full rounded-xl border border-gray-100 bg-white p-4 text-left shadow-sm transition-all active:scale-[0.99] active:bg-gray-50"
+            >
+              <div className="mb-2 flex items-start justify-between gap-3">
+                <div className="min-w-0 flex-1 pr-4">
+                  <div className="mb-1.5 flex flex-wrap items-center gap-2">
+                    <span
+                      className={`inline-flex shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium ${getLegacyAccountTagClassName(item.accountType)}`}
+                    >
+                      {accountLabel}
+                    </span>
+                    {item.isMerged ? (
+                      <span className="inline-flex shrink-0 rounded bg-amber-50 px-1.5 py-0.5 text-[10px] font-medium text-amber-600">
+                        {item.mergeRowCount && item.mergeRowCount > 1 ? `已合并 ${item.mergeRowCount} 笔` : '合并流水'}
+                      </span>
+                    ) : null}
+                    <span className="min-w-0 truncate text-sm font-medium text-gray-700">{titleText}</span>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-400">
+                    {subtitleText ? <span className="line-clamp-1">{subtitleText}</span> : null}
+                    <span>{item.createTimeText || '--'}</span>
+                  </div>
+                </div>
 
-                return (
-                  <button
-                    key={`${item.id}-${item.flowNo ?? item.createTime ?? index}`}
-                    type="button"
-                    onClick={() => setSelectedLog(item)}
-                    className="group w-full rounded-2xl border border-border-light/80 bg-bg-card px-4 py-3.5 text-left shadow-[0_8px_22px_rgba(15,23,42,0.05)] transition-all duration-200 active:scale-[0.99] active:bg-bg-base/55 active:shadow-[0_4px_12px_rgba(15,23,42,0.06)]"
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0 flex-1">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span className={`inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-medium ${tone.badgeClassName}`}>
-                            {accountLabel}
-                          </span>
-                          {item.isMerged ? (
-                            <span className="inline-flex items-center rounded-md bg-amber-500/10 px-2 py-0.5 text-[11px] font-medium text-amber-700 ring-1 ring-amber-500/12 dark:bg-amber-500/16 dark:text-amber-300">
-                              {item.mergeRowCount && item.mergeRowCount > 1
-                                ? `合并 ${item.mergeRowCount} 笔`
-                                : '合并流水'}
-                            </span>
-                          ) : null}
-                        </div>
-
-                        <div className="mt-2 line-clamp-1 text-[15px] font-semibold text-text-main">
-                          {titleText}
-                        </div>
-
-                        <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-text-aux">
-                          {subtitleText ? <span className="line-clamp-1">{subtitleText}</span> : null}
-                          <span className="inline-flex items-center gap-1">
-                            <Clock3 size={12} />
-                            <span>{item.createTimeText || '--'}</span>
-                          </span>
-                        </div>
-                      </div>
-
-                      <div className="flex shrink-0 items-start gap-2">
-                        <div className="text-right">
-                          <div
-                            className={`text-lg font-bold tracking-[-0.02em] font-[DINAlternate-Bold,Roboto,sans-serif] ${getAmountClassName(item.amount)}`}
-                          >
-                            {formatSignedMoney(item.amount)}
-                          </div>
-                          <div
-                            className={`mt-1 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium ${flowMeta.badgeClassName}`}
-                          >
-                            <FlowIcon size={11} />
-                            <span>{flowMeta.label}</span>
-                          </div>
-                        </div>
-
-                        <div className="pt-0.5 text-text-disabled transition-transform duration-200 group-active:translate-x-0.5">
-                          <ChevronRight size={16} />
-                        </div>
-                      </div>
+                <div className="flex shrink-0 items-center gap-2">
+                  <div className="text-right">
+                    <div
+                      className={`text-base font-bold font-[DINAlternate-Bold,Roboto,sans-serif] ${getLegacyListAmountClassName(item.accountType, item.amount)}`}
+                    >
+                      {formatSignedMoney(item.amount)}
                     </div>
+                  </div>
+                  <ChevronRight size={16} className="text-gray-300" />
+                </div>
+              </div>
 
-                    <div className="mt-3 border-t border-border-light/70 pt-2.5">
-                      <div className="flex flex-wrap items-center justify-between gap-2">
-                        <div className="min-w-0 flex-1 truncate text-[11px] text-text-aux">{detailReference}</div>
-                        <div className="inline-flex max-w-full items-center gap-2 rounded-full bg-bg-base px-3 py-1.5 text-xs text-text-sub">
-                          <span className="shrink-0 text-text-aux">变动前</span>
-                          <span className="truncate font-medium text-text-main">{beforeValueText}</span>
-                          <MoveRight size={12} className="shrink-0 text-text-disabled" />
-                          <span className="shrink-0 text-text-aux">变动后</span>
-                          <span className={`truncate font-medium ${getAmountClassName(item.amount)}`}>
-                            {afterValueText}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        ))}
+              <div className="mt-2 flex items-center justify-between gap-3 border-t border-gray-50 pt-2">
+                <div className="truncate text-[11px] text-gray-400">
+                  {item.isMerged && item.mergeKey ? `合并键 ${item.mergeKey}` : item.flowNo || `记录 #${item.id}`}
+                </div>
+                <div className="flex items-center font-mono text-xs text-gray-400">
+                  <span>{beforeValueText}</span>
+                  <span className="mx-1.5 text-gray-300">→</span>
+                  <span className={getLegacyBalanceAfterClassName(item.accountType, item.amount)}>{afterValueText}</span>
+                </div>
+              </div>
+            </button>
+          );
+        })}
 
-        <div
-          ref={loadMoreRef}
-          className="flex min-h-[80px] flex-col items-center justify-center gap-2 py-6"
-        >
+        <div ref={loadMoreRef} className="flex min-h-[56px] items-center justify-center py-3">
           {renderLoadMore()}
         </div>
       </div>
     );
   };
 
-  const renderDetailRow = (
+  const renderDetailInfoRow = (
     label: string,
     value: string | undefined,
-    options: { copyable?: boolean; successMessage?: string } = {},
+    options: {
+      copyable?: boolean;
+      fieldKey?: string;
+      icon?: LucideIcon;
+      successMessage?: string;
+    } = {},
   ) => {
-    const content = value?.trim() || '--';
+    const content = value?.trim() || '-';
+    const Icon = options.icon;
+    const canCopy = Boolean(options.copyable && content !== '-');
+    const copied = options.fieldKey ? copiedDetailField === options.fieldKey : false;
 
     return (
-      <div className="flex items-start justify-between gap-4">
-        <span className="shrink-0 text-sm text-text-sub">{label}</span>
-        <div className="flex min-w-0 items-center text-right">
-          <span className="break-all text-sm text-text-main">{content}</span>
-          {options.copyable && content !== '--' ? (
+      <div className="flex items-start justify-between gap-4 py-2">
+        <div className="flex items-center gap-2 text-gray-600">
+          {Icon ? <Icon className="h-4 w-4 text-gray-400" /> : null}
+          <span className="text-sm">{label}</span>
+        </div>
+        <div className="flex max-w-[62%] items-center gap-1.5">
+          <span className={`break-all text-right text-sm text-gray-900 ${canCopy ? 'font-mono' : ''}`}>
+            {content}
+          </span>
+          {canCopy && options.fieldKey ? (
             <button
               type="button"
-              onClick={() => void handleCopy(content, options.successMessage)}
-              className="ml-2 shrink-0 text-text-aux active:opacity-70"
+              onClick={() => void handleDetailFieldCopy(options.fieldKey!, content, options.successMessage)}
+              className="rounded-md p-1 text-gray-400 active:bg-gray-100"
+              aria-label={`复制${label}`}
             >
-              <Copy size={14} />
+              {copied ? <Check size={13} className="text-green-500" /> : <Copy size={13} />}
             </button>
           ) : null}
         </div>
@@ -1218,25 +1241,39 @@ export function BillingPage() {
     if (detailLoading && !selectedDetail) {
       return (
         <div className="space-y-4 p-4">
-          <Card className="space-y-4 p-6">
+          <div className="rounded-2xl bg-gradient-to-br from-gray-200 to-gray-300 p-6">
             <div className="flex flex-col items-center">
-              <Skeleton className="mb-2 h-4 w-20" />
-              <Skeleton className="h-10 w-36" />
+              <Skeleton className="mb-3 h-4 w-20 bg-white/50" />
+              <Skeleton className="h-10 w-40 bg-white/60" />
             </div>
-            {[1, 2, 3, 4].map((row) => (
-              <Skeleton key={row} className="h-4 w-full" />
-            ))}
-          </Card>
+          </div>
+          {[1, 2, 3].map((card) => (
+            <div key={card} className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm">
+              <Skeleton className="mb-4 h-5 w-24" />
+              {[1, 2, 3].map((row) => (
+                <Skeleton key={row} className="mb-3 h-4 w-full" />
+              ))}
+            </div>
+          ))}
         </div>
       );
     }
 
     if (detailError && !selectedDetail) {
       return (
-        <ErrorState
-          message={getErrorMessage(detailError)}
-          onRetry={() => void reloadDetail().catch(() => undefined)}
-        />
+        <div className="flex flex-col items-center justify-center py-20 text-red-400">
+          <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-lg border-2 border-red-200">
+            <FileText size={32} className="opacity-50" />
+          </div>
+          <span className="text-xs">{getErrorMessage(detailError)}</span>
+          <button
+            type="button"
+            onClick={() => void reloadDetail().catch(() => undefined)}
+            className="mt-3 rounded-full bg-red-50 px-4 py-2 text-xs font-medium text-red-600 active:opacity-80"
+          >
+            重新加载
+          </button>
+        </div>
       );
     }
 
@@ -1253,83 +1290,128 @@ export function BillingPage() {
     const hasAssetSnapshot = Boolean(titleSnapshot || hasUserCollectionId || hasItemId);
     const beforeValueText = formatMoney(detail?.beforeValue);
     const afterValueText = formatMoney(detail?.afterValue);
+    const imageSnapshot = detail?.imageSnapshot || selectedLog.imageSnapshot;
+    const amountValue = detail?.amount ?? selectedLog.amount;
+    const accountType = detail?.accountType || selectedLog.accountType;
+    const isPositive = amountValue > 0;
+    const amountUnit = accountType === 'green_power' ? '算力' : accountType === 'score' ? '' : '元';
+    const amountClassName =
+      accountType === 'green_power'
+        ? 'from-emerald-500 to-emerald-600'
+        : isPositive
+          ? 'from-green-500 to-green-600'
+          : 'from-gray-600 to-gray-700';
 
     return (
       <div className="space-y-4 p-4 pb-10">
-        <Card className="p-6">
-          <div className="mb-6 flex flex-col items-center">
-            <div className="mb-2 text-sm text-text-sub">
-              {formatBizTypeLabel(detail?.bizType || selectedLog.bizType)}
-            </div>
-            <div className={`text-4xl font-bold ${getAmountClassName(detail?.amount ?? selectedLog.amount)}`}>
-              {formatSignedMoney(detail?.amount ?? selectedLog.amount)}
-            </div>
-            <div className="mt-2 text-sm text-text-aux">
-              {formatAccountTypeLabel(detail?.accountType || selectedLog.accountType)}
-            </div>
-            <div className="mt-5 grid w-full grid-cols-2 gap-3">
-              <div className="rounded-2xl border border-border-light bg-bg-base px-4 py-3 text-left">
-                <div className="text-xs text-text-aux">变动前金额</div>
-                <div className="mt-1 text-base font-semibold text-text-main">{beforeValueText}</div>
-              </div>
-              <div className="rounded-2xl border border-border-light bg-bg-base px-4 py-3 text-left">
-                <div className="text-xs text-text-aux">变动后金额</div>
-                <div className="mt-1 text-base font-semibold text-text-main">{afterValueText}</div>
-              </div>
+        <div className={`rounded-2xl bg-gradient-to-br ${amountClassName} p-6 text-white shadow-lg`}>
+          <div className="mb-4 text-center">
+            <div className="mb-2 text-sm opacity-90">变动金额</div>
+            <div className="font-[DINAlternate-Bold,Roboto,sans-serif] text-4xl font-bold">
+              {amountValue > 0 ? '+' : ''}
+              {Math.abs(amountValue).toFixed(2)}
+              {amountUnit ? ` ${amountUnit}` : ''}
             </div>
           </div>
+          <div className="flex items-center justify-between text-sm opacity-90">
+            <span>变动前: {beforeValueText}</span>
+            <span className="text-lg">→</span>
+            <span>变动后: {afterValueText}</span>
+          </div>
+        </div>
 
-          <div className="space-y-4">
-            {renderDetailRow('流水模式', (detail?.isMerged ?? selectedLog.isMerged) ? '合并流水' : '正常流水')}
-            {renderDetailRow('账户类型', formatAccountTypeLabel(detail?.accountType || selectedLog.accountType))}
-            {renderDetailRow('业务类型', formatBizTypeLabel(detail?.bizType || selectedLog.bizType))}
-            {renderDetailRow('创建时间', detail?.createTimeText || selectedLog.createTimeText)}
-            {renderDetailRow('备注说明', detail?.memo || selectedLog.memo)}
+        <div className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm">
+          <div className="mb-4 flex items-center gap-2 border-b border-gray-100 pb-3">
+            <Receipt className="h-5 w-5 text-red-600" />
+            <h2 className="text-base font-semibold text-gray-900">基本信息</h2>
+          </div>
+
+          <div className="space-y-1">
+            {renderDetailInfoRow('流水号', detail?.flowNo || selectedLog.flowNo, {
+              copyable: true,
+              fieldKey: 'flow-no',
+              icon: Hash,
+              successMessage: '流水号已复制',
+            })}
+            {(detail?.batchNo || selectedLog.batchNo) ? (
+              renderDetailInfoRow('批次号', detail?.batchNo || selectedLog.batchNo, {
+                copyable: true,
+                fieldKey: 'batch-no',
+                icon: Package,
+                successMessage: '批次号已复制',
+              })
+            ) : null}
+            {renderDetailInfoRow('账户类型', formatAccountTypeLabel(accountType), {
+              icon: TrendingUp,
+            })}
+            {(detail?.bizType || selectedLog.bizType) ? (
+              renderDetailInfoRow('业务类型', formatBizTypeLabel(detail?.bizType || selectedLog.bizType))
+            ) : null}
+            {(detail?.bizId || selectedLog.bizId) ? renderDetailInfoRow('业务ID', detail?.bizId || selectedLog.bizId) : null}
+            {renderDetailInfoRow('创建时间', detail?.createTimeText || selectedLog.createTimeText, {
+              icon: Calendar,
+            })}
+            {renderDetailInfoRow('流水模式', (detail?.isMerged ?? selectedLog.isMerged) ? '合并流水' : '正常流水')}
             {(detail?.mergeRowCount ?? selectedLog.mergeRowCount) ? (
-              renderDetailRow('合并笔数', `${detail?.mergeRowCount ?? selectedLog.mergeRowCount} 笔`)
+              renderDetailInfoRow('合并笔数', `${detail?.mergeRowCount ?? selectedLog.mergeRowCount} 笔`)
             ) : null}
             {(detail?.mergeKey || selectedLog.mergeKey) ? (
-              renderDetailRow('合并键', detail?.mergeKey || selectedLog.mergeKey, {
+              renderDetailInfoRow('合并键', detail?.mergeKey || selectedLog.mergeKey, {
                 copyable: true,
+                fieldKey: 'merge-key',
                 successMessage: '合并键已复制',
               })
             ) : null}
-            {renderDetailRow('流水号', detail?.flowNo || selectedLog.flowNo, {
-              copyable: true,
-              successMessage: '流水号已复制',
-            })}
-            {renderDetailRow('批次号', detail?.batchNo || selectedLog.batchNo, {
-              copyable: true,
-              successMessage: '批次号已复制',
-            })}
-            {renderDetailRow('业务ID', detail?.bizId || selectedLog.bizId)}
           </div>
-        </Card>
+        </div>
+
+        {(detail?.memo || selectedLog.memo) ? (
+          <div className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm">
+            <div className="mb-3 flex items-center gap-2">
+              <FileText className="h-5 w-5 text-red-600" />
+              <h2 className="text-base font-semibold text-gray-900">备注说明</h2>
+            </div>
+            <p className="text-sm leading-relaxed text-gray-700">{detail?.memo || selectedLog.memo}</p>
+          </div>
+        ) : null}
 
         {hasAssetSnapshot ? (
-          <Card className="p-4">
-            <div className="mb-3 text-sm font-medium text-text-main">关联资产</div>
-            <div className="space-y-2">
-              <div className="break-all text-sm font-medium text-text-main">{titleSnapshot || '未命名资产'}</div>
-              <div className="text-sm text-text-sub">
-                藏品 ID：{userCollectionId ?? '--'} / 商品 ID：{itemId ?? '--'}
+          <div className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm">
+            <div className="mb-3 flex items-center gap-2">
+              <Package className="h-5 w-5 text-red-600" />
+              <h2 className="text-base font-semibold text-gray-900">商品信息</h2>
+            </div>
+            <div className="flex gap-3">
+              {imageSnapshot ? (
+                <div className="h-16 w-16 overflow-hidden rounded-lg bg-gray-100">
+                  <img src={imageSnapshot} alt={titleSnapshot || '商品图片'} className="h-full w-full object-cover" />
+                </div>
+              ) : null}
+              <div className="flex min-w-0 flex-1 flex-col justify-center">
+                {titleSnapshot ? <p className="text-sm text-gray-700">{titleSnapshot}</p> : null}
+                <div className="mt-1 text-xs text-gray-500">
+                  藏品 ID：{userCollectionId ?? '--'} / 商品 ID：{itemId ?? '--'}
+                </div>
               </div>
             </div>
-          </Card>
+          </div>
         ) : null}
 
         {detailBreakdownEntries.length ? (
-          <Card className="p-4">
-            <div className="mb-3 text-sm font-medium text-text-main">资金结构</div>
-            <div className="space-y-3">
+          <div className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm">
+            <div className="mb-3 flex items-center gap-2">
+              <TrendingDown className="h-5 w-5 text-red-600" />
+              <h2 className="text-base font-semibold text-gray-900">详细信息</h2>
+            </div>
+            <div className="space-y-2">
               {detailBreakdownEntries.map((entry) => (
-                <div key={entry.key} className="flex items-center justify-between gap-4">
-                  <span className="text-sm text-text-sub">{entry.label}</span>
-                  <span className="break-all text-right text-sm text-text-main">{entry.value}</span>
+                <div key={entry.key} className="flex items-center justify-between gap-4 py-1.5 text-sm">
+                  <span className="text-gray-600">{entry.label}</span>
+                  <span className="max-w-[65%] break-all text-right font-medium text-gray-900">{entry.value}</span>
                 </div>
               ))}
             </div>
-          </Card>
+          </div>
         ) : null}
       </div>
     );
@@ -1337,7 +1419,7 @@ export function BillingPage() {
 
   if (!isAuthenticated) {
     return (
-      <div className="flex h-full flex-1 flex-col bg-bg-base">
+      <div className="flex h-full flex-1 flex-col bg-gray-50">
         {renderHeader()}
         <div ref={scrollContainerRef} className="flex-1 overflow-y-auto no-scrollbar px-4">
           <EmptyState
@@ -1352,13 +1434,15 @@ export function BillingPage() {
   }
 
   return (
-    <div className="relative flex h-full flex-1 flex-col bg-bg-base">
+    <div className="relative flex h-full flex-1 flex-col bg-gray-50">
       {isOffline ? (
         <OfflineBanner onAction={handleRefresh} className="absolute top-12 right-0 left-0 z-50" />
       ) : null}
 
-      {renderHeader()}
-      {renderFilters()}
+      <div className="sticky top-0 z-30">
+        {renderHeader()}
+        {renderFilters()}
+      </div>
 
       <PullToRefreshContainer onRefresh={handleRefresh} disabled={isOffline}>
         <div ref={scrollContainerRef} className="flex-1 overflow-y-auto no-scrollbar">

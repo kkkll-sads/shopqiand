@@ -11,7 +11,6 @@ import type { AddressItem } from '../../api/modules/address';
 import { OfflineBanner } from '../../components/layout/OfflineBanner';
 import { useFeedback } from '../../components/ui/FeedbackProvider';
 import { ErrorState } from '../../components/ui/ErrorState';
-import { PullToRefreshContainer } from '../../components/ui/PullToRefreshContainer';
 import { ProductAddressManageSheet } from '../../features/product-detail/components/ProductAddressManageSheet';
 import { ProductDetailHeader } from '../../features/product-detail/components/ProductDetailHeader';
 import { ProductAddressFormSheet, type ProductAddressFormValue } from '../../features/product-detail/components/ProductAddressFormSheet';
@@ -446,7 +445,7 @@ export const ProductDetailPage = () => {
     (Boolean(productRequest.error) || (!hasValidProductId && Boolean(fallbackProductRequest.error)));
 
   return (
-    <div className="relative flex flex-1 flex-col overflow-hidden bg-bg-base">
+    <div className="relative flex flex-1 flex-col overflow-hidden bg-[#f5f5f5]">
       {isOffline && (
         <OfflineBanner
           onAction={refreshStatus}
@@ -465,7 +464,7 @@ export const ProductDetailPage = () => {
         />
       ) : (
         <>
-          <div ref={scrollRef} className="flex-1 overflow-y-auto pb-[60px]">
+          <div ref={scrollRef} className="flex-1 overflow-y-auto bg-[#f5f5f5] pb-[72px]">
             <ProductOverviewSection
               loading={isLoading}
               onOpenServiceDescription={() => setShowServiceSheet(true)}

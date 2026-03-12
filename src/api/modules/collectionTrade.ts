@@ -455,4 +455,13 @@ export const collectionTradeApi = {
       signal,
     });
   },
+
+  async toMining(userCollectionId: number | string, signal?: AbortSignal): Promise<void> {
+    const formData = new FormData();
+    formData.append('user_collection_id', String(userCollectionId));
+
+    await http.post<Record<string, unknown>, FormData>('/api/collectionTrade/toMining', formData, {
+      signal,
+    });
+  },
 };

@@ -1,10 +1,11 @@
-import { Award, Copy, FileText, Fingerprint, Shield } from 'lucide-react';
+import { Award, Copy, ExternalLink, FileText, Fingerprint, Shield } from 'lucide-react';
 import type { UserCollectionDetail } from '../../../api';
 
 interface MyCollectionCertificateCardProps {
   item: UserCollectionDetail;
+  onCopy: (text: string, successMessage?: string) => void | Promise<void>;
+  onSearchHash: (hash: string) => void;
   title: string;
-  onCopy: (text: string, successMessage?: string) => void;
 }
 
 const DEFAULT_HASH =
@@ -19,93 +20,64 @@ function formatTimeRange(startTime: string, endTime: string): string {
 }
 
 function getFingerprint(item: UserCollectionDetail): string {
-  const candidates = [item.hash, item.fingerprint, item.md5, item.tx_hash];
-  return candidates.find((value) => typeof value === 'string' && value.trim()) || DEFAULT_HASH;
-}
-
-function InfoRow({
-  label,
-  value,
-}: {
-  label: string;
-  value: string;
-}) {
-  return (
-    <div className="grid grid-cols-[88px_1fr] gap-3 border-b border-[#e8dcc6] py-2.5 last:border-b-0">
-      <div className="text-[11px] uppercase tracking-[0.18em] text-[#9d8266]">{label}</div>
-      <div className="text-right text-[13px] leading-6 text-[#453126]">{value || '--'}</div>
-    </div>
-  );
+  return item.hash || item.fingerprint || item.md5 || item.tx_hash || DEFAULT_HASH;
 }
 
 export function MyCollectionCertificateCard({
   item,
-  title,
   onCopy,
+  onSearchHash,
+  title,
 }: MyCollectionCertificateCardProps) {
   const assetCode =
-    item.asset_code || `37-DATA-${String(item.user_collection_id || item.id || 0).padStart(8, '0')}`;
-  const fingerprint = getFingerprint(item);
+    item.asset_code || `37-DATA-****-${String(item.user_collection_id || item.id || 8821).padStart(4, '0')}`;
+  const hashValue = getFingerprint(item);
 
   return (
-    <div className="relative overflow-hidden rounded-[30px] border border-[#dfc7a4] bg-[#fbf4e8] p-4 shadow-[0_18px_40px_rgba(137,92,37,0.12)]">
-      <div
-        className="pointer-events-none absolute inset-0 opacity-60"
-        style={{
-          background:
-            'radial-gradient(circle at top left, rgba(255,255,255,0.85), transparent 38%), repeating-linear-gradient(135deg, rgba(191,150,96,0.07) 0 8px, transparent 8px 18px)',
-        }}
-      />
+    <div className="p-5">
+      <div className="relative overflow-hidden rounded-sm border-[6px] border-double border-amber-900/10 bg-white p-6 shadow-2xl shadow-gray-200/50 md:p-8">
+        <div className="pointer-events-none absolute inset-0 flex items-center justify-center opacity-[0.03]">
+          <Shield size={200} />
+        </div>
 
-      <div className="relative rounded-[24px] border-[6px] border-double border-[#d9bd93] bg-[linear-gradient(180deg,#fffaf1_0%,#f6e7ce_100%)] p-5 shadow-[inset_0_0_0_1px_rgba(167,120,59,0.18)]">
-        <div className="absolute inset-0 opacity-[0.08]">
-          <div className="flex h-full items-center justify-center text-[#8b5b2b]">
-            <Shield size={220} strokeWidth={1.2} />
+        <div className="mb-6 text-center">
+          <div className="mb-3 inline-flex h-12 w-12 items-center justify-center rounded-full border border-amber-100 bg-amber-50 text-amber-900">
+            <Award size={24} />
+          </div>
+          <h2 className="mb-1 text-2xl font-bold tracking-wide text-gray-900">数字资产持有凭证</h2>
+          <div className="text-[10px] uppercase tracking-[0.2em] text-gray-400">
+            Digital Asset Certificate
           </div>
         </div>
 
-        <div className="relative z-10">
-          <div className="text-center">
-            <div className="mx-auto inline-flex h-14 w-14 items-center justify-center rounded-full border border-[#e8cba7] bg-[#fff3de] text-[#8a5829] shadow-[0_10px_20px_rgba(192,146,86,0.15)]">
-              <Award size={26} />
-            </div>
+        <div className="relative z-10 space-y-6 font-sans">
+          <div className="relative mb-2 py-6 text-center">
             <div
-              className="mt-4 text-[27px] font-semibold tracking-[0.14em] text-[#5d3e23]"
-              style={{ fontFamily: '"Noto Serif SC", "Songti SC", "STSong", serif' }}
-            >
-              数字资产持有凭证
-            </div>
-            <div className="mt-1 text-[11px] uppercase tracking-[0.34em] text-[#b78a57]">
-              Digital Asset Certificate
-            </div>
-          </div>
-
-          <div className="relative mt-7 overflow-hidden rounded-[22px] border border-[#ebd8bb] bg-[rgba(255,248,237,0.86)] px-4 py-5 text-center">
-            <div
-              className="absolute inset-0 opacity-[0.08]"
+              className="pointer-events-none absolute inset-0 overflow-hidden rounded-lg border border-amber-900/5 opacity-[0.08]"
               style={{
-                background:
-                  'repeating-linear-gradient(45deg, transparent, transparent 10px, #b99362 10px, #b99362 11px), repeating-linear-gradient(-45deg, transparent, transparent 10px, #b99362 10px, #b99362 11px)',
+                backgroundImage:
+                  'repeating-linear-gradient(45deg, transparent, transparent 10px, #C5A572 10px, #C5A572 11px), repeating-linear-gradient(-45deg, transparent, transparent 10px, #C5A572 10px, #C5A572 11px)',
               }}
             />
 
             <button
               type="button"
-              onClick={() => onCopy(assetCode, '确权编号已复制')}
-              className="relative z-10 inline-flex items-center gap-2 rounded-full border border-[#e8cfad] bg-white/80 px-3 py-1 text-[11px] font-semibold tracking-[0.14em] text-[#8a5829] transition active:scale-[0.98]"
+              className="relative z-10 mb-3 inline-flex items-center justify-center gap-2 text-sm font-bold tracking-widest text-gray-600 drop-shadow-sm transition-colors hover:text-amber-600"
+              style={{ fontFamily: 'courier, monospace' }}
+              onClick={() => void onCopy(assetCode, '确权编号已复制')}
             >
-              <span>确权编号 {assetCode}</span>
-              <Copy size={12} />
+              <span>确权编号：{assetCode}</span>
+              <Copy size={12} className="text-gray-400" />
             </button>
 
-            <h2
-              className="relative z-10 mt-4 px-4 text-[28px] font-semibold leading-tight text-[#3a291f]"
+            <h3
+              className="relative z-10 mb-3 px-2 text-2xl font-extrabold leading-tight tracking-tight text-gray-700 drop-shadow-sm"
               style={{ fontFamily: '"Noto Serif SC", "Songti SC", "STSong", serif' }}
             >
               《{title || '未命名藏品'}》
-            </h2>
+            </h3>
 
-            <div className="pointer-events-none absolute -bottom-7 right-[-6px] z-20 h-32 w-32 rotate-[-12deg] opacity-90 mix-blend-multiply">
+            <div className="pointer-events-none absolute -bottom-6 -right-4 z-20 h-32 w-32 rotate-[-12deg] opacity-[0.85] mix-blend-multiply contrast-125 brightness-90">
               <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
                 <defs>
                   <path id="certificate-seal-circle" d="M 25,100 A 75,75 0 1,1 175,100" fill="none" />
@@ -114,15 +86,22 @@ export function MyCollectionCertificateCard({
                     <feDisplacementMap in="SourceGraphic" in2="noise" scale="3" />
                   </filter>
                 </defs>
-                <g filter="url(#certificate-seal-noise)" fill="#b22222" stroke="none">
-                  <circle cx="100" cy="100" r="96" fill="none" stroke="#b22222" strokeWidth="3" />
-                  <circle cx="100" cy="100" r="91" fill="none" stroke="#b22222" strokeWidth="1" />
-                  <text fontSize="14" fontWeight="bold" fontFamily="SimSun, serif" fill="#b22222">
+                <g filter="url(#certificate-seal-noise)" fill="#B22222" stroke="none">
+                  <circle cx="100" cy="100" r="96" fill="none" stroke="#B22222" strokeWidth="3" />
+                  <circle cx="100" cy="100" r="92" fill="none" stroke="#B22222" strokeWidth="1" />
+                  <text fontSize="14" fontWeight="bold" fontFamily="SimSun, serif" fill="#B22222">
                     <textPath href="#certificate-seal-circle" startOffset="50%" textAnchor="middle">
                       树交所数字资产登记结算中心
                     </textPath>
                   </text>
-                  <text x="100" y="100" fontSize="40" textAnchor="middle" dominantBaseline="middle" fill="#b22222">
+                  <text
+                    x="100"
+                    y="100"
+                    fontSize="40"
+                    textAnchor="middle"
+                    dominantBaseline="middle"
+                    fill="#B22222"
+                  >
                     验
                   </text>
                   <text
@@ -132,18 +111,18 @@ export function MyCollectionCertificateCard({
                     fontWeight="bold"
                     fontFamily="SimHei, sans-serif"
                     textAnchor="middle"
-                    fill="#b22222"
+                    fill="#B22222"
                   >
                     确权专用章
                   </text>
                   <text
                     x="100"
-                    y="154"
+                    y="155"
                     fontSize="10"
-                    fontWeight="bold"
                     fontFamily="Arial, sans-serif"
+                    fontWeight="bold"
                     textAnchor="middle"
-                    fill="#b22222"
+                    fill="#B22222"
                     letterSpacing="1"
                   >
                     37010299821
@@ -153,87 +132,124 @@ export function MyCollectionCertificateCard({
             </div>
           </div>
 
-          <div className="mt-6 rounded-[22px] border border-[#ead6b8] bg-white/70 p-4">
+          <div className="mb-6 rounded-lg border border-gray-100 bg-gray-50 p-4">
             <div className="mb-3 flex items-start gap-3">
-              <div className="mt-0.5 rounded-full bg-[#f7ead7] p-2 text-[#8b5b2b]">
-                <Shield size={16} />
-              </div>
+              <Shield size={16} className="mt-0.5 shrink-0 text-amber-600" />
               <div>
-                <div className="text-[11px] uppercase tracking-[0.22em] text-[#9d8266]">
+                <label className="mb-0.5 block text-xs font-bold uppercase text-gray-400">
                   Asset Anchor / 资产锚定
+                </label>
+                <div className="text-sm font-medium text-gray-600">
+                  涉及农户/合作社：{item.farmer_info || '暂无数据'}
+                  <span className="ml-1 inline-block rounded border border-amber-200 bg-white px-1 text-[10px] text-amber-600">
+                    隐私保护
+                  </span>
                 </div>
-                <div className="mt-1 text-[14px] font-medium leading-6 text-[#49352a]">
-                  涉及农户/合作社：{item.farmer_info || '暂未披露'}
+                <div className="mt-1 text-xs font-medium text-gray-600">
+                  核心企业：{item.core_enterprise || '暂无数据'}
                 </div>
-                <div className="mt-1 text-[13px] leading-6 text-[#6d5648]">
-                  核心企业：{item.core_enterprise || '暂未披露'}
-                </div>
-                <div className="mt-2 inline-flex rounded-full border border-[#edd8bc] bg-[#fff7ea] px-2.5 py-1 text-[10px] tracking-[0.12em] text-[#a17847]">
-                  已做隐私脱敏处理
+                <div className="mt-1 text-[10px] leading-tight text-gray-400">
+                  * 根据相关数据合规要求，底层隐私信息已做 hash 脱敏处理，仅持有人可申请解密查看。
                 </div>
               </div>
             </div>
           </div>
 
-          <div className="mt-4 rounded-[22px] border border-[#ead6b8] bg-white/72 p-4">
+          <div className="mb-6 rounded-lg border border-gray-100 bg-gray-50 p-4">
             <div className="mb-3 flex items-start gap-3">
-              <div className="mt-0.5 rounded-full bg-[#f7ead7] p-2 text-[#8b5b2b]">
-                <FileText size={16} />
-              </div>
+              <FileText size={16} className="mt-0.5 shrink-0 text-amber-600" />
               <div className="min-w-0 flex-1">
-                <div className="text-[11px] uppercase tracking-[0.22em] text-[#9d8266]">
+                <label className="mb-2 block text-xs font-bold uppercase text-gray-400">
                   Contract & Session / 合约与场次
-                </div>
-                <div className="mt-3">
-                  <InfoRow label="合约编号" value={item.contract_no || '--'} />
-                  <InfoRow label="所属场次" value={item.session_title || '--'} />
-                  <InfoRow
-                    label="交易时段"
-                    value={formatTimeRange(item.session_start_time, item.session_end_time)}
-                  />
-                  <InfoRow
-                    label="运行状态"
-                    value={item.mining_status === 1 ? '运行中' : '未激活'}
-                  />
-                  <InfoRow label="启动时间" value={item.mining_start_time || '--'} />
-                  <InfoRow label="最近更新" value={item.last_dividend_time || item.create_time_text || '--'} />
+                </label>
+
+                <div className="grid grid-cols-1 gap-x-4 gap-y-3 md:grid-cols-2">
+                  {item.contract_no ? (
+                    <div>
+                      <div className="text-[10px] text-gray-400">合约编号</div>
+                      <div className="break-all font-mono text-sm font-medium text-gray-700">
+                        {item.contract_no}
+                      </div>
+                    </div>
+                  ) : null}
+
+                  {item.session_title ? (
+                    <div>
+                      <div className="text-[10px] text-gray-400">所属场次</div>
+                      <div className="text-sm font-medium text-gray-700">{item.session_title}</div>
+                    </div>
+                  ) : null}
+
+                  {item.session_start_time || item.session_end_time ? (
+                    <div>
+                      <div className="text-[10px] text-gray-400">交易时段</div>
+                      <div className="text-sm font-medium text-gray-700">
+                        {formatTimeRange(item.session_start_time, item.session_end_time)}
+                      </div>
+                    </div>
+                  ) : null}
+
+                  <div>
+                    <div className="text-[10px] text-gray-400">权益节点状态</div>
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={`rounded px-2 py-0.5 text-xs font-medium ${
+                          item.mining_status === 1
+                            ? 'bg-green-100 text-green-700'
+                            : 'bg-gray-100 text-gray-500'
+                        }`}
+                      >
+                        {item.mining_status === 1 ? '运行中' : '未激活'}
+                      </span>
+                      {item.mining_start_time ? (
+                        <span className="text-[10px] text-gray-400">
+                          （{item.mining_start_time} 开始）
+                        </span>
+                      ) : null}
+                    </div>
+                  </div>
+
+                  {item.last_dividend_time ? (
+                    <div>
+                      <div className="text-[10px] text-gray-400">最近更新</div>
+                      <div className="font-mono text-sm font-medium text-gray-700">
+                        {item.last_dividend_time}
+                      </div>
+                    </div>
+                  ) : null}
                 </div>
               </div>
             </div>
           </div>
 
-          <div className="mt-4">
-            <div className="mb-2 text-[11px] uppercase tracking-[0.24em] text-[#9d8266]">
+          <div>
+            <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-gray-400">
               Blockchain Fingerprint / 存证指纹
+            </label>
+            <div className="relative break-all rounded-t bg-gray-900 p-3 font-mono text-[10px] leading-relaxed text-green-500">
+              <div className="mb-1 flex items-center gap-2 font-sans font-bold text-gray-500">
+                <Fingerprint size={12} />
+                <span className="uppercase">TREE-CHAIN CONSORTIUM</span>
+              </div>
+              {hashValue}
             </div>
-            <div className="overflow-hidden rounded-[22px] border border-[#2d231f] shadow-[0_18px_32px_rgba(22,16,14,0.22)]">
-              <div className="bg-[#1d1613] px-4 py-3 text-[#7ce690]">
-                <div className="mb-2 flex items-center gap-2 text-[11px] uppercase tracking-[0.16em] text-[#8ca18f]">
-                  <Fingerprint size={13} />
-                  <span>Tree Chain Consortium</span>
-                </div>
-                <div className="break-all font-mono text-[11px] leading-6 text-[#dbffe1]">
-                  {fingerprint}
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-2 border-t border-[#3d322d] bg-[#2a211d] p-2">
-                <button
-                  type="button"
-                  onClick={() => onCopy(fingerprint, '链上指纹已复制')}
-                  className="flex items-center justify-center gap-1 rounded-2xl bg-white/10 py-2 text-[12px] text-white transition active:scale-[0.98]"
-                >
-                  <Copy size={12} />
-                  <span>复制指纹</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => onCopy(assetCode, '凭证编号已复制')}
-                  className="flex items-center justify-center gap-1 rounded-2xl bg-white/10 py-2 text-[12px] text-white transition active:scale-[0.98]"
-                >
-                  <Award size={12} />
-                  <span>复制凭证号</span>
-                </button>
-              </div>
+            <div className="flex gap-2 rounded-b border-t border-gray-700 bg-gray-800 p-2">
+              <button
+                type="button"
+                onClick={() => void onCopy(hashValue, '链上指纹已复制')}
+                className="flex flex-1 items-center justify-center gap-1 rounded bg-gray-700 py-1.5 text-[10px] text-white transition-colors active:bg-gray-600"
+              >
+                <Copy size={10} />
+                <span>复制 Hash</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => onSearchHash(hashValue)}
+                className="flex flex-1 items-center justify-center gap-1 rounded bg-gray-700 py-1.5 text-[10px] text-white transition-colors active:bg-gray-600"
+              >
+                <ExternalLink size={10} />
+                <span>去查询</span>
+              </button>
             </div>
           </div>
         </div>

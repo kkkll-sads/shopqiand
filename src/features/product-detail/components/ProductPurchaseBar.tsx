@@ -1,5 +1,4 @@
 import { MessageCircle, ShoppingCart, Store } from 'lucide-react';
-import { Button } from '../../../components/ui/Button';
 import { CartCountBadge } from '../../../components/ui/CartCountBadge';
 
 interface ProductPurchaseBarProps {
@@ -19,46 +18,50 @@ export const ProductPurchaseBar = ({
   onOpenStore,
   cartCount = 0,
 }: ProductPurchaseBarProps) => (
-  <div className="fixed bottom-0 left-0 right-0 z-40 flex items-center justify-between border-t border-border-light bg-white px-2 py-2 pb-safe dark:bg-gray-900">
-    <div className="flex items-center space-x-4 px-2">
+  <div className="fixed bottom-0 left-0 right-0 z-40 mx-auto flex w-full max-w-[430px] items-center border-t border-[#ececec] bg-white px-3 py-2 pb-safe">
+    <div className="flex shrink-0 items-center gap-1">
       <button
         type="button"
-        className="flex flex-col items-center text-text-main active:opacity-70"
+        className="flex w-12 flex-col items-center justify-center py-0.5 text-[#6b7280] active:opacity-70"
         onClick={onOpenStore}
       >
-        <Store size={20} className="mb-0.5" />
-        <span className="text-xs">商城</span>
+        <Store size={18} />
+        <span className="mt-0.5 text-[10px]">商城</span>
       </button>
       <button
         type="button"
-        className="flex flex-col items-center text-text-main active:opacity-70"
+        className="flex w-12 flex-col items-center justify-center py-0.5 text-[#6b7280] active:opacity-70"
         onClick={onOpenHelp}
       >
-        <MessageCircle size={20} className="mb-0.5" />
-        <span className="text-xs">客服</span>
+        <MessageCircle size={18} />
+        <span className="mt-0.5 text-[10px]">客服</span>
       </button>
       <button
         type="button"
-        className="relative flex flex-col items-center text-text-main active:opacity-70"
+        className="relative flex w-12 flex-col items-center justify-center py-0.5 text-[#6b7280] active:opacity-70"
         onClick={onOpenCart}
       >
         <CartCountBadge count={cartCount} />
-        <ShoppingCart size={20} className="mb-0.5" />
-        <span className="text-xs">购物车</span>
+        <ShoppingCart size={18} />
+        <span className="mt-0.5 text-[10px]">购物车</span>
       </button>
     </div>
 
-    <div className="ml-4 flex flex-1 space-x-2">
-      <Button
-        variant="outline"
-        className="h-[40px] flex-1 rounded-full border-primary-start text-base text-primary-start"
+    <div className="ml-3 flex flex-1 items-center gap-2">
+      <button
+        type="button"
+        className="flex h-10 flex-1 items-center justify-center rounded-full border border-[#f2b5a4] bg-[#fff7f3] text-sm font-medium text-primary-start active:opacity-80"
         onClick={onAddToCart}
       >
         加入购物车
-      </Button>
-      <Button className="h-[40px] flex-1 rounded-full text-base" onClick={onBuyNow}>
+      </button>
+      <button
+        type="button"
+        className="flex h-10 flex-1 items-center justify-center rounded-full bg-primary-start text-sm font-medium text-white active:opacity-80"
+        onClick={onBuyNow}
+      >
         立即购买
-      </Button>
+      </button>
     </div>
   </div>
 );

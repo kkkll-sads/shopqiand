@@ -5,6 +5,7 @@ export * from './modules/activityCenter';
 export * from './modules/auth';
 export * from './modules/announcement';
 export * from './modules/collectionItem';
+export * from './modules/collectionConsignment';
 export * from './modules/collectionSession';
 export * from './modules/collectionTrade';
 export * from './modules/common';

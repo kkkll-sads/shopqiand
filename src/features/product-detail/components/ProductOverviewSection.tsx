@@ -1,8 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type TouchEvent } from 'react';
 import { ChevronRight, ShieldCheck } from 'lucide-react';
 import type { ShopProductDetail } from '../../../api/modules/shopProduct';
-import { Badge } from '../../../components/ui/Badge';
-import { Card } from '../../../components/ui/Card';
 import { Skeleton } from '../../../components/ui/Skeleton';
 import type { SkuMode } from '../types';
 import {
@@ -55,6 +53,7 @@ export const ProductOverviewSection = ({
 
   const serviceItems = buildShopProductServiceItems(product);
   const productDescription = buildShopProductDescription(product);
+  const productBadges = product ? getShopProductBadges(product) : [];
   const hasMultipleImages = gallery.length > 1;
   const currentImageIndex = gallery.length > 0 ? activeIndex + 1 : 1;
   const totalImages = Math.max(gallery.length, 1);
@@ -166,7 +165,7 @@ export const ProductOverviewSection = ({
       ) : (
         <div
           ref={carouselRef}
-          className="relative aspect-square w-full overflow-hidden bg-white dark:bg-gray-900"
+          className="relative aspect-square w-full overflow-hidden bg-white"
           onTouchCancel={handleTouchEnd}
           onTouchEnd={handleTouchEnd}
           onTouchMove={handleTouchMove}
@@ -200,7 +199,7 @@ export const ProductOverviewSection = ({
                 ))}
               </div>
 
-              {hasMultipleImages && (
+              {hasMultipleImages ? (
                 <div className="pointer-events-none absolute inset-x-0 bottom-4 z-10 flex items-center justify-between px-4">
                   <div className="pointer-events-auto flex items-center gap-2">
                     {gallery.map((image, index) => {
@@ -217,15 +216,19 @@ export const ProductOverviewSection = ({
                             setIsInteracting(false);
                           }}
                           className={`h-2 rounded-full transition-all duration-300 ${
-                            isActive ? 'w-6 bg-white' : 'w-2 bg-white/45'
+                            isActive ? 'w-5 bg-white' : 'w-2 bg-white/55'
                           }`}
                         />
                       );
                     })}
                   </div>
-                  <div className="rounded-full bg-black/40 px-2 py-1 text-s text-white backdrop-blur-sm">
+                  <div className="rounded-full bg-black/40 px-2 py-1 text-xs text-white">
                     {currentImageIndex} / {totalImages}
                   </div>
+                </div>
+              ) : (
+                <div className="absolute bottom-4 right-4 rounded-full bg-black/40 px-2 py-1 text-xs text-white">
+                  {currentImageIndex} / {totalImages}
                 </div>
               )}
             </>
@@ -234,123 +237,113 @@ export const ProductOverviewSection = ({
               暂无商品图片
             </div>
           )}
-
-          {!hasMultipleImages && gallery.length > 0 && (
-            <div className="absolute bottom-4 right-4 rounded-full bg-black/40 px-2 py-1 text-s text-white backdrop-blur-sm">
-              {currentImageIndex} / {totalImages}
-            </div>
-          )}
         </div>
       )}
 
       {loading ? (
-        <Card className="m-4 space-y-3 p-4">
+        <div className="bg-white px-4 py-4">
           <Skeleton className="h-8 w-40" />
-          <Skeleton className="h-4 w-full" />
-          <Skeleton className="h-4 w-2/3" />
-        </Card>
+          <Skeleton className="mt-4 h-4 w-full" />
+          <Skeleton className="mt-2 h-4 w-2/3" />
+        </div>
       ) : (
-        <Card className="mx-4 mt-4 rounded-t-[16px] rounded-b-none border-b border-border-light p-4 shadow-none">
-          <div className="mb-2 flex items-end justify-between">
-            <div>
-              <div className="text-2xl font-bold leading-tight text-primary-start">
+        <div className="bg-white px-4 py-4">
+          <div className="flex items-start justify-between gap-4">
+            <div className="min-w-0 flex-1">
+              <div className="text-[28px] font-bold leading-none text-primary-start">
                 {product ? getShopProductPrimaryPrice(product) : '价格待定'}
               </div>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {productBadges.map((badge) => (
+                  <span
+                    key={badge}
+                    className={`rounded-md border px-2 py-1 text-xs leading-none ${
+                      badge === '消费金'
+                        ? 'border-[#f4d38d] bg-[#fff7df] text-[#9a6b00]'
+                        : badge === '混合支付'
+                          ? 'border-[#f4c2b6] bg-[#fff5f1] text-primary-start'
+                          : 'border-[#e5e7eb] bg-[#fafafa] text-text-sub'
+                    }`}
+                  >
+                    {badge}
+                  </span>
+                ))}
+                {product?.category ? (
+                  <span className="rounded-md border border-[#e5e7eb] bg-[#fafafa] px-2 py-1 text-xs leading-none text-text-sub">
+                    {product.category}
+                  </span>
+                ) : null}
+                <span className="rounded-md border border-[#e5e7eb] bg-white px-2 py-1 text-xs leading-none text-text-sub">
+                  {product?.is_physical === '1' ? '实体商品' : '虚拟商品'}
+                </span>
+              </div>
             </div>
-            <div className="text-sm text-text-sub">库存 {product?.stock ?? 0}</div>
+            <div className="shrink-0 text-right text-xs leading-5 text-text-sub">
+              <div>已售 {product?.sales ?? 0}</div>
+              <div>库存 {product?.stock ?? 0}</div>
+            </div>
           </div>
 
-          <div className="mb-3 flex flex-wrap gap-1.5">
-            {(product ? getShopProductBadges(product) : []).map((badge) => (
-              <Badge key={badge} variant={badge === '消费金' ? 'score' : 'primary'}>
-                {badge}
-              </Badge>
-            ))}
-            {product?.category && (
-              <Badge variant="default" className="rounded-full">
-                {product.category}
-              </Badge>
-            )}
-          </div>
-        </Card>
-      )}
-
-      {loading ? (
-        <Card className="mx-4 mb-4 space-y-2 rounded-t-none p-4">
-          <Skeleton className="h-5 w-full" />
-          <Skeleton className="h-5 w-3/4" />
-          <Skeleton className="mt-2 h-4 w-1/2" />
-        </Card>
-      ) : (
-        <Card className="mx-4 mb-4 rounded-t-none p-4 shadow-soft">
-          <h1 className="mb-2 line-clamp-2 text-xl font-bold leading-snug text-text-main">
+          <h1 className="mt-4 line-clamp-2 text-[16px] font-semibold leading-6 text-text-main">
             {product?.name || '商品详情'}
           </h1>
-          {productDescription && (
-            <p className="mb-3 text-base text-text-sub">{productDescription}</p>
-          )}
-          <div className="flex items-center space-x-4 text-s text-text-aux">
-            <span>销量 {product?.sales ?? 0}</span>
-            <span>库存 {product?.stock ?? 0}</span>
-            <span>{product?.is_physical === '1' ? '实物商品' : '虚拟商品'}</span>
-          </div>
-        </Card>
+          {productDescription ? (
+            <p className="mt-2 text-sm leading-6 text-text-sub">{productDescription}</p>
+          ) : null}
+        </div>
       )}
 
       {loading ? (
-        <Card className="m-4 flex items-center justify-between p-4">
-          <div className="flex w-full items-center space-x-4">
-            <Skeleton className="h-4 w-8" />
-            <Skeleton className="h-4 w-48" />
-          </div>
-          <Skeleton className="h-4 w-4" />
-        </Card>
-      ) : (
-        <Card
-          className="m-4 flex cursor-pointer items-center justify-between p-4 transition-colors active:bg-bg-base"
-          onClick={() => onOpenSku('select')}
-        >
-          <div className="flex items-center">
-            <span className="w-12 shrink-0 text-base font-bold text-text-main">已选</span>
-            <span className="line-clamp-1 text-base text-text-main">
-              {selectedSummary || `x${quantity}`}
-            </span>
-          </div>
-          <ChevronRight size={16} className="shrink-0 text-text-aux" />
-        </Card>
-      )}
-
-      {loading ? (
-        <Card className="m-4 space-y-4 p-4">
-          <div className="flex items-center space-x-4">
-            <Skeleton className="h-4 w-8" />
+        <div className="mt-2 bg-white px-4 py-4">
+          <div className="flex items-center gap-4">
+            <Skeleton className="h-4 w-10" />
             <Skeleton className="h-4 w-full" />
           </div>
-          <div className="flex items-center space-x-4">
-            <Skeleton className="h-4 w-8" />
-            <Skeleton className="h-4 w-full" />
-          </div>
-        </Card>
+        </div>
       ) : (
-        <Card
-          className="m-4 cursor-pointer p-4 transition-colors active:bg-bg-base"
+        <div
+          className="mt-2 flex cursor-pointer items-center justify-between bg-white px-4 py-3 transition-colors active:bg-[#fafafa]"
           onClick={onOpenServiceDescription}
         >
-          <div className="flex items-start justify-between">
-            <div className="flex items-start">
-              <span className="mt-0.5 w-12 shrink-0 text-base font-bold text-text-main">服务</span>
-              <div className="flex flex-wrap gap-x-3 gap-y-2">
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-3">
+              <span className="shrink-0 text-sm text-text-sub">服务</span>
+              <div className="flex min-w-0 flex-wrap gap-x-3 gap-y-2">
                 {serviceItems.map((item) => (
-                  <span key={item} className="flex items-center text-sm text-text-sub">
+                  <span key={item} className="inline-flex items-center text-xs text-text-main">
                     <ShieldCheck size={12} className="mr-1 text-primary-start" />
                     {item}
                   </span>
                 ))}
               </div>
             </div>
-            <ChevronRight size={16} className="mt-0.5 shrink-0 text-text-aux" />
           </div>
-        </Card>
+          <ChevronRight size={16} className="ml-3 shrink-0 text-text-aux" />
+        </div>
+      )}
+
+      {loading ? (
+        <div className="mt-2 bg-white px-4 py-4">
+          <div className="flex items-center gap-4">
+            <Skeleton className="h-4 w-10" />
+            <Skeleton className="h-4 w-40" />
+          </div>
+        </div>
+      ) : (
+        <div
+          className="mt-2 flex cursor-pointer items-center justify-between bg-white px-4 py-3 transition-colors active:bg-[#fafafa]"
+          onClick={() => onOpenSku('select')}
+        >
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-3">
+              <span className="shrink-0 text-sm text-text-sub">已选</span>
+              <span className="line-clamp-1 text-sm text-text-main">
+                {selectedSummary || `x${quantity}`}
+              </span>
+            </div>
+          </div>
+          <ChevronRight size={16} className="ml-3 shrink-0 text-text-aux" />
+        </div>
       )}
     </>
   );
