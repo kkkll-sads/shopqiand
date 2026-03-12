@@ -1,4 +1,4 @@
-﻿import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
   AlertTriangle,
@@ -71,11 +71,15 @@ const RechargeCashierView = ({
   const [pollCount, setPollCount] = useState(0);
   const [pollResult, setPollResult] = useState<'pending' | 'success' | 'failure' | null>(null);
   const pollAbortRef = useRef<AbortController | null>(null);
+  const pollStateRef = useRef<'idle' | 'polling' | 'done'>('idle');
 
   useEffect(() => {
     setTimeLeft(expireSeconds);
     setHasOpenedPay(false);
   }, [expireSeconds]);
+
+  // 同步 ref
+  useEffect(() => { pollStateRef.current = pollState; }, [pollState]);
 
   /** 轮询后端订单状态（最多 maxAttempts 次，每次间隔 intervalMs） */
   const startPolling = useCallback(async (maxAttempts = 5, intervalMs = 3000) => {
@@ -138,14 +142,14 @@ const RechargeCashierView = ({
     if (!hasOpenedPay) return undefined;
 
     const handleVisibility = () => {
-      if (document.visibilityState === 'visible' && pollState === 'idle') {
+      if (document.visibilityState === 'visible' && pollStateRef.current === 'idle') {
         void startPolling();
       }
     };
 
     document.addEventListener('visibilitychange', handleVisibility);
     return () => document.removeEventListener('visibilitychange', handleVisibility);
-  }, [hasOpenedPay, pollState, startPolling]);
+  }, [hasOpenedPay, startPolling]);
 
   /** 组件卸载时中止轮询 */
   useEffect(() => {

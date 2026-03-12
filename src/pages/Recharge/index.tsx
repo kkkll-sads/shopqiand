@@ -325,56 +325,22 @@ export function RechargePage() {
       const resolvedPaymentMethod = result.paymentMethod ?? 'online';
 
       if (resolvedPaymentMethod !== 'offline') {
-        const submitResult = await rechargeApi.submitOrder({
-          amount: numAmount,
-          matchedAccountId: result.matchedAccountId,
-          paymentMethod: 'online',
-          paymentType: result.account.type,
-        });
-
-        const cashierParams = new URLSearchParams({
-          scene: 'recharge',
-          amount: String(numAmount),
-          order_no: submitResult.orderNo || String(submitResult.orderId || ''),
-          order_id: String(submitResult.orderId || 0),
-          expire_seconds: '300',
-          ...(submitResult.payUrl ? { pay_url: submitResult.payUrl } : {}),
-        });
-
-        showToast({
-          message: '支付订单已创建，正在跳转收银台',
-          type: 'success',
-          duration: 2400,
-        });
-
+        // 先跳转匹配动画页，在动画期间提交订单，成功后进入收银台
         setAmount('');
         resetMatchState();
         void Promise.allSettled([reloadProfile(), reloadRecentOrders()]);
         navigate('/matching', {
           state: {
-            nextPath: `/cashier?${cashierParams.toString()}`,
-            delayMs: 1800,
+            rechargeTask: {
+              amount: numAmount,
+              matchedAccountId: result.matchedAccountId,
+              paymentType: result.account.type,
+            },
           },
         });
         return;
       }
 
-      if (resolvedPaymentMethod !== 'offline') {
-        try {
-          const submitResult = await submitMatchedOrder({
-            account: result.account,
-            matchedId: result.matchedAccountId,
-            paymentMethod: 'online',
-            successMessage: '支付订单已创建，正在打开支付页面',
-          });
-
-          if (submitResult?.payUrl) {
-            return;
-          }
-        } catch {
-          // Fall back to manual flow below when auto-submit fails.
-        }
-      }
 
       setMatchedAccount(result.account);
       setMatchedAccountId(result.matchedAccountId);
