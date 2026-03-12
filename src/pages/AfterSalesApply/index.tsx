@@ -19,6 +19,7 @@ import { Card } from '../../components/ui/Card';
 import { ErrorState } from '../../components/ui/ErrorState';
 import { Skeleton } from '../../components/ui/Skeleton';
 import { useFeedback } from '../../components/ui/FeedbackProvider';
+import { isAfterSaleEligibleOrderStatus } from '../../features/order/status';
 import { resolveShopProductImageUrl } from '../../features/shop-product/utils';
 import { useAppNavigate } from '../../lib/navigation';
 
@@ -247,7 +248,7 @@ export const AfterSalesApplyPage = () => {
 
     const canApplyAfterSale =
       (order.product_type === 'physical' || order.product_type === 'mixed') &&
-      (order.status === 'shipped' || order.status === 'completed') &&
+      isAfterSaleEligibleOrderStatus(order.status) &&
       !order.after_sale_status;
 
     if (!canApplyAfterSale) {
@@ -261,7 +262,7 @@ export const AfterSalesApplyPage = () => {
               <div className="min-w-0 flex-1">
                 <h2 className="text-lg font-semibold text-text-main">当前订单暂不可申请售后</h2>
                 <p className="mt-2 text-sm leading-6 text-text-sub">
-                  仅实物类且已发货或已完成的订单支持在线申请售后。你可以先回到订单详情查看当前状态。
+                  仅实物类且处于待收货或已完成状态的订单支持在线申请售后。你可以先回到订单详情查看当前状态。
                 </p>
               </div>
             </div>

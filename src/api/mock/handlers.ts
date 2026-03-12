@@ -1,4 +1,4 @@
-import type { MockHandlerMap } from '../core/client';
+import type { MockHandler, MockHandlerMap } from '../core/client';
 import type { MessageCategory, MessageScope, MessageSummary } from '../modules/message';
 
 /**
@@ -12,6 +12,39 @@ function asRecord(value: unknown): Record<string, unknown> {
 
 function readValue(value: unknown) {
   return typeof value === 'string' ? value.trim() : '';
+}
+
+function isMockEnvelope(payload: unknown): payload is Record<string, unknown> & { code: number | string; data: unknown } {
+  return Boolean(payload) && typeof payload === 'object' && 'code' in payload && 'data' in payload;
+}
+
+function normalizeMockEnvelope(payload: unknown) {
+  if (!isMockEnvelope(payload)) {
+    return payload;
+  }
+
+  const message =
+    typeof payload.message === 'string'
+      ? payload.message
+      : typeof payload.msg === 'string'
+        ? payload.msg
+        : '';
+
+  return {
+    ...payload,
+    message,
+    msg: typeof payload.msg === 'string' ? payload.msg : message,
+    time: typeof payload.time === 'number' ? payload.time : Math.floor(Date.now() / 1000),
+  };
+}
+
+function wrapMockHandlers(handlers: MockHandlerMap): MockHandlerMap {
+  return Object.fromEntries(
+    Object.entries(handlers).map(([key, handler]) => [
+      key,
+      (async (context) => normalizeMockEnvelope(await handler(context))) as MockHandler,
+    ]),
+  );
 }
 
 const mockAnnouncements = [
@@ -219,7 +252,7 @@ function filterMockMessages(
   });
 }
 
-export const mockHandlers: MockHandlerMap = {
+export const mockHandlers: MockHandlerMap = wrapMockHandlers({
   'GET /api/Announcement/index': ({ url }) => {
     const type = url.searchParams.get('type');
     const list = type ? mockAnnouncements.filter((item) => item.type === type) : mockAnnouncements;
@@ -625,4 +658,4 @@ export const mockHandlers: MockHandlerMap = {
     message: 'ok',
     data: { list: [], balance_available: '0', score: '0' },
   }),
-};
+});

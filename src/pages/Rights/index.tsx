@@ -612,35 +612,35 @@ export function RightsPage() {
         <div className="grid grid-cols-3 gap-2 rounded-[22px] bg-[#F7F1F1] p-2 shadow-inner dark:bg-gray-800/80">
           <button
             type="button"
-            className={`rounded-[16px] px-2 py-3 text-left transition-all ${activeTab === 'apply'
+            className={`flex min-h-[44px] items-center justify-center rounded-[16px] px-2 py-3 text-center transition-all ${activeTab === 'apply'
               ? 'bg-gradient-to-r from-primary-start to-primary-end text-white shadow-[0_10px_24px_rgba(239,68,68,0.22)]'
               : 'bg-transparent text-text-sub'
               }`}
             onClick={() => setActiveTab('apply')}
           >
-            <div className="text-[15px] font-bold leading-5">确权申请</div>
+            <div className="w-full text-center text-[15px] font-bold leading-5">确权申请</div>
 
           </button>
           <button
             type="button"
-            className={`rounded-[16px] px-2 py-3 text-left transition-all ${activeTab === 'unlock'
+            className={`flex min-h-[44px] items-center justify-center rounded-[16px] px-2 py-3 text-center transition-all ${activeTab === 'unlock'
               ? 'bg-gradient-to-r from-primary-start to-primary-end text-white shadow-[0_10px_24px_rgba(239,68,68,0.22)]'
               : 'bg-transparent text-text-sub'
               }`}
             onClick={() => setActiveTab('unlock')}
           >
-            <div className="text-[15px] font-bold leading-5">旧资产解锁</div>
+            <div className="w-full text-center text-[15px] font-bold leading-5">旧资产解锁</div>
 
           </button>
           <button
             type="button"
-            className={`rounded-[16px] px-2 py-3 text-left transition-all ${activeTab === 'growth'
+            className={`flex min-h-[44px] items-center justify-center rounded-[16px] px-2 py-3 text-center transition-all ${activeTab === 'growth'
               ? 'bg-gradient-to-r from-primary-start to-primary-end text-white shadow-[0_10px_24px_rgba(239,68,68,0.22)]'
               : 'bg-transparent text-text-sub'
               }`}
             onClick={() => setActiveTab('growth')}
           >
-            <div className="text-[15px] font-bold leading-5">成长权益</div>
+            <div className="w-full text-center text-[15px] font-bold leading-5">成长权益</div>
 
           </button>
         </div>

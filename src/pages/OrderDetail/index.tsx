@@ -15,6 +15,10 @@ import type { ShopOrderDetailResponse, ShopOrderItemDetail } from '../../api/mod
 import { ApiError, getErrorMessage } from '../../api/core/errors';
 import { useFeedback } from '../../components/ui/FeedbackProvider';
 import { buildShopProductPath, resolveShopProductImageUrl } from '../../features/shop-product/utils';
+import {
+  isAfterSaleEligibleOrderStatus,
+  isPendingReceiptOrderStatus,
+} from '../../features/order/status';
 
 function formatTime(ts: number): string {
   if (!ts) return '--';
@@ -52,13 +56,22 @@ const STATUS_CONFIG: Record<string, { icon: typeof Package; gradient: string; bg
   pending: { icon: Clock, gradient: 'from-amber-500 to-orange-500', bgColor: 'bg-amber-50' },
   paid: { icon: CreditCard, gradient: 'from-blue-500 to-indigo-500', bgColor: 'bg-blue-50' },
   shipped: { icon: Truck, gradient: 'from-cyan-500 to-blue-500', bgColor: 'bg-cyan-50' },
+  pending_confirm: { icon: Truck, gradient: 'from-cyan-500 to-blue-500', bgColor: 'bg-cyan-50' },
+  pending_receive: { icon: Truck, gradient: 'from-cyan-500 to-blue-500', bgColor: 'bg-cyan-50' },
   completed: { icon: CheckCircle2, gradient: 'from-emerald-500 to-green-500', bgColor: 'bg-emerald-50' },
   cancelled: { icon: XCircle, gradient: 'from-gray-400 to-gray-500', bgColor: 'bg-gray-50' },
   refunded: { icon: RotateCcw, gradient: 'from-gray-400 to-gray-500', bgColor: 'bg-gray-50' },
 };
 
 function getActiveSteps(status: string): number {
-  const map: Record<string, number> = { pending: 1, paid: 2, shipped: 3, completed: 4 };
+  const map: Record<string, number> = {
+    pending: 1,
+    paid: 2,
+    shipped: 3,
+    pending_confirm: 3,
+    pending_receive: 3,
+    completed: 4,
+  };
   return map[status] ?? 0;
 }
 
@@ -201,10 +214,10 @@ export const OrderDetailPage = () => {
   };
 
   const hasBottomBar = !loading && !error && order &&
-    (order.status === 'pending' || order.status === 'shipped' || order.status === 'completed');
+    (order.status === 'pending' || isPendingReceiptOrderStatus(order.status) || order.status === 'completed');
   const canApplyAfterSale = order
     ? (order.product_type === 'physical' || order.product_type === 'mixed') &&
-      (order.status === 'shipped' || order.status === 'completed') &&
+      isAfterSaleEligibleOrderStatus(order.status) &&
       !order.after_sale_status
     : false;
 
@@ -499,7 +512,7 @@ export const OrderDetailPage = () => {
         </div>
       )}
 
-      {!loading && !error && order?.status === 'shipped' && (
+      {!loading && !error && order && isPendingReceiptOrderStatus(order.status) && (
         <div className="absolute bottom-0 left-0 right-0 bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm border-t border-gray-100 dark:border-gray-800 px-4 py-3 pb-safe flex justify-end items-center gap-2.5 z-40">
           {order.after_sale_status === 'processing' ? (
             <button

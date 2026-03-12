@@ -101,9 +101,14 @@ export const RegisterPage = () => {
         username: normalizedMobile,
       });
 
-      persistAuthSession(session, {
+      const didPersistSession = persistAuthSession(session, {
         persistent: true,
       });
+      if (!didPersistSession) {
+        showToast({ message: '注册成功，请重新登录', type: 'warning' });
+        navigate('/login', { replace: true });
+        return;
+      }
 
       showToast({ message: '注册成功', type: 'success' });
       navigate(resolveAuthRedirectPath(readRedirectFromState(location.state) ?? session.routePath), {

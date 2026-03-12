@@ -203,9 +203,13 @@ export const LoginPage = () => {
 
       const session = createAuthSession(response, sessionIdentity);
 
-      persistAuthSession(session, {
+      const didPersistSession = persistAuthSession(session, {
         persistent: remember,
       });
+      if (!didPersistSession) {
+        showToast({ message: '登录状态获取失败，请重试', type: 'error' });
+        return;
+      }
 
       showToast({ message: '登录成功', type: 'success' });
       navigate(resolveAuthRedirectPath(readRedirectFromState(location.state) ?? session.routePath), {

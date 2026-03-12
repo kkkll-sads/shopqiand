@@ -71,13 +71,13 @@ function resolveActionPath(path: string, message: MessageItem): string | null {
 }
 
 export function resolveMessageTitle(message: MessageItem): string {
-  if (message.sourceType === 'announcement' && message.content) {
-    return message.content;
-  }
-
   const title = message.title.trim();
   if (title) {
     return title;
+  }
+
+  if (message.sourceType === 'announcement' && message.content) {
+    return message.content;
   }
 
   return MESSAGE_TYPE_TITLES[message.type] ?? '消息通知';
@@ -123,6 +123,34 @@ export function resolveMessageTargetPath(message: MessageItem): string | null {
 
   if (message.sourceType === 'user_withdraw' || message.bizType === 'user_withdraw') {
     return getBillingPath('withdraw');
+  }
+
+  return null;
+}
+
+export function getMessageDetailPath(messageKey: string) {
+  return `/messages/detail/${encodeURIComponent(messageKey)}`;
+}
+
+export function resolveMessageActionText(message: MessageItem): string | null {
+  if (message.sourceType === 'announcement' || message.bizType === 'announcement') {
+    return '查看公告';
+  }
+
+  if (message.sourceType === 'shop_order' || message.bizType === 'shop_order') {
+    return '查看订单';
+  }
+
+  if (message.sourceType === 'recharge_order' || message.bizType === 'recharge_order') {
+    return '查看充值记录';
+  }
+
+  if (message.sourceType === 'user_withdraw' || message.bizType === 'user_withdraw') {
+    return '查看提现记录';
+  }
+
+  if (message.actionPath.trim()) {
+    return '前往相关页面';
   }
 
   return null;

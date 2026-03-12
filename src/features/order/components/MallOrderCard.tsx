@@ -4,6 +4,11 @@ import type { ShopOrderListItem } from '../../../api';
 import { resolveShopProductImageUrl } from '../../shop-product/utils';
 import { Button } from '../../../components/ui/Button';
 import { Card } from '../../../components/ui/Card';
+import {
+  canShowOrderLogistics,
+  isAfterSaleEligibleOrderStatus,
+  isPendingReceiptOrderStatus,
+} from '../status';
 
 interface MallOrderCardProps {
   order: ShopOrderListItem;
@@ -47,15 +52,15 @@ function getOrderActions(order: ShopOrderListItem) {
   const afterSaleStatus = order.after_sale_status ?? '';
   const canApplyAfterSale =
     (order.product_type === 'physical' || order.product_type === 'mixed') &&
-    (status === 'shipped' || status === 'completed') &&
+    isAfterSaleEligibleOrderStatus(status) &&
     !afterSaleStatus;
   return {
     showPay: status === 'pending',
     showCancel: status === 'pending',
-    showLogistics: status === 'shipped' || status === 'completed',
+    showLogistics: canShowOrderLogistics(status),
     showRefund: canApplyAfterSale,
     showCancelAfterSale: afterSaleStatus === 'processing' && order.can_cancel_after_sale === 1,
-    showConfirm: status === 'shipped' && afterSaleStatus !== 'processing',
+    showConfirm: isPendingReceiptOrderStatus(status) && afterSaleStatus !== 'processing',
     showReview: status === 'completed' && !isCommented,
     showReviewed: status === 'completed' && isCommented,
   };

@@ -30,6 +30,7 @@ import { useRouteScrollRestoration } from '../../hooks/useRouteScrollRestoration
 import { useSessionState } from '../../hooks/useSessionState';
 import { useAppNavigate } from '../../lib/navigation';
 import {
+  getMessageDetailPath,
   resolveMessageSceneLabel,
   resolveMessageTargetPath,
   resolveMessageTitle,
@@ -114,17 +115,15 @@ function getMessageTone(message: MessageItem) {
   return 'bg-rose-50 text-rose-600 ring-1 ring-rose-100 dark:bg-rose-500/10 dark:text-rose-300 dark:ring-rose-500/20';
 }
 
-function buildPreview(message: MessageItem, title: string) {
-  if (message.sourceType === 'announcement' && title === message.content) {
-    return message.scene === 'dynamic' ? '查看活动详情' : '查看公告详情';
-  }
-
+function buildPreview(message: MessageItem) {
   return message.content || '查看消息详情';
 }
 
 function buildEmptyMessage(scope: MessageScope, category: MessageFilterCategory) {
   if (scope === 'unread') {
-    return category === 'all' ? '暂时没有未读消息' : `当前没有未读${categoryTabs.find((tab) => tab.id === category)?.label || ''}消息`;
+    return category === 'all'
+      ? '暂时没有未读消息'
+      : `当前没有未读${categoryTabs.find((tab) => tab.id === category)?.label || ''}消息`;
   }
 
   if (category === 'all') {
@@ -299,6 +298,8 @@ export const MessageCenterPage = () => {
     }
 
     const targetPath = resolveMessageTargetPath(message);
+    const detailPath = getMessageDetailPath(message.messageKey);
+    const destination = targetPath ?? detailPath;
 
     if (!message.isRead) {
       setPendingMessageKey(message.messageKey);
@@ -316,17 +317,12 @@ export const MessageCenterPage = () => {
 
     setPendingMessageKey(null);
 
-    if (!targetPath) {
-      showToast({ message: '当前消息暂无可查看页面', type: 'info' });
+    if (isExternalTarget(destination)) {
+      window.location.assign(destination);
       return;
     }
 
-    if (isExternalTarget(targetPath)) {
-      window.location.assign(targetPath);
-      return;
-    }
-
-    navigate(targetPath);
+    navigate(destination);
   }, [markMessageReadLocally, navigate, pendingMessageKey, showToast, syncSummary]);
 
   const categoryCards = useMemo(() => categoryTabs.map((tab) => ({
@@ -344,7 +340,7 @@ export const MessageCenterPage = () => {
               {summary.total}
             </h2>
             <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-              未读消息会按系统、订单、活动和资金四类自动聚合
+              未读消息按系统、订单、活动和资金四类自动聚合
             </p>
           </div>
           <div className="rounded-2xl bg-white/80 p-3 text-orange-500 shadow-sm ring-1 ring-orange-100 dark:bg-white/5 dark:text-orange-300 dark:ring-white/10">
@@ -467,7 +463,7 @@ export const MessageCenterPage = () => {
 
   const renderMessageItem = (message: MessageItem) => {
     const title = resolveMessageTitle(message);
-    const preview = buildPreview(message, title);
+    const preview = buildPreview(message);
     const sceneLabel = resolveMessageSceneLabel(message);
     const isPending = pendingMessageKey === message.messageKey;
 

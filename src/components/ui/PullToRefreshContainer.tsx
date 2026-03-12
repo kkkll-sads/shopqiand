@@ -25,6 +25,16 @@ interface PullToRefreshContainerProps {
   onRefresh: () => Promise<unknown>;
 }
 
+function canScroll(element: HTMLElement) {
+  const style = window.getComputedStyle(element);
+  const overflowY = style.overflowY;
+
+  return (
+    (overflowY === 'auto' || overflowY === 'scroll') &&
+    element.scrollHeight > element.clientHeight
+  );
+}
+
 export const PullToRefreshContainer = ({
   children,
   className = '',
@@ -61,10 +71,24 @@ export const PullToRefreshContainer = ({
     onRefreshRef.current = onRefresh;
   }, [onRefresh]);
 
-  /** 查找第一个可滚动的子元素 */
-  const findScrollable = useCallback((): HTMLElement | null => {
+  /** 查找当前手势命中的可滚动容器，包含容器本身 */
+  const findScrollable = useCallback((target?: EventTarget | null): HTMLElement | null => {
     const wrapper = wrapperRef.current;
     if (!wrapper) return null;
+
+    if (canScroll(wrapper)) {
+      return wrapper;
+    }
+
+    let current = target instanceof HTMLElement ? target : null;
+    while (current && current !== wrapper) {
+      if (canScroll(current)) {
+        return current;
+      }
+
+      current = current.parentElement;
+    }
+
     return wrapper.querySelector<HTMLElement>('[class*="overflow-y"]');
   }, []);
 
@@ -96,7 +120,7 @@ export const PullToRefreshContainer = ({
         }
 
         // 向下移动但滚动容器不在顶部 → 正常滚动
-        const scrollable = findScrollable();
+        const scrollable = findScrollable(event.target);
         if (scrollable && scrollable.scrollTop > 0) {
           gestureRef.current = 'scrolling';
           return;

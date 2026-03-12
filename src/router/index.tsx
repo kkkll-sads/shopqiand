@@ -39,6 +39,7 @@ const AddressPage = lazy(() => import('../pages/Address').then(m => ({ default: 
 const PaymentAccountsPage = lazy(() => import('../pages/PaymentAccounts').then(m => ({ default: m.PaymentAccountsPage })));
 const FavoritesPage = lazy(() => import('../pages/Favorites').then(m => ({ default: m.FavoritesPage })));
 const MessageCenterPage = lazy(() => import('../pages/MessageCenter').then(m => ({ default: m.MessageCenterPage })));
+const MessageDetailPage = lazy(() => import('../pages/MessageDetail').then(m => ({ default: m.MessageDetailPage })));
 const AnnouncementPage = lazy(() => import('../pages/Announcement').then(m => ({ default: m.AnnouncementPage })));
 const AnnouncementDetailPage = lazy(() => import('../pages/AnnouncementDetail').then(m => ({ default: m.AnnouncementDetailPage })));
 const HelpCenterPage = lazy(() => import('../pages/HelpCenter').then(m => ({ default: m.HelpCenterPage })));
@@ -252,6 +253,7 @@ export const router = createHashRouter([
       { path: 'payment-accounts', element: <Lazy><PaymentAccountsPage /></Lazy> },
       { path: 'favorites', element: <Lazy><FavoritesPage /></Lazy> },
       { path: 'messages', element: <Lazy><MessageCenterPage /></Lazy> },
+      { path: 'messages/detail/:messageKey', element: <Lazy><MessageDetailPage /></Lazy> },
       { path: 'friends', element: <Lazy><FriendsPage /></Lazy> },
       { path: 'invite', element: <Lazy><InvitePage /></Lazy> },
       { path: 'settings', element: <Lazy><SettingsPage /></Lazy> },

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useAppNavigate } from '../../../lib/navigation';
+import { getErrorMessage } from '../../../api/core/errors';
 import { getAuthSessionSnapshot } from '../../../lib/auth';
 import { useFeedback } from '../../../components/ui/FeedbackProvider';
 import {
@@ -169,8 +170,8 @@ export function useSignInPage(): UseSignInPageResult {
       } catch {
         // Ignore refresh failures after a successful sign-in.
       }
-    } catch (error: any) {
-      showToast(error?.msg || error?.message || '签到失败，请重试');
+    } catch (error) {
+      showToast(getErrorMessage(error) || '签到失败，请重试');
     }
   }, [applyInfoData, applyProgressData, goTo, hasSignedIn, isLoggedIn, showToast]);
 

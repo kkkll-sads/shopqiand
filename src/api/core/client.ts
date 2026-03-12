@@ -12,6 +12,7 @@ interface ApiEnvelope<TData> {
   biz_code?: EnvelopeCode;
   message?: string;
   msg?: string;
+  time?: number | string;
   data: TData;
 }
 
@@ -295,7 +296,7 @@ export class HttpClient {
       enableMock: options.enableMock ?? false,
       getAccessToken: options.getAccessToken,
       getAuthHeaders: options.getAuthHeaders,
-      isSuccessCode: options.isSuccessCode ?? ((code) => code === 0),
+      isSuccessCode: options.isSuccessCode ?? ((code) => code === 1 || code === '1'),
       mockDelay: options.mockDelay ?? 0,
       mockHandlers: options.mockHandlers ?? {},
       timeout: options.timeout ?? 10000,

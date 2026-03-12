@@ -63,6 +63,18 @@ function pickObject(source: UnknownRecord | undefined, keys: string[]): UnknownR
   return undefined;
 }
 
+function resolveSessionToken(
+  session: Pick<AuthSession, 'accessToken' | 'baUserToken'> | null | undefined,
+) {
+  return readString(session?.baUserToken) ?? readString(session?.accessToken);
+}
+
+function hasValidAuthSession(
+  session: Pick<AuthSession, 'accessToken' | 'baUserToken' | 'isAuthenticated'> | null | undefined,
+) {
+  return Boolean(session?.isAuthenticated && resolveSessionToken(session));
+}
+
 function safeParse(value: string | null): AuthSession | null {
   if (!value) {
     return null;
@@ -74,7 +86,7 @@ function safeParse(value: string | null): AuthSession | null {
       return null;
     }
 
-    return parsed.isAuthenticated ? parsed : null;
+    return hasValidAuthSession(parsed) ? parsed : null;
   } catch {
     return null;
   }
@@ -180,11 +192,13 @@ export function createAuthSession(
     pickString(source, ['routePath', 'route_path', 'redirect', 'redirectPath']) ??
     pickString(nestedUserInfo, ['routePath', 'route_path']);
 
+  const isAuthenticated = Boolean(resolveSessionToken({ accessToken, baUserToken }));
+
   return {
     accessToken,
     baToken,
     baUserToken,
-    isAuthenticated: true,
+    isAuthenticated,
     routePath,
     userInfo,
   };
@@ -193,22 +207,29 @@ export function createAuthSession(
 export function persistAuthSession(
   session: Omit<AuthSession, 'persistent'>,
   options: { persistent: boolean },
-) {
+): boolean {
   const storages = getBrowserStorages();
   if (!storages) {
-    return;
+    return false;
   }
 
+  const isAuthenticated = Boolean(resolveSessionToken(session));
   const nextSession: AuthSession = {
     ...session,
-    isAuthenticated: true,
+    isAuthenticated,
     persistent: options.persistent,
   };
 
   removeSessionFromStorage(storages.local);
   removeSessionFromStorage(storages.session);
+  if (!nextSession.isAuthenticated) {
+    dispatchAuthSessionChange();
+    return false;
+  }
+
   writeSessionToStorage(options.persistent ? storages.local : storages.session, nextSession);
   dispatchAuthSessionChange();
+  return true;
 }
 
 export function clearAuthSession() {
