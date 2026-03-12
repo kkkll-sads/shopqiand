@@ -29,6 +29,9 @@ export interface MessageItem {
   icon: ElementType;
   color: string;
   bgColor: string;
+  scene?: string;
+  actionPath?: string;
+  sourceType?: string;
   sourceId?: string | number;
 }
 

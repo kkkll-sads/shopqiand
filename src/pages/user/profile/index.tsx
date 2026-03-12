@@ -5,11 +5,12 @@ import {
   fetchShopOrderStatistics,
   type ShopOrderStatistics,
   fetchSignInInfo,
+  fetchMessageCenterUnreadCount,
 } from '@/services';
 import { getStoredToken } from '@/services/client';
 import type { UserInfo } from '@/types';
 import { useAuthStore } from '@/stores/authStore';
-import { useUnreadNewsCount } from '@/stores/appStore';
+import { useAppStore } from '@/stores/appStore';
 import { isSuccess, extractData } from '@/utils/apiHelpers';
 import { useErrorHandler } from '@/hooks/useErrorHandler';
 import { useNavigate } from 'react-router-dom';
@@ -29,8 +30,9 @@ import {
 
 const Profile: React.FC<{ unreadCount?: number }> = ({ unreadCount: propUnreadCount }) => {
   const navigate = useNavigate();
-  const storeUnreadCount = useUnreadNewsCount();
-  const unreadCount = propUnreadCount ?? storeUnreadCount;
+  const backendUnreadCount = useAppStore((state) => state.extraUnreadCount);
+  const setExtraUnreadCount = useAppStore((state) => state.setExtraUnreadCount);
+  const unreadCount = propUnreadCount ?? backendUnreadCount;
 
   const { errorMessage, hasError, handleError, clearError } = useErrorHandler();
 
@@ -135,9 +137,22 @@ const Profile: React.FC<{ unreadCount?: number }> = ({ unreadCount: propUnreadCo
       }
     };
 
+    const loadMessageCenterUnreadCount = async () => {
+      try {
+        const res = await fetchMessageCenterUnreadCount(token);
+        const unreadSummary = extractData(res);
+        if (unreadSummary) {
+          setExtraUnreadCount(unreadSummary.total || 0);
+        }
+      } catch (e) {
+        errorLog('Profile', 'load message center unread count failed', e);
+      }
+    };
+
     loadProfile();
     loadOrderStats();
     loadSignInStatus();
+    loadMessageCenterUnreadCount();
 
     const handleFocus = () => {
       const now = Date.now();
@@ -146,6 +161,7 @@ const Profile: React.FC<{ unreadCount?: number }> = ({ unreadCount: propUnreadCo
       }
       lastSignInStatusFetchRef.current = now;
       loadSignInStatus();
+      loadMessageCenterUnreadCount();
     };
     window.addEventListener('focus', handleFocus);
 

@@ -7,28 +7,32 @@ import { useStateMachine } from '@/hooks/useStateMachine';
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
 import { getStoredToken } from '@/services/client';
 import { LoadingEvent, LoadingState } from '@/types/states';
-import { debugLog, errorLog } from '@/utils/logger';
+import { debugLog } from '@/utils/logger';
+import { extractData } from '@/utils/apiHelpers';
+import { useNotification } from '@/context/NotificationContext';
+import { useAppStore } from '@/stores/appStore';
 import { loadMessagesBatch } from './message-center/loader';
-import {
-  clearCachedMessages,
-  getCachedMessages,
-  getNewsReadIds,
-  getReadMessageIds,
-  saveNewsReadIds,
-  saveReadMessageIds,
-  setCachedMessages,
-  syncCachedReadState,
-} from './message-center/storage';
 import { formatMessageTime } from './message-center/time';
 import type { MessageItem } from './message-center/types';
+import { markMessageCenterRead, type MessageCenterSummary } from '@/services';
 
-const MIN_EXPECTED_ITEMS = 3;
+const DEFAULT_SUMMARY: MessageCenterSummary = {
+  system: 0,
+  order: 0,
+  activity: 0,
+  finance: 0,
+  total: 0,
+};
 
 const MessageCenter: React.FC = () => {
   const navigate = useNavigate();
+  const { showToast } = useNotification();
+  const setExtraUnreadCount = useAppStore((state) => state.setExtraUnreadCount);
+
   const [error, setError] = useState<string | null>(null);
   const [messages, setMessages] = useState<MessageItem[]>([]);
   const [activeTab, setActiveTab] = useState<'all' | 'unread'>('all');
+  const [summary, setSummary] = useState<MessageCenterSummary>(DEFAULT_SUMMARY);
 
   const loadMachine = useStateMachine<LoadingState, LoadingEvent>({
     initial: LoadingState.IDLE,
@@ -50,25 +54,21 @@ const MessageCenter: React.FC = () => {
   });
 
   const loading = loadMachine.state === LoadingState.LOADING;
-
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
 
-  const handleLoadMore = () => {
-    if (loading || isLoadingMore || !hasMore) {
-      return;
-    }
-    setIsLoadingMore(true);
-    setPage((prev) => prev + 1);
+  const applySummary = (nextSummary?: MessageCenterSummary | null) => {
+    const safeSummary = nextSummary || DEFAULT_SUMMARY;
+    setSummary(safeSummary);
+    setExtraUnreadCount(safeSummary.total || 0);
   };
 
-  const bottomRef = useInfiniteScroll(handleLoadMore, hasMore, loading || isLoadingMore);
-
-  const loadMessages = async (pageNum: number, append: boolean = false) => {
+  const loadMessages = async (pageNum: number, scope: 'all' | 'unread', append = false) => {
     const token = getStoredToken();
     if (!token) {
       setError('请先登录');
+      applySummary(DEFAULT_SUMMARY);
       loadMachine.send(LoadingEvent.ERROR);
       return;
     }
@@ -79,147 +79,125 @@ const MessageCenter: React.FC = () => {
     setError(null);
 
     try {
-      const readIds = getReadMessageIds();
-      const allMessages = await loadMessagesBatch({ pageNum, token, readIds });
+      const result = await loadMessagesBatch({ pageNum, scope });
 
-      if (append) {
-        setMessages((prev) => [...prev, ...allMessages]);
-      } else {
-        setMessages(allMessages);
-        if (pageNum === 1) {
-          setCachedMessages(allMessages);
-        }
-      }
-
-      setHasMore(allMessages.length >= MIN_EXPECTED_ITEMS);
+      setMessages((prev) => (append ? [...prev, ...result.list] : result.list));
+      setHasMore(result.hasMore);
+      applySummary(result.summary);
       loadMachine.send(LoadingEvent.SUCCESS);
     } catch (err: any) {
       setError(err?.msg || err?.message || '获取消息失败');
-      loadMachine.send(LoadingEvent.ERROR);
       setHasMore(false);
+      loadMachine.send(LoadingEvent.ERROR);
     } finally {
       setIsLoadingMore(false);
     }
   };
 
   useEffect(() => {
-    const cachedMessages = getCachedMessages();
-    if (cachedMessages) {
-      debugLog('MessageCenter', '使用缓存数据');
-      setMessages(syncCachedReadState(cachedMessages));
-      loadMachine.send(LoadingEvent.SUCCESS);
-      return;
-    }
-
-    loadMessages(1, false);
-  }, []);
-
-  useEffect(() => {
-    if (page > 1) {
-      loadMessages(page, true);
-    }
-  }, [page]);
-
-  const handleRefresh = () => {
-    clearCachedMessages();
+    debugLog('MessageCenter', `load tab: ${activeTab}`);
     setMessages([]);
     setPage(1);
     setHasMore(true);
     setIsLoadingMore(false);
-    loadMessages(1, false);
+    loadMessages(1, activeTab, false);
+  }, [activeTab]);
+
+  useEffect(() => {
+    if (page > 1) {
+      loadMessages(page, activeTab, true);
+    }
+  }, [page]);
+
+  const handleLoadMore = () => {
+    if (loading || isLoadingMore || !hasMore) {
+      return;
+    }
+
+    setIsLoadingMore(true);
+    setPage((prev) => prev + 1);
   };
 
-  const unreadCount = messages.filter((message) => !message.isRead).length;
-  const filteredMessages = activeTab === 'unread' ? messages.filter((message) => !message.isRead) : messages;
+  const bottomRef = useInfiniteScroll(handleLoadMore, hasMore, loading || isLoadingMore);
 
-  const handleMarkAsRead = (id: string, message?: MessageItem) => {
-    let updatedMessages = messages;
+  const unreadCount = summary.total || 0;
 
-    if (messages.some((item) => item.id === id)) {
-      updatedMessages = messages.map((item) => (item.id === id ? { ...item, isRead: true } : item));
+  const markSingleMessageAsRead = async (message: MessageItem): Promise<boolean> => {
+    if (message.isRead) {
+      return true;
     }
-
-    const targetMessage = message || messages.find((item) => item.id === id);
-    if (
-      targetMessage &&
-      (targetMessage.type === 'notice' || targetMessage.type === 'activity') &&
-      targetMessage.sourceId
-    ) {
-      try {
-        const newsReadIds = getNewsReadIds();
-        const newsId = String(targetMessage.sourceId);
-        if (!newsReadIds.includes(newsId)) {
-          saveNewsReadIds([...newsReadIds, newsId]);
-        }
-      } catch (error) {
-        errorLog('MessageCenter', '保存新闻已读状态失败', error);
-      }
-    }
-
-    const readIds = getReadMessageIds();
-    if (!readIds.includes(id)) {
-      saveReadMessageIds([...readIds, id]);
-    }
-
-    setMessages(updatedMessages);
-    setCachedMessages(updatedMessages);
-  };
-
-  const handleMarkAllAsRead = () => {
-    const updatedMessages = messages.map((item) => ({ ...item, isRead: true }));
-
-    const allIds = updatedMessages.map((item) => item.id);
-    saveReadMessageIds(allIds);
 
     try {
-      const newsReadIds = getNewsReadIds();
-      const nextNewsReadIds = [...newsReadIds];
+      const response = await markMessageCenterRead({ messageKey: message.id });
+      const data = extractData(response) as { count: number; summary: MessageCenterSummary } | null;
+      applySummary(data?.summary || DEFAULT_SUMMARY);
 
-      updatedMessages.forEach((item) => {
-        if ((item.type === 'notice' || item.type === 'activity') && item.sourceId) {
-          const newsId = String(item.sourceId);
-          if (!nextNewsReadIds.includes(newsId)) {
-            nextNewsReadIds.push(newsId);
-          }
-        }
-      });
+      if (activeTab === 'unread') {
+        setMessages((prev) => prev.filter((item) => item.id !== message.id));
+      } else {
+        setMessages((prev) => prev.map((item) => (item.id === message.id ? { ...item, isRead: true } : item)));
+      }
 
-      saveNewsReadIds(nextNewsReadIds);
-    } catch (error) {
-      errorLog('MessageCenter', '批量保存新闻已读状态失败', error);
+      return true;
+    } catch (err: any) {
+      showToast('error', '操作失败', err?.message || '标记已读失败');
+      return false;
     }
-
-    setMessages(updatedMessages);
-    setCachedMessages(updatedMessages);
   };
 
-  const handleMessageClick = (message: MessageItem) => {
-    handleMarkAsRead(message.id);
+  const handleMarkAllAsRead = async () => {
+    if (unreadCount <= 0) {
+      return;
+    }
+
+    try {
+      const response = await markMessageCenterRead();
+      const data = extractData(response) as { count: number; summary: MessageCenterSummary } | null;
+      applySummary(data?.summary || DEFAULT_SUMMARY);
+
+      if (activeTab === 'unread') {
+        setMessages([]);
+        setHasMore(false);
+      } else {
+        setMessages((prev) => prev.map((item) => ({ ...item, isRead: true })));
+      }
+
+      showToast('success', '操作成功', '已全部标记为已读');
+    } catch (err: any) {
+      showToast('error', '操作失败', err?.message || '全部已读失败');
+    }
+  };
+
+  const resolveActionPath = (message: MessageItem): string => {
+    if (message.actionPath) {
+      return message.actionPath;
+    }
 
     switch (message.type) {
       case 'notice':
       case 'activity':
-        if (message.sourceId) {
-          navigate(`/news/${String(message.sourceId)}`);
-        }
-        break;
+        return message.sourceId ? `/news/${String(message.sourceId)}` : '';
       case 'recharge':
-        if (message.sourceId) {
-          navigate(`/recharge-order/${String(message.sourceId)}`);
-        }
-        break;
+        return message.sourceId ? `/recharge-order/${String(message.sourceId)}` : '';
       case 'withdraw':
-        if (message.sourceId) {
-          navigate(`/withdraw-order/${String(message.sourceId)}`);
-        }
-        break;
+        return message.sourceId ? `/withdraw-order/${String(message.sourceId)}` : '';
       case 'shop_order':
-        if (message.sourceId) {
-          navigate(`/order/${String(message.sourceId)}`);
-        }
-        break;
+      case 'order':
+        return message.sourceId ? `/order/${String(message.sourceId)}` : '';
       default:
-        break;
+        return '';
+    }
+  };
+
+  const handleMessageClick = async (message: MessageItem) => {
+    const marked = await markSingleMessageAsRead(message);
+    if (!marked) {
+      return;
+    }
+
+    const actionPath = resolveActionPath(message);
+    if (actionPath) {
+      navigate(actionPath);
     }
   };
 
@@ -287,7 +265,7 @@ const MessageCenter: React.FC = () => {
           </div>
         ) : error ? (
           <EmptyState icon={<FileText size={48} className="text-gray-300" />} title="加载失败" description={error} />
-        ) : filteredMessages.length === 0 ? (
+        ) : messages.length === 0 ? (
           <EmptyState
             icon={<MessageSquare size={48} className="text-gray-300" />}
             title={activeTab === 'unread' ? '暂无未读消息' : '暂无消息'}
@@ -295,7 +273,7 @@ const MessageCenter: React.FC = () => {
           />
         ) : (
           <div className="space-y-3">
-            {filteredMessages.map((message) => (
+            {messages.map((message) => (
               <div
                 key={message.id}
                 className={`bg-white rounded-xl p-4 shadow-sm cursor-pointer active:bg-gray-50 transition-colors relative overflow-hidden ${
@@ -328,8 +306,7 @@ const MessageCenter: React.FC = () => {
         )}
 
         <div ref={bottomRef} className="h-4" />
-        {loading && hasMore && <div className="py-4 text-center text-xs text-gray-400">加载中...</div>}
-
+        {isLoadingMore && hasMore && <div className="py-4 text-center text-xs text-gray-400">加载中...</div>}
       </div>
     </PageContainer>
   );

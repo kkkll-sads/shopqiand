@@ -17,3 +17,4 @@ export * from './activity';
 export * from './activeRank';
 export * from './client';
 export * from './membershipCard';
+export * from './messageCenter';
