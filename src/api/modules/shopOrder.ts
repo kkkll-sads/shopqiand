@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @file 商城订单 API
  * @description 商城订单相关接口
  */
@@ -363,9 +363,12 @@ export const shopOrderApi = {
    * GET /api/shopOrder/detail
    * @param id 订单 ID
    */
-  detail(id: number, signal?: AbortSignal): Promise<ShopOrderDetailResponse> {
+  detail(
+    params: { id?: number; order_no?: string },
+    signal?: AbortSignal,
+  ): Promise<ShopOrderDetailResponse> {
     return http.get<ShopOrderDetailResponse>('/api/shopOrder/detail', {
-      query: { id },
+      query: params,
       signal,
     });
   },

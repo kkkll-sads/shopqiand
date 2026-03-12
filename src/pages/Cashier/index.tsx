@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+﻿import React, { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
   AlertTriangle,
@@ -280,7 +280,7 @@ const MallCashierView = () => {
     setModuleError(false);
 
     try {
-      const detail = await shopOrderApi.detail(orderId);
+      const detail = await shopOrderApi.detail({ id: orderId });
       setSnapshot({
         orderNo: detail.order_no ?? '',
         amount: Number(detail.total_amount) || 0,

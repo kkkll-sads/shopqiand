@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @file OrderDetail/index.tsx - 订单详情页面
  * @description 展示单个订单的详细信息，包括商品、物流、支付等。
  */
@@ -94,7 +94,7 @@ export const OrderDetailPage = () => {
     setLoading(true);
     setError(false);
     try {
-      const data = await shopOrderApi.detail(orderId);
+      const data = await shopOrderApi.detail({ id: orderId });
       setOrder(data);
     } catch (error) {
       if (error instanceof ApiError && error.message !== 'Network request failed.' && error.message !== 'Request timed out.') {

@@ -1,4 +1,4 @@
-import { createApiHeaders, type ApiAuthOptions } from '../core/headers';
+﻿import { createApiHeaders, type ApiAuthOptions } from '../core/headers';
 import { http } from '../http';
 import { resolveUploadUrl } from './upload';
 
@@ -364,5 +364,23 @@ export const rechargeApi = {
       status: readNumber(response.status),
       withdrawId: readNumber(response.withdraw_id),
     };
+  },
+
+  /**
+   * 充值订单详情
+   * GET /api/Recharge/detail
+   * @param params 订单 ID 或订单号（至少传一个）
+   */
+  async detail(
+    params: { id?: number; order_no?: string },
+    options: RechargeRequestOptions = {},
+  ): Promise<RechargeOrderRecord> {
+    const payload = await http.get<RechargeOrderRecordRaw>('/api/Recharge/detail', {
+      headers: createApiHeaders(options),
+      query: params,
+      signal: options.signal,
+    });
+
+    return normalizeRechargeOrderRecord(payload);
   },
 };

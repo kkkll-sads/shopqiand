@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type ChangeEvent } from 'react';
+﻿import { useCallback, useEffect, useRef, useState, type ChangeEvent } from 'react';
 import { useParams } from 'react-router-dom';
 import {
   AlertCircle,
@@ -98,7 +98,7 @@ export const AfterSalesApplyPage = () => {
     setLoading(true);
     setError(false);
     try {
-      const data = await shopOrderApi.detail(numericOrderId);
+      const data = await shopOrderApi.detail({ id: numericOrderId });
       setOrder(data);
       if (data.after_sale_status) {
         showToast({ message: '该订单已有售后申请', type: 'warning' });

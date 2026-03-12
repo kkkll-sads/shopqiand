@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
   AlertCircle,
@@ -7,29 +7,32 @@ import {
   Clock3,
   Copy,
   HeadphonesIcon,
+  Loader2,
   ShieldCheck,
   WifiOff,
 } from 'lucide-react';
+import { shopOrderApi, rechargeApi } from '../../api';
 import { useAppNavigate } from '../../lib/navigation';
 import { copyToClipboard } from '../../lib/clipboard';
 import { useFeedback } from '../../components/ui/FeedbackProvider';
 import { openCustomerServiceLink } from '../../lib/customerService';
 
-type RechargeStatus = 'pending' | 'success' | 'failure';
-type MallStatus = 'success' | 'failure';
+type CommonStatus = 'pending' | 'success' | 'failure';
 
 interface RechargeResultInfo {
   scene: 'recharge';
-  status: RechargeStatus;
+  status: CommonStatus;
   orderNo: string;
+  orderId: number;
   amount: number;
   errorMessage: string;
 }
 
 interface MallResultInfo {
   scene: 'mall';
-  status: MallStatus;
+  status: CommonStatus;
   orderNo: string;
+  orderId: number;
   amount: number;
   totalScore: number;
   payType: string;
@@ -51,6 +54,11 @@ export const PaymentResultPage = () => {
   const { goTo, goBack, navigate } = useAppNavigate();
   const { showToast } = useFeedback();
   const [offline, setOffline] = useState(false);
+  const [polling, setPolling] = useState(false);
+
+  /** 后端查询覆盖后的状态（仅用于覆盖 URL params 的 status） */
+  const [backendStatus, setBackendStatus] = useState<CommonStatus | null>(null);
+  const [backendOrderId, setBackendOrderId] = useState<number>(0);
 
   const handleOpenSupport = () => {
     void openCustomerServiceLink(({ duration, message, type }) => {
@@ -58,15 +66,17 @@ export const PaymentResultPage = () => {
     });
   };
 
-  const orderInfo = useMemo<ResultInfo>(() => {
+  /** 从 URL params 解析初始信息 */
+  const orderInfoFromParams = useMemo<ResultInfo>(() => {
     const scene = searchParams.get('scene') === 'recharge' ? 'recharge' : 'mall';
     const statusParam = searchParams.get('status');
     const orderNo = searchParams.get('order_no') ?? '';
+    const orderId = Number(searchParams.get('order_id') ?? '0');
     const amount = Number(searchParams.get('amount') ?? '0');
     const errorMessage = searchParams.get('error') ?? '支付失败，请稍后重试或联系客服。';
 
     if (scene === 'recharge') {
-      const status: RechargeStatus =
+      const status: CommonStatus =
         statusParam === 'success'
           ? 'success'
           : statusParam === 'failure'
@@ -77,6 +87,7 @@ export const PaymentResultPage = () => {
         scene,
         status,
         orderNo,
+        orderId,
         amount: Number.isFinite(amount) ? amount : 0,
         errorMessage,
       };
@@ -84,18 +95,83 @@ export const PaymentResultPage = () => {
 
     const totalScore = Number(searchParams.get('total_score') ?? '0');
     const payType = searchParams.get('pay_type') ?? '';
-    const status: MallStatus = statusParam === 'failure' ? 'failure' : 'success';
+    const status: CommonStatus =
+      statusParam === 'success'
+        ? 'success'
+        : statusParam === 'failure'
+          ? 'failure'
+          : 'pending';
 
     return {
       scene,
       status,
       orderNo,
+      orderId,
       amount: Number.isFinite(amount) ? amount : 0,
       totalScore: Number.isFinite(totalScore) ? totalScore : 0,
       payType,
       errorMessage,
     };
   }, [searchParams]);
+
+  /** 综合后的 orderInfo（backendStatus 覆盖 URL status） */
+  const orderInfo: ResultInfo = useMemo(() => {
+    const base = { ...orderInfoFromParams };
+    if (backendStatus) {
+      base.status = backendStatus;
+    }
+    if (backendOrderId) {
+      base.orderId = backendOrderId;
+    }
+    return base;
+  }, [orderInfoFromParams, backendStatus, backendOrderId]);
+
+  /** 查询后端获取权威状态 */
+  const pollBackendStatus = useCallback(async () => {
+    const { scene, orderNo, orderId } = orderInfoFromParams;
+    if (!orderNo && !orderId) return;
+
+    setPolling(true);
+    try {
+      if (scene === 'mall') {
+        const detail = await shopOrderApi.detail(
+          orderId ? { id: orderId } : { order_no: orderNo },
+        );
+        setBackendOrderId(detail.id ?? 0);
+        // 映射后端 status → 前端 CommonStatus
+        const statusMap: Record<string, CommonStatus> = {
+          pending: 'pending',
+          paid: 'success',
+          shipped: 'success',
+          completed: 'success',
+          cancelled: 'failure',
+          refunded: 'failure',
+        };
+        setBackendStatus(statusMap[detail.status] ?? 'pending');
+      } else {
+        const detail = await rechargeApi.detail(
+          orderId ? { id: orderId } : { order_no: orderNo },
+        );
+        setBackendOrderId(detail.id ?? 0);
+        // 充值: 0=待审核(pending), 1=已通过(success), 2=已拒绝(failure)
+        const rechargeStatusMap: Record<number, CommonStatus> = {
+          0: 'pending',
+          1: 'success',
+          2: 'failure',
+        };
+        setBackendStatus(rechargeStatusMap[detail.status] ?? 'pending');
+      }
+    } catch {
+      // 查询失败不覆盖，保持 URL 状态
+    } finally {
+      setPolling(false);
+    }
+  }, [orderInfoFromParams]);
+
+  /** 页面加载时自动查询一次后端状态 */
+  useEffect(() => {
+    void pollBackendStatus();
+  }, [pollBackendStatus]);
 
   const handleBack = () => {
     if (orderInfo.scene === 'recharge') {
@@ -117,6 +193,21 @@ export const PaymentResultPage = () => {
         type: ok ? 'success' : 'error',
       });
     });
+  };
+
+  /** 跳转到收银台重新支付（带 order_id） */
+  const handleRetryPay = () => {
+    if (orderInfo.scene === 'mall' && orderInfo.orderId) {
+      const params = new URLSearchParams({
+        scene: 'mall',
+        order_id: String(orderInfo.orderId),
+      });
+      navigate(`/cashier?${params.toString()}`, { replace: true });
+    } else if (orderInfo.scene === 'recharge') {
+      goTo('recharge');
+    } else {
+      goTo('cashier');
+    }
   };
 
   const renderHeader = (title: string) => (
@@ -150,7 +241,7 @@ export const PaymentResultPage = () => {
 
   const renderRechargeResult = () => {
     const statusMeta: Record<
-      RechargeStatus,
+      CommonStatus,
       {
         title: string;
         description: string;
@@ -218,8 +309,16 @@ export const PaymentResultPage = () => {
         <div className="flex-1 overflow-y-auto px-4 pb-10 pt-10">
           <div className="rounded-[28px] bg-white px-5 pb-6 pt-8 shadow-[0_18px_44px_rgba(15,23,42,0.06)]">
             <div className="flex flex-col items-center text-center">
-              {meta.icon}
-              <h2 className={`mt-5 text-[28px] font-semibold ${meta.accentClass}`}>{meta.title}</h2>
+              {polling ? (
+                <div className="flex h-20 w-20 items-center justify-center rounded-full bg-[#f0f4ff]">
+                  <Loader2 size={40} className="animate-spin text-[#6366f1]" />
+                </div>
+              ) : (
+                meta.icon
+              )}
+              <h2 className={`mt-5 text-[28px] font-semibold ${polling ? 'text-[#6b7280]' : meta.accentClass}`}>
+                {polling ? '查询中...' : meta.title}
+              </h2>
               <p className="mt-3 max-w-[280px] text-[14px] leading-6 text-[#6b7280]">{meta.description}</p>
             </div>
 
@@ -255,7 +354,8 @@ export const PaymentResultPage = () => {
               <button
                 type="button"
                 onClick={meta.primaryAction}
-                className="flex h-12 w-full items-center justify-center rounded-full bg-gradient-to-r from-[#ff1530] to-[#ff0019] text-[17px] font-semibold text-white shadow-[0_14px_28px_rgba(255,0,25,0.18)] active:scale-[0.99]"
+                disabled={polling}
+                className="flex h-12 w-full items-center justify-center rounded-full bg-gradient-to-r from-[#ff1530] to-[#ff0019] text-[17px] font-semibold text-white shadow-[0_14px_28px_rgba(255,0,25,0.18)] active:scale-[0.99] disabled:opacity-50"
               >
                 {meta.primaryText}
               </button>
@@ -272,6 +372,47 @@ export const PaymentResultPage = () => {
       </div>
     );
   };
+
+  const renderMallPending = () => (
+    <div className="flex flex-col items-center px-6 pt-12">
+      <div className="mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-[#fff3d8]">
+        {polling ? (
+          <Loader2 size={48} className="animate-spin text-[#f59e0b]" />
+        ) : (
+          <Clock3 size={48} className="text-[#f59e0b]" />
+        )}
+      </div>
+      <h2 className="mb-2 text-4xl font-bold text-[#f59e0b]">{polling ? '查询中...' : '待支付'}</h2>
+      <p className="mb-6 text-base text-text-sub">订单尚未支付，请前往收银台完成支付。</p>
+
+      <div className="mb-10 flex items-center text-base text-text-sub">
+        <span className="mr-2">订单号：{orderInfo.orderNo || '--'}</span>
+        {orderInfo.orderNo ? (
+          <button type="button" onClick={() => handleCopy(orderInfo.orderNo, '已复制订单号')} className="active:opacity-70">
+            <Copy size={14} />
+          </button>
+        ) : null}
+      </div>
+
+      <div className="flex w-full space-x-4">
+        <button
+          type="button"
+          onClick={() => goTo('home')}
+          className="h-11 flex-1 rounded-full border border-primary-start text-lg font-medium text-primary-start active:bg-primary-start/5"
+        >
+          返回首页
+        </button>
+        <button
+          type="button"
+          onClick={handleRetryPay}
+          disabled={polling}
+          className="h-11 flex-1 rounded-full bg-gradient-to-r from-primary-start to-primary-end text-lg font-medium text-white shadow-sm active:opacity-80 disabled:opacity-50"
+        >
+          去支付
+        </button>
+      </div>
+    </div>
+  );
 
   const renderMallSuccess = (info: MallResultInfo) => (
     <div className="flex flex-col items-center px-6 pt-12">
@@ -352,14 +493,14 @@ export const PaymentResultPage = () => {
       <div className="mb-6 flex w-full space-x-4">
         <button
           type="button"
-          onClick={() => goTo('cashier')}
+          onClick={() => goTo('order')}
           className="h-11 flex-1 rounded-full border border-primary-start text-lg font-medium text-primary-start active:bg-primary-start/5"
         >
-          更换方式
+          查看订单
         </button>
         <button
           type="button"
-          onClick={() => goTo('cashier')}
+          onClick={handleRetryPay}
           className="h-11 flex-1 rounded-full bg-gradient-to-r from-primary-start to-primary-end text-lg font-medium text-white shadow-sm active:opacity-80"
         >
           重新支付
@@ -381,7 +522,11 @@ export const PaymentResultPage = () => {
     <div className="relative flex h-full flex-1 flex-col overflow-hidden bg-white">
       {renderHeader('支付结果')}
       <div className="no-scrollbar flex-1 overflow-y-auto">
-        {orderInfo.status === 'success' ? renderMallSuccess(orderInfo) : renderMallFailure(orderInfo)}
+        {orderInfo.status === 'pending'
+          ? renderMallPending()
+          : orderInfo.status === 'success'
+            ? renderMallSuccess(orderInfo)
+            : renderMallFailure(orderInfo)}
       </div>
     </div>
   );

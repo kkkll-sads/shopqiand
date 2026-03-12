@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @file AddReview/index.tsx - 发表评价页面
  * @description 用户对已购商品进行评价，支持星级评分、快捷标签、文字输入、图片上传（最多9张）、匿名评价。
  */
@@ -86,7 +86,7 @@ export default function AddReviewPage() {
     }
     let cancelled = false;
     setLoadingOrder(true);
-    shopOrderApi.detail(numOrderId).then((data) => {
+    shopOrderApi.detail({ id: numOrderId }).then((data) => {
       if (!cancelled) setOrderDetail(data);
     }).catch(() => {}).finally(() => {
       if (!cancelled) setLoadingOrder(false);
