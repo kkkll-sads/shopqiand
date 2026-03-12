@@ -229,7 +229,7 @@ export function RechargePage() {
 
   const selectedPaymentOption =
     paymentTypeOptions.find((item) => item.type === selectedPaymentType) ?? paymentTypeOptions[0] ?? null;
-  const totalBalance = profile?.userInfo?.money;
+  const totalBalance = profile?.userInfo?.balanceAvailable;
   const availableBalance = profile?.userInfo?.balanceAvailable;
   const frozenBalance = profile?.userInfo?.frozenAmount;
   const numAmount = parseFloat(amount) || 0;

@@ -1,4 +1,4 @@
-﻿import { createApiHeaders, type ApiAuthOptions } from '../core/headers';
+import { createApiHeaders, type ApiAuthOptions } from '../core/headers';
 import { http } from '../http';
 import { resolveUploadUrl } from './upload';
 
@@ -49,33 +49,42 @@ interface AccountOverviewRaw {
 }
 
 interface AccountProfileUserInfoRaw {
+  agent_level?: number | string;
+  agent_level_text?: string;
   agent_review_status?: number | string;
   avatar?: string;
   balance_available?: string;
   birthday?: string;
   consignment_coupon?: number | string;
-  dynamic_income?: string;
   email?: string;
   frozen_amount?: string;
   gender?: number | string;
   green_power?: string;
   id?: number | string;
   invite_code?: string;
+  is_real_name?: number | string;
   join_time?: number | string;
   last_login_ip?: string;
   last_login_time?: number | string;
   mobile?: string;
-  money?: string;
   motto?: string;
   nickname?: string;
   old_assets_status?: number | string;
   pending_activation_gold?: string;
+  real_name_info?: {
+    real_name_status?: number | string;
+    real_name_status_text?: string;
+    real_name?: string;
+    id_card?: string;
+    id_card_front?: string;
+    id_card_back?: string;
+    audit_time?: string;
+    audit_reason?: string;
+  };
   score?: number | string;
   service_fee_balance?: string;
-  static_income?: string;
-  uid?: number | string;
-  usdt?: string;
   user_type?: number | string;
+  user_type_text?: string;
   username?: string;
   withdrawable_money?: string;
 }
@@ -160,33 +169,42 @@ export interface AccountOverview {
 }
 
 export interface AccountProfileUserInfo {
+  agentLevel: number;
+  agentLevelText: string;
   agentReviewStatus: number;
   avatar?: string;
   balanceAvailable: string;
   birthday?: string;
   consignmentCoupon: number;
-  dynamicIncome: string;
   email?: string;
   frozenAmount: string;
   gender: number;
   greenPower: string;
   id?: number | string;
   inviteCode?: string;
+  isRealName: boolean;
   joinTime?: number;
   lastLoginIp?: string;
   lastLoginTime?: number;
   mobile?: string;
-  money: string;
   motto?: string;
   nickname?: string;
   oldAssetsStatus: number;
   pendingActivationGold: string;
+  realNameInfo?: {
+    realNameStatus: number;
+    realNameStatusText: string;
+    realName: string;
+    idCard: string;
+    idCardFront: string;
+    idCardBack: string;
+    auditTime: string;
+    auditReason: string;
+  };
   score: number;
   serviceFeeBalance: string;
-  staticIncome: string;
-  uid?: number | string;
-  usdt: string;
   userType: number;
+  userTypeText: string;
   username?: string;
   withdrawableMoney: string;
 }
@@ -369,33 +387,44 @@ function normalizeProfileUserInfo(
   }
 
   return {
+    agentLevel: readNumber(payload.agent_level),
+    agentLevelText: payload.agent_level_text ?? '',
     agentReviewStatus: readNumber(payload.agent_review_status, -1),
     avatar: payload.avatar ? resolveUploadUrl(payload.avatar) : undefined,
     balanceAvailable: readString(payload.balance_available),
     birthday: readOptionalString(payload.birthday),
     consignmentCoupon: readNumber(payload.consignment_coupon),
-    dynamicIncome: readString(payload.dynamic_income),
     email: readOptionalString(payload.email),
     frozenAmount: readString(payload.frozen_amount),
     gender: readNumber(payload.gender),
     greenPower: readString(payload.green_power),
     id: payload.id,
     inviteCode: readOptionalString(payload.invite_code),
+    isRealName: readNumber(payload.is_real_name) === 1,
     joinTime: payload.join_time == null ? undefined : readNumber(payload.join_time),
     lastLoginIp: readOptionalString(payload.last_login_ip),
     lastLoginTime: payload.last_login_time == null ? undefined : readNumber(payload.last_login_time),
     mobile: readOptionalString(payload.mobile),
-    money: readString(payload.money),
     motto: readOptionalString(payload.motto),
     nickname: readOptionalString(payload.nickname),
     oldAssetsStatus: readNumber(payload.old_assets_status),
     pendingActivationGold: readString(payload.pending_activation_gold),
+    realNameInfo: payload.real_name_info
+      ? {
+          realNameStatus: readNumber(payload.real_name_info.real_name_status),
+          realNameStatusText: payload.real_name_info.real_name_status_text ?? '',
+          realName: payload.real_name_info.real_name ?? '',
+          idCard: payload.real_name_info.id_card ?? '',
+          idCardFront: payload.real_name_info.id_card_front ?? '',
+          idCardBack: payload.real_name_info.id_card_back ?? '',
+          auditTime: payload.real_name_info.audit_time ?? '',
+          auditReason: payload.real_name_info.audit_reason ?? '',
+        }
+      : undefined,
     score: readNumber(payload.score),
     serviceFeeBalance: readString(payload.service_fee_balance),
-    staticIncome: readString(payload.static_income),
-    uid: payload.uid,
-    usdt: readString(payload.usdt),
     userType: readNumber(payload.user_type),
+    userTypeText: payload.user_type_text ?? '',
     username: readOptionalString(payload.username),
     withdrawableMoney: readString(payload.withdrawable_money),
   };
