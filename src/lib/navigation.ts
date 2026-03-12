@@ -7,6 +7,49 @@
 import { useNavigate } from 'react-router-dom';
 import { useCallback, useMemo } from 'react';
 
+export const LEGACY_APP_PATH_TO_ROUTE: Record<string, string> = {
+  '/pages/market': '/store',
+  '/pages/market/index': '/store',
+  '/pages/recharge': '/recharge',
+  '/pages/recharge/index': '/recharge',
+  '/pages/user/poster': '/invite',
+  '/pages/user/poster/index': '/invite',
+  '/pages/questionnaire': '/questionnaire',
+  '/pages/questionnaire/index': '/questionnaire',
+};
+
+function normalizeAppPath(path: string) {
+  const trimmedPath = path.trim();
+  if (!trimmedPath) {
+    return {
+      pathname: '',
+      search: '',
+    };
+  }
+
+  const hashlessPath = trimmedPath.startsWith('#') ? trimmedPath.slice(1) : trimmedPath;
+  const queryIndex = hashlessPath.indexOf('?');
+  const rawPathname = queryIndex >= 0 ? hashlessPath.slice(0, queryIndex) : hashlessPath;
+  const pathnameWithSlash = rawPathname.startsWith('/') ? rawPathname : `/${rawPathname}`;
+  const normalizedPathname = pathnameWithSlash.replace(/\/+$/, '') || '/';
+
+  return {
+    pathname: normalizedPathname,
+    search: queryIndex >= 0 ? hashlessPath.slice(queryIndex) : '',
+  };
+}
+
+export function resolveLegacyAppPath(path: string) {
+  const { pathname, search } = normalizeAppPath(path);
+  const targetPath = LEGACY_APP_PATH_TO_ROUTE[pathname];
+
+  if (!targetPath) {
+    return null;
+  }
+
+  return `${targetPath}${search}`;
+}
+
 /**
  * view ID 鈫?URL 璺緞鏄犲皠琛?
  * 灏嗘棫鐗?CustomEvent 涓娇鐢ㄧ殑 view ID 鏄犲皠鍒?React Router 璺緞
@@ -149,7 +192,7 @@ export function useAppNavigate() {
    * @param viewId - 鏃х増 view ID 鎴?URL 璺緞
    */
   const goTo = useCallback((viewId: string) => {
-    const path = VIEW_TO_PATH[viewId];
+    const path = VIEW_TO_PATH[viewId] ?? resolveLegacyAppPath(viewId);
     if (path) {
       navigate(path);
     } else {
@@ -171,7 +214,7 @@ export function useAppNavigate() {
       return;
     }
 
-    const fallbackPath = VIEW_TO_PATH[fallbackViewId];
+    const fallbackPath = VIEW_TO_PATH[fallbackViewId] ?? resolveLegacyAppPath(fallbackViewId);
     navigate(fallbackPath ?? fallbackViewId);
   }, [canGoBack, navigate]);
 

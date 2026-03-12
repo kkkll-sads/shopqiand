@@ -1,6 +1,7 @@
 ﻿import { ApiError, isAbortError } from './errors';
 import { appendQueryParams, type QueryParams } from './query';
 import { clearAuthSession, persistAuthRedirectPath } from '../../lib/auth';
+import { emitGlobalToast } from '../../lib/feedback';
 
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 
@@ -232,10 +233,21 @@ function getBizCode(payload: ApiEnvelope<unknown>): EnvelopeCode {
   return payload.biz_code ?? payload.code;
 }
 
-function redirectToLogin() {
+let lastLoginRedirectAt = 0;
+
+function redirectToLogin(message?: string) {
   if (typeof window === 'undefined') {
     return;
   }
+
+  const now = Date.now();
+  if (message && now - lastLoginRedirectAt > 1200) {
+    emitGlobalToast({
+      message,
+      type: 'warning',
+    });
+  }
+  lastLoginRedirectAt = now;
 
   const currentPath = window.location.hash.startsWith('#')
     ? window.location.hash.slice(1)
@@ -483,7 +495,7 @@ export class HttpClient {
   private toApiError(payload: unknown, status: number): ApiError {
     if (isEnvelope(payload)) {
       if (shouldRedirectToLogin(status, getBizCode(payload))) {
-        redirectToLogin();
+        redirectToLogin(payload.message || payload.msg || '请先登录');
       }
 
       return new ApiError(payload.message || payload.msg || 'Request failed.', {
@@ -494,7 +506,7 @@ export class HttpClient {
     }
 
     if (shouldRedirectToLogin(status)) {
-      redirectToLogin();
+      redirectToLogin('请先登录');
     }
 
     if (isPlainObject(payload) && typeof payload.message === 'string') {
@@ -506,9 +518,13 @@ export class HttpClient {
 
   private unwrapPayload<TResponse>(payload: unknown, status: number): TResponse {
     if (isEnvelope<TResponse>(payload)) {
-      if (!this.options.isSuccessCode(payload.code)) {
+      const isPrimarySuccess = this.options.isSuccessCode(payload.code);
+      const isBizSuccess =
+        payload.biz_code == null ? true : this.options.isSuccessCode(payload.biz_code);
+
+      if (!isPrimarySuccess || !isBizSuccess) {
         if (shouldRedirectToLogin(status, getBizCode(payload))) {
-          redirectToLogin();
+          redirectToLogin(payload.message || payload.msg || '请先登录');
         }
 
         throw new ApiError(payload.message || payload.msg || 'Request failed.', {

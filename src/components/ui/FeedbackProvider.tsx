@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useCallback, useRef, useEffect } from 'react';
 import { Info, AlertCircle, CheckCircle2, XCircle, X, Loader2 } from 'lucide-react';
+import { subscribeGlobalToast } from '../../lib/feedback';
 
 // --- Types ---
 export interface NoticeBarOptions {
@@ -332,6 +333,12 @@ export const FeedbackProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       }
     };
   }, []);
+
+  useEffect(() => {
+    return subscribeGlobalToast((payload) => {
+      showToast(payload);
+    });
+  }, [showToast]);
 
   return (
     <FeedbackContext.Provider value={{ showNoticeBar, hideNoticeBar, showToast, showLoading, hideLoading, showConfirm }}>

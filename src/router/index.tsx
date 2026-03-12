@@ -7,8 +7,9 @@
  */
 
 import React, { lazy, Suspense } from 'react';
-import { Navigate, createHashRouter, useParams, useRouteError } from 'react-router-dom';
+import { Navigate, createHashRouter, useLocation, useParams, useRouteError } from 'react-router-dom';
 import { AppLayout } from '../components/layout/AppLayout';
+import { LEGACY_APP_PATH_TO_ROUTE } from '../lib/navigation';
 
 // ========== 首屏 Tab 页 - 同步导入 ==========
 import { HomePage } from '../pages/Home';
@@ -112,6 +113,17 @@ const LegacyTradingItemRedirect = () => {
   return <Navigate replace to={targetPath} />;
 };
 
+const LegacyPathRedirect = ({ to }: { to: string }) => {
+  const location = useLocation();
+
+  return <Navigate replace to={`${to}${location.search}`} />;
+};
+
+const legacyAppPathRoutes = Object.entries(LEGACY_APP_PATH_TO_ROUTE).map(([path, to]) => ({
+  path: path.replace(/^\/+/, ''),
+  element: <LegacyPathRedirect to={to} />,
+}));
+
 /**
  * 根错误边界组件，专用于捕获类似“重新构建后分包文件丢失”或 React 内部抛错
  */
@@ -177,6 +189,9 @@ export const router = createHashRouter([
       { path: 'shield', element: <RightsPage /> },
       { path: 'order', element: <OrderPage /> },
       { path: 'user', element: <UserPage /> },
+
+      // ========== 旧版路径兼容 ========== 
+      ...legacyAppPathRoutes,
 
       // ========== 商品相关 ==========
       { path: 'product/:id', element: <Lazy><ProductDetailPage /></Lazy> },

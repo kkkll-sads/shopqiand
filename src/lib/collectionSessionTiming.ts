@@ -8,8 +8,17 @@ export interface CollectionSessionTiming {
   endAt: number | null;
 }
 
-function parseSessionClock(time: string, now: Date): number | null {
-  const match = /^(\d{1,2}):(\d{2})$/.exec(time.trim());
+function parseSessionClock(time: string | null | undefined, now: Date): number | null {
+  if (typeof time !== 'string') {
+    return null;
+  }
+
+  const normalizedTime = time.trim();
+  if (!normalizedTime) {
+    return null;
+  }
+
+  const match = /^(\d{1,2}):(\d{2})$/.exec(normalizedTime);
   if (!match) {
     return null;
   }
@@ -37,8 +46,8 @@ export function formatSessionCountdown(countdownMs: number): string {
 }
 
 export function getCollectionSessionTiming(
-  startTime: string,
-  endTime: string,
+  startTime: string | null | undefined,
+  endTime: string | null | undefined,
   nowMs: number = Date.now(),
 ): CollectionSessionTiming {
   const now = new Date(nowMs);

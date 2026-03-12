@@ -15,18 +15,7 @@ import { PullToRefreshContainer } from '../../components/ui/PullToRefreshContain
 import { useNetworkStatus } from '../../hooks/useNetworkStatus';
 import { useRequest } from '../../hooks/useRequest';
 import { useRouteScrollRestoration } from '../../hooks/useRouteScrollRestoration';
-import { useAppNavigate } from '../../lib/navigation';
-
-const LEGACY_ACTIVITY_ROUTE_MAP: Record<string, string> = {
-  '/pages/market': '/store',
-  '/pages/market/index': '/store',
-  '/pages/recharge': '/recharge',
-  '/pages/recharge/index': '/recharge',
-  '/pages/user/poster': '/invite',
-  '/pages/user/poster/index': '/invite',
-  '/pages/questionnaire': '/questionnaire',
-  '/pages/questionnaire/index': '/questionnaire',
-};
+import { resolveLegacyAppPath, useAppNavigate } from '../../lib/navigation';
 
 const ACTIVITY_KEY_ROUTE_MAP: Record<string, string> = {
   first_trade: '/store',
@@ -68,17 +57,8 @@ function getRewardClassName(type: string) {
   }
 }
 
-function normalizeActivityPath(path: string) {
-  return path.split('?')[0].trim().replace(/\/+$/, '');
-}
-
 function resolveActivityTarget(item: ActivityCenterItem) {
-  const normalizedPath = normalizeActivityPath(item.app_path);
-  if (normalizedPath && LEGACY_ACTIVITY_ROUTE_MAP[normalizedPath]) {
-    return LEGACY_ACTIVITY_ROUTE_MAP[normalizedPath];
-  }
-
-  return ACTIVITY_KEY_ROUTE_MAP[item.key] ?? null;
+  return resolveLegacyAppPath(item.app_path) ?? ACTIVITY_KEY_ROUTE_MAP[item.key] ?? null;
 }
 
 function ActivityCard({

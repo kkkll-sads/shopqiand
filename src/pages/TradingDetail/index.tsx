@@ -84,17 +84,20 @@ export const TradingDetailPage = () => {
     return fromList || sessionData ? { ...fromList, ...sessionData } : null;
   }, [sessionId, sessionListData?.list, sessionData]);
 
+  const sessionStartTime = currentSession?.start_time || '00:00';
+  const sessionEndTime = currentSession?.end_time || '23:59';
+
   const sessionTiming = useMemo(
     () =>
       currentSession
-        ? getCollectionSessionTiming(currentSession.start_time, currentSession.end_time, nowMs)
+        ? getCollectionSessionTiming(sessionStartTime, sessionEndTime, nowMs)
         : getCollectionSessionTiming('00:00', '23:59', nowMs),
-    [currentSession, nowMs],
+    [currentSession, nowMs, sessionEndTime, sessionStartTime],
   );
 
   const poolStatus = sessionTiming.status;
   const sessionTimeSlot = currentSession
-    ? `${currentSession.start_time || '--:--'} - ${currentSession.end_time || '--:--'}`
+    ? `${sessionStartTime || '--:--'} - ${sessionEndTime || '--:--'}`
     : '00:00 - 21:00';
 
   const loadMore = useCallback(async () => {
