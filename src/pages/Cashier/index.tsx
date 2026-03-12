@@ -63,7 +63,7 @@ const RechargeCashierView = ({
   expireSeconds: number;
 }) => {
   const { goBack, navigate } = useAppNavigate();
-  const { showToast } = useFeedback();
+  const { showToast, showLoading, hideLoading } = useFeedback();
   const pollAbortRef = useRef<AbortController | null>(null);
   const pollStateRef = useRef<'idle' | 'polling' | 'done'>('idle');
   const windowCheckRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -91,6 +91,21 @@ const RechargeCashierView = ({
   // 同步 ref
   useEffect(() => { pollStateRef.current = pollState; }, [pollState]);
 
+  const cancelPolling = useCallback((showCancelToast = true) => {
+    pollAbortRef.current?.abort();
+    pollAbortRef.current = null;
+    setPollState('idle');
+    setPollCount(0);
+    setPollResult(null);
+
+    if (showCancelToast) {
+      showToast({
+        message: '已取消查询，可稍后再次确认支付结果',
+        type: 'info',
+      });
+    }
+  }, [showToast]);
+
   /** 轮询后端订单状态（最多 maxAttempts 次，每次间隔 intervalMs） */
   const startPolling = useCallback(async (maxAttempts = 5, intervalMs = 3000) => {
     if ((!orderNo && !orderId) || pollStateRef.current === 'polling') {
@@ -115,6 +130,7 @@ const RechargeCashierView = ({
         );
         // 充值: 0=待审核(pending), 1=已通过(success), 2=已拒绝(failure)
         if (detail.status === 1) {
+          hideLoading();
           setPollResult('success');
           setPollState('done');
           // 自动跳转到成功结果页
@@ -129,6 +145,7 @@ const RechargeCashierView = ({
           return;
         }
         if (detail.status === 2) {
+          hideLoading();
           setPollResult('failure');
           setPollState('done');
           return;
@@ -145,6 +162,7 @@ const RechargeCashierView = ({
 
     // 轮询结束仍为 pending
     if (!abort.signal.aborted) {
+      hideLoading();
       setPollResult('pending');
       setPollState('done');
       showToast({
@@ -152,7 +170,7 @@ const RechargeCashierView = ({
         type: 'warning',
       });
     }
-  }, [orderNo, orderId, amount, navigate, showToast]);
+  }, [orderNo, orderId, amount, navigate, showToast, hideLoading]);
 
   /** 备用：visibilitychange 兼容无法检测 window.closed 的场景 */
   useEffect(() => {
@@ -172,9 +190,10 @@ const RechargeCashierView = ({
   useEffect(() => {
     return () => {
       pollAbortRef.current?.abort();
+      hideLoading();
       if (windowCheckRef.current) clearInterval(windowCheckRef.current);
     };
-  }, []);
+  }, [hideLoading]);
 
   useEffect(() => {
     if (timeLeft <= 0) {
@@ -206,10 +225,8 @@ const RechargeCashierView = ({
       return;
     }
 
-    pollAbortRef.current?.abort();
-    setPollState('idle');
-    setPollCount(0);
-    setPollResult(null);
+    cancelPolling(false);
+    hideLoading();
     setOpening(true);
 
     try {
@@ -264,7 +281,26 @@ const RechargeCashierView = ({
 
   const isPolling = pollState === 'polling';
   const isFailureState = pollState === 'done' && pollResult === 'failure';
-  const showCompletionAction = hasOpenedPay && !isPolling && !isFailureState;
+  const showCompletionAction = hasOpenedPay && !isFailureState;
+
+  useEffect(() => {
+    if (!isPolling) {
+      hideLoading();
+      return undefined;
+    }
+
+    showLoading({
+      message: '查询支付结果中...',
+      subMessage: `正在确认支付结果 (${Math.max(pollCount, 1)}/5)，可取消后稍后再查`,
+      cancelable: true,
+      onCancel: () => cancelPolling(),
+      timeout: 20000,
+    });
+
+    return () => {
+      hideLoading();
+    };
+  }, [cancelPolling, hideLoading, isPolling, pollCount, showLoading]);
 
   const primaryAction = isFailureState
     ? {
@@ -281,7 +317,7 @@ const RechargeCashierView = ({
       ? {
           className:
             'mt-8 h-14 rounded-full text-[18px] font-semibold !bg-gradient-to-r !from-[#16a34a] !to-[#22c55e] !shadow-[0_14px_28px_rgba(22,163,74,0.22)]',
-          disabled: false,
+          disabled: isPolling,
           label: '已完成支付',
           leftIcon: <CheckCircle2 size={18} />,
           loading: false,
@@ -301,19 +337,17 @@ const RechargeCashierView = ({
           rightIcon: opening ? undefined : <ArrowRight size={19} />,
         };
 
-  const secondaryAction = isPolling
-    ? null
-    : isFailureState
+  const secondaryAction = isFailureState
+    ? {
+        label: '重新支付',
+        onClick: handleOpenPay,
+      }
+    : showCompletionAction && !isPolling
       ? {
-          label: '重新支付',
+          label: '支付遇到问题，获取新链接',
           onClick: handleOpenPay,
         }
-      : showCompletionAction
-        ? {
-            label: '支付遇到问题，获取新链接',
-            onClick: handleOpenPay,
-          }
-        : null;
+      : null;
 
   return (
     <div className="relative flex h-full flex-1 flex-col overflow-hidden bg-[#f4f4f5]">
@@ -374,11 +408,11 @@ const RechargeCashierView = ({
           className={primaryAction.className}
           onClick={primaryAction.onClick}
           disabled={primaryAction.disabled}
-          loading={primaryAction.loading || isPolling}
-          leftIcon={isPolling ? undefined : primaryAction.leftIcon}
-          rightIcon={isPolling ? undefined : primaryAction.rightIcon}
+          loading={primaryAction.loading}
+          leftIcon={primaryAction.leftIcon}
+          rightIcon={primaryAction.rightIcon}
         >
-          {isPolling ? `查询支付结果中 (${pollCount}/5)` : primaryAction.label}
+          {primaryAction.label}
         </Button>
 
         {secondaryAction ? (

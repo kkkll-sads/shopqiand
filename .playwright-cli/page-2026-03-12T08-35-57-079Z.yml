@@ -1,0 +1,33 @@
+- generic [ref=e61]:
+  - generic [ref=e63]:
+    - button [ref=e64]:
+      - img [ref=e65]
+    - heading "支付收银台" [level=1] [ref=e67]
+  - generic:
+    - img
+    - text: 4:11
+  - generic [ref=e68]:
+    - generic [ref=e69]:
+      - generic [ref=e70]: 支付金额
+      - generic [ref=e71]:
+        - generic [ref=e72]: ¥
+        - generic [ref=e73]: "2000"
+      - button "订单号：RC202603121604320009568576" [ref=e74]:
+        - generic [ref=e75]: 订单号：RC202603121604320009568576
+        - img [ref=e76]
+    - generic [ref=e79]:
+      - generic [ref=e80]:
+        - img [ref=e81]
+        - text: 重要提醒
+      - generic [ref=e83]:
+        - generic [ref=e84]: 请核对支付金额，否则无法到账
+        - generic [ref=e85]: 请勿保存二维码稍后支付
+        - generic [ref=e86]: 支付链接 5 分钟内有效
+    - button "已完成支付" [ref=e99]:
+      - img [ref=e100]
+      - generic [ref=e89]: 已完成支付
+    - button "支付遇到问题，获取新链接" [ref=e120]:
+      - img [ref=e121]
+      - text: 支付遇到问题，获取新链接
+  - button "联系客服" [ref=e96]:
+    - img [ref=e97]

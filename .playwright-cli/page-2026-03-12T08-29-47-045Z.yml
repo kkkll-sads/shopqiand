@@ -1,0 +1,37 @@
+- generic [ref=e2]:
+  - generic [ref=e58]:
+    - generic [ref=e59]:
+      - button [ref=e60]:
+        - img [ref=e61]
+      - button "客服" [ref=e63]:
+        - img [ref=e64]
+        - generic [ref=e67]: 客服
+    - generic [ref=e68]:
+      - generic [ref=e69]:
+        - heading "Hello!" [level=1] [ref=e70]
+        - paragraph [ref=e71]: 欢迎登录树交所
+      - button "密码登录" [ref=e74]: 密码登录
+      - generic [ref=e76]:
+        - textbox "请输入用户名或手机号" [ref=e78]
+        - generic [ref=e79]:
+          - textbox "请输入登录密码" [ref=e80]
+          - button "显示密码" [ref=e82]:
+            - img [ref=e83]
+      - generic [ref=e89]:
+        - generic [ref=e92] [cursor=pointer]: 记住密码
+        - button "忘记密码" [ref=e93]:
+          - generic [ref=e94]: 忘记密码
+      - button "登录" [ref=e96]:
+        - generic [ref=e97]: 登录
+      - generic [ref=e98]:
+        - generic [ref=e102]:
+          - text: 登录即代表你已同意
+          - button "用户协议" [ref=e103]
+          - text: 和
+          - button "隐私政策" [ref=e104]
+        - button "没有账户？点击注册" [ref=e106]:
+          - generic [ref=e107]: 没有账户？点击注册
+  - generic:
+    - generic:
+      - img
+      - generic: 请先登录后再进入该页面
