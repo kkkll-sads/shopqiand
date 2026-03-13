@@ -91,9 +91,9 @@ export const HashrateExchangePage: React.FC = () => {
   };
 
   return (
-    <div className="flex min-h-screen flex-col bg-bg-base pb-safe">
+    <div className="relative flex min-h-screen flex-col overflow-hidden bg-bg-base">
       {/* ====== Header ====== */}
-      <div className="bg-gradient-to-b from-emerald-50 to-bg-base p-5 pt-4 dark:from-emerald-950/20">
+      <div className="shrink-0 bg-gradient-to-b from-emerald-50 to-bg-base p-5 pt-4 dark:from-emerald-950/20">
         <div className="mb-6 flex items-center gap-3">
           <button
             onClick={() => navigate(-1)}
@@ -164,83 +164,85 @@ export const HashrateExchangePage: React.FC = () => {
       </div>
 
       {/* ====== 兑换详情 ====== */}
-      <div className="flex-1 space-y-4 px-5">
-        <h2 className="flex items-center gap-2 text-sm font-bold text-text-main">
-          <span className="h-4 w-1 rounded-full bg-emerald-500" />
-          兑换详情
-        </h2>
+      <div className="flex-1 overflow-y-auto px-5 pb-[calc(env(safe-area-inset-bottom)+8.5rem)]">
+        <div className="space-y-4 pb-6">
+          <h2 className="flex items-center gap-2 text-sm font-bold text-text-main">
+            <span className="h-4 w-1 rounded-full bg-emerald-500" />
+            兑换详情
+          </h2>
 
-        <div className="space-y-3 rounded-2xl border border-border-light bg-white p-4 shadow-sm dark:border-border-light dark:bg-bg-card">
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-text-sub">标准算力成本</span>
-            <span className="text-sm font-medium text-text-aux line-through">
-              {STANDARD_RATE} 消费金 / GHs
-            </span>
+          <div className="space-y-3 rounded-2xl border border-border-light bg-white p-4 shadow-sm dark:border-border-light dark:bg-bg-card">
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-text-sub">标准算力成本</span>
+              <span className="text-sm font-medium text-text-aux line-through">
+                {STANDARD_RATE} 消费金 / GHs
+              </span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-text-sub">当前补贴价</span>
+              <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400">
+                {SUBSIDIZED_RATE} 消费金 / GHs
+              </span>
+            </div>
+            <div className="h-px w-full bg-border-light" />
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-bold text-text-main">预计消耗</span>
+              <span className="text-lg font-bold text-red-600">
+                {cost}{' '}
+                <span className="text-xs font-normal text-text-aux">消费金</span>
+              </span>
+            </div>
           </div>
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-text-sub">当前补贴价</span>
-            <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400">
-              {SUBSIDIZED_RATE} 消费金 / GHs
-            </span>
-          </div>
-          <div className="h-px w-full bg-border-light" />
-          <div className="flex items-center justify-between">
-            <span className="text-sm font-bold text-text-main">预计消耗</span>
-            <span className="text-lg font-bold text-red-600">
-              {cost}{' '}
-              <span className="text-xs font-normal text-text-aux">消费金</span>
-            </span>
-          </div>
-        </div>
 
-        {/* 余额提示 */}
-        <div className="flex items-start gap-2 rounded-xl bg-red-50 p-3 dark:bg-red-900/10">
-          <Activity size={16} className="mt-0.5 shrink-0 text-red-500" />
-          <p className="text-xs leading-tight text-red-600 dark:text-red-400">
-            您的当前消费金余额为{' '}
-            <span className="font-bold">{loading ? '--' : score}</span>
-            。算力补充后即时生效，可提升您的每日产出效率。
-          </p>
-        </div>
+          {/* 余额提示 */}
+          <div className="flex items-start gap-2 rounded-xl bg-red-50 p-3 dark:bg-red-900/10">
+            <Activity size={16} className="mt-0.5 shrink-0 text-red-500" />
+            <p className="text-xs leading-tight text-red-600 dark:text-red-400">
+              您的当前消费金余额为{' '}
+              <span className="font-bold">{loading ? '--' : score}</span>
+              。算力补充后即时生效，可提升您的每日产出效率。
+            </p>
+          </div>
 
-        {/* 兑换优势 */}
-        <div className="rounded-2xl border border-border-light bg-white p-4 shadow-sm dark:bg-bg-card">
-          <h3 className="mb-3 text-sm font-bold text-text-main">补充算力优势</h3>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="flex items-start gap-2">
-              <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-emerald-50 dark:bg-emerald-900/20">
-                <TrendingUp size={14} className="text-emerald-600" />
+          {/* 兑换优势 */}
+          <div className="rounded-2xl border border-border-light bg-white p-4 shadow-sm dark:bg-bg-card">
+            <h3 className="mb-3 text-sm font-bold text-text-main">补充算力优势</h3>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="flex items-start gap-2">
+                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-emerald-50 dark:bg-emerald-900/20">
+                  <TrendingUp size={14} className="text-emerald-600" />
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-text-main">提升产出</p>
+                  <p className="text-[10px] text-text-aux">增加每日收益效率</p>
+                </div>
               </div>
-              <div>
-                <p className="text-xs font-bold text-text-main">提升产出</p>
-                <p className="text-[10px] text-text-aux">增加每日收益效率</p>
+              <div className="flex items-start gap-2">
+                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-blue-50 dark:bg-blue-900/20">
+                  <Zap size={14} className="text-blue-600" />
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-text-main">即时生效</p>
+                  <p className="text-[10px] text-text-aux">兑换后立即可用</p>
+                </div>
               </div>
-            </div>
-            <div className="flex items-start gap-2">
-              <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-blue-50 dark:bg-blue-900/20">
-                <Zap size={14} className="text-blue-600" />
+              <div className="flex items-start gap-2">
+                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-amber-50 dark:bg-amber-900/20">
+                  <Shield size={14} className="text-amber-600" />
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-text-main">绿色补贴</p>
+                  <p className="text-[10px] text-text-aux">享受60%优惠折扣</p>
+                </div>
               </div>
-              <div>
-                <p className="text-xs font-bold text-text-main">即时生效</p>
-                <p className="text-[10px] text-text-aux">兑换后立即可用</p>
-              </div>
-            </div>
-            <div className="flex items-start gap-2">
-              <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-amber-50 dark:bg-amber-900/20">
-                <Shield size={14} className="text-amber-600" />
-              </div>
-              <div>
-                <p className="text-xs font-bold text-text-main">绿色补贴</p>
-                <p className="text-[10px] text-text-aux">享受60%优惠折扣</p>
-              </div>
-            </div>
-            <div className="flex items-start gap-2">
-              <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-purple-50 dark:bg-purple-900/20">
-                <Leaf size={14} className="text-purple-600" />
-              </div>
-              <div>
-                <p className="text-xs font-bold text-text-main">绿色能源</p>
-                <p className="text-[10px] text-text-aux">清洁环保可持续</p>
+              <div className="flex items-start gap-2">
+                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-purple-50 dark:bg-purple-900/20">
+                  <Leaf size={14} className="text-purple-600" />
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-text-main">绿色能源</p>
+                  <p className="text-[10px] text-text-aux">清洁环保可持续</p>
+                </div>
               </div>
             </div>
           </div>
@@ -248,26 +250,34 @@ export const HashrateExchangePage: React.FC = () => {
       </div>
 
       {/* ====== 底部操作 ====== */}
-      <div className="border-t border-border-light bg-white/80 p-5 pb-safe backdrop-blur dark:bg-bg-card/80">
-        <button
-          onClick={handleExchange}
-          disabled={confirming || !hasEnough || numAmount <= 0}
-          className={`flex w-full items-center justify-center gap-2 rounded-xl py-4 text-lg font-bold shadow-lg transition-transform active:scale-[0.98] ${
-            confirming || !hasEnough || numAmount <= 0
-              ? 'cursor-not-allowed bg-gray-200 text-gray-400 shadow-none dark:bg-gray-800 dark:text-gray-600'
-              : 'bg-gradient-to-r from-emerald-500 to-green-500 text-white shadow-emerald-200 dark:shadow-none'
-          }`}
-        >
-          {confirming ? (
-            <Loader2 size={20} className="animate-spin" />
-          ) : (
-            <>
-              <Zap size={20} fill="currentColor" />
-              确认兑换
-              <ArrowRight size={16} />
-            </>
-          )}
-        </button>
+      <div className="fixed bottom-0 left-0 right-0 z-[60] border-t border-border-light bg-white/90 p-4 pb-safe backdrop-blur-md dark:bg-bg-card/90">
+        <div className="mx-auto flex w-full max-w-[480px] items-center gap-3">
+          <div className="min-w-0 flex-1 rounded-xl bg-emerald-50 px-3 py-2.5 dark:bg-emerald-900/20">
+            <div className="text-[11px] text-emerald-700/80 dark:text-emerald-300/80">预计消耗</div>
+            <div className="truncate text-sm font-bold text-emerald-700 dark:text-emerald-300">
+              {cost} 消费金
+            </div>
+          </div>
+          <button
+            onClick={handleExchange}
+            disabled={confirming || !hasEnough || numAmount <= 0}
+            className={`flex min-h-12 flex-[1.35] items-center justify-center gap-2 rounded-xl px-4 py-3 text-base font-bold shadow-lg transition-transform active:scale-[0.98] ${
+              confirming || !hasEnough || numAmount <= 0
+                ? 'cursor-not-allowed bg-gray-200 text-gray-400 shadow-none dark:bg-gray-800 dark:text-gray-600'
+                : 'bg-gradient-to-r from-emerald-500 to-green-500 text-white shadow-emerald-200 dark:shadow-none'
+            }`}
+          >
+            {confirming ? (
+              <Loader2 size={20} className="animate-spin" />
+            ) : (
+              <>
+                <Zap size={20} fill="currentColor" />
+                确认兑换
+                <ArrowRight size={16} />
+              </>
+            )}
+          </button>
+        </div>
       </div>
     </div>
   );
