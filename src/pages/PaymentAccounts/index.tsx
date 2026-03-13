@@ -66,8 +66,6 @@ const PAYMENT_TYPE_OPTIONS: Array<{
 }> = [
   { value: 'bank_card', label: '银行卡', icon: Landmark, description: '提现和收款常用银行卡' },
   { value: 'alipay', label: '支付宝', icon: Wallet, description: '支持个人和公司支付宝账户' },
-  { value: 'wechat', label: '微信', icon: Smartphone, description: '可上传微信收款二维码' },
-  { value: 'usdt', label: 'USDT', icon: CreditCard, description: '支持 TRC20 / ERC20 等网络' },
 ];
 
 const ACCOUNT_OWNER_OPTIONS: Array<{

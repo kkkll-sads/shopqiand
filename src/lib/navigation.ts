@@ -1,4 +1,4 @@
-﻿/**
+/**
  * @file 瀵艰埅宸ュ叿鍑芥暟
  * @description 灏佽 React Router 瀵艰埅閫昏緫锛屾彁渚?view ID 鈫?URL 璺緞鐨勬槧灏勶紝
  *              绠€鍖栭〉闈㈢粍浠朵腑鐨勫鑸縼绉汇€傛墍鏈夐〉闈㈠彧闇€浣跨敤 useAppNavigate() hook銆?
@@ -50,6 +50,12 @@ export function resolveLegacyAppPath(path: string) {
   return `${targetPath}${search}`;
 }
 
+/** 静态资源扩展名，这些路径不进行重定向 */
+const STATIC_FILE_EXTENSIONS = /\.(txt|html?|js|mjs|cjs|css|ico|png|jpe?g|gif|webp|svg|woff2?|ttf|eot|map)(\?|$)/i;
+
+/** 明确不重定向的路径（如 1.txt） */
+const NO_REDIRECT_PATHS = new Set(['/1.txt']);
+
 export function rewriteLegacyBrowserLocationToHashRoute() {
   if (typeof window === 'undefined') {
     return;
@@ -59,6 +65,11 @@ export function rewriteLegacyBrowserLocationToHashRoute() {
   const normalizedPath = normalizeAppPath(pathname).pathname;
 
   if (!normalizedPath || normalizedPath === '/' || hash) {
+    return;
+  }
+
+  // 静态文件或明确排除的路径不重定向
+  if (NO_REDIRECT_PATHS.has(normalizedPath) || STATIC_FILE_EXTENSIONS.test(normalizedPath)) {
     return;
   }
 

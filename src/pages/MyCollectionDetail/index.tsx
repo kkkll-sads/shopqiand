@@ -342,6 +342,14 @@ export const MyCollectionDetailPage = () => {
 
     return Number((consignmentPrice * serviceFeeRate).toFixed(2));
   }, [consignmentCheckData, consignmentPrice, isFreeResend]);
+  const originalServiceFee = useMemo(
+    () => (isFreeResend ? 0 : readNumber(consignmentCheckData?.original_service_fee)),
+    [consignmentCheckData?.original_service_fee, isFreeResend],
+  );
+  const membershipDeduction = useMemo(
+    () => (isFreeResend ? 0 : readNumber(consignmentCheckData?.membership_deduction)),
+    [consignmentCheckData?.membership_deduction, isFreeResend],
+  );
   const serviceFeeBalance = useMemo(() => {
     if (hasFieldValue(consignmentCheckData, CHECK_SERVICE_FEE_BALANCE_KEYS)) {
       return readStringValue(consignmentCheckData?.service_fee_balance, '0.00');
@@ -783,6 +791,8 @@ export const MyCollectionDetailPage = () => {
           onSubmit={() => void handleSubmitConsignment()}
           serviceFee={consignmentServiceFee}
           serviceFeeBalance={serviceFeeBalance}
+          originalServiceFee={originalServiceFee}
+          membershipDeduction={membershipDeduction}
           submitError={consignmentSubmitError}
         />
       ) : null}

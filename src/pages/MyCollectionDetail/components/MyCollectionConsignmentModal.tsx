@@ -15,11 +15,13 @@ interface MyCollectionConsignmentModalProps {
   isFreeResend?: boolean;
   isSubmitting: boolean;
   item: UserCollectionDetail;
+  membershipDeduction: number;
   onClose: () => void;
   onCopy: (text: string, successMessage?: string) => void | Promise<void>;
   onOpenVoucherCenter: () => void;
   onRetry: () => void;
   onSubmit: () => void;
+  originalServiceFee: number;
   requiredConsignmentCouponCount: number;
   serviceFee: number;
   serviceFeeBalance: string;
@@ -55,11 +57,13 @@ export function MyCollectionConsignmentModal({
   isFreeResend = false,
   isSubmitting,
   item,
+  membershipDeduction,
   onClose,
   onCopy,
   onOpenVoucherCenter,
   onRetry,
   onSubmit,
+  originalServiceFee,
   requiredConsignmentCouponCount,
   serviceFee,
   serviceFeeBalance,
@@ -233,6 +237,18 @@ export function MyCollectionConsignmentModal({
                   <span className="text-gray-500">预计寄售价</span>
                   <span className="font-semibold text-gray-900">¥{formatCurrency(consignmentPrice)}</span>
                 </div>
+                {!isFreeResend && originalServiceFee > 0 ? (
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-gray-500">原始手续费</span>
+                    <span className="font-semibold text-gray-900">¥{formatCurrency(originalServiceFee)}</span>
+                  </div>
+                ) : null}
+                {!isFreeResend && membershipDeduction > 0 ? (
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-gray-500">权益卡抵扣</span>
+                    <span className="font-semibold text-emerald-600">-¥{formatCurrency(membershipDeduction)}</span>
+                  </div>
+                ) : null}
                 <div className="flex items-center justify-between gap-3">
                   <span className="text-gray-500">本次所需确权金</span>
                   <span className={`font-semibold ${isFreeResend ? 'text-emerald-700' : 'text-gray-900'}`}>

@@ -130,14 +130,18 @@ interface CollectionConsignmentCheckRaw {
   fee?: number | string;
   free_attempts_remaining?: number | string;
   free_consign_attempts?: number | string;
+  membership_deduction?: number | string;
   need_coupon_count?: number | string;
+  original_service_fee?: number | string;
   price?: number | string;
   required_consignment_coupon?: number | string;
   required_coupon_count?: number | string;
   required_service_fee?: number | string;
   is_old_asset_package?: boolean | number | string;
   is_free_resend?: boolean | number | string;
+  membership_deduction?: number | string;
   message?: string;
+  original_service_fee?: number | string;
   sell_price?: number | string;
   remaining_seconds?: number | string | null;
   remaining_text?: string;
@@ -202,7 +206,9 @@ export interface CollectionConsignmentCheckData {
   free_consign_attempts: number;
   is_old_asset_package: boolean;
   is_free_resend: boolean;
+  membership_deduction: number;
   message: string;
+  original_service_fee: number;
   required_coupon_count: number;
   remaining_seconds: number | null;
   remaining_text: string;
@@ -317,7 +323,9 @@ function normalizeConsignmentCheck(
     free_consign_attempts: readNumber(payload?.free_consign_attempts),
     is_old_asset_package: readBoolean(payload?.is_old_asset_package),
     is_free_resend: isFreeResend,
+    membership_deduction: readNumber(payload?.membership_deduction),
     message: readString(payload?.message),
+    original_service_fee: readNumber(payload?.original_service_fee),
     required_coupon_count: isFreeResend
       ? 0
       : Math.max(
