@@ -228,10 +228,10 @@ export const UserPage = () => {
 
   const renderAssetSkeleton = () => (
     <div className="relative z-10 px-4 transition-transform">
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-red-600 to-red-500 p-4 text-white shadow-xl">
+      <div className="profile-balance-card-bg relative overflow-hidden rounded-2xl p-4 text-white shadow-xl">
         <div className="absolute inset-0 z-0 overflow-hidden">
-          <div className="absolute top-0 right-0 h-48 w-48 translate-x-1/2 -translate-y-1/2 rounded-full bg-white/10 blur-3xl" />
-          <div className="absolute bottom-0 left-0 h-40 w-40 -translate-x-1/4 translate-y-1/4 rounded-full bg-orange-300/20 blur-2xl" />
+          <div className="balance-card-glow-light absolute top-0 right-0 h-48 w-48 -translate-y-1/2 translate-x-1/2 rounded-full" />
+          <div className="balance-card-glow-warm absolute bottom-0 left-0 h-40 w-40 -translate-x-1/4 translate-y-1/4 rounded-full" />
         </div>
 
         <div className="relative z-10">

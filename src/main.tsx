@@ -10,11 +10,13 @@ import { AppErrorBoundary } from './components/AppErrorBoundary';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { startAppLifecycleObserver } from './lib/appLifecycle';
 import { rewriteLegacyBrowserLocationToHashRoute } from './lib/navigation';
+import { initializeClientLogReporting } from './lib/remoteLogReporter';
 import { router } from './router';
 import './index.css';
 
 rewriteLegacyBrowserLocationToHashRoute();
 startAppLifecycleObserver();
+initializeClientLogReporting();
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

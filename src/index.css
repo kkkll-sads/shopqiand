@@ -490,6 +490,39 @@
   min-height: 100vh;
 }
 
+.auth-submit-gradient {
+  background-color: #E93B3B;
+  background-image: linear-gradient(90deg, #E93B3B 0%, #FF5C5C 100%);
+  color: #FFFFFF;
+  forced-color-adjust: none;
+  -webkit-text-fill-color: #FFFFFF;
+}
+
+.profile-balance-card-bg {
+  background-color: #DC2626;
+  background-image: linear-gradient(135deg, #DC2626 0%, #EF4444 58%, #F43F5E 100%);
+}
+
+.balance-card-glow-light {
+  background: radial-gradient(
+    circle at center,
+    rgba(255, 255, 255, 0.2) 0%,
+    rgba(255, 255, 255, 0.09) 42%,
+    rgba(255, 255, 255, 0) 72%
+  );
+  pointer-events: none;
+}
+
+.balance-card-glow-warm {
+  background: radial-gradient(
+    circle at center,
+    rgba(253, 186, 116, 0.28) 0%,
+    rgba(251, 146, 60, 0.12) 44%,
+    rgba(251, 146, 60, 0) 74%
+  );
+  pointer-events: none;
+}
+
 @supports (height: 100dvh) {
   #root,
   .app-min-viewport-height {

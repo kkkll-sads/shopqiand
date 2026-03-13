@@ -5,8 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite --port=5657 --host=0.0.0.0",
-    "build": "vite build",
+    "build": "vite build && node scripts/sanitize-css.mjs && node scripts/check-css-compat.mjs",
     "preview": "vite preview",
+    "check:css-compat": "node scripts/check-css-compat.mjs",
     "clean": "rm -rf dist",
     "lint": "tsc --noEmit"
   },

@@ -1,8 +1,0 @@
-System.register(["./index-legacy-C2lX5T86.js"],function(e,t){"use strict";var r;return{setters:[e=>{r=e.x}],execute:function(){
-/**
-       * @license lucide-react v0.546.0 - ISC
-       *
-       * This source code is licensed under the ISC license.
-       * See the LICENSE file in the root directory of this source tree.
-       */
-e("S",r("smartphone",[["rect",{width:"14",height:"20",x:"5",y:"2",rx:"2",ry:"2",key:"1yt0o3"}],["path",{d:"M12 18h.01",key:"mhygvu"}]]))}}});

@@ -276,7 +276,11 @@ export const LoginPage = () => {
             </div>
           }
           actions={
-            <Button loading={submitting} onClick={handleSubmit}>
+            <Button
+              loading={submitting}
+              onClick={handleSubmit}
+              className="auth-submit-gradient"
+            >
               登录
             </Button>
           }
