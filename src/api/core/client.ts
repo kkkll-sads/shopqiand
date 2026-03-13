@@ -26,6 +26,7 @@ export interface RequestOptions<TBody = unknown>
   responseType?: 'json' | 'text' | 'blob';
   signal?: AbortSignal;
   timeout?: number;
+  unwrapEnvelope?: boolean;
   useMock?: boolean;
 }
 
@@ -360,6 +361,7 @@ export class HttpClient {
             payload,
             200,
             options.isSuccessCode ?? this.options.isSuccessCode,
+            options.unwrapEnvelope ?? true,
           );
         }
       }
@@ -382,6 +384,7 @@ export class HttpClient {
         payload,
         response.status,
         options.isSuccessCode ?? this.options.isSuccessCode,
+        options.unwrapEnvelope ?? true,
       );
     } catch (error) {
       if (timedOut) {
@@ -530,6 +533,7 @@ export class HttpClient {
     payload: unknown,
     status: number,
     isSuccessCode: (code: EnvelopeCode) => boolean,
+    unwrapEnvelope: boolean,
   ): TResponse {
     if (isEnvelope<TResponse>(payload)) {
       const isPrimarySuccess = isSuccessCode(payload.code);
@@ -546,6 +550,13 @@ export class HttpClient {
           details: payload,
           status,
         });
+      }
+
+      if (!unwrapEnvelope) {
+        return {
+          ...payload,
+          data: normalizeListPayload(payload.data),
+        } as TResponse;
       }
 
       return normalizeListPayload(payload.data);

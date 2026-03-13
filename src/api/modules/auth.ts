@@ -2,6 +2,16 @@ import { http } from '../http';
 
 export type LoginTab = 'login' | 'sms_login';
 export type CheckInTab = LoginTab | 'register';
+export type CheckInCode = number | string;
+
+export interface CheckInEnvelope<TData> {
+  code: CheckInCode;
+  biz_code?: CheckInCode;
+  message?: string;
+  msg?: string;
+  time?: number | string;
+  data: TData;
+}
 
 export interface UserInfo {
   id?: number | string;
@@ -63,6 +73,32 @@ export interface RetrievePasswordPayload {
   password: string;
 }
 
+export function isCheckInSuccessCode(code: CheckInCode | undefined): boolean {
+  return code === 1 || code === '1';
+}
+
+function isCheckInHandledCode(code: CheckInCode): boolean {
+  return isCheckInSuccessCode(code) || code === 0 || code === '0';
+}
+
+export function resolveCheckInCode(response: Pick<CheckInEnvelope<unknown>, 'biz_code' | 'code'>) {
+  return response.biz_code ?? response.code;
+}
+
+export function getCheckInResponseMessage(
+  response: Partial<Pick<CheckInEnvelope<unknown>, 'message' | 'msg'>>,
+  fallback: string,
+) {
+  const nextMessage =
+    typeof response.message === 'string' && response.message.trim()
+      ? response.message.trim()
+      : typeof response.msg === 'string' && response.msg.trim()
+        ? response.msg.trim()
+        : '';
+
+  return nextMessage || fallback;
+}
+
 export const authApi = {
   getCheckInConfig(signal?: AbortSignal) {
     return http.get<CheckInConfig>('/api/User/checkIn', {
@@ -72,28 +108,32 @@ export const authApi = {
   },
 
   login(payload: Omit<AccountLoginPayload, 'tab'>, signal?: AbortSignal) {
-    return http.post<CheckInResponseData, AccountLoginPayload>(
+    return http.post<CheckInEnvelope<CheckInResponseData | null>, AccountLoginPayload>(
       '/api/User/checkIn',
       {
         tab: 'login',
         ...payload,
       },
       {
+        isSuccessCode: isCheckInHandledCode,
         signal,
+        unwrapEnvelope: false,
         useMock: false,
       },
     );
   },
 
   smsLogin(payload: Omit<SmsLoginPayload, 'tab'>, signal?: AbortSignal) {
-    return http.post<CheckInResponseData, SmsLoginPayload>(
+    return http.post<CheckInEnvelope<CheckInResponseData | null>, SmsLoginPayload>(
       '/api/User/checkIn',
       {
         tab: 'sms_login',
         ...payload,
       },
       {
+        isSuccessCode: isCheckInHandledCode,
         signal,
+        unwrapEnvelope: false,
         useMock: false,
       },
     );

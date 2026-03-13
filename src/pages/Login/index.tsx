@@ -6,7 +6,16 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { getErrorMessage } from '../../api/core/errors';
-import { authApi, type CheckInConfig, type LoginTab } from '../../api/modules/auth';
+import {
+  authApi,
+  getCheckInResponseMessage,
+  isCheckInSuccessCode,
+  resolveCheckInCode,
+  type CheckInConfig,
+  type CheckInEnvelope,
+  type CheckInResponseData,
+  type LoginTab,
+} from '../../api/modules/auth';
 import {
   AuthAgreement,
   AuthFooterLink,
@@ -148,7 +157,7 @@ export const LoginPage = () => {
     setSubmitting(true);
 
     try {
-      let response;
+      let response: CheckInEnvelope<CheckInResponseData | null>;
       let sessionIdentity: { mobile?: string; username?: string };
 
       if (currentTab === 'login') {
@@ -201,13 +210,24 @@ export const LoginPage = () => {
         };
       }
 
-      const session = createAuthSession(response, sessionIdentity);
+      if (!isCheckInSuccessCode(resolveCheckInCode(response))) {
+        showToast({
+          message: getCheckInResponseMessage(response, '登录失败，请重试'),
+          type: 'error',
+        });
+        return;
+      }
+
+      const session = createAuthSession(response.data, sessionIdentity);
 
       const didPersistSession = persistAuthSession(session, {
         persistent: remember,
       });
       if (!didPersistSession) {
-        showToast({ message: '登录状态获取失败，请重试', type: 'error' });
+        showToast({
+          message: getCheckInResponseMessage(response, '登录状态获取失败，请重试'),
+          type: 'error',
+        });
         return;
       }
 

@@ -15,7 +15,9 @@ interface MembershipCardProductRaw {
   level_text?: string;
   min_fee?: number | string;
   name?: string;
+  pending_activation_price?: number | string;
   price?: number | string;
+  stackable?: boolean | number | string;
   valid_days?: number | string;
 }
 
@@ -76,7 +78,9 @@ export interface MembershipCardProduct {
   levelText?: string;
   minFee: number;
   name: string;
+  pendingActivationPrice: number;
   price: number;
+  stackable: boolean;
   validDays: number;
 }
 
@@ -173,7 +177,9 @@ function normalizeProduct(payload: MembershipCardProductRaw): MembershipCardProd
     levelText: readOptionalString(payload.level_text),
     minFee: readNumber(payload.min_fee),
     name: readOptionalString(payload.name) || '权益卡',
+    pendingActivationPrice: readNumber(payload.pending_activation_price),
     price: readNumber(payload.price),
+    stackable: readBoolean(payload.stackable),
     validDays: readNumber(payload.valid_days),
   };
 }

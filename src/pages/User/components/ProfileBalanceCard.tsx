@@ -80,7 +80,7 @@ const ProfileBalanceCard: React.FC<ProfileBalanceCardProps> = ({ userInfo, onNav
 
             <div
               className="cursor-pointer text-center active:opacity-70"
-              onClick={() => onNavigate('/growth_rights')}
+              onClick={() => onNavigate('/hashrate-exchange')}
             >
               <div className="mb-1 whitespace-nowrap text-[10px] text-red-100">绿色算力</div>
               <div className="truncate font-mono text-sm font-bold">

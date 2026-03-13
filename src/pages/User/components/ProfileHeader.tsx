@@ -97,7 +97,10 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
   };
   const lc = levelColors[agentLevel] ?? levelColors[0];
 
-  const statusConfig: Record<number, { icon: React.ComponentType<{ size?: number; className?: string }> }> = {
+  const statusConfig: Record<
+    number,
+    { icon: React.ComponentType<{ size?: number; className?: string }> }
+  > = {
     0: { icon: Sprout },
     1: { icon: UserCheck },
     2: { icon: Gem },
@@ -107,11 +110,11 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
 
   return (
     <div className="relative z-10 px-6 pb-2 pt-2 text-text-main">
-      <div className="flex items-center justify-between">
+      <div className="flex items-start">
         <button
           type="button"
           onClick={onEditProfile}
-          className="flex min-w-0 items-center gap-3 rounded-[28px] pr-2 text-left transition-opacity active:opacity-70"
+          className="flex min-w-0 flex-1 items-center gap-3 rounded-[28px] pr-2 text-left transition-opacity active:opacity-70"
         >
           <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-full border-2 border-white bg-primary-start/10 text-xl font-bold text-primary-start shadow-sm">
             {displayAvatarUrl ? (
@@ -137,7 +140,7 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
               </span>
             </div>
 
-            <div className="flex items-center gap-1.5">
+            <div className="flex flex-wrap items-center gap-1.5">
               <div className="flex items-center whitespace-nowrap rounded-full border border-border-light bg-bg-card px-1.5 py-px shadow-sm">
                 <div className="mr-0.5 flex h-3 w-3 items-center justify-center rounded-full bg-gradient-to-br from-primary-start to-primary-end">
                   <UserTypeIcon size={7} className="fill-current text-white" />
@@ -176,37 +179,37 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
             </div>
           </div>
         </button>
+      </div>
 
-        <div className="flex items-center gap-5">
-          <button
-            onClick={onOpenHelp}
-            className="flex flex-col items-center text-text-main active:opacity-70"
-          >
-            <HeadphonesIcon size={26} strokeWidth={1.5} />
-            <span className="mt-0.5 text-[10px] font-medium">客服</span>
-          </button>
+      <div className="mt-4 grid grid-cols-3 gap-2 rounded-[24px] border border-white/70 bg-bg-card p-2 shadow-sm">
+        <button
+          onClick={onOpenHelp}
+          className="flex h-[62px] flex-col items-center justify-center rounded-[18px] text-text-main transition-colors active:bg-bg-hover"
+        >
+          <HeadphonesIcon size={24} strokeWidth={1.5} />
+          <span className="mt-1 text-[11px] font-medium">客服</span>
+        </button>
 
-          <button
-            onClick={() => onNavigate('message_center')}
-            className="relative flex flex-col items-center text-text-main active:opacity-70"
-          >
-            <MessageSquare size={26} strokeWidth={1.5} />
-            <span className="mt-0.5 text-[10px] font-medium">消息</span>
-            {unreadCount > 0 && (
-              <span className="absolute -right-3 -top-2 flex h-4 min-w-[16px] items-center justify-center rounded-full border border-white bg-red-500 px-1 text-[10px] font-bold leading-none text-white">
-                {unreadCount > 99 ? '99+' : unreadCount}
-              </span>
-            )}
-          </button>
+        <button
+          onClick={() => onNavigate('message_center')}
+          className="relative flex h-[62px] flex-col items-center justify-center rounded-[18px] text-text-main transition-colors active:bg-bg-hover"
+        >
+          <MessageSquare size={24} strokeWidth={1.5} />
+          <span className="mt-1 text-[11px] font-medium">消息</span>
+          {unreadCount > 0 && (
+            <span className="absolute right-4 top-2 flex h-4 min-w-[16px] items-center justify-center rounded-full border border-white bg-red-500 px-1 text-[10px] font-bold leading-none text-white">
+              {unreadCount > 99 ? '99+' : unreadCount}
+            </span>
+          )}
+        </button>
 
-          <button
-            onClick={() => onNavigate('settings')}
-            className="flex flex-col items-center text-text-main active:opacity-70"
-          >
-            <Settings size={26} strokeWidth={1.5} />
-            <span className="mt-0.5 text-[10px] font-medium">设置</span>
-          </button>
-        </div>
+        <button
+          onClick={() => onNavigate('settings')}
+          className="flex h-[62px] flex-col items-center justify-center rounded-[18px] text-text-main transition-colors active:bg-bg-hover"
+        >
+          <Settings size={24} strokeWidth={1.5} />
+          <span className="mt-1 text-[11px] font-medium">设置</span>
+        </button>
       </div>
     </div>
   );
