@@ -139,9 +139,7 @@ interface CollectionConsignmentCheckRaw {
   required_service_fee?: number | string;
   is_old_asset_package?: boolean | number | string;
   is_free_resend?: boolean | number | string;
-  membership_deduction?: number | string;
   message?: string;
-  original_service_fee?: number | string;
   sell_price?: number | string;
   remaining_seconds?: number | string | null;
   remaining_text?: string;

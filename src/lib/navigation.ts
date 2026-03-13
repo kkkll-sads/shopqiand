@@ -145,6 +145,7 @@ export const VIEW_TO_PATH: Record<string, string> = {
   hashrate_exchange: '/hashrate-exchange',
   live: '/live',
   live_webview: '/live/view',
+  customer_service: '/support/chat',
   reservations: '/reservations',
   item_detail: '/item-detail/0/0',
   matching: '/matching',

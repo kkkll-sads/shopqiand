@@ -17,6 +17,7 @@ const PUBLIC_EXACT_PATHS = new Set([
   '/register',
   '/forgot-password',
   '/reset-password',
+  '/support/chat',
   '/user_agreement',
   '/privacy_policy',
 ]);

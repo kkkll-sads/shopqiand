@@ -77,6 +77,7 @@ const MatchingPage = lazy(() => import('../pages/Matching').then(m => ({ default
 const ItemDetailPage = lazy(() => import('../pages/ItemDetail').then(m => ({ default: m.ItemDetailPage })));
 const LivePage = lazy(() => import('../pages/Live').then(m => ({ default: m.LivePage })));
 const LiveWebViewPage = lazy(() => import('../pages/LiveWebView').then(m => ({ default: m.LiveWebViewPage })));
+const CustomerServicePage = lazy(() => import('../pages/CustomerService').then(m => ({ default: m.CustomerServicePage })));
 const ServiceDescriptionPage = lazy(() => import('../pages/ServiceDescription').then(m => ({ default: m.ServiceDescriptionPage })));
 const ReviewsPage = lazy(() => import('../pages/Reviews').then(m => ({ default: m.ReviewsPage })));
 const AddReviewPage = lazy(() => import('../pages/AddReview'));
@@ -285,6 +286,7 @@ export const router = createHashRouter([
       // ========== 直播 ==========
       { path: 'live', element: <Lazy><LivePage /></Lazy> },
       { path: 'live/view', element: <Lazy><LiveWebViewPage /></Lazy> },
+      { path: 'support/chat', element: <Lazy><CustomerServicePage /></Lazy> },
       { path: 'matching', element: <Lazy><MatchingPage /></Lazy> },
 
       // ========== 认证与登录 ==========

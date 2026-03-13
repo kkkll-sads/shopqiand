@@ -365,7 +365,7 @@ export const HelpCenterPage = () => {
 
               <div className="mb-4 mt-6 flex items-center justify-center text-text-aux">
                 <ExternalLink size={12} className="mr-1" />
-                <span className="text-[12px]">客服将直接跳转到第三方链接</span>
+                <span className="text-[12px]">客服将在站内打开，可随时返回当前页面</span>
               </div>
             </div>
           </div>
