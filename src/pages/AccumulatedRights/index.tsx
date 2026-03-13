@@ -404,7 +404,7 @@ export const AccumulatedRightsPage = () => {
   };
 
   return (
-    <div className="flex flex-1 flex-col overflow-hidden bg-bg-base">
+    <div className="accumulated-rights-dark-scope flex flex-1 flex-col overflow-hidden bg-bg-base">
       <WalletPageHeader
         title="累计权益"
         onBack={() => goBackOr('user')}

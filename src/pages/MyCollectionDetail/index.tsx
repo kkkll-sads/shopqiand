@@ -6,6 +6,7 @@ import {
   collectionConsignmentApi,
   collectionTradeApi,
   computeConsignmentPrice,
+  getConsignFailureMessage,
   type CollectionConsignmentCheckData,
   type MyCollectionItem,
   userApi,
@@ -35,6 +36,23 @@ type CollectionRetrySource = {
   free_attempts_remaining?: number;
   free_consign_attempts?: number;
 } | null | undefined;
+
+const CHECK_AVAILABLE_COUPON_KEYS = [
+  'available_coupon_count',
+  'available_consignment_coupon_count',
+  'consignment_coupon',
+  'consignment_coupon_count',
+  'coupon_balance',
+  'coupon_remaining',
+  'coupon_count',
+];
+
+const CHECK_SERVICE_FEE_BALANCE_KEYS = [
+  'service_fee_balance',
+  'available_service_fee_balance',
+  'confirm_fee_balance',
+  'available_confirm_fee_balance',
+];
 
 function formatCurrency(value: number): string {
   return Number.isFinite(value)
@@ -87,6 +105,18 @@ function readNumber(value: unknown, fallback = 0): number {
   return Number.isFinite(nextValue) ? nextValue : fallback;
 }
 
+function readStringValue(value: unknown, fallback = ''): string {
+  if (typeof value === 'string') {
+    return value;
+  }
+
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return String(value);
+  }
+
+  return fallback;
+}
+
 function readBoolean(value: unknown): boolean {
   if (typeof value === 'boolean') {
     return value;
@@ -106,6 +136,25 @@ function readBoolean(value: unknown): boolean {
 
 function readWaiveType(value: unknown): string {
   return typeof value === 'string' ? value.trim().toLowerCase() : '';
+}
+
+function hasFieldValue(source: Record<string, unknown> | null | undefined, keys: string[]): boolean {
+  if (!source) {
+    return false;
+  }
+
+  return keys.some((key) => {
+    const value = source[key];
+    if (typeof value === 'string') {
+      return value.trim().length > 0;
+    }
+
+    if (typeof value === 'number') {
+      return Number.isFinite(value);
+    }
+
+    return value != null;
+  });
 }
 
 function getSourceFailCount(source: CollectionRetrySource): number {
@@ -222,8 +271,6 @@ export const MyCollectionDetailPage = () => {
   const userInfo = profile?.userInfo;
   const title = getCollectionTitle(item);
   const resolvedCollectionId = item?.user_collection_id || item?.id || collectionId;
-  const consignmentCouponCount = userInfo?.consignmentCoupon ?? 0;
-  const serviceFeeBalance = userInfo?.serviceFeeBalance ?? '0.00';
   const currentValuation = useMemo(() => {
     if (!item) {
       return '0.00';
@@ -265,6 +312,20 @@ export const MyCollectionDetailPage = () => {
 
     return getFreeResendDescription(consignmentCheckData, item, sourceItem);
   }, [consignmentCheckData, failCount, freeAttemptCount, item, sourceItem]);
+  const availableConsignmentCouponCount = useMemo(() => {
+    if (hasFieldValue(consignmentCheckData, CHECK_AVAILABLE_COUPON_KEYS)) {
+      return Math.max(0, readNumber(consignmentCheckData?.available_coupon_count));
+    }
+
+    return Math.max(0, userInfo?.consignmentCoupon ?? 0);
+  }, [consignmentCheckData, userInfo?.consignmentCoupon]);
+  const requiredConsignmentCouponCount = useMemo(() => {
+    if (isFreeResend) {
+      return 0;
+    }
+
+    return Math.max(1, readNumber(consignmentCheckData?.required_coupon_count, 1));
+  }, [consignmentCheckData?.required_coupon_count, isFreeResend]);
   const consignmentServiceFee = useMemo(() => {
     if (isFreeResend) {
       return 0;
@@ -281,6 +342,21 @@ export const MyCollectionDetailPage = () => {
 
     return Number((consignmentPrice * serviceFeeRate).toFixed(2));
   }, [consignmentCheckData, consignmentPrice, isFreeResend]);
+  const serviceFeeBalance = useMemo(() => {
+    if (hasFieldValue(consignmentCheckData, CHECK_SERVICE_FEE_BALANCE_KEYS)) {
+      return readStringValue(consignmentCheckData?.service_fee_balance, '0.00');
+    }
+
+    return userInfo?.serviceFeeBalance ?? '0.00';
+  }, [consignmentCheckData, userInfo?.serviceFeeBalance]);
+  const serviceFeeBalanceValue = useMemo(
+    () => Math.max(0, readNumber(serviceFeeBalance)),
+    [serviceFeeBalance],
+  );
+  const hasInsufficientServiceFee = useMemo(
+    () => !isFreeResend && consignmentServiceFee > 0 && serviceFeeBalanceValue < consignmentServiceFee,
+    [consignmentServiceFee, isFreeResend, serviceFeeBalanceValue],
+  );
   const showBottomActions = Boolean(
     item && !isSoldItem(item) && !isConsigningItem(item) && !isMiningItem(item),
   );
@@ -354,8 +430,19 @@ export const MyCollectionDetailPage = () => {
     setConsignmentCheckError(null);
 
     try {
-      const response = await collectionConsignmentApi.consignmentCheck(resolvedCollectionId);
-      setConsignmentCheckData(response);
+      const [checkResult, profileResult] = await Promise.allSettled([
+        collectionConsignmentApi.consignmentCheck(resolvedCollectionId),
+        accountApi.getProfile(),
+      ]);
+
+      if (checkResult.status !== 'fulfilled') {
+        throw checkResult.reason;
+      }
+
+      setConsignmentCheckData(checkResult.value);
+      if (profileResult.status === 'fulfilled') {
+        pageRequest.setData((current) => (current ? { ...current, profile: profileResult.value } : current));
+      }
       setConsignmentSubmitError(null);
     } catch (error) {
       setConsignmentCheckError(getErrorMessage(error));
@@ -363,7 +450,7 @@ export const MyCollectionDetailPage = () => {
     } finally {
       setConsignmentCheckLoading(false);
     }
-  }, [resolvedCollectionId]);
+  }, [pageRequest, resolvedCollectionId]);
 
   const handleRefresh = useCallback(async () => {
     refreshStatus();
@@ -478,7 +565,14 @@ export const MyCollectionDetailPage = () => {
       return;
     }
 
-    if (!isFreeResend && consignmentCouponCount <= 0) {
+    if (!isFreeResend && hasInsufficientServiceFee) {
+      setConsignmentSubmitError(
+        `当前确权金不足，本次寄售需要 ${formatCurrency(consignmentServiceFee)} 元，当前余额 ${formatCurrency(serviceFeeBalance)} 元`,
+      );
+      return;
+    }
+
+    if (!isFreeResend && availableConsignmentCouponCount < requiredConsignmentCouponCount) {
       setConsignmentSubmitError('当前账户没有可用寄售券');
       return;
     }
@@ -491,6 +585,10 @@ export const MyCollectionDetailPage = () => {
         user_collection_id: resolvedCollectionId,
         price: consignmentPrice,
       });
+      const failureMessage = getConsignFailureMessage(result);
+      if (failureMessage) {
+        throw new Error(failureMessage);
+      }
       const waivedThisConsignment =
         isFreeResend
         || result.is_free_resend
@@ -513,10 +611,20 @@ export const MyCollectionDetailPage = () => {
                     userInfo: current.profile.userInfo
                       ? {
                           ...current.profile.userInfo,
-                          consignmentCoupon: Math.max(
-                            0,
-                            current.profile.userInfo.consignmentCoupon - result.coupon_used,
-                          ),
+                          consignmentCoupon: result.coupon_remaining > 0
+                            ? result.coupon_remaining
+                            : Math.max(
+                                0,
+                                current.profile.userInfo.consignmentCoupon - result.coupon_used,
+                              ),
+                          serviceFeeBalance: result.service_fee_balance
+                            ? formatCurrency(Number(result.service_fee_balance))
+                            : formatCurrency(
+                                Math.max(
+                                  0,
+                                  readNumber(current.profile.userInfo.serviceFeeBalance) - result.service_fee,
+                                ),
+                              ),
                         }
                       : current.profile.userInfo,
                   }
@@ -541,17 +649,21 @@ export const MyCollectionDetailPage = () => {
       setConsignmentSubmitting(false);
     }
   }, [
+    availableConsignmentCouponCount,
     consignmentCheckData,
-    consignmentCouponCount,
     consignmentPrice,
+    consignmentServiceFee,
     consignmentSubmitting,
     countdownSeconds,
     ensureRealNameVerified,
     goBackOr,
+    hasInsufficientServiceFee,
     isFreeResend,
     item,
     pageRequest,
+    requiredConsignmentCouponCount,
     resolvedCollectionId,
+    serviceFeeBalance,
     showToast,
   ]);
 
@@ -610,7 +722,7 @@ export const MyCollectionDetailPage = () => {
 
   return (
     <div
-      className="relative flex h-full flex-1 flex-col overflow-hidden bg-[#FDFBF7] text-gray-900"
+      className="collection-certificate-dark-scope relative flex h-full flex-1 flex-col overflow-hidden bg-[#FDFBF7] text-gray-900"
       style={{ paddingBottom: showBottomActions ? 'calc(env(safe-area-inset-bottom) + 5.75rem)' : undefined }}
     >
       <div
@@ -654,7 +766,7 @@ export const MyCollectionDetailPage = () => {
           checkData={consignmentCheckData}
           checkError={consignmentCheckError}
           checkLoading={consignmentCheckLoading}
-          consignmentCouponCount={consignmentCouponCount}
+          availableConsignmentCouponCount={availableConsignmentCouponCount}
           consignmentPrice={consignmentPrice}
           countdownSeconds={countdownSeconds}
           freeResendDescription={freeResendDescription}
@@ -667,6 +779,7 @@ export const MyCollectionDetailPage = () => {
             goTo('consignment_voucher');
           }}
           onRetry={() => void loadConsignmentCheck()}
+          requiredConsignmentCouponCount={requiredConsignmentCouponCount}
           onSubmit={() => void handleSubmitConsignment()}
           serviceFee={consignmentServiceFee}
           serviceFeeBalance={serviceFeeBalance}

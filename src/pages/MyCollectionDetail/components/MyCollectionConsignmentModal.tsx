@@ -4,10 +4,10 @@ import type { CollectionConsignmentCheckData } from '../../../api';
 import type { UserCollectionDetail } from '../../../api/modules/userCollection';
 
 interface MyCollectionConsignmentModalProps {
+  availableConsignmentCouponCount: number;
   checkData: CollectionConsignmentCheckData | null;
   checkError: string | null;
   checkLoading: boolean;
-  consignmentCouponCount: number;
   consignmentPrice: number;
   countdownSeconds: number | null;
   freeResendDescription?: string;
@@ -20,6 +20,7 @@ interface MyCollectionConsignmentModalProps {
   onOpenVoucherCenter: () => void;
   onRetry: () => void;
   onSubmit: () => void;
+  requiredConsignmentCouponCount: number;
   serviceFee: number;
   serviceFeeBalance: string;
   submitError: string | null;
@@ -43,10 +44,10 @@ function formatCountdown(totalSeconds: number): string {
 }
 
 export function MyCollectionConsignmentModal({
+  availableConsignmentCouponCount,
   checkData,
   checkError,
   checkLoading,
-  consignmentCouponCount,
   consignmentPrice,
   countdownSeconds,
   freeResendDescription,
@@ -59,6 +60,7 @@ export function MyCollectionConsignmentModal({
   onOpenVoucherCenter,
   onRetry,
   onSubmit,
+  requiredConsignmentCouponCount,
   serviceFee,
   serviceFeeBalance,
   submitError,
@@ -89,16 +91,26 @@ export function MyCollectionConsignmentModal({
   const serviceFeeBalanceValue = Number(serviceFeeBalance);
   const hasServiceFeeWarning =
     !isFreeResend && Number.isFinite(serviceFeeBalanceValue) && serviceFeeBalanceValue < serviceFee;
+  const hasCouponShortage =
+    !isFreeResend && availableConsignmentCouponCount < requiredConsignmentCouponCount;
   const countdownText =
     typeof countdownSeconds === 'number'
       ? formatCountdown(countdownSeconds)
       : checkData?.remaining_text || '--';
+  const statusDescription = checkLoading
+    ? '正在获取该藏品当前寄售状态，请稍候。'
+    : checkData?.message?.trim()
+      ? checkData.message.trim()
+      : isUnlocked
+        ? '当前资产可以提交寄售申请，提交后会进入寄售流程。'
+        : `剩余 ${countdownText} 后可提交寄售申请。`;
   const canSubmit =
     !checkLoading
     && !isSubmitting
     && Boolean(checkData)
     && isUnlocked
-    && (isFreeResend || consignmentCouponCount > 0);
+    && !hasServiceFeeWarning
+    && !hasCouponShortage;
 
   if (!isRendered) {
     return null;
@@ -192,11 +204,7 @@ export function MyCollectionConsignmentModal({
                     {checkLoading ? '寄售资格校验中' : isUnlocked ? '已满足寄售条件' : 'T+1 解锁倒计时'}
                   </div>
                   <div className={`mt-1 text-xs leading-5 ${isUnlocked ? 'text-emerald-700/80' : 'text-amber-700/90'}`}>
-                    {checkLoading
-                      ? '正在获取该藏品当前寄售状态，请稍候。'
-                      : isUnlocked
-                        ? '当前资产可以提交寄售申请，提交后会进入寄售流程。'
-                        : `剩余 ${countdownText} 后可提交寄售申请。`}
+                    {statusDescription}
                   </div>
                 </div>
               </div>
@@ -226,7 +234,7 @@ export function MyCollectionConsignmentModal({
                   <span className="font-semibold text-gray-900">¥{formatCurrency(consignmentPrice)}</span>
                 </div>
                 <div className="flex items-center justify-between gap-3">
-                  <span className="text-gray-500">确权技术服务费</span>
+                  <span className="text-gray-500">本次所需确权金</span>
                   <span className={`font-semibold ${isFreeResend ? 'text-emerald-700' : 'text-gray-900'}`}>
                     {isFreeResend ? '已豁免' : `¥${formatCurrency(serviceFee)}`}
                   </span>
@@ -234,10 +242,19 @@ export function MyCollectionConsignmentModal({
                 <div className="flex items-center justify-between gap-3">
                   <span className="inline-flex items-center gap-1 text-gray-500">
                     <Wallet size={14} />
-                    服务费余额
+                    确权金余额
                   </span>
                   <span className={`font-semibold ${hasServiceFeeWarning ? 'text-amber-700' : 'text-gray-900'}`}>
                     ¥{formatCurrency(serviceFeeBalance)}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between gap-3">
+                  <span className="inline-flex items-center gap-1 text-gray-500">
+                    <Ticket size={14} />
+                    本次需用寄售券
+                  </span>
+                  <span className={`font-semibold ${isFreeResend ? 'text-emerald-700' : 'text-gray-900'}`}>
+                    {isFreeResend ? '已豁免' : `${requiredConsignmentCouponCount} 张`}
                   </span>
                 </div>
                 <div className="flex items-center justify-between gap-3">
@@ -249,12 +266,12 @@ export function MyCollectionConsignmentModal({
                     className={`font-semibold ${
                       isFreeResend
                         ? 'text-emerald-700'
-                        : consignmentCouponCount > 0
-                          ? 'text-gray-900'
-                          : 'text-amber-700'
+                        : hasCouponShortage
+                          ? 'text-amber-700'
+                          : 'text-gray-900'
                     }`}
                   >
-                    {isFreeResend ? '本次不消耗' : `${consignmentCouponCount} 张`}
+                    {isFreeResend ? '本次不消耗' : `${availableConsignmentCouponCount} 张`}
                   </span>
                 </div>
               </div>
@@ -262,7 +279,7 @@ export function MyCollectionConsignmentModal({
 
             {hasServiceFeeWarning ? (
               <div className="rounded-[20px] border border-amber-200 bg-amber-50 px-4 py-3 text-xs leading-5 text-amber-700">
-                当前服务费余额小于本次寄售所需费用，提交前请先确认账户余额是否充足。
+                当前确权金余额不足，本次寄售需要 ¥{formatCurrency(serviceFee)}，当前余额 ¥{formatCurrency(serviceFeeBalance)}。
               </div>
             ) : null}
 
@@ -288,11 +305,11 @@ export function MyCollectionConsignmentModal({
               </div>
             ) : null}
 
-            {!isFreeResend && consignmentCouponCount <= 0 ? (
+            {hasCouponShortage ? (
               <div className="rounded-[22px] border border-[#eadfce] bg-white p-4">
                 <div className="text-sm font-semibold text-gray-900">寄售券不足</div>
                 <div className="mt-1 text-xs leading-5 text-gray-500">
-                  当前账户没有可用寄售券，暂时无法提交寄售申请。
+                  当前账户可用寄售券不足，本次寄售需要 {requiredConsignmentCouponCount} 张，当前可用 {availableConsignmentCouponCount} 张。
                 </div>
                 <button
                   type="button"
@@ -308,6 +325,7 @@ export function MyCollectionConsignmentModal({
               type="button"
               onClick={onSubmit}
               disabled={!canSubmit}
+              aria-busy={isSubmitting}
               className={`flex h-12 w-full items-center justify-center gap-2 rounded-[16px] text-sm font-bold transition ${
                 canSubmit
                   ? 'bg-gradient-to-r from-[#8B0000] to-[#A00000] text-amber-50 shadow-lg shadow-red-900/15 active:scale-[0.98]'
@@ -325,9 +343,11 @@ export function MyCollectionConsignmentModal({
                     ? '校验中...'
                     : !isUnlocked
                       ? '暂未解锁寄售'
-                      : !isFreeResend && consignmentCouponCount <= 0
-                        ? '寄售券不足'
-                        : '确认挂牌'}
+                      : hasServiceFeeWarning
+                        ? '确权金不足'
+                        : hasCouponShortage
+                          ? '寄售券不足'
+                          : '确认挂牌'}
                 </span>
               )}
             </button>

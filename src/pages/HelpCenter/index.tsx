@@ -279,7 +279,7 @@ export const HelpCenterPage = () => {
               <Card className="p-5 shadow-sm">
                 <div className="mb-5 flex items-start justify-between">
                   <div className="flex items-center">
-                    <div className="mr-3 flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-red-50 text-primary-start">
+                    <div className="mr-3 flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-red-50 text-primary-start dark:bg-red-500/12">
                       <HeadphonesIcon size={24} />
                     </div>
                     <div>
@@ -349,7 +349,7 @@ export const HelpCenterPage = () => {
                           onClick={() => handleCategoryChange(category.id)}
                           className={`shrink-0 rounded-full border px-3 py-1 text-[12px] transition ${
                             active
-                              ? 'border-primary-start/30 bg-red-50 text-primary-start'
+                              ? 'border-primary-start/30 bg-red-50 text-primary-start dark:bg-red-500/12 dark:text-red-300'
                               : 'border-transparent bg-bg-base text-text-sub'
                           }`}
                         >

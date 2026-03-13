@@ -347,7 +347,7 @@ export const WithdrawPage = () => {
   return (
     <div className="relative flex h-full flex-1 flex-col bg-bg-base">
       {isOffline && (
-        <div className="absolute left-0 right-0 top-12 z-50 flex items-center justify-between border-b border-red-100 bg-red-50 px-4 py-2 text-sm text-primary-start">
+        <div className="absolute left-0 right-0 top-12 z-50 flex items-center justify-between border-b border-red-100 bg-red-50 px-4 py-2 text-sm text-primary-start dark:border-red-500/25 dark:bg-red-500/12 dark:text-red-300">
           <div className="flex items-center">
             <WifiOff size={14} className="mr-2" />
             <span>网络不稳定，请检查后重试</span>

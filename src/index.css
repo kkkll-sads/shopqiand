@@ -216,6 +216,226 @@
   scrollbar-width: none;
 }
 
+@layer components {
+  .dark :is(.billing-dark-scope, .product-detail-dark-scope, .accumulated-rights-dark-scope, .collection-certificate-dark-scope)
+    :is([class~="bg-white"], [class~="bg-white/90"]):not([class*="dark:bg"]) {
+    background-color: var(--bg-card);
+  }
+
+  .dark :is(.billing-dark-scope, .product-detail-dark-scope, .accumulated-rights-dark-scope, .collection-certificate-dark-scope)
+    :is([class~="bg-gray-50"], [class~="bg-gray-50/60"], [class~="bg-gray-50/70"]):not([class*="dark:bg"]) {
+    background-color: var(--bg-base);
+  }
+
+  .dark :is(.billing-dark-scope, .product-detail-dark-scope, .accumulated-rights-dark-scope, .collection-certificate-dark-scope)
+    :is([class~="bg-gray-100"], [class~="bg-gray-200"]):not([class*="dark:bg"]) {
+    background-color: var(--bg-hover);
+  }
+
+  .dark :is(.billing-dark-scope, .product-detail-dark-scope, .accumulated-rights-dark-scope, .collection-certificate-dark-scope)
+    :is([class~="border-gray-50"], [class~="border-gray-100"]):not([class*="dark:border"]) {
+    border-color: var(--border-light);
+  }
+
+  .dark :is(.billing-dark-scope, .product-detail-dark-scope, .accumulated-rights-dark-scope, .collection-certificate-dark-scope)
+    [class~="border-gray-200"]:not([class*="dark:border"]) {
+    border-color: var(--border-main);
+  }
+
+  .dark :is(.billing-dark-scope, .product-detail-dark-scope, .accumulated-rights-dark-scope, .collection-certificate-dark-scope)
+    :is([class~="text-gray-900"], [class~="text-gray-800"], [class~="text-gray-700"]):not([class*="dark:text"]) {
+    color: var(--text-main);
+  }
+
+  .dark :is(.billing-dark-scope, .product-detail-dark-scope, .accumulated-rights-dark-scope, .collection-certificate-dark-scope)
+    :is([class~="text-gray-600"], [class~="text-gray-500"]):not([class*="dark:text"]) {
+    color: var(--text-sub);
+  }
+
+  .dark :is(.billing-dark-scope, .product-detail-dark-scope, .accumulated-rights-dark-scope, .collection-certificate-dark-scope)
+    :is([class~="text-gray-400"], [class~="text-gray-300"]):not([class*="dark:text"]) {
+    color: var(--text-aux);
+  }
+
+  .dark :is(.billing-dark-scope, .collection-certificate-dark-scope)
+    :is([class~="bg-red-50"], [class~="bg-red-100"]):not([class*="dark:bg"]) {
+    background-color: rgba(233, 59, 59, 0.14);
+  }
+
+  .dark :is(.billing-dark-scope, .collection-certificate-dark-scope)
+    :is([class~="bg-blue-50"], [class~="bg-blue-100"]):not([class*="dark:bg"]) {
+    background-color: rgba(59, 130, 246, 0.14);
+  }
+
+  .dark :is(.billing-dark-scope, .collection-certificate-dark-scope)
+    [class~="bg-orange-50"]:not([class*="dark:bg"]) {
+    background-color: rgba(249, 115, 22, 0.14);
+  }
+
+  .dark :is(.billing-dark-scope, .collection-certificate-dark-scope)
+    :is([class~="bg-amber-50"], [class~="bg-amber-100"]):not([class*="dark:bg"]) {
+    background-color: rgba(217, 119, 6, 0.16);
+  }
+
+  .dark :is(.billing-dark-scope, .collection-certificate-dark-scope)
+    :is([class~="bg-emerald-50"], [class~="bg-emerald-100"]):not([class*="dark:bg"]) {
+    background-color: rgba(16, 185, 129, 0.16);
+  }
+
+  .dark :is(.billing-dark-scope, .collection-certificate-dark-scope)
+    :is([class~="border-red-100"], [class~="border-red-200"]):not([class*="dark:border"]) {
+    border-color: rgba(233, 59, 59, 0.28);
+  }
+
+  .dark :is(.billing-dark-scope, .collection-certificate-dark-scope)
+    :is([class~="border-amber-200"], [class~="border-orange-200"], [class~="border-emerald-200"]):not([class*="dark:border"]) {
+    border-color: rgba(245, 158, 11, 0.28);
+  }
+
+  .dark :is(.billing-dark-scope, .collection-certificate-dark-scope)
+    :is([class~="text-red-400"], [class~="text-red-500"], [class~="text-red-600"]):not([class*="dark:text"]) {
+    color: #ff8a8a;
+  }
+
+  .dark :is(.billing-dark-scope, .collection-certificate-dark-scope)
+    :is([class~="text-blue-500"], [class~="text-blue-600"]):not([class*="dark:text"]) {
+    color: #8ab4ff;
+  }
+
+  .dark :is(.billing-dark-scope, .collection-certificate-dark-scope)
+    :is([class~="text-green-500"], [class~="text-green-600"], [class~="text-emerald-600"], [class~="text-emerald-700"]):not([class*="dark:text"]) {
+    color: #6ee7b7;
+  }
+
+  .dark :is(.billing-dark-scope, .collection-certificate-dark-scope)
+    :is([class~="text-orange-600"], [class~="text-amber-700"], [class~="text-amber-800"]):not([class*="dark:text"]) {
+    color: #fbbf24;
+  }
+
+  .dark .billing-dark-scope [class*="active:bg-gray-50"]:active,
+  .dark .billing-dark-scope [class*="active:bg-gray-100"]:active {
+    background-color: var(--bg-hover);
+  }
+
+  .dark .product-detail-dark-scope [class~="bg-[#f5f5f5]"]:not([class*="dark:bg"]) {
+    background-color: var(--bg-base);
+  }
+
+  .dark .product-detail-dark-scope [class~="bg-[#fafafa]"]:not([class*="dark:bg"]) {
+    background-color: var(--bg-hover);
+  }
+
+  .dark .product-detail-dark-scope :is([class~="border-[#ececec]"], [class~="border-[#e5e7eb]"], [class~="border-[#f1f1f1]"], [class~="border-[#f0f0f0]"]):not([class*="dark:border"]) {
+    border-color: var(--border-light);
+  }
+
+  .dark .product-detail-dark-scope [class~="bg-[#fff7df]"]:not([class*="dark:bg"]) {
+    background-color: rgba(217, 119, 6, 0.16);
+  }
+
+  .dark .product-detail-dark-scope [class~="border-[#f4d38d]"]:not([class*="dark:border"]) {
+    border-color: rgba(217, 119, 6, 0.3);
+  }
+
+  .dark .product-detail-dark-scope [class~="text-[#9a6b00]"]:not([class*="dark:text"]) {
+    color: #fbbf24;
+  }
+
+  .dark .product-detail-dark-scope [class~="bg-[#fff5f1]"]:not([class*="dark:bg"]),
+  .dark .product-detail-dark-scope [class~="bg-[#fff3ef]"]:not([class*="dark:bg"]),
+  .dark .product-detail-dark-scope [class~="bg-[#fff7f3]"]:not([class*="dark:bg"]) {
+    background-color: rgba(233, 59, 59, 0.14);
+  }
+
+  .dark .product-detail-dark-scope :is([class~="border-[#f4c2b6]"], [class~="border-[#f2b5a4]"]):not([class*="dark:border"]) {
+    border-color: rgba(233, 59, 59, 0.28);
+  }
+
+  .dark .product-detail-dark-scope [class~="text-[#6b7280]"]:not([class*="dark:text"]) {
+    color: var(--text-sub);
+  }
+
+  .dark .product-detail-dark-scope [class*="active:bg-[#fafafa]"]:active,
+  .dark .product-detail-dark-scope [class*="active:bg-[#f5f5f5]"]:active {
+    background-color: var(--bg-hover);
+  }
+
+  .dark .accumulated-rights-dark-scope [class~="bg-[#fff7f4]"]:not([class*="dark:bg"]) {
+    background-color: rgba(233, 59, 59, 0.12);
+  }
+
+  .dark .accumulated-rights-dark-scope [class~="border-[#f1d5cb]"]:not([class*="dark:border"]) {
+    border-color: rgba(233, 59, 59, 0.26);
+  }
+
+  .dark .accumulated-rights-dark-scope [class~="bg-[#fff8f1]"]:not([class*="dark:bg"]) {
+    background-color: rgba(249, 115, 22, 0.14);
+  }
+
+  .dark .accumulated-rights-dark-scope [class~="border-[#f4d8c2]"]:not([class*="dark:border"]) {
+    border-color: rgba(249, 115, 22, 0.26);
+  }
+
+  .dark .accumulated-rights-dark-scope [class~="border-[#ececec]"]:not([class*="dark:border"]) {
+    border-color: var(--border-light);
+  }
+
+  .dark .accumulated-rights-dark-scope [class~="bg-[#fff7e7]"]:not([class*="dark:bg"]) {
+    background-color: rgba(217, 119, 6, 0.16);
+  }
+
+  .dark .accumulated-rights-dark-scope [class~="bg-[#fbe3dc]"]:not([class*="dark:bg"]) {
+    background-color: rgba(233, 59, 59, 0.18);
+  }
+
+  .dark .accumulated-rights-dark-scope [class~="bg-[#eef4ff]"]:not([class*="dark:bg"]) {
+    background-color: rgba(59, 130, 246, 0.18);
+  }
+
+  .dark .accumulated-rights-dark-scope [class~="bg-[#f3efff]"]:not([class*="dark:bg"]) {
+    background-color: rgba(124, 58, 237, 0.18);
+  }
+
+  .dark .accumulated-rights-dark-scope [class~="bg-[#eefbf3]"]:not([class*="dark:bg"]) {
+    background-color: rgba(22, 163, 74, 0.18);
+  }
+
+  .dark .accumulated-rights-dark-scope [class~="bg-[#eff8ff]"]:not([class*="dark:bg"]) {
+    background-color: rgba(2, 132, 199, 0.18);
+  }
+
+  .dark .accumulated-rights-dark-scope [class~="bg-[#f3faea]"]:not([class*="dark:bg"]) {
+    background-color: rgba(101, 163, 13, 0.18);
+  }
+
+  .dark .collection-certificate-dark-scope [class~="bg-[#FDFBF7]"]:not([class*="dark:bg"]),
+  .dark .collection-certificate-dark-scope [class~="bg-[#FDFBF7]/90"]:not([class*="dark:bg"]) {
+    background-color: #101216;
+  }
+
+  .dark .collection-certificate-dark-scope [class~="bg-[#F7F4EE]"]:not([class*="dark:bg"]) {
+    background-color: #171a20;
+  }
+
+  .dark .collection-certificate-dark-scope [class~="bg-[#f4efe7]"]:not([class*="dark:bg"]),
+  .dark .collection-certificate-dark-scope [class~="bg-[#fcf8f1]"]:not([class*="dark:bg"]),
+  .dark .collection-certificate-dark-scope [class~="bg-[#fcf7ef]"]:not([class*="dark:bg"]) {
+    background-color: rgba(140, 97, 54, 0.12);
+  }
+
+  .dark .collection-certificate-dark-scope :is([class~="border-[#eadfce]"], [class~="border-[#e8dfd2]"], [class~="border-[#d6c5ad]"]):not([class*="dark:border"]) {
+    border-color: rgba(140, 97, 54, 0.28);
+  }
+
+  .dark .collection-certificate-dark-scope :is([class~="text-[#8c6136]"], [class~="text-[#9c8468]"]):not([class*="dark:text"]) {
+    color: #d8b68b;
+  }
+
+  .dark .collection-certificate-dark-scope [class*="active:bg-gray-100"]:active {
+    background-color: var(--bg-hover);
+  }
+}
+
 /* 筛选按钮横向滚动时防止触发父级竖向滚动 */
 .overscroll-x-contain {
   overscroll-behavior-x: contain;

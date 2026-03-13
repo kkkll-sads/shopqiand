@@ -269,7 +269,7 @@ export function ReviewsPage() {
 
           <div className="flex flex-wrap gap-2">
             {tagItems.map((tag) => (
-              <div key={tag.label} className="rounded-full bg-red-50 px-2.5 py-1 text-s text-text-main">
+              <div key={tag.label} className="rounded-full bg-red-50 px-2.5 py-1 text-s text-text-main dark:bg-red-500/12 dark:text-red-100">
                 {tag.label} <span className="text-text-aux">{tag.count}</span>
               </div>
             ))}

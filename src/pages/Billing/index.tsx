@@ -2078,7 +2078,7 @@ export function BillingPage() {
 
   if (!isAuthenticated) {
     return (
-      <div className="flex h-full flex-1 flex-col bg-gray-50">
+      <div className="billing-dark-scope flex h-full flex-1 flex-col bg-gray-50">
         {renderHeader()}
         <div ref={scrollContainerRef} className="flex-1 overflow-y-auto no-scrollbar px-4">
           <EmptyState
@@ -2093,7 +2093,7 @@ export function BillingPage() {
   }
 
   return (
-    <div className="relative flex h-full flex-1 flex-col bg-gray-50">
+    <div className="billing-dark-scope relative flex h-full flex-1 flex-col bg-gray-50">
       {isOffline ? (
         <OfflineBanner onAction={handleRefresh} className="absolute top-12 right-0 left-0 z-50" />
       ) : null}

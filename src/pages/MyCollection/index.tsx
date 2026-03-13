@@ -95,22 +95,22 @@ function isMiningItem(item: MyCollectionItem): boolean {
 
 function getStatusBadgeClass(item: MyCollectionItem): string {
   if (isFailedItem(item)) {
-    return 'bg-amber-100 text-amber-700';
+    return 'bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300';
   }
 
   if (isSoldItem(item)) {
-    return 'bg-emerald-100 text-emerald-700';
+    return 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300';
   }
 
   if (isMiningItem(item)) {
-    return 'bg-sky-100 text-sky-700';
+    return 'bg-sky-100 text-sky-700 dark:bg-sky-500/15 dark:text-sky-300';
   }
 
   if (item.consignment_status === 1 || item.status_text === '寄售中') {
-    return 'bg-violet-100 text-violet-700';
+    return 'bg-violet-100 text-violet-700 dark:bg-violet-500/15 dark:text-violet-300';
   }
 
-  return 'bg-red-100 text-red-700';
+  return 'bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-300';
 }
 
 function getPrimaryTimeMeta(item: MyCollectionItem): { label: string; value: string } {
@@ -302,7 +302,7 @@ function BatchConsignButton({
   const availableCount = data.available_now_count || data.stats.available_collections || data.items.length;
 
   return (
-    <div className="mt-3 rounded-2xl border border-[#f3d6cf] bg-[#fff7f4] p-3">
+    <div className="mt-3 rounded-2xl border border-[#f3d6cf] bg-[#fff7f4] p-3 dark:border-red-500/25 dark:bg-red-500/10">
       <button
         type="button"
         onClick={onClick}
@@ -703,7 +703,7 @@ export const MyCollectionPage = () => {
           </button>
         </form>
 
-        <div className="mt-3 rounded-[18px] border border-[#f0e3d6] bg-[#fbf6ef] p-1.5 shadow-[0_8px_24px_rgba(140,97,54,0.06)]">
+        <div className="mt-3 rounded-[18px] border border-[#f0e3d6] bg-[#fbf6ef] p-1.5 shadow-[0_8px_24px_rgba(140,97,54,0.06)] dark:border-white/10 dark:bg-white/5 dark:shadow-none">
           <div className="grid grid-cols-4 gap-1.5">
             {COLLECTION_CATEGORY_TABS.map((tab) => {
               const active = tab.key === activeTab;
@@ -714,7 +714,7 @@ export const MyCollectionPage = () => {
                   onClick={() => setActiveTab(tab.key)}
                   className={`min-h-11 rounded-[14px] px-2 py-2 text-[12px] font-bold transition ${
                     active
-                      ? 'bg-white text-primary-start shadow-[0_6px_18px_rgba(140,97,54,0.12)]'
+                      ? 'bg-white text-primary-start shadow-[0_6px_18px_rgba(140,97,54,0.12)] dark:bg-bg-card dark:text-red-300 dark:shadow-none'
                       : 'text-text-sub'
                   }`}
                 >

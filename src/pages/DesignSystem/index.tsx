@@ -39,7 +39,7 @@ export const DesignSystemPage = () => {
             <div className="h-16 rounded-2xl bg-bg-card border border-border-light flex items-end p-2 shadow-soft">
               <span className="text-text-main text-sm font-medium">Bg Card</span>
             </div>
-            <div className="h-16 rounded-2xl bg-white flex flex-col justify-end p-2 shadow-soft border border-border-light">
+            <div className="h-16 rounded-2xl bg-bg-card flex flex-col justify-end p-2 shadow-soft border border-border-light">
               <div className="flex space-x-1 mb-1">
                 <div className="w-3 h-3 rounded-full bg-text-main"></div>
                 <div className="w-3 h-3 rounded-full bg-text-sub"></div>

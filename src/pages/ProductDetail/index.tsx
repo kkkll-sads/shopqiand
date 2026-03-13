@@ -445,7 +445,7 @@ export const ProductDetailPage = () => {
     (Boolean(productRequest.error) || (!hasValidProductId && Boolean(fallbackProductRequest.error)));
 
   return (
-    <div className="relative flex flex-1 flex-col overflow-hidden bg-[#f5f5f5]">
+    <div className="product-detail-dark-scope relative flex flex-1 flex-col overflow-hidden bg-[#f5f5f5]">
       {isOffline && (
         <OfflineBanner
           onAction={refreshStatus}
