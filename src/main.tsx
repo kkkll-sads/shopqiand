@@ -9,9 +9,11 @@ import { RouterProvider } from 'react-router-dom';
 import { AppErrorBoundary } from './components/AppErrorBoundary';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { startAppLifecycleObserver } from './lib/appLifecycle';
+import { rewriteLegacyBrowserLocationToHashRoute } from './lib/navigation';
 import { router } from './router';
 import './index.css';
 
+rewriteLegacyBrowserLocationToHashRoute();
 startAppLifecycleObserver();
 
 createRoot(document.getElementById('root')!).render(

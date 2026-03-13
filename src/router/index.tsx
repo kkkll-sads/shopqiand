@@ -121,6 +121,12 @@ const LegacyPathRedirect = ({ to }: { to: string }) => {
   return <Navigate replace to={`${to}${location.search}`} />;
 };
 
+const UnknownRouteRedirect = () => {
+  const location = useLocation();
+
+  return <Navigate replace to={{ pathname: '/', search: location.search }} />;
+};
+
 const legacyAppPathRoutes = Object.entries(LEGACY_APP_PATH_TO_ROUTE).map(([path, to]) => ({
   path: path.replace(/^\/+/, ''),
   element: <LegacyPathRedirect to={to} />,
@@ -296,7 +302,8 @@ export const router = createHashRouter([
       { path: 'design', element: <Lazy><DesignSystemPage /></Lazy> },
 
       // ========== 404 兜底 ==========
-      { path: '*', element: <Lazy><NotFoundPage /></Lazy> },
+      { path: '404', element: <Lazy><NotFoundPage /></Lazy> },
+      { path: '*', element: <UnknownRouteRedirect /> },
     ],
   },
 ], {

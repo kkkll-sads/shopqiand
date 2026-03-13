@@ -50,6 +50,24 @@ export function resolveLegacyAppPath(path: string) {
   return `${targetPath}${search}`;
 }
 
+export function rewriteLegacyBrowserLocationToHashRoute() {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  const { pathname, search, hash, origin } = window.location;
+  const normalizedPath = normalizeAppPath(pathname).pathname;
+
+  if (!normalizedPath || normalizedPath === '/' || hash) {
+    return;
+  }
+
+  const targetPath = resolveLegacyAppPath(normalizedPath) ?? normalizedPath;
+  const nextUrl = `${origin}/#${targetPath}${search}`;
+
+  window.history.replaceState(window.history.state, '', nextUrl);
+}
+
 /**
  * view ID 鈫?URL 璺緞鏄犲皠琛?
  * 灏嗘棫鐗?CustomEvent 涓娇鐢ㄧ殑 view ID 鏄犲皠鍒?React Router 璺緞
