@@ -3,7 +3,7 @@
  * @description 展示用户持有的数字藏品列表，支持搜索、状态筛选和无限滚动。
  */
 
-import { type FormEvent, useCallback, useEffect, useRef, useState } from 'react';
+import { type FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Box, ChevronRight, RefreshCcw, Search, X, Zap } from 'lucide-react';
 import {
   collectionConsignmentApi,
@@ -38,14 +38,21 @@ const EMPTY_RESPONSE: MyCollectionResponse = {
   last_page: 1,
 };
 
-const STATUS_TABS: Array<{ key: MyCollectionStatus; label: string }> = [
-  { key: 'holding', label: '持有中' },
-  { key: 'consigned', label: '寄售中' },
-  { key: 'mining', label: '运行中' },
-  { key: 'sold', label: '已售出' },
-  { key: 'failed', label: '寄售失败' },
-  { key: 'all', label: '全部' },
+type CollectionCategoryTab = 'hold' | 'consign' | 'sold' | 'dividend';
+
+const COLLECTION_CATEGORY_TABS: Array<{ key: CollectionCategoryTab; label: string }> = [
+  { key: 'hold', label: '持仓中' },
+  { key: 'consign', label: '寄售中' },
+  { key: 'sold', label: '已流转' },
+  { key: 'dividend', label: '权益节点' },
 ];
+
+const CATEGORY_STATUS_MAP: Record<CollectionCategoryTab, MyCollectionStatus> = {
+  hold: 'holding',
+  consign: 'consigned',
+  sold: 'sold',
+  dividend: 'mining',
+};
 
 function formatMoney(value: number): string {
   const amount = Number.isFinite(value) ? value : 0;
@@ -72,6 +79,10 @@ function formatHash(value: string): string {
 
 function isFailedItem(item: MyCollectionItem): boolean {
   return item.consignment_status === 3 || item.status_text === '寄售失败';
+}
+
+function isConsigningItem(item: MyCollectionItem): boolean {
+  return item.consignment_status === 1 || item.status_text === '寄售中';
 }
 
 function isSoldItem(item: MyCollectionItem): boolean {
@@ -330,13 +341,32 @@ function buildBatchFailureLines(result: BatchConsignResult): string[] {
   return Object.entries(result.failure_summary).map(([reason, count]) => `${reason}: ${count} 个`);
 }
 
+function getEmptyCollectionMessage(tab: CollectionCategoryTab, keyword: string): string {
+  if (keyword) {
+    return '没有找到匹配的藏品';
+  }
+
+  switch (tab) {
+    case 'hold':
+      return '暂时还没有持仓中的藏品';
+    case 'consign':
+      return '暂时还没有寄售中的藏品';
+    case 'sold':
+      return '暂时还没有已流转的藏品';
+    case 'dividend':
+      return '暂时还没有权益节点藏品';
+    default:
+      return '暂时还没有藏品';
+  }
+}
+
 export const MyCollectionPage = () => {
   const { goBackOr, navigate } = useAppNavigate();
   const { isOffline, refreshStatus } = useNetworkStatus();
   const { hideLoading, showConfirm, showLoading, showToast } = useFeedback();
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
-  const [activeStatus, setActiveStatus] = useState<MyCollectionStatus>('holding');
+  const [activeTab, setActiveTab] = useState<CollectionCategoryTab>('hold');
   const [draftKeyword, setDraftKeyword] = useState('');
   const [keyword, setKeyword] = useState('');
   const [items, setItems] = useState<MyCollectionItem[]>([]);
@@ -344,7 +374,15 @@ export const MyCollectionPage = () => {
   const [hasMore, setHasMore] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [loadMoreError, setLoadMoreError] = useState<string | null>(null);
-  const queryKey = `${activeStatus}::${keyword}`;
+  const activeStatus = CATEGORY_STATUS_MAP[activeTab];
+  const visibleItems = useMemo(() => {
+    if (activeTab === 'consign') {
+      return items.filter(isConsigningItem);
+    }
+
+    return items;
+  }, [activeTab, items]);
+  const queryKey = `${activeTab}::${keyword}`;
   const queryKeyRef = useRef(queryKey);
 
   useEffect(() => {
@@ -375,7 +413,7 @@ export const MyCollectionPage = () => {
       return response;
     },
     {
-      deps: [activeStatus, keyword],
+      deps: [activeTab, keyword],
       initialData: EMPTY_RESPONSE,
       keepPreviousData: false,
     },
@@ -439,8 +477,8 @@ export const MyCollectionPage = () => {
   useRouteScrollRestoration({
     containerRef: scrollContainerRef,
     namespace: 'my-collection-page',
-    restoreDeps: [activeStatus, keyword, firstRequest.loading, items.length],
-    restoreWhen: !firstRequest.loading && items.length > 0,
+    restoreDeps: [activeTab, keyword, firstRequest.loading, visibleItems.length],
+    restoreWhen: !firstRequest.loading && visibleItems.length > 0,
   });
 
   const handleRefresh = useCallback(async () => {
@@ -555,7 +593,9 @@ export const MyCollectionPage = () => {
     showToast,
   ]);
 
-  const total = firstRequest.data?.total ?? items.length;
+  const total = activeTab === 'consign'
+    ? visibleItems.length
+    : firstRequest.data?.total ?? visibleItems.length;
 
   const renderLoadMore = () => {
     if (loadingMore) {
@@ -604,18 +644,18 @@ export const MyCollectionPage = () => {
       );
     }
 
-    if (items.length === 0) {
+    if (visibleItems.length === 0) {
       return (
         <EmptyState
           icon={<Box size={42} />}
-          message={keyword ? '没有找到匹配的藏品' : '暂时还没有藏品'}
+          message={getEmptyCollectionMessage(activeTab, keyword)}
         />
       );
     }
 
     return (
       <div className="space-y-3 p-4 pb-8">
-        {items.map((item) => (
+        {visibleItems.map((item) => (
           <div key={`${item.consignment_id || item.user_collection_id || item.id}-${item.status_text}`}>
             <CollectionCard item={item} onClick={() => handleOpenDetail(item)} />
           </div>
@@ -663,22 +703,26 @@ export const MyCollectionPage = () => {
           </button>
         </form>
 
-        <div className="mt-3 flex min-w-0 gap-2 overflow-x-auto overflow-y-hidden no-scrollbar overscroll-x-contain">
-          {STATUS_TABS.map((tab) => {
-            const active = tab.key === activeStatus;
-            return (
-              <button
-                key={tab.key}
-                type="button"
-                onClick={() => setActiveStatus(tab.key)}
-                className={`shrink-0 rounded-full px-4 py-2 text-[13px] font-medium transition ${
-                  active ? 'bg-primary-start text-white' : 'bg-bg-base text-text-sub'
-                }`}
-              >
-                {tab.label}
-              </button>
-            );
-          })}
+        <div className="mt-3 rounded-[18px] border border-[#f0e3d6] bg-[#fbf6ef] p-1.5 shadow-[0_8px_24px_rgba(140,97,54,0.06)]">
+          <div className="grid grid-cols-4 gap-1.5">
+            {COLLECTION_CATEGORY_TABS.map((tab) => {
+              const active = tab.key === activeTab;
+              return (
+                <button
+                  key={tab.key}
+                  type="button"
+                  onClick={() => setActiveTab(tab.key)}
+                  className={`min-h-11 rounded-[14px] px-2 py-2 text-[12px] font-bold transition ${
+                    active
+                      ? 'bg-white text-primary-start shadow-[0_6px_18px_rgba(140,97,54,0.12)]'
+                      : 'text-text-sub'
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         <BatchConsignButton
@@ -690,7 +734,7 @@ export const MyCollectionPage = () => {
 
         <div className="mt-3 flex items-center justify-between text-[12px] text-text-aux">
           <span>共 {total} 件</span>
-          {keyword ? <span className="truncate">关键词: {keyword}</span> : <span>按状态浏览</span>}
+          {keyword ? <span className="truncate">关键词: {keyword}</span> : <span>按分类浏览</span>}
         </div>
       </div>
 
