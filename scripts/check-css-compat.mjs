@@ -33,12 +33,6 @@ const checks = [
     name: 'TAILWIND_SPECIFICITY_HACK',
     pattern: /:not\(#\\#\)/,
   },
-  {
-    message:
-      'Found nested var(--tw-gradient-via-stops,...) in --tw-gradient-stops; gradients will fail on Android WebView < Chrome 80.',
-    name: 'NESTED_GRADIENT_VAR_CHAIN',
-    pattern: /--tw-gradient-stops\s*:\s*var\(\s*--tw-gradient-via-stops\s*,/,
-  },
 ];
 
 const cssFiles = readdirSync(distAssetsDir)

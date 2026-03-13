@@ -33,7 +33,7 @@ const ProfileBalanceCard: React.FC<ProfileBalanceCardProps> = ({ userInfo, onNav
           <div className="mb-3 flex items-start justify-between">
             <div className="flex items-center gap-2">
               <span className="text-sm font-medium text-red-50">供应链专项金</span>
-              <span className="rounded-full border border-white/30 bg-white/20 px-2 py-0.5 text-[10px] font-bold text-white backdrop-blur-sm">
+              <span className="profile-balance-chip rounded-full px-2 py-0.5 text-[10px] font-bold backdrop-blur-sm">
                 采购本金
               </span>
             </div>

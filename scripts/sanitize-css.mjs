@@ -68,42 +68,6 @@ for (const file of cssFiles) {
     }
   });
 
-  const viaStopsRe = /var\(\s*--tw-gradient-via-stops\s*,\s*/;
-
-  const flattenViaStopsWrapper = (value) => {
-    const match = value.match(viaStopsRe);
-    if (!match || match.index == null) {
-      return null;
-    }
-
-    const startIdx = match.index + match[0].length;
-    let depth = 1;
-    let endIdx = startIdx;
-
-    for (let index = startIdx; index < value.length; index += 1) {
-      if (value[index] === '(') {
-        depth += 1;
-      }
-      if (value[index] === ')') {
-        depth -= 1;
-      }
-      if (depth === 0) {
-        endIdx = index;
-        break;
-      }
-    }
-
-    return value.substring(startIdx, endIdx).trim();
-  };
-
-  root.walkDecls(/^--tw-gradient-(stops|via-stops)$/, (decl) => {
-    const flattened = flattenViaStopsWrapper(decl.value);
-    if (flattened) {
-      decl.value = flattened;
-      changed = true;
-    }
-  });
-
   if (changed) {
     writeFileSync(file, root.toString(), 'utf8');
     changedFiles += 1;
