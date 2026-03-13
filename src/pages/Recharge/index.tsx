@@ -475,9 +475,11 @@ export function RechargePage() {
       });
 
       const resolvedPaymentMethod =
-        selectedPaymentOption.type === 'bank_card' || selectedPaymentOption.type === 'unionpay'
+        selectedPaymentOption.type === 'bank_card'
           ? 'offline'
-          : result.paymentMethod ?? 'online';
+          : selectedPaymentOption.type === 'unionpay'
+            ? 'online'
+            : result.paymentMethod ?? 'online';
 
       if (resolvedPaymentMethod !== 'offline') {
         // 先跳转匹配动画页，在动画期间提交订单，成功后进入收银台
@@ -619,7 +621,7 @@ export function RechargePage() {
     matchStep === 'matched' &&
     Boolean(matchedAccount) &&
     matchedPaymentMethod === 'offline' &&
-    (selectedPaymentType === 'bank_card' || selectedPaymentType === 'unionpay');
+    selectedPaymentType === 'bank_card';
 
   const renderHeader = () => (
     <WalletPageHeader
