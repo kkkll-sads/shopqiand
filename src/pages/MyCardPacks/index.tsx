@@ -565,11 +565,7 @@ export function MyCardPacksPage() {
 
     return (
       <div className="space-y-3">
-        <Card className="border border-orange-100 bg-orange-50/70 text-sm leading-6 text-orange-700 dark:border-orange-500/20 dark:bg-orange-500/10 dark:text-orange-200">
-          {usesDualPricing
-            ? '卡包支持专项金或待激活确权金购买，页面展示的是各支付方式对应金额；下单时会优先使用可用的专项金方案。'
-            : `卡包购买会同时扣除专项金与待激活确权金，专项金至少支付 ${formatPercent(productsData.minPayRatio)}，系统会按当前余额自动拆分。`}
-        </Card>
+
 
         {productList.map((product) => {
           const plan = plans.get(product.id);
@@ -635,13 +631,12 @@ export function MyCardPacksPage() {
                   type="button"
                   onClick={() => void handleBuy(product)}
                   disabled={isAuthenticated ? !plan?.canBuy : false}
-                  className={`flex h-11 w-full items-center justify-center rounded-full text-base font-medium ${
-                    isAuthenticated
+                  className={`flex h-11 w-full items-center justify-center rounded-full text-base font-medium ${isAuthenticated
                       ? plan?.canBuy
                         ? 'bg-gradient-to-r from-primary-start to-primary-end text-white'
                         : 'bg-gray-200 text-gray-400 dark:bg-gray-800 dark:text-gray-500'
                       : 'bg-gradient-to-r from-primary-start to-primary-end text-white'
-                  }`}
+                    }`}
                 >
                   {!isAuthenticated ? '登录后购买' : plan?.canBuy ? '立即购买' : '暂不可购买'}
                 </button>
@@ -663,10 +658,10 @@ export function MyCardPacksPage() {
         action={
           isAuthenticated
             ? {
-                icon: Wallet,
-                label: '去充值',
-                onClick: () => goTo('recharge'),
-              }
+              icon: Wallet,
+              label: '去充值',
+              onClick: () => goTo('recharge'),
+            }
             : undefined
         }
       />
@@ -685,11 +680,10 @@ export function MyCardPacksPage() {
                   key={tab.id}
                   type="button"
                   onClick={() => setActiveTab(tab.id as CardTab)}
-                  className={`flex-1 rounded-[14px] px-4 py-2.5 text-sm font-medium ${
-                    activeTab === tab.id
+                  className={`flex-1 rounded-[14px] px-4 py-2.5 text-sm font-medium ${activeTab === tab.id
                       ? 'bg-gradient-to-r from-primary-start to-primary-end text-white shadow-sm'
                       : 'text-text-sub'
-                  }`}
+                    }`}
                 >
                   {tab.label}
                 </button>
