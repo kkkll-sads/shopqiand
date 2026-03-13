@@ -1,1 +1,0 @@
-import{j as t}from"./index-CDWEbrq9.js";import{E as e}from"./eye-BzJuQ3RZ.js";import{E as a}from"./eye-off-3nzadxJ1.js";const r="rounded-full p-1 text-text-sub transition-opacity active:opacity-70",m=({visible:o,onToggle:s})=>t.jsx("button",{type:"button","aria-label":o?"隐藏密码":"显示密码",onClick:s,className:r,children:o?t.jsx(e,{size:18}):t.jsx(a,{size:18})});export{m as A};

@@ -1,0 +1,1 @@
+import{u as a,j as e,ab as t,aD as o}from"./index-3QopHfh1.js";const r=()=>{const{goBackOr:s}=a();return e.jsxs("div",{className:"flex flex-1 flex-col overflow-hidden bg-bg-base",children:[e.jsx(t,{title:"成长权益",onBack:()=>s("shield")}),e.jsx("div",{className:"flex-1 overflow-y-auto",children:e.jsx(o,{})})]})};export{r as GrowthRightsPage,r as default};
