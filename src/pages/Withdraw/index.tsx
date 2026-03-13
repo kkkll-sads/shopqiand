@@ -394,7 +394,7 @@ export const WithdrawPage = () => {
                   <div className="mb-2 text-7xl font-bold tracking-tight text-primary-start">
                     {formatMoney(withdrawableBalance)}
                   </div>
-                  <div className="text-sm text-text-sub">
+                  <div className="hidden">
                     可提现收益总额：{formatMoney(accountOverview?.income.totalIncomeWithdrawable)}
                   </div>
                 </div>
