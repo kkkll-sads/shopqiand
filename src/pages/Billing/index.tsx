@@ -25,12 +25,17 @@ import {
 import { useSearchParams } from 'react-router-dom';
 import {
   accountApi,
+  rechargeApi,
   type AccountLogFlowDirection,
   type AccountLogItem,
   type AccountLogList,
   type AccountLogType,
   type AccountLogViewMode,
   type AccountMoneyLogDetail,
+  type RechargeOrderList,
+  type RechargeOrderRecord,
+  type WithdrawRecord,
+  type WithdrawRecordList,
 } from '../../api';
 import { getErrorMessage } from '../../api/core/errors';
 import { OfflineBanner } from '../../components/layout/OfflineBanner';
@@ -64,6 +69,8 @@ interface BillingCategoryOption {
   label: string;
   section: BillingCategorySection;
 }
+
+type BillingListResponse = AccountLogList | RechargeOrderList | WithdrawRecordList;
 
 /** 账户类型筛选选项（全部/供应链专项金/可调度收益/确权金/待激活确权金/消费金/绿色算力/静态收益） */
 const ACCOUNT_TYPE_OPTIONS: Array<{ key: AccountLogType; label: string }> = [
@@ -251,6 +258,19 @@ function formatSignedMoney(value: number) {
   return `${prefix}${formatMoney(value)}`;
 }
 
+function maskAccountNumber(value: string | undefined) {
+  const nextValue = value?.trim();
+  if (!nextValue) {
+    return '--';
+  }
+
+  if (nextValue.length <= 8) {
+    return nextValue;
+  }
+
+  return `${nextValue.slice(0, 4)} **** ${nextValue.slice(-4)}`;
+}
+
 /** 格式化账户类型标签 */
 function formatAccountTypeLabel(type: string | undefined) {
   if (!type) {
@@ -323,6 +343,109 @@ function getLegacyBalanceAfterClassName(type: string | undefined, amount: number
   }
 
   return amount >= 0 ? 'text-red-500' : 'text-gray-600';
+}
+
+function getWithdrawStatusBadgeClassName(status: number) {
+  switch (status) {
+    case 0:
+      return 'bg-amber-50 text-amber-600';
+    case 1:
+      return 'bg-blue-50 text-blue-600';
+    case 2:
+      return 'bg-red-50 text-red-600';
+    case 3:
+      return 'bg-emerald-50 text-emerald-600';
+    case 4:
+      return 'bg-rose-50 text-rose-600';
+    default:
+      return 'bg-gray-100 text-gray-500';
+  }
+}
+
+function getWithdrawStatusCardClassName(status: number) {
+  switch (status) {
+    case 0:
+      return 'from-amber-500 to-orange-500';
+    case 1:
+      return 'from-blue-500 to-sky-500';
+    case 2:
+      return 'from-red-500 to-rose-500';
+    case 3:
+      return 'from-emerald-500 to-green-500';
+    case 4:
+      return 'from-rose-500 to-pink-500';
+    default:
+      return 'from-gray-600 to-gray-700';
+  }
+}
+
+function getWithdrawAccountTitle(record: WithdrawRecord) {
+  return record.accountName || record.accountTypeText || '收款账户';
+}
+
+function getWithdrawAccountSubtitle(record: WithdrawRecord) {
+  const parts = [record.bankName, maskAccountNumber(record.accountNumber)].filter(
+    (part): part is string => Boolean(part && part !== '--'),
+  );
+  return parts.length ? parts.join(' · ') : '--';
+}
+
+function getRechargeRecordTypeLabel(recordType: string | undefined) {
+  return recordType === 'transfer' ? '余额划转' : '充值订单';
+}
+
+function getRechargeRecordStatusText(record: RechargeOrderRecord) {
+  return record.statusText || (record.recordType === 'transfer' ? '已到账' : '处理中');
+}
+
+function getRechargeRecordTitle(record: RechargeOrderRecord) {
+  if (record.recordType === 'transfer') {
+    return '余额划转到账';
+  }
+
+  return record.paymentTypeText || '充值订单';
+}
+
+function getRechargeRecordSubtitle(record: RechargeOrderRecord) {
+  const parts =
+    record.recordType === 'transfer'
+      ? ['系统入账', record.createTimeText || '--']
+      : [record.paymentTypeText, record.createTimeText || '--'];
+  return parts.filter((part): part is string => Boolean(part)).join(' · ');
+}
+
+function getRechargeRecordStatusBadgeClassName(record: RechargeOrderRecord) {
+  if (record.recordType === 'transfer') {
+    return 'bg-emerald-50 text-emerald-600';
+  }
+
+  switch (record.status) {
+    case 0:
+      return 'bg-amber-50 text-amber-600';
+    case 1:
+      return 'bg-emerald-50 text-emerald-600';
+    case 2:
+      return 'bg-red-50 text-red-600';
+    default:
+      return 'bg-gray-100 text-gray-500';
+  }
+}
+
+function getRechargeRecordStatusCardClassName(record: RechargeOrderRecord) {
+  if (record.recordType === 'transfer') {
+    return 'from-emerald-500 to-teal-500';
+  }
+
+  switch (record.status) {
+    case 0:
+      return 'from-amber-500 to-orange-500';
+    case 1:
+      return 'from-emerald-500 to-green-500';
+    case 2:
+      return 'from-red-500 to-rose-500';
+    default:
+      return 'from-gray-600 to-gray-700';
+  }
 }
 
 /** 构建查询参数 */
@@ -461,6 +584,10 @@ function getNextHasMore(response: AccountLogList) {
   return response.currentPage * response.perPage < response.total;
 }
 
+function getBillingListHasMore(response: BillingListResponse) {
+  return 'hasMore' in response ? response.hasMore : getNextHasMore(response);
+}
+
 /**
  * BillingPage - 资产明细页面
  * 功能：账户类型/收支方向/关键词筛选 → 分月分组流水列表 → 无限滚动 → 点击查看详情
@@ -475,6 +602,8 @@ export function BillingPage() {
   const queryKeyRef = useRef('');
   const [searchParams] = useSearchParams();
   const scene = resolveBillingScene(searchParams.get('scene'));
+  const isRechargeScene = scene === 'recharge';
+  const isWithdrawScene = scene === 'withdraw';
   const sceneConfig = getBillingSceneConfig(scene);
   const sessionNamespace = scene === 'all' ? 'billing-page' : `billing-page:${scene}`;
 
@@ -497,12 +626,16 @@ export function BillingPage() {
   const [draftKeyword, setDraftKeyword] = useState('');
   const [keyword, setKeyword] = useSessionState(`${sessionNamespace}:keyword`, '');
   const [items, setItems] = useState<AccountLogItem[]>([]);
+  const [rechargeItems, setRechargeItems] = useState<RechargeOrderRecord[]>([]);
+  const [withdrawItems, setWithdrawItems] = useState<WithdrawRecord[]>([]);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [loadMoreError, setLoadMoreError] = useState<string | null>(null);
   const [paginationNotice, setPaginationNotice] = useState<string | null>(null);
   const [selectedLog, setSelectedLog] = useState<AccountLogItem | null>(null);
+  const [selectedRechargeRecord, setSelectedRechargeRecord] = useState<RechargeOrderRecord | null>(null);
+  const [selectedWithdrawRecord, setSelectedWithdrawRecord] = useState<WithdrawRecord | null>(null);
   const [copiedDetailField, setCopiedDetailField] = useState<string | null>(null);
   const [activeDropdown, setActiveDropdown] = useState<BillingFilterDropdown | null>(null);
   const [categorySearch, setCategorySearch] = useState('');
@@ -611,17 +744,19 @@ export function BillingPage() {
   }, [category, categoryOptions, setCategory]);
 
   useEffect(() => {
-    if (selectedLog) {
+    if (selectedLog || selectedRechargeRecord || selectedWithdrawRecord) {
       setActiveDropdown(null);
       setCategorySearch('');
     }
-  }, [selectedLog]);
+  }, [selectedLog, selectedRechargeRecord, selectedWithdrawRecord]);
 
   const queryKey = `${scene}:${viewMode}:${category}:${flowFilter}:${rangeFilter}:${keyword}`;
 
   useEffect(() => {
     queryKeyRef.current = queryKey;
     setItems([]);
+    setRechargeItems([]);
+    setWithdrawItems([]);
     setPage(1);
     setHasMore(false);
     setLoadMoreError(null);
@@ -633,23 +768,62 @@ export function BillingPage() {
     error: listError,
     loading: listLoading,
     reload: reloadList,
-  } = useRequest(
+  } = useRequest<BillingListResponse>(
     async (signal) => {
-      const response = await accountApi.getLogList(
-        buildQueryParams(viewMode, selectedCategoryQuery, flowFilter, rangeFilter, keyword, 1),
-        { signal },
-      );
+      const response = isWithdrawScene
+        ? await rechargeApi.getMyWithdrawList(
+            {
+              limit: PAGE_SIZE,
+              page: 1,
+            },
+            { signal },
+          )
+        : isRechargeScene
+          ? await rechargeApi.getMyOrderList(
+              {
+                limit: PAGE_SIZE,
+                page: 1,
+              },
+              { signal },
+            )
+        : await accountApi.getLogList(
+            buildQueryParams(viewMode, selectedCategoryQuery, flowFilter, rangeFilter, keyword, 1),
+            { signal },
+          );
 
-      setItems(response.list);
+      if (isWithdrawScene) {
+        setWithdrawItems(response.list as WithdrawRecord[]);
+        setRechargeItems([]);
+        setItems([]);
+      } else if (isRechargeScene) {
+        setRechargeItems(response.list as RechargeOrderRecord[]);
+        setWithdrawItems([]);
+        setItems([]);
+      } else {
+        setItems(response.list as AccountLogItem[]);
+        setRechargeItems([]);
+        setWithdrawItems([]);
+      }
       setPage(response.currentPage);
-      setHasMore(getNextHasMore(response));
+      setHasMore(getBillingListHasMore(response));
       setLoadMoreError(null);
       setPaginationNotice(null);
 
       return response;
     },
     {
-      deps: [category, flowFilter, isAuthenticated, keyword, rangeFilter, selectedCategoryQuery.bizType, selectedCategoryQuery.type, viewMode],
+      deps: [
+        category,
+        flowFilter,
+        isAuthenticated,
+        isRechargeScene,
+        isWithdrawScene,
+        keyword,
+        rangeFilter,
+        selectedCategoryQuery.bizType,
+        selectedCategoryQuery.type,
+        viewMode,
+      ],
       keepPreviousData: false,
       manual: !isAuthenticated,
     },
@@ -663,7 +837,7 @@ export function BillingPage() {
     setData: setSelectedDetail,
   } = useRequest<AccountMoneyLogDetail | undefined>(
     (signal) =>
-      selectedLog
+      !isRechargeScene && !isWithdrawScene && selectedLog
         ? accountApi.getMoneyLogDetail(
             {
               flowNo: selectedLog.flowNo,
@@ -675,17 +849,25 @@ export function BillingPage() {
           )
         : Promise.resolve(undefined),
     {
-      deps: [isAuthenticated, selectedLog?.flowNo, selectedLog?.id, selectedLog?.mergeKey, selectedLog?.isMerged],
+      deps: [
+        isAuthenticated,
+        isRechargeScene,
+        isWithdrawScene,
+        selectedLog?.flowNo,
+        selectedLog?.id,
+        selectedLog?.mergeKey,
+        selectedLog?.isMerged,
+      ],
       keepPreviousData: false,
-      manual: !isAuthenticated || !selectedLog,
+      manual: !isAuthenticated || isRechargeScene || isWithdrawScene || !selectedLog,
     },
   );
 
   useEffect(() => {
-    if (!selectedLog) {
+    if (!selectedLog || isRechargeScene || isWithdrawScene) {
       setSelectedDetail(undefined);
     }
-  }, [selectedLog, setSelectedDetail]);
+  }, [isRechargeScene, isWithdrawScene, selectedLog, setSelectedDetail]);
 
   const loadMore = useCallback(async () => {
     if (!hasMore || loadingMore || !isAuthenticated) {
@@ -699,17 +881,33 @@ export function BillingPage() {
     setLoadMoreError(null);
 
     try {
-      const response = await accountApi.getLogList(
-        buildQueryParams(viewMode, selectedCategoryQuery, flowFilter, rangeFilter, keyword, nextPage),
-      );
+      const response = isWithdrawScene
+        ? await rechargeApi.getMyWithdrawList({
+            limit: PAGE_SIZE,
+            page: nextPage,
+          })
+        : isRechargeScene
+          ? await rechargeApi.getMyOrderList({
+              limit: PAGE_SIZE,
+              page: nextPage,
+            })
+        : await accountApi.getLogList(
+            buildQueryParams(viewMode, selectedCategoryQuery, flowFilter, rangeFilter, keyword, nextPage),
+          );
 
       if (queryKeyRef.current !== requestKey) {
         return;
       }
 
-      setItems((current) => [...current, ...response.list]);
+      if (isWithdrawScene) {
+        setWithdrawItems((current) => [...current, ...(response.list as WithdrawRecord[])]);
+      } else if (isRechargeScene) {
+        setRechargeItems((current) => [...current, ...(response.list as RechargeOrderRecord[])]);
+      } else {
+        setItems((current) => [...current, ...(response.list as AccountLogItem[])]);
+      }
       setPage(response.currentPage);
-      setHasMore(getNextHasMore(response));
+      setHasMore(getBillingListHasMore(response));
 
       if (response.list.length === 0) {
         setPaginationNotice('分页接口返回空页，已停止继续加载');
@@ -725,10 +923,29 @@ export function BillingPage() {
         setLoadingMore(false);
       }
     }
-  }, [category, flowFilter, hasMore, isAuthenticated, keyword, loadingMore, page, rangeFilter, selectedCategoryQuery, viewMode]);
+  }, [
+    category,
+    flowFilter,
+    hasMore,
+    isAuthenticated,
+    isRechargeScene,
+    isWithdrawScene,
+    keyword,
+    loadingMore,
+    page,
+    rangeFilter,
+    selectedCategoryQuery,
+    viewMode,
+  ]);
 
   useInfiniteScroll({
-    disabled: Boolean(selectedLog) || isOffline || Boolean(loadMoreError) || Boolean(paginationNotice),
+    disabled:
+      Boolean(selectedLog) ||
+      Boolean(selectedRechargeRecord) ||
+      Boolean(selectedWithdrawRecord) ||
+      isOffline ||
+      Boolean(loadMoreError) ||
+      Boolean(paginationNotice),
     hasMore,
     loading: loadingMore || listLoading,
     onLoadMore: loadMore,
@@ -737,6 +954,8 @@ export function BillingPage() {
   });
 
   const logs = items;
+  const rechargeLogs = rechargeItems;
+  const withdrawLogs = withdrawItems;
 
   const detailBreakdownEntries = useMemo(() => {
     const source = {
@@ -749,14 +968,23 @@ export function BillingPage() {
 
   useRouteScrollRestoration({
     containerRef: scrollContainerRef,
-    enabled: isAuthenticated && !selectedLog,
+    enabled: isAuthenticated && !selectedLog && !selectedRechargeRecord && !selectedWithdrawRecord,
     namespace: `${sessionNamespace}:scroll`,
-    restoreDeps: [category, flowFilter, keyword, logs.length, listLoading, rangeFilter, viewMode],
-    restoreWhen: isAuthenticated && !selectedLog && !listLoading,
+    restoreDeps: [
+      category,
+      flowFilter,
+      keyword,
+      isWithdrawScene ? withdrawLogs.length : isRechargeScene ? rechargeLogs.length : logs.length,
+      listLoading,
+      rangeFilter,
+      viewMode,
+    ],
+    restoreWhen:
+      isAuthenticated && !selectedLog && !selectedRechargeRecord && !selectedWithdrawRecord && !listLoading,
   });
 
   useViewScrollSnapshot({
-    active: !selectedLog,
+    active: !selectedLog && !selectedRechargeRecord && !selectedWithdrawRecord,
     containerRef: scrollContainerRef,
     enabled: isAuthenticated,
   });
@@ -764,7 +992,7 @@ export function BillingPage() {
   const handleRefresh = () => {
     refreshStatus();
 
-    if (selectedLog) {
+    if (!isRechargeScene && !isWithdrawScene && selectedLog) {
       return reloadDetail().catch(() => undefined) as Promise<unknown>;
     }
 
@@ -774,6 +1002,16 @@ export function BillingPage() {
   const handleBack = () => {
     if (selectedLog) {
       setSelectedLog(null);
+      return;
+    }
+
+    if (selectedRechargeRecord) {
+      setSelectedRechargeRecord(null);
+      return;
+    }
+
+    if (selectedWithdrawRecord) {
+      setSelectedWithdrawRecord(null);
       return;
     }
 
@@ -854,7 +1092,22 @@ export function BillingPage() {
         >
           <ArrowLeft size={20} />
         </button>
-        <h1 className="w-full text-center text-lg font-bold text-gray-800">
+        {selectedRechargeRecord ? (
+          <>
+            <h1 className="w-full text-center text-lg font-bold text-gray-800">{'充值详情'}</h1>
+            {/*
+          <h1 className="w-full text-center text-lg font-bold text-gray-800">充值详情</h1>
+            */}
+          </>
+        ) : null}
+        {selectedWithdrawRecord ? (
+          <h1 className="w-full text-center text-lg font-bold text-gray-800">提现详情</h1>
+        ) : null}
+        <h1
+          className={`w-full text-center text-lg font-bold text-gray-800 ${
+            selectedRechargeRecord || selectedWithdrawRecord ? 'hidden' : ''
+          }`}
+        >
           {selectedLog ? '资金明细详情' : scene === 'all' ? '历史记录' : sceneConfig.title}
         </h1>
       </div>
@@ -862,8 +1115,30 @@ export function BillingPage() {
   );
 
   const renderFilters = () => {
-    if (selectedLog) {
+    if (selectedLog || selectedRechargeRecord || selectedWithdrawRecord) {
       return null;
+    }
+
+    if (isRechargeScene || isWithdrawScene) {
+      return (
+        <div className="z-20 shrink-0 bg-white">
+          <div className="border-b border-gray-100 bg-gray-50/70 px-4 py-3">
+            <div className="flex items-start justify-between gap-3 rounded-xl border border-gray-100 bg-white px-3.5 py-3">
+              <div>
+                <div className="text-sm font-medium text-gray-800">{sceneConfig.title}</div>
+                <div className="mt-1 text-xs leading-5 text-gray-500">{sceneConfig.intro}</div>
+              </div>
+              <button
+                type="button"
+                onClick={() => navigate(getBillingPath('all'))}
+                className="shrink-0 rounded-full bg-red-50 px-3 py-1.5 text-xs font-medium text-red-600 active:opacity-70"
+              >
+                查看全部
+              </button>
+            </div>
+          </div>
+        </div>
+      );
     }
 
     return (
@@ -1065,6 +1340,8 @@ export function BillingPage() {
   );
 
   const renderLoadMore = () => {
+    const currentListLength = isWithdrawScene ? withdrawLogs.length : isRechargeScene ? rechargeLogs.length : logs.length;
+
     if (paginationNotice) {
       return <span className="text-xs text-amber-500">{paginationNotice}</span>;
     }
@@ -1085,11 +1362,171 @@ export function BillingPage() {
       return <span className="text-xs text-gray-400">加载中...</span>;
     }
 
-    if (!hasMore && logs.length > 5) {
+    if (!hasMore && currentListLength > 5) {
       return <span className="text-xs text-gray-300">- 到底了 -</span>;
     }
 
     return hasMore ? <span className="text-xs text-gray-300">继续下滑加载</span> : null;
+  };
+
+  const renderRechargeList = () => {
+    if (listLoading && !rechargeLogs.length) {
+      return renderListSkeleton();
+    }
+
+    if (listError && !rechargeLogs.length) {
+      return (
+        <div className="flex flex-col items-center justify-center py-20 text-red-400">
+          <span className="text-xs">{getErrorMessage(listError)}</span>
+          <button
+            type="button"
+            onClick={() => void reloadList().catch(() => undefined)}
+            className="mt-3 rounded-full bg-red-50 px-4 py-2 text-xs font-medium text-red-600 active:opacity-80"
+          >
+            重新加载
+          </button>
+        </div>
+      );
+    }
+
+    if (!rechargeLogs.length) {
+      return (
+        <div className="flex flex-col items-center justify-center py-20 text-gray-400">
+          <div className="mb-3 flex h-16 w-16 items-center justify-center rounded-full bg-gray-100">
+            <Receipt size={24} className="text-gray-300" />
+          </div>
+          <span className="text-xs text-gray-400">{sceneConfig.emptyMessage}</span>
+        </div>
+      );
+    }
+
+    return (
+      <div className="space-y-3 p-3 pb-10">
+        {rechargeLogs.map((item, index) => (
+          <button
+            key={`${item.id}-${item.orderNo ?? item.createTime ?? index}`}
+            type="button"
+            onClick={() => setSelectedRechargeRecord(item)}
+            className="group w-full rounded-xl border border-gray-100 bg-white p-4 text-left shadow-sm transition-all active:scale-[0.99] active:bg-gray-50"
+          >
+            <div className="mb-3 flex items-start justify-between gap-3">
+              <div className="min-w-0 flex-1">
+                <div className="mb-1.5 flex flex-wrap items-center gap-2">
+                  <span className="inline-flex shrink-0 rounded bg-indigo-50 px-1.5 py-0.5 text-[10px] font-medium text-indigo-600">
+                    {getRechargeRecordTypeLabel(item.recordType)}
+                  </span>
+                  <span
+                    className={`inline-flex shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium ${getRechargeRecordStatusBadgeClassName(item)}`}
+                  >
+                    {getRechargeRecordStatusText(item)}
+                  </span>
+                </div>
+                <div className="truncate text-sm font-medium text-gray-800">{getRechargeRecordTitle(item)}</div>
+                <div className="mt-1 text-xs text-gray-400">{getRechargeRecordSubtitle(item) || '--'}</div>
+                <div className="mt-1 truncate text-xs text-gray-400">{item.orderNo || `记录 #${item.id}`}</div>
+              </div>
+
+              <div className="flex shrink-0 items-start gap-2">
+                <div className="text-right">
+                  <div className="text-base font-bold text-red-500">+{formatMoney(item.amount)}</div>
+                  <div className="mt-1 text-xs text-gray-500">{item.createTimeText || '--'}</div>
+                </div>
+                <ChevronRight size={16} className="mt-0.5 text-gray-300" />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between gap-3 border-t border-gray-50 pt-2 text-[11px] text-gray-400">
+              <span className="truncate">{item.paymentTypeText || '系统处理'}</span>
+              <span className="truncate">{item.statusText || getRechargeRecordStatusText(item)}</span>
+            </div>
+          </button>
+        ))}
+
+        <div ref={loadMoreRef} className="flex min-h-[56px] items-center justify-center py-3">
+          {renderLoadMore()}
+        </div>
+      </div>
+    );
+  };
+
+  const renderWithdrawList = () => {
+    if (listLoading && !withdrawLogs.length) {
+      return renderListSkeleton();
+    }
+
+    if (listError && !withdrawLogs.length) {
+      return (
+        <div className="flex flex-col items-center justify-center py-20 text-red-400">
+          <span className="text-xs">{getErrorMessage(listError)}</span>
+          <button
+            type="button"
+            onClick={() => void reloadList().catch(() => undefined)}
+            className="mt-3 rounded-full bg-red-50 px-4 py-2 text-xs font-medium text-red-600 active:opacity-80"
+          >
+            重新加载
+          </button>
+        </div>
+      );
+    }
+
+    if (!withdrawLogs.length) {
+      return (
+        <div className="flex flex-col items-center justify-center py-20 text-gray-400">
+          <div className="mb-3 flex h-16 w-16 items-center justify-center rounded-full bg-gray-100">
+            <Receipt size={24} className="text-gray-300" />
+          </div>
+          <span className="text-xs text-gray-400">{sceneConfig.emptyMessage}</span>
+        </div>
+      );
+    }
+
+    return (
+      <div className="space-y-3 p-3 pb-10">
+        {withdrawLogs.map((item, index) => (
+          <button
+            key={`${item.id}-${item.createTime ?? index}`}
+            type="button"
+            onClick={() => setSelectedWithdrawRecord(item)}
+            className="group w-full rounded-xl border border-gray-100 bg-white p-4 text-left shadow-sm transition-all active:scale-[0.99] active:bg-gray-50"
+          >
+            <div className="mb-3 flex items-start justify-between gap-3">
+              <div className="min-w-0 flex-1">
+                <div className="mb-1.5 flex flex-wrap items-center gap-2">
+                  <span className="inline-flex shrink-0 rounded bg-indigo-50 px-1.5 py-0.5 text-[10px] font-medium text-indigo-600">
+                    {item.accountTypeText || '提现账户'}
+                  </span>
+                  <span
+                    className={`inline-flex shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium ${getWithdrawStatusBadgeClassName(item.status)}`}
+                  >
+                    {item.statusText || '处理中'}
+                  </span>
+                </div>
+                <div className="truncate text-sm font-medium text-gray-800">{getWithdrawAccountTitle(item)}</div>
+                <div className="mt-1 text-xs text-gray-400">{getWithdrawAccountSubtitle(item)}</div>
+                <div className="mt-1 text-xs text-gray-400">{item.createTimeText || '--'}</div>
+              </div>
+
+              <div className="flex shrink-0 items-start gap-2">
+                <div className="text-right">
+                  <div className="text-base font-bold text-gray-900">-{formatMoney(item.amount)}</div>
+                  <div className="mt-1 text-xs text-gray-500">到账 {formatMoney(item.actualAmount)}</div>
+                </div>
+                <ChevronRight size={16} className="mt-0.5 text-gray-300" />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between gap-3 border-t border-gray-50 pt-2 text-[11px] text-gray-400">
+              <span className="truncate">手续费 {formatMoney(item.fee)}</span>
+              <span className="truncate">记录 #{item.id}</span>
+            </div>
+          </button>
+        ))}
+
+        <div ref={loadMoreRef} className="flex min-h-[56px] items-center justify-center py-3">
+          {renderLoadMore()}
+        </div>
+      </div>
+    );
   };
 
   const renderLogList = () => {
@@ -1232,6 +1669,228 @@ export function BillingPage() {
               {copied ? <Check size={13} className="text-green-500" /> : <Copy size={13} />}
             </button>
           ) : null}
+        </div>
+      </div>
+    );
+  };
+
+  const renderRechargeDetail = () => {
+    if (!selectedRechargeRecord) {
+      return null;
+    }
+
+    const record = selectedRechargeRecord;
+    const statusText = getRechargeRecordStatusText(record);
+    const recordTypeText = getRechargeRecordTypeLabel(record.recordType);
+
+    return (
+      <div className="space-y-4 p-4 pb-10">
+        <div
+          className={`rounded-2xl bg-gradient-to-br ${getRechargeRecordStatusCardClassName(record)} p-6 text-white shadow-lg`}
+        >
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <div className="text-sm opacity-85">{statusText}</div>
+              <div className="mt-2 font-[DINAlternate-Bold,Roboto,sans-serif] text-4xl font-bold">
+                +{formatMoney(record.amount)}
+              </div>
+              <div className="mt-2 text-xs opacity-80">{record.createTimeText || '--'}</div>
+            </div>
+            <span className="rounded-full bg-white/15 px-3 py-1 text-xs font-medium text-white">
+              {recordTypeText}
+            </span>
+          </div>
+
+          <div className="mt-5 grid grid-cols-2 gap-3 rounded-xl bg-white/12 p-3 text-sm">
+            <div>
+              <div className="text-xs opacity-80">支付方式</div>
+              <div className="mt-1 font-medium">{record.paymentTypeText || '系统处理'}</div>
+            </div>
+            <div>
+              <div className="text-xs opacity-80">状态</div>
+              <div className="mt-1 font-medium">{statusText}</div>
+            </div>
+          </div>
+        </div>
+
+        <div className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm">
+          <div className="mb-4 flex items-center gap-2 border-b border-gray-100 pb-3">
+            <Receipt className="h-5 w-5 text-red-600" />
+            <h2 className="text-base font-semibold text-gray-900">充值信息</h2>
+          </div>
+
+          <div className="space-y-1">
+            {renderDetailInfoRow('记录类型', recordTypeText, {
+              icon: Receipt,
+            })}
+            {renderDetailInfoRow('记录ID', String(record.id || '--'), {
+              copyable: Boolean(record.id),
+              fieldKey: 'recharge-id',
+              icon: Hash,
+              successMessage: '记录ID已复制',
+            })}
+            {record.orderNo
+              ? renderDetailInfoRow('订单号', record.orderNo, {
+                  copyable: true,
+                  fieldKey: 'recharge-order-no',
+                  successMessage: '订单号已复制',
+                })
+              : null}
+            {renderDetailInfoRow('充值金额', formatMoney(record.amount))}
+            {renderDetailInfoRow('支付方式', record.paymentTypeText || '系统处理')}
+            {renderDetailInfoRow('状态', statusText, {
+              icon: TrendingUp,
+            })}
+          </div>
+        </div>
+
+        {record.auditRemark ? (
+          <div className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm">
+            <div className="mb-4 flex items-center gap-2 border-b border-gray-100 pb-3">
+              <FileText className="h-5 w-5 text-red-600" />
+              <h2 className="text-base font-semibold text-gray-900">审核备注</h2>
+            </div>
+
+            <div className="space-y-1">
+              {renderDetailInfoRow('备注内容', record.auditRemark)}
+            </div>
+          </div>
+        ) : null}
+
+        {record.paymentScreenshot ? (
+          <div className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm">
+            <div className="mb-4 flex items-center gap-2 border-b border-gray-100 pb-3">
+              <Package className="h-5 w-5 text-red-600" />
+              <h2 className="text-base font-semibold text-gray-900">付款凭证</h2>
+            </div>
+            <div className="overflow-hidden rounded-xl bg-gray-50">
+              <img src={record.paymentScreenshot} alt="付款凭证" className="h-auto w-full object-cover" />
+            </div>
+          </div>
+        ) : null}
+
+        <div className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm">
+          <div className="mb-4 flex items-center gap-2 border-b border-gray-100 pb-3">
+            <Calendar className="h-5 w-5 text-red-600" />
+            <h2 className="text-base font-semibold text-gray-900">时间节点</h2>
+          </div>
+
+          <div className="space-y-1">
+            {renderDetailInfoRow('创建时间', record.createTimeText || '--', {
+              icon: Calendar,
+            })}
+            {record.auditTimeText ? renderDetailInfoRow('审核时间', record.auditTimeText) : null}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const renderWithdrawDetail = () => {
+    if (!selectedWithdrawRecord) {
+      return null;
+    }
+
+    const record = selectedWithdrawRecord;
+    const accountTypeText = record.accountTypeText || '提现账户';
+    const accountTitle = getWithdrawAccountTitle(record);
+    const accountSubtitle = getWithdrawAccountSubtitle(record);
+
+    return (
+      <div className="space-y-4 p-4 pb-10">
+        <div
+          className={`rounded-2xl bg-gradient-to-br ${getWithdrawStatusCardClassName(record.status)} p-6 text-white shadow-lg`}
+        >
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <div className="text-sm opacity-85">{record.statusText || '处理中'}</div>
+              <div className="mt-2 font-[DINAlternate-Bold,Roboto,sans-serif] text-4xl font-bold">
+                -{formatMoney(record.amount)}
+              </div>
+              <div className="mt-2 text-xs opacity-80">{record.createTimeText || '--'}</div>
+            </div>
+            <span className="rounded-full bg-white/15 px-3 py-1 text-xs font-medium text-white">
+              {accountTypeText}
+            </span>
+          </div>
+
+          <div className="mt-5 grid grid-cols-2 gap-3 rounded-xl bg-white/12 p-3 text-sm">
+            <div>
+              <div className="text-xs opacity-80">到账金额</div>
+              <div className="mt-1 font-medium">{formatMoney(record.actualAmount)}</div>
+            </div>
+            <div>
+              <div className="text-xs opacity-80">手续费</div>
+              <div className="mt-1 font-medium">{formatMoney(record.fee)}</div>
+            </div>
+          </div>
+        </div>
+
+        <div className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm">
+          <div className="mb-4 flex items-center gap-2 border-b border-gray-100 pb-3">
+            <Receipt className="h-5 w-5 text-red-600" />
+            <h2 className="text-base font-semibold text-gray-900">提现信息</h2>
+          </div>
+
+          <div className="space-y-1">
+            {renderDetailInfoRow('记录ID', String(record.id || '--'), {
+              copyable: Boolean(record.id),
+              fieldKey: 'withdraw-id',
+              icon: Hash,
+              successMessage: '记录ID已复制',
+            })}
+            {renderDetailInfoRow('提现状态', record.statusText || '--', {
+              icon: TrendingUp,
+            })}
+            {renderDetailInfoRow('提现金额', formatMoney(record.amount))}
+            {renderDetailInfoRow('到账金额', formatMoney(record.actualAmount))}
+            {renderDetailInfoRow('手续费', formatMoney(record.fee))}
+            {renderDetailInfoRow('账户类型', accountTypeText, {
+              icon: Receipt,
+            })}
+            {renderDetailInfoRow('账户名称', accountTitle)}
+            {renderDetailInfoRow('账户号码', record.accountNumber, {
+              copyable: Boolean(record.accountNumber),
+              fieldKey: 'withdraw-account-number',
+              successMessage: '账户号码已复制',
+            })}
+            {record.bankName
+              ? renderDetailInfoRow('开户银行', record.bankName, {
+                  icon: Package,
+                })
+              : null}
+            {accountSubtitle !== '--' ? renderDetailInfoRow('账户摘要', accountSubtitle) : null}
+          </div>
+        </div>
+
+        {record.auditReason || record.payReason || record.remark ? (
+          <div className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm">
+            <div className="mb-4 flex items-center gap-2 border-b border-gray-100 pb-3">
+              <FileText className="h-5 w-5 text-red-600" />
+              <h2 className="text-base font-semibold text-gray-900">处理说明</h2>
+            </div>
+
+            <div className="space-y-1">
+              {record.auditReason ? renderDetailInfoRow('审核原因', record.auditReason) : null}
+              {record.payReason ? renderDetailInfoRow('打款原因', record.payReason) : null}
+              {record.remark ? renderDetailInfoRow('备注', record.remark) : null}
+            </div>
+          </div>
+        ) : null}
+
+        <div className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm">
+          <div className="mb-4 flex items-center gap-2 border-b border-gray-100 pb-3">
+            <Calendar className="h-5 w-5 text-red-600" />
+            <h2 className="text-base font-semibold text-gray-900">时间节点</h2>
+          </div>
+
+          <div className="space-y-1">
+            {renderDetailInfoRow('申请时间', record.createTimeText || '--', {
+              icon: Calendar,
+            })}
+            {record.auditTimeText ? renderDetailInfoRow('审核时间', record.auditTimeText) : null}
+            {record.payTimeText ? renderDetailInfoRow('打款时间', record.payTimeText) : null}
+          </div>
         </div>
       </div>
     );
@@ -1446,7 +2105,17 @@ export function BillingPage() {
 
       <PullToRefreshContainer onRefresh={handleRefresh} disabled={isOffline}>
         <div ref={scrollContainerRef} className="flex-1 overflow-y-auto no-scrollbar">
-          {selectedLog ? renderDetail() : renderLogList()}
+          {isRechargeScene
+            ? selectedRechargeRecord
+              ? renderRechargeDetail()
+              : renderRechargeList()
+            : isWithdrawScene
+            ? selectedWithdrawRecord
+              ? renderWithdrawDetail()
+              : renderWithdrawList()
+            : selectedLog
+              ? renderDetail()
+              : renderLogList()}
         </div>
       </PullToRefreshContainer>
 

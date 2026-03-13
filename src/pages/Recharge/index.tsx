@@ -676,198 +676,200 @@ export function RechargePage() {
           onChange={handleScreenshotChange}
         />
 
-        <div className="relative overflow-hidden bg-red-600 px-4 pb-8 pt-6 text-white">
-          <div className="absolute right-0 top-0 h-56 w-56 translate-x-1/3 -translate-y-1/3 rounded-full bg-white/10 blur-3xl" />
-          <div className="relative z-10">
-            <div className="mb-6 flex items-center gap-3">
-              <button
-                type="button"
-                onClick={resetMatchState}
-                className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-white backdrop-blur-sm transition-colors hover:bg-white/30"
-              >
-                <ChevronLeft size={20} />
-              </button>
-              <h1 className="text-xl font-bold">通道接入成功</h1>
-            </div>
-
-            <div className="flex flex-col items-center justify-center py-3 text-center">
-              <div className="mb-3 flex h-16 w-16 items-center justify-center rounded-full bg-white text-red-600 shadow-lg">
-                <CheckCircle size={32} />
+        <div className="flex-1 overflow-y-auto no-scrollbar">
+          <div className="relative overflow-hidden bg-red-600 px-4 pb-8 pt-6 text-white">
+            <div className="absolute right-0 top-0 h-56 w-56 translate-x-1/3 -translate-y-1/3 rounded-full bg-white/10 blur-3xl" />
+            <div className="relative z-10">
+              <div className="mb-6 flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={resetMatchState}
+                  className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-white backdrop-blur-sm transition-colors hover:bg-white/30"
+                >
+                  <ChevronLeft size={20} />
+                </button>
+                <h1 className="text-xl font-bold">通道接入成功</h1>
               </div>
-              <h2 className="mb-1 text-2xl font-bold">已分配专属收款账户</h2>
-              <p className="rounded-full bg-white/10 px-3 py-1 text-sm text-white/90 backdrop-blur-sm">
-                请在 15 分钟内完成线下转账
-              </p>
-            </div>
-          </div>
-        </div>
 
-        <div className="relative z-10 -mt-4 flex-1 overflow-y-auto rounded-t-[28px] bg-gray-50 px-4 pb-6 pt-5">
-          <div className="mb-4 flex items-center justify-between px-1">
-            <span className="text-xs font-bold uppercase tracking-wider text-gray-400">Offline Payment</span>
-            <span className="flex items-center gap-1 rounded-md bg-orange-100 px-2.5 py-1 text-[10px] font-bold text-orange-700">
-              <ShieldCheck size={10} />
-              人工到账审核
-            </span>
-          </div>
-
-          <div className="mb-4 rounded-2xl border border-red-100 bg-white p-4 shadow-sm">
-            <div className="text-xs text-gray-500">本次充值金额</div>
-            <div className="mt-1 text-3xl font-black text-gray-900">
-              ¥{numAmount > 0 ? formatMoney(numAmount) : '0.00'}
+              <div className="flex flex-col items-center justify-center py-3 text-center">
+                <div className="mb-3 flex h-16 w-16 items-center justify-center rounded-full bg-white text-red-600 shadow-lg">
+                  <CheckCircle size={32} />
+                </div>
+                <h2 className="mb-1 text-2xl font-bold">已分配专属收款账户</h2>
+                <p className="rounded-full bg-white/10 px-3 py-1 text-sm text-white/90 backdrop-blur-sm">
+                  请在 15 分钟内完成线下转账
+                </p>
+              </div>
             </div>
           </div>
 
-          <div className="mb-4 rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
-            <div className="mb-4 flex items-center gap-3 border-b border-gray-50 pb-4">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-red-600 to-red-500 text-base font-bold text-white shadow-md shadow-orange-200">
-                {(matchedAccount.accountName || '收').charAt(0)}
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="truncate text-base font-bold text-gray-900">{matchedAccount.accountName || '--'}</div>
-                <div className="mt-0.5 text-xs text-gray-500">专属线下收款账户 (UID: {matchedAccount.id})</div>
+          <div className="relative z-10 -mt-4 rounded-t-[28px] bg-gray-50 px-4 pb-6 pt-5">
+            <div className="mb-4 flex items-center justify-between px-1">
+              <span className="text-xs font-bold uppercase tracking-wider text-gray-400">Offline Payment</span>
+              <span className="flex items-center gap-1 rounded-md bg-orange-100 px-2.5 py-1 text-[10px] font-bold text-orange-700">
+                <ShieldCheck size={10} />
+                人工到账审核
+              </span>
+            </div>
+
+            <div className="mb-4 rounded-2xl border border-red-100 bg-white p-4 shadow-sm">
+              <div className="text-xs text-gray-500">本次充值金额</div>
+              <div className="mt-1 text-3xl font-black text-gray-900">
+                ¥{numAmount > 0 ? formatMoney(numAmount) : '0.00'}
               </div>
             </div>
 
-            <div className="space-y-2.5">
-              {[
-                { label: '收款账号', value: matchedAccount.accountNumber },
-                { label: '银行名称', value: matchedAccount.bankName || '支付平台' },
-                { label: '开户行', value: matchedAccount.bankBranch },
-                { label: '收款姓名', value: matchedAccount.accountName },
-              ]
-                .filter((item) => item.value)
-                .map((item) => (
-                  <div key={item.label} className="rounded-xl border border-gray-100/50 bg-gray-50 p-2.5">
-                    <span className="mb-1 block text-xs text-gray-500">{item.label}</span>
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="flex-1 break-all text-sm font-bold text-gray-900">{item.value}</span>
-                      <button
-                        type="button"
-                        className="shrink-0 rounded bg-white px-2 py-1 text-[10px] text-gray-600 ring-1 ring-gray-200"
-                        onClick={() => void handleCopy(item.value, `${item.label}已复制`)}
-                      >
-                        复制
-                      </button>
+            <div className="mb-4 rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
+              <div className="mb-4 flex items-center gap-3 border-b border-gray-50 pb-4">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-red-600 to-red-500 text-base font-bold text-white shadow-md shadow-orange-200">
+                  {(matchedAccount.accountName || '收').charAt(0)}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="truncate text-base font-bold text-gray-900">{matchedAccount.accountName || '--'}</div>
+                  <div className="mt-0.5 text-xs text-gray-500">专属线下收款账户 (UID: {matchedAccount.id})</div>
+                </div>
+              </div>
+
+              <div className="space-y-2.5">
+                {[
+                  { label: '收款账号', value: matchedAccount.accountNumber },
+                  { label: '银行名称', value: matchedAccount.bankName || '支付平台' },
+                  { label: '开户行', value: matchedAccount.bankBranch },
+                  { label: '收款姓名', value: matchedAccount.accountName },
+                ]
+                  .filter((item) => item.value)
+                  .map((item) => (
+                    <div key={item.label} className="rounded-xl border border-gray-100/50 bg-gray-50 p-2.5">
+                      <span className="mb-1 block text-xs text-gray-500">{item.label}</span>
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="flex-1 break-all text-sm font-bold text-gray-900">{item.value}</span>
+                        <button
+                          type="button"
+                          className="shrink-0 rounded bg-white px-2 py-1 text-[10px] text-gray-600 ring-1 ring-gray-200"
+                          onClick={() => void handleCopy(item.value, `${item.label}已复制`)}
+                        >
+                          复制
+                        </button>
+                      </div>
                     </div>
+                  ))}
+              </div>
+            </div>
+
+            <div className="mb-4 overflow-hidden rounded-2xl border-2 border-red-400 bg-gradient-to-r from-red-500 to-red-600 shadow-lg shadow-red-200">
+              <div className="p-3.5">
+                <div className="mb-2 flex items-center gap-2">
+                  <AlertTriangle size={16} className="shrink-0 text-white" strokeWidth={3} />
+                  <h3 className="text-sm font-bold text-white">重要提示</h3>
+                </div>
+                <p className="text-xs leading-relaxed text-white">
+                  <span className="rounded bg-white/20 px-1.5 py-0.5 font-bold">切勿保存</span>
+                  收款信息转账。请务必使用本人账户转账，且不要备注任何信息。
+                </p>
+                <ul className="mt-3 space-y-1.5 text-xs text-white/90">
+                  <li>每次充值都需要重新获取收款信息。</li>
+                  <li>收款账户动态分配，使用旧信息可能导致无法到账。</li>
+                  <li>转账完成后请立即上传付款截图。</li>
+                </ul>
+              </div>
+            </div>
+
+            <div className="mb-4">
+              <div className="mb-2 flex items-center gap-2 text-sm font-bold text-gray-900">
+                <span className="h-4 w-1 rounded-full bg-orange-500" />
+                上传付款截图
+              </div>
+
+              {uploadingScreenshot ? (
+                <div className="flex h-36 items-center justify-center rounded-2xl border border-dashed border-red-200 bg-white">
+                  <div className="flex items-center text-sm text-red-500">
+                    <Loader2 size={16} className="mr-2 animate-spin" />
+                    正在上传付款截图
                   </div>
-                ))}
-            </div>
-          </div>
-
-          <div className="mb-4 overflow-hidden rounded-2xl border-2 border-red-400 bg-gradient-to-r from-red-500 to-red-600 shadow-lg shadow-red-200">
-            <div className="p-3.5">
-              <div className="mb-2 flex items-center gap-2">
-                <AlertTriangle size={16} className="shrink-0 text-white" strokeWidth={3} />
-                <h3 className="text-sm font-bold text-white">重要提示</h3>
-              </div>
-              <p className="text-xs leading-relaxed text-white">
-                <span className="rounded bg-white/20 px-1.5 py-0.5 font-bold">切勿保存</span>
-                收款信息转账。请务必使用本人账户转账，且不要备注任何信息。
-              </p>
-              <ul className="mt-3 space-y-1.5 text-xs text-white/90">
-                <li>每次充值都需要重新获取收款信息。</li>
-                <li>收款账户动态分配，使用旧信息可能导致无法到账。</li>
-                <li>转账完成后请立即上传付款截图。</li>
-              </ul>
-            </div>
-          </div>
-
-          <div className="mb-4">
-            <div className="mb-2 flex items-center gap-2 text-sm font-bold text-gray-900">
-              <span className="h-4 w-1 rounded-full bg-orange-500" />
-              上传付款截图
-            </div>
-
-            {uploadingScreenshot ? (
-              <div className="flex h-36 items-center justify-center rounded-2xl border border-dashed border-red-200 bg-white">
-                <div className="flex items-center text-sm text-red-500">
-                  <Loader2 size={16} className="mr-2 animate-spin" />
-                  正在上传付款截图
                 </div>
-              </div>
-            ) : paymentScreenshot ? (
-              <div className="relative overflow-hidden rounded-2xl bg-white shadow-lg shadow-gray-200">
-                <img
-                  src={paymentScreenshot.url}
-                  alt={paymentScreenshot.name}
-                  className="max-h-[320px] w-full bg-gray-900 object-contain"
-                  referrerPolicy="no-referrer"
-                />
-                <div className="absolute left-0 right-0 top-0 flex justify-end bg-gradient-to-b from-black/50 to-transparent p-3">
-                  <button
-                    type="button"
-                    onClick={() => setPaymentScreenshot(null)}
-                    className="flex h-8 w-8 items-center justify-center rounded-full bg-red-500/80 text-white transition-colors hover:bg-red-600"
-                  >
-                    <X size={16} />
-                  </button>
+              ) : paymentScreenshot ? (
+                <div className="relative overflow-hidden rounded-2xl bg-white shadow-lg shadow-gray-200">
+                  <img
+                    src={paymentScreenshot.url}
+                    alt={paymentScreenshot.name}
+                    className="max-h-[320px] w-full bg-gray-900 object-contain"
+                    referrerPolicy="no-referrer"
+                  />
+                  <div className="absolute left-0 right-0 top-0 flex justify-end bg-gradient-to-b from-black/50 to-transparent p-3">
+                    <button
+                      type="button"
+                      onClick={() => setPaymentScreenshot(null)}
+                      className="flex h-8 w-8 items-center justify-center rounded-full bg-red-500/80 text-white transition-colors hover:bg-red-600"
+                    >
+                      <X size={16} />
+                    </button>
+                  </div>
+                  <div className="flex items-center justify-between gap-3 px-4 py-3">
+                    <span className="truncate text-sm font-medium text-text-main">{paymentScreenshot.name}</span>
+                    <button
+                      type="button"
+                      className="shrink-0 rounded-full border border-gray-200 px-3 py-1.5 text-xs font-medium text-text-sub"
+                      onClick={handlePickScreenshot}
+                    >
+                      重新上传
+                    </button>
+                  </div>
                 </div>
-                <div className="flex items-center justify-between gap-3 px-4 py-3">
-                  <span className="truncate text-sm font-medium text-text-main">{paymentScreenshot.name}</span>
-                  <button
-                    type="button"
-                    className="shrink-0 rounded-full border border-gray-200 px-3 py-1.5 text-xs font-medium text-text-sub"
-                    onClick={handlePickScreenshot}
-                  >
-                    重新上传
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <button
-                type="button"
-                onClick={handlePickScreenshot}
-                className="flex h-36 w-full flex-col items-center justify-center rounded-2xl border-2 border-dashed border-gray-300 bg-white transition-all hover:border-orange-500 hover:bg-orange-50/30"
-              >
-                <ImagePlus size={28} className="mb-2 text-gray-400" />
-                <span className="text-base font-medium text-gray-700">点击上传付款截图</span>
-                <span className="mt-1 text-sm text-gray-400">支持 JPG、PNG、GIF、WEBP、BMP</span>
-              </button>
-            )}
+              ) : (
+                <button
+                  type="button"
+                  onClick={handlePickScreenshot}
+                  className="flex h-36 w-full flex-col items-center justify-center rounded-2xl border-2 border-dashed border-gray-300 bg-white transition-all hover:border-orange-500 hover:bg-orange-50/30"
+                >
+                  <ImagePlus size={28} className="mb-2 text-gray-400" />
+                  <span className="text-base font-medium text-gray-700">点击上传付款截图</span>
+                  <span className="mt-1 text-sm text-gray-400">支持 JPG、PNG、GIF、WEBP、BMP</span>
+                </button>
+              )}
+            </div>
+
+            <div className="mb-5 rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
+              <div className="mb-3 text-sm font-medium text-text-main">支付说明</div>
+              <textarea
+                value={remark}
+                onChange={(event) => setRemark(event.target.value.slice(0, 500))}
+                rows={3}
+                placeholder="备注转账时间、付款账户等信息（选填）"
+                className="w-full resize-none rounded-2xl border border-border-light bg-bg-base px-4 py-3 text-lg text-text-main outline-none placeholder:text-text-aux focus:border-primary-start"
+              />
+            </div>
+
+            <button
+              type="button"
+              onClick={() => void handleSubmit()}
+              disabled={!canSubmit}
+              className={`mb-3 flex w-full items-center justify-center gap-2 rounded-xl py-4 text-base font-bold transition-all ${
+                canSubmit
+                  ? 'bg-gradient-to-r from-red-600 to-red-500 text-white shadow-lg shadow-orange-200 active:scale-[0.98]'
+                  : 'cursor-not-allowed bg-gray-200 text-gray-400 shadow-none'
+              }`}
+            >
+              {submitting ? (
+                <>
+                  <Loader2 size={18} className="animate-spin" />
+                  提交处理中...
+                </>
+              ) : (
+                <>
+                  <Zap size={18} fill="currentColor" />
+                  提交充值订单
+                </>
+              )}
+            </button>
+
+            <button
+              type="button"
+              onClick={resetMatchState}
+              className="w-full rounded-xl border border-gray-200 bg-white py-3 text-sm font-medium text-gray-500 transition-colors hover:bg-gray-50"
+            >
+              取消并返回
+            </button>
           </div>
-
-          <div className="mb-5 rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
-            <div className="mb-3 text-sm font-medium text-text-main">支付说明</div>
-            <textarea
-              value={remark}
-              onChange={(event) => setRemark(event.target.value.slice(0, 500))}
-              rows={3}
-              placeholder="备注转账时间、付款账户等信息（选填）"
-              className="w-full resize-none rounded-2xl border border-border-light bg-bg-base px-4 py-3 text-lg text-text-main outline-none placeholder:text-text-aux focus:border-primary-start"
-            />
-          </div>
-
-          <button
-            type="button"
-            onClick={() => void handleSubmit()}
-            disabled={!canSubmit}
-            className={`mb-3 flex w-full items-center justify-center gap-2 rounded-xl py-4 text-base font-bold transition-all ${
-              canSubmit
-                ? 'bg-gradient-to-r from-red-600 to-red-500 text-white shadow-lg shadow-orange-200 active:scale-[0.98]'
-                : 'cursor-not-allowed bg-gray-200 text-gray-400 shadow-none'
-            }`}
-          >
-            {submitting ? (
-              <>
-                <Loader2 size={18} className="animate-spin" />
-                提交处理中...
-              </>
-            ) : (
-              <>
-                <Zap size={18} fill="currentColor" />
-                提交充值订单
-              </>
-            )}
-          </button>
-
-          <button
-            type="button"
-            onClick={resetMatchState}
-            className="w-full rounded-xl border border-gray-200 bg-white py-3 text-sm font-medium text-gray-500 transition-colors hover:bg-gray-50"
-          >
-            取消并返回
-          </button>
         </div>
       </div>
     );

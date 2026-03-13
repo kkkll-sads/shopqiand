@@ -65,6 +65,36 @@ interface RechargeOrderListRaw {
   total?: number | string;
 }
 
+interface WithdrawRecordRaw {
+  account_name?: string;
+  account_number?: string;
+  account_type?: string;
+  account_type_text?: string;
+  actual_amount?: number | string;
+  amount?: number | string;
+  audit_reason?: string;
+  audit_time?: number | string;
+  audit_time_text?: string;
+  bank_name?: string;
+  create_time?: number | string;
+  create_time_text?: string;
+  fee?: number | string;
+  id?: number | string;
+  pay_reason?: string;
+  pay_time?: number | string;
+  pay_time_text?: string;
+  remark?: string;
+  status?: number | string;
+  status_text?: string;
+}
+
+interface WithdrawRecordListRaw {
+  current_page?: number | string;
+  data?: WithdrawRecordRaw[];
+  per_page?: number | string;
+  total?: number | string;
+}
+
 interface SubmitWithdrawRaw {
   actual_amount?: number | string;
   fee?: number | string;
@@ -165,6 +195,42 @@ export interface RechargeOrderList {
   total: number;
 }
 
+export interface GetMyWithdrawListParams {
+  limit?: number;
+  page?: number;
+}
+
+export interface WithdrawRecord {
+  accountName?: string;
+  accountNumber?: string;
+  accountType?: string;
+  accountTypeText?: string;
+  actualAmount: number;
+  amount: number;
+  auditReason?: string;
+  auditTime?: number;
+  auditTimeText?: string;
+  bankName?: string;
+  createTime?: number;
+  createTimeText?: string;
+  fee: number;
+  id: number;
+  payReason?: string;
+  payTime?: number;
+  payTimeText?: string;
+  remark?: string;
+  status: number;
+  statusText?: string;
+}
+
+export interface WithdrawRecordList {
+  currentPage: number;
+  hasMore: boolean;
+  list: WithdrawRecord[];
+  perPage: number;
+  total: number;
+}
+
 function readNumber(value: number | string | undefined, fallback = 0): number {
   const nextValue = typeof value === 'string' ? Number(value) : value;
   return typeof nextValue === 'number' && Number.isFinite(nextValue) ? nextValue : fallback;
@@ -216,6 +282,31 @@ function normalizeRechargeOrderRecord(payload: RechargeOrderRecordRaw): Recharge
     paymentType: readOptionalString(payload.payment_type),
     paymentTypeText: readOptionalString(payload.payment_type_text),
     recordType: readOptionalString(payload.record_type) || 'recharge',
+    status: readNumber(payload.status),
+    statusText: readOptionalString(payload.status_text),
+  };
+}
+
+function normalizeWithdrawRecord(payload: WithdrawRecordRaw): WithdrawRecord {
+  return {
+    accountName: readOptionalString(payload.account_name),
+    accountNumber: readOptionalString(payload.account_number),
+    accountType: readOptionalString(payload.account_type),
+    accountTypeText: readOptionalString(payload.account_type_text),
+    actualAmount: readNumber(payload.actual_amount),
+    amount: readNumber(payload.amount),
+    auditReason: readOptionalString(payload.audit_reason),
+    auditTime: readOptionalNumber(payload.audit_time),
+    auditTimeText: readOptionalString(payload.audit_time_text),
+    bankName: readOptionalString(payload.bank_name),
+    createTime: readOptionalNumber(payload.create_time),
+    createTimeText: readOptionalString(payload.create_time_text),
+    fee: readNumber(payload.fee),
+    id: readNumber(payload.id),
+    payReason: readOptionalString(payload.pay_reason),
+    payTime: readOptionalNumber(payload.pay_time),
+    payTimeText: readOptionalString(payload.pay_time_text),
+    remark: readOptionalString(payload.remark),
     status: readNumber(payload.status),
     statusText: readOptionalString(payload.status_text),
   };
@@ -372,6 +463,33 @@ export const rechargeApi = {
       fee: response?.fee == null ? undefined : readNumber(response.fee),
       status: response?.status == null ? undefined : readNumber(response.status),
       withdrawId: response?.withdraw_id == null ? undefined : readNumber(response.withdraw_id),
+    };
+  },
+
+  async getMyWithdrawList(
+    params: GetMyWithdrawListParams = {},
+    options: RechargeRequestOptions = {},
+  ): Promise<WithdrawRecordList> {
+    const payload = await http.get<WithdrawRecordListRaw>('/api/Recharge/getMyWithdrawList', {
+      headers: createApiHeaders(options),
+      query: {
+        limit: params.limit,
+        page: params.page,
+      },
+      signal: options.signal,
+    });
+
+    const currentPage = readNumber(payload.current_page, params.page ?? 1);
+    const perPage = readNumber(payload.per_page, params.limit ?? 10);
+    const total = readNumber(payload.total);
+    const list = (payload.data ?? []).map(normalizeWithdrawRecord);
+
+    return {
+      currentPage,
+      hasMore: currentPage * perPage < total,
+      list,
+      perPage,
+      total,
     };
   },
 
