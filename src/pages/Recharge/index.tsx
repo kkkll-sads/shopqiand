@@ -51,6 +51,7 @@ import { getBillingPath } from '../../lib/billing';
 import { copyToClipboard } from '../../lib/clipboard';
 import { useAppNavigate } from '../../lib/navigation';
 import { PullToRefreshContainer } from '../../components/ui/PullToRefreshContainer';
+import { RechargeBankCardConfirmModal } from './RechargeBankCardConfirmModal';
 
 const QUICK_AMOUNTS = [500, 1000, 2000, 5000, 10000];
 
@@ -177,6 +178,21 @@ function buildCompanyAccountSubtitle(account: CompanyAccount) {
   return maskAccountNumber(account.accountNumber);
 }
 
+function buildOfflineSubmitRemark(lastFourDigits: string | undefined, remark: string | undefined) {
+  const normalizedLastFourDigits = lastFourDigits?.trim();
+  const normalizedRemark = remark?.trim();
+
+  if (normalizedLastFourDigits && normalizedRemark) {
+    return `付款银行卡尾号：${normalizedLastFourDigits}\n支付说明：${normalizedRemark}`;
+  }
+
+  if (normalizedLastFourDigits) {
+    return `付款银行卡尾号：${normalizedLastFourDigits}`;
+  }
+
+  return normalizedRemark || undefined;
+}
+
 function getOrderStatusClassName(status: number) {
   if (status === 1) {
     return 'bg-green-50 text-green-600 dark:bg-green-500/15 dark:text-green-300';
@@ -225,6 +241,8 @@ export function RechargePage() {
   const [matchedAccountId, setMatchedAccountId] = useState<number>(0);
   const [matchedPaymentMethod, setMatchedPaymentMethod] = useState<RechargePaymentMethod>('offline');
   const [remark, setRemark] = useState('');
+  const [bankCardLastFourDigits, setBankCardLastFourDigits] = useState('');
+  const [showBankCardConfirmModal, setShowBankCardConfirmModal] = useState(false);
   const [paymentScreenshot, setPaymentScreenshot] = useState<UploadedFile | null>(null);
   const [uploadingScreenshot, setUploadingScreenshot] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -350,6 +368,8 @@ export function RechargePage() {
     matchedAccountId > 0 &&
     numAmount > 0 &&
     (matchedPaymentMethod === 'online' || Boolean(paymentScreenshot));
+  const shouldCollectBankCardLastFourDigits =
+    matchStep === 'matched' && matchedPaymentMethod === 'offline' && selectedPaymentType === 'bank_card';
 
   useRouteScrollRestoration({
     containerRef: scrollContainerRef,
@@ -371,6 +391,8 @@ export function RechargePage() {
     setMatchedPaymentMethod('offline');
     setPaymentScreenshot(null);
     setRemark('');
+    setBankCardLastFourDigits('');
+    setShowBankCardConfirmModal(false);
   };
 
   const handleAmountChange = (event: ChangeEvent<HTMLInputElement>) => {
@@ -467,6 +489,8 @@ export function RechargePage() {
     setMatchedAccountId(0);
     setPaymentScreenshot(null);
     setRemark('');
+    setBankCardLastFourDigits('');
+    setShowBankCardConfirmModal(false);
 
     try {
       const result = await rechargeApi.matchAccount({
@@ -549,6 +573,7 @@ export function RechargePage() {
     screenshotId,
     screenshotUrl,
     successMessage,
+    userRemark,
   }: {
     account: CompanyAccount;
     matchedId: number;
@@ -556,6 +581,7 @@ export function RechargePage() {
     screenshotId?: number;
     screenshotUrl?: string;
     successMessage?: string;
+    userRemark?: string;
   }) => {
     setSubmitting(true);
 
@@ -567,7 +593,7 @@ export function RechargePage() {
         paymentScreenshotId: paymentMethod === 'offline' ? screenshotId : undefined,
         paymentScreenshotUrl: paymentMethod === 'offline' ? screenshotUrl : undefined,
         paymentType: account.type,
-        userRemark: remark.trim() || undefined,
+        userRemark,
       });
 
       showToast({
@@ -599,18 +625,49 @@ export function RechargePage() {
     }
   };
 
-  const handleSubmit = async () => {
-    if (!matchedAccount || !canSubmit) {
+  const handleCloseBankCardConfirmModal = () => {
+    if (submitting) {
       return;
     }
 
-    await submitMatchedOrder({
-      account: matchedAccount,
-      matchedId: matchedAccountId,
-      paymentMethod: matchedPaymentMethod,
-      screenshotId: paymentScreenshot?.id,
-      screenshotUrl: paymentScreenshot?.url,
-    });
+    setShowBankCardConfirmModal(false);
+    setBankCardLastFourDigits('');
+  };
+
+  const handleSubmit = async ({
+    bypassBankCardConfirm = false,
+  }: {
+    bypassBankCardConfirm?: boolean;
+  } = {}): Promise<boolean> => {
+    if (!matchedAccount || !canSubmit) {
+      return false;
+    }
+
+    if (shouldCollectBankCardLastFourDigits && !bypassBankCardConfirm) {
+      setShowBankCardConfirmModal(true);
+      return false;
+    }
+
+    if (shouldCollectBankCardLastFourDigits && bankCardLastFourDigits.length !== 4) {
+      showToast({ message: '请输入付款银行卡后四位号码', type: 'warning' });
+      return false;
+    }
+
+    try {
+      await submitMatchedOrder({
+        account: matchedAccount,
+        matchedId: matchedAccountId,
+        paymentMethod: matchedPaymentMethod,
+        screenshotId: paymentScreenshot?.id,
+        screenshotUrl: paymentScreenshot?.url,
+        userRemark: shouldCollectBankCardLastFourDigits
+          ? buildOfflineSubmitRemark(bankCardLastFourDigits, remark)
+          : remark.trim() || undefined,
+      });
+      return true;
+    } catch {
+      return false;
+    }
   };
 
   const handleOpenRechargeRecords = () => {
@@ -622,6 +679,17 @@ export function RechargePage() {
     Boolean(matchedAccount) &&
     matchedPaymentMethod === 'offline' &&
     selectedPaymentType === 'bank_card';
+
+  const renderBankCardConfirmModal = () => (
+    <RechargeBankCardConfirmModal
+      open={showBankCardConfirmModal}
+      lastFourDigits={bankCardLastFourDigits}
+      onChange={setBankCardLastFourDigits}
+      onClose={handleCloseBankCardConfirmModal}
+      onConfirm={() => void handleSubmit({ bypassBankCardConfirm: true })}
+      submitting={submitting}
+    />
+  );
 
   const renderHeader = () => (
     <WalletPageHeader
@@ -873,6 +941,8 @@ export function RechargePage() {
             </button>
           </div>
         </div>
+
+        {renderBankCardConfirmModal()}
       </div>
     );
   }
@@ -1441,6 +1511,8 @@ export function RechargePage() {
           </button>
         </div>
       </div>
+
+      {renderBankCardConfirmModal()}
     </div>
   );
 }
