@@ -1,20 +1,24 @@
+/**
+ * @file AccumulatedRights/index.tsx
+ * @description 累计权益页面，展示可提现收益、消费金收益、藏品资产及近7日收支。
+ */
+
 import { useCallback, useMemo, useRef } from 'react';
-import type { LucideIcon } from 'lucide-react';
 import {
-  Award,
-  Banknote,
+  BarChart3,
   Box,
-  Coins,
+  CalendarDays,
+  Gift,
   Pickaxe,
-  Receipt,
-  ShieldCheck,
   TrendingUp,
+  Users,
   Wallet,
-  Zap,
 } from 'lucide-react';
 import { accountApi } from '../../api';
 import { getErrorMessage } from '../../api/core/errors';
+import type { AccountOverview } from '../../api/modules/account';
 import { WalletPageHeader } from '../../components/layout/WalletPageHeader';
+import { Card } from '../../components/ui/Card';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { ErrorState } from '../../components/ui/ErrorState';
 import { PullToRefreshContainer } from '../../components/ui/PullToRefreshContainer';
@@ -25,33 +29,11 @@ import { useRequest } from '../../hooks/useRequest';
 import { useRouteScrollRestoration } from '../../hooks/useRouteScrollRestoration';
 import { useAppNavigate } from '../../lib/navigation';
 
-interface BalanceCardItem {
-  description: string;
-  icon: LucideIcon;
-  iconBgClassName: string;
-  iconTextClassName: string;
-  label: string;
-  value: string;
-}
-
-interface CollectionStatItem {
-  label: string;
-  value: string;
-}
-
-const FUND_NOTES = [
-  '总资产为专项金、可提现、消费金、确权金与绿色算力等账户的汇总展示，仅用于总览核对。',
-  '专项金主要用于申购、购买等场景，会优先参与订单支付扣减。',
-  '可提现余额包含收益、分红和奖励等可提现资金，可在提现页面发起申请。',
-  '确权金主要用于寄售等服务费场景，充值或划转后不可直接提现。',
-] as const;
-
 function formatMoney(value: number | string | undefined, fractionDigits = 2) {
   const nextValue = typeof value === 'string' ? Number(value) : value;
   if (typeof nextValue !== 'number' || !Number.isFinite(nextValue)) {
-    return '--';
+    return '0.00';
   }
-
   return nextValue.toLocaleString('zh-CN', {
     maximumFractionDigits: fractionDigits,
     minimumFractionDigits: fractionDigits,
@@ -62,67 +44,48 @@ function formatMoney(value: number | string | undefined, fractionDigits = 2) {
 function formatCount(value: number | string | undefined) {
   const nextValue = typeof value === 'string' ? Number(value) : value;
   if (typeof nextValue !== 'number' || !Number.isFinite(nextValue)) {
-    return '--';
+    return '0';
   }
-
   return nextValue.toLocaleString('zh-CN', {
     maximumFractionDigits: 0,
     useGrouping: false,
   });
 }
 
-function SectionTitle({
-  accentClassName,
-  title,
-}: {
-  accentClassName: string;
-  title: string;
-}) {
-  return (
-    <div className="mb-3 flex items-center gap-2">
-      <span className={`h-4 w-1 rounded-full ${accentClassName}`} />
-      <h2 className="text-sm font-semibold text-text-main">{title}</h2>
-    </div>
-  );
-}
-
-function OverviewCard() {
-  return (
-    <div className="rounded-2xl border border-[#f1d5cb] bg-[#fff7f4] px-5 py-5">
-      <div className="flex items-center gap-2 text-[#d9482e]">
-        <ShieldCheck size={18} />
-        <span className="text-sm font-medium">我的权益</span>
-      </div>
-      <div className="mt-3 text-2xl font-semibold text-text-main">资产全景</div>
-      <p className="mt-2 text-sm leading-6 text-text-sub">
-        按账户余额、累计收益、藏品价值和订单资金说明统一查看累计权益。
-      </p>
-    </div>
-  );
-}
+const INCOME_ITEMS: Array<{
+  key: keyof Pick<
+    NonNullable<AccountOverview['income']>,
+    'consignmentIncome' | 'miningDividend' | 'friendCommission' | 'signIn' | 'registerReward' | 'other'
+  >;
+  label: string;
+  icon: typeof TrendingUp;
+  iconClass: string;
+}> = [
+  { key: 'consignmentIncome', label: '寄售收益', icon: TrendingUp, iconClass: 'text-blue-500' },
+  { key: 'miningDividend', label: '矿机分红', icon: Pickaxe, iconClass: 'text-orange-500' },
+  { key: 'friendCommission', label: '好友分润', icon: Users, iconClass: 'text-green-500' },
+  { key: 'signIn', label: '签到奖励', icon: CalendarDays, iconClass: 'text-purple-500' },
+  { key: 'registerReward', label: '注册奖励', icon: Gift, iconClass: 'text-red-500' },
+  { key: 'other', label: '其他收益', icon: Wallet, iconClass: 'text-gray-500' },
+];
 
 function OverviewSkeleton() {
   return (
-    <div className="space-y-6 px-4 py-4">
-      <Skeleton className="h-32 rounded-2xl" />
-      <div>
-        <Skeleton className="mb-3 h-5 w-24 rounded-full" />
+    <div className="flex-1 bg-bg-base flex flex-col">
+      <div className="h-12 flex items-center px-4 bg-bg-card border-b border-border-main">
+        <Skeleton className="w-6 h-6 rounded-full" />
+        <Skeleton className="w-24 h-5 mx-auto" />
+      </div>
+      <div className="p-4 space-y-4">
+        <Skeleton className="w-full h-36 rounded-2xl" />
         <div className="grid grid-cols-2 gap-3">
-          {Array.from({ length: 6 }).map((_, index) => (
-            <Skeleton key={index} className="h-28 rounded-xl" />
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <Skeleton key={i} className="w-full h-24 rounded-xl" />
           ))}
         </div>
+        <Skeleton className="w-full h-48 rounded-2xl" />
+        <Skeleton className="w-full h-56 rounded-2xl" />
       </div>
-      <div>
-        <Skeleton className="mb-3 h-5 w-24 rounded-full" />
-        <Skeleton className="h-32 rounded-xl" />
-      </div>
-      <div>
-        <Skeleton className="mb-3 h-5 w-28 rounded-full" />
-        <Skeleton className="h-36 rounded-xl" />
-      </div>
-      <Skeleton className="h-20 rounded-xl" />
-      <Skeleton className="h-36 rounded-xl" />
     </div>
   );
 }
@@ -156,84 +119,19 @@ export const AccumulatedRightsPage = () => {
 
   const handleRefresh = useCallback(async () => {
     refreshStatus();
-
-    if (!isAuthenticated) {
-      return;
-    }
-
+    if (!isAuthenticated) return;
     await reloadOverview().catch(() => undefined);
   }, [isAuthenticated, refreshStatus, reloadOverview]);
 
-  const balanceItems = useMemo<BalanceCardItem[]>(
-    () => [
-      {
-        description: '所有账户资产总和',
-        icon: Award,
-        iconBgClassName: 'bg-[#eef4ff]',
-        iconTextClassName: 'text-[#3b82f6]',
-        label: '总资产',
-        value: formatMoney(accountOverview?.balance.totalAssets),
-      },
-      {
-        description: '申购和购买时优先使用',
-        icon: Wallet,
-        iconBgClassName: 'bg-[#f3efff]',
-        iconTextClassName: 'text-[#7c3aed]',
-        label: '专项金余额',
-        value: formatMoney(accountOverview?.balance.balanceAvailable),
-      },
-      {
-        description: '可直接发起提现申请',
-        icon: Banknote,
-        iconBgClassName: 'bg-[#eefbf3]',
-        iconTextClassName: 'text-[#16a34a]',
-        label: '可提现余额',
-        value: formatMoney(accountOverview?.balance.withdrawableMoney),
-      },
-      {
-        description: '用于商城消费',
-        icon: Coins,
-        iconBgClassName: 'bg-[#fff7e7]',
-        iconTextClassName: 'text-[#d97706]',
-        label: '消费金',
-        value: formatCount(accountOverview?.balance.score),
-      },
-      {
-        description: '寄售等服务费场景使用',
-        icon: ShieldCheck,
-        iconBgClassName: 'bg-[#eff8ff]',
-        iconTextClassName: 'text-[#0284c7]',
-        label: '确权金',
-        value: formatMoney(accountOverview?.balance.serviceFeeBalance),
-      },
-      {
-        description: '绿色算力账户余额',
-        icon: Zap,
-        iconBgClassName: 'bg-[#f3faea]',
-        iconTextClassName: 'text-[#65a30d]',
-        label: '绿色算力',
-        value: formatMoney(accountOverview?.balance.greenPower),
-      },
-    ],
-    [accountOverview],
-  );
-
-  const collectionStats = useMemo<CollectionStatItem[]>(
-    () => [
-      { label: '藏品总数', value: formatCount(accountOverview?.collection.totalCount) },
-      { label: '持有中', value: formatCount(accountOverview?.collection.holdingCount) },
-      { label: '寄售中', value: formatCount(accountOverview?.collection.consignmentCount) },
-      { label: '已售出', value: formatCount(accountOverview?.collection.soldCount) },
-      { label: '矿机数量', value: formatCount(accountOverview?.collection.miningCount) },
-    ],
-    [accountOverview],
-  );
+  const dailyBreakdown = useMemo(() => {
+    return accountOverview?.dailyBreakdown ?? [];
+  }, [accountOverview?.dailyBreakdown]);
 
   const renderContent = () => {
     if (!isAuthenticated) {
       return (
         <EmptyState
-          icon={<ShieldCheck size={44} />}
+          icon={<Box size={44} />}
           message="登录后查看累计权益与账户总览"
           actionText="去登录"
           actionVariant="primary"
@@ -260,160 +158,201 @@ export const AccumulatedRightsPage = () => {
     }
 
     return (
-      <div className="space-y-6 px-4 py-4 pb-8">
-        <OverviewCard />
-
-        <section>
-          <SectionTitle accentClassName="bg-[#ef4444]" title="账户余额" />
-          <div className="grid grid-cols-2 gap-3">
-            {balanceItems.map((item) => {
-              const Icon = item.icon;
-              return (
-                <div key={item.label} className="rounded-xl border border-[#ececec] bg-white p-4">
-                  <div className={`flex h-10 w-10 items-center justify-center rounded-full ${item.iconBgClassName}`}>
-                    <Icon size={18} className={item.iconTextClassName} />
-                  </div>
-                  <div className="mt-3 text-xs text-text-sub">{item.label}</div>
-                  <div className={`mt-1 text-lg font-semibold ${item.iconTextClassName}`}>{item.value}</div>
-                  <div className="mt-2 text-[11px] leading-5 text-text-aux">{item.description}</div>
-                </div>
-              );
-            })}
-          </div>
-        </section>
-
-        <section>
-          <SectionTitle accentClassName="bg-[#f97316]" title="历史收益统计" />
-          <div className="rounded-xl border border-[#f4d8c2] bg-[#fff8f1] p-4">
-            <div className="flex items-start justify-between gap-4">
-              <div className="min-w-0 flex-1">
-                <div className="text-xs text-text-sub">累计可提现收益</div>
-                <div className="mt-2 text-2xl font-semibold text-[#ea580c]">
-                  {formatMoney(accountOverview.income.totalIncomeWithdrawable)}
-                </div>
-              </div>
-              <div className="min-w-0 flex-1 text-right">
-                <div className="text-xs text-text-sub">累计消费金收益</div>
-                <div className="mt-2 text-2xl font-semibold text-[#d97706]">
+      <div ref={scrollContainerRef} className="flex-1 min-h-0 overflow-y-auto no-scrollbar pb-safe">
+        {/* Top Banner */}
+        <div className="bg-gradient-to-br from-primary-start to-primary-end px-6 py-8 text-white relative overflow-hidden">
+          <div className="absolute right-0 top-0 w-32 h-32 bg-white/10 rounded-full blur-2xl -mr-10 -mt-10 pointer-events-none" />
+          <div className="relative z-10">
+            <div className="text-[14px] text-white/80 mb-1">累计可提现收益 (元)</div>
+            <div className="text-[36px] font-bold leading-none mb-4">
+              {formatMoney(accountOverview.income.totalIncomeWithdrawable)}
+            </div>
+            <div className="flex items-center space-x-6">
+              <div>
+                <div className="text-[12px] text-white/70 mb-0.5">累计消费金收益</div>
+                <div className="text-[16px] font-medium">
                   {formatCount(accountOverview.income.totalIncomeScore)}
                 </div>
               </div>
-            </div>
-          </div>
-
-          <div className="mt-3 grid grid-cols-2 gap-3">
-            <div className="rounded-xl border border-[#ececec] bg-white p-4">
-              <div className="flex items-center gap-2 text-sm text-text-main">
-                <TrendingUp size={16} className="text-[#ea580c]" />
-                <span>可提现收益</span>
-              </div>
-              <div className="mt-3 text-lg font-semibold text-[#ea580c]">
-                {formatMoney(accountOverview.income.totalIncomeWithdrawable)}
-              </div>
-              <div className="mt-1 text-[11px] text-text-aux">当前接口返回的累计可提现金额汇总</div>
-            </div>
-            <div className="rounded-xl border border-[#ececec] bg-white p-4">
-              <div className="flex items-center gap-2 text-sm text-text-main">
-                <Coins size={16} className="text-[#d97706]" />
-                <span>消费金收益</span>
-              </div>
-              <div className="mt-3 text-lg font-semibold text-[#d97706]">
-                {formatCount(accountOverview.income.totalIncomeScore)}
-              </div>
-              <div className="mt-1 text-[11px] text-text-aux">当前接口返回的累计消费金收益汇总</div>
-            </div>
-          </div>
-        </section>
-
-        <section>
-          <SectionTitle accentClassName="bg-[#8b5cf6]" title="藏品价值统计" />
-          <div className="rounded-xl border border-[#ececec] bg-white p-4">
-            <div className="flex items-start justify-between gap-4">
+              <div className="w-px h-8 bg-white/20" />
               <div>
-                <div className="text-xs text-text-sub">藏品总价值</div>
-                <div className="mt-2 text-2xl font-semibold text-text-main">
-                  {formatMoney(accountOverview.collection.totalValue)}
+                <div className="text-[12px] text-white/70 mb-0.5">当前总资产 (元)</div>
+                <div className="text-[16px] font-medium">
+                  {formatMoney(accountOverview.balance.totalAssets)}
                 </div>
               </div>
-              {accountOverview.collection.miningCount > 0 ? (
-                <div className="rounded-full bg-[#fff7e7] px-3 py-1 text-xs font-medium text-[#b45309]">
-                  矿机 {formatCount(accountOverview.collection.miningCount)} 台
-                </div>
-              ) : null}
             </div>
+          </div>
+        </div>
 
-            <div className="mt-4 grid grid-cols-5 gap-2 text-center">
-              {collectionStats.map((item) => (
-                <div key={item.label}>
-                  <div className="text-lg font-semibold text-text-main">{item.value}</div>
-                  <div className="mt-1 text-[11px] leading-4 text-text-sub">{item.label}</div>
-                </div>
-              ))}
+        <div className="p-4 space-y-4">
+          {/* Income Breakdown */}
+          <div>
+            <h3 className="text-[15px] font-bold text-text-main mb-3 flex items-center">
+              <BarChart3 size={16} className="mr-1.5 text-primary-start" /> 收益构成
+            </h3>
+            <div className="grid grid-cols-2 gap-3">
+              {INCOME_ITEMS.map((item) => {
+                const data = accountOverview.income?.[item.key];
+                const Icon = item.icon;
+                return (
+                  <Card
+                    key={item.key}
+                    className="p-3 shadow-sm border-none bg-bg-card dark:bg-bg-card"
+                  >
+                    <div className="flex items-center mb-2">
+                      <div className="w-6 h-6 rounded-full bg-bg-base flex items-center justify-center mr-2">
+                        <Icon size={14} className={item.iconClass} />
+                      </div>
+                      <span className="text-[13px] font-medium text-text-main">{item.label}</span>
+                    </div>
+                    <div className="space-y-1">
+                      <div className="flex justify-between items-center text-[12px]">
+                        <span className="text-text-sub">可提现</span>
+                        <span className="font-medium text-text-main">
+                          ¥{data ? formatMoney(data.withdrawableIncome) : '0.00'}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center text-[12px]">
+                        <span className="text-text-sub">消费金</span>
+                        <span className="font-medium text-orange-500">
+                          {data ? formatCount(data.scoreIncome) : '0'}
+                        </span>
+                      </div>
+                    </div>
+                  </Card>
+                );
+              })}
             </div>
           </div>
 
-          {accountOverview.collection.miningCount > 0 ? (
-            <div className="mt-3 flex items-center justify-between rounded-xl border border-[#ececec] bg-white p-4">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#fff7e7]">
-                  <Pickaxe size={18} className="text-[#d97706]" />
+          {/* Collection Stats */}
+          <Card className="p-4 shadow-sm border-none bg-bg-card dark:bg-bg-card">
+            <h3 className="text-[15px] font-bold text-text-main mb-4 flex items-center">
+              <Box size={16} className="mr-1.5 text-primary-start" /> 藏品资产统计
+            </h3>
+            <div className="flex justify-between items-center mb-5 pb-4 border-b border-border-main">
+              <div className="text-center flex-1 border-r border-border-main">
+                <div className="text-[12px] text-text-sub mb-1">藏品总价值</div>
+                <div className="text-[18px] font-bold text-text-main">
+                  ¥{formatMoney(accountOverview.collection.totalValue)}
                 </div>
-                <div>
-                  <div className="text-xs text-text-sub">矿机资产补充统计</div>
-                  <div className="mt-1 text-sm font-medium text-text-main">
-                    当前共持有 {formatCount(accountOverview.collection.miningCount)} 台矿机
-                  </div>
+              </div>
+              <div className="text-center flex-1">
+                <div className="text-[12px] text-text-sub mb-1">藏品总数</div>
+                <div className="text-[18px] font-bold text-text-main">
+                  {formatCount(accountOverview.collection.totalCount)}
                 </div>
               </div>
             </div>
-          ) : null}
-        </section>
-
-        <section>
-          <button
-            type="button"
-            onClick={() => goTo('billing')}
-            className="flex w-full items-center justify-between rounded-xl border border-[#f1d5cb] bg-[#fff7f4] p-4 text-left active:opacity-80"
-          >
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#fbe3dc] text-[#d9482e]">
-                <Receipt size={18} />
+            <div className="grid grid-cols-3 gap-y-4 text-center">
+              <div>
+                <div className="text-[12px] text-text-sub mb-1">持有中</div>
+                <div className="text-[15px] font-medium text-text-main">
+                  {formatCount(accountOverview.collection.holdingCount)}
+                </div>
               </div>
               <div>
-                <div className="text-base font-medium text-text-main">订单资金详情</div>
-                <div className="mt-1 text-xs text-text-sub">查看订单相关的账户流水和资金变动记录</div>
+                <div className="text-[12px] text-text-sub mb-1">寄售中</div>
+                <div className="text-[15px] font-medium text-text-main">
+                  {formatCount(accountOverview.collection.consignmentCount)}
+                </div>
+              </div>
+              <div>
+                <div className="text-[12px] text-text-sub mb-1">已售出</div>
+                <div className="text-[15px] font-medium text-text-main">
+                  {formatCount(accountOverview.collection.soldCount)}
+                </div>
+              </div>
+              <div>
+                <div className="text-[12px] text-text-sub mb-1">矿机数量</div>
+                <div className="text-[15px] font-medium text-text-main">
+                  {formatCount(accountOverview.collection.miningCount)}
+                </div>
+              </div>
+              <div>
+                <div className="text-[12px] text-text-sub mb-1">矿机价值</div>
+                <div className="text-[15px] font-medium text-text-main">
+                  ¥{formatMoney(accountOverview.collection.miningValue)}
+                </div>
+              </div>
+              <div>
+                <div className="text-[12px] text-text-sub mb-1">平均价格</div>
+                <div className="text-[15px] font-medium text-text-main">
+                  ¥{formatMoney(accountOverview.collection.avgPrice)}
+                </div>
               </div>
             </div>
-            <TrendingUp size={18} className="text-[#d9482e]" />
-          </button>
-        </section>
+          </Card>
 
-        <section className="rounded-xl border border-[#ececec] bg-white p-4">
-          <SectionTitle accentClassName="bg-[#ef4444]" title="资金说明" />
-          <div className="space-y-3">
-            {FUND_NOTES.map((item) => (
-              <div key={item} className="flex items-start gap-3">
-                <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[#ef4444]" />
-                <p className="text-sm leading-6 text-text-sub">{item}</p>
+          {/* 7 Days Trend */}
+          {dailyBreakdown.length > 0 && (
+            <Card className="p-4 shadow-sm border-none bg-bg-card dark:bg-bg-card">
+              <h3 className="text-[15px] font-bold text-text-main mb-4 flex items-center">
+                <TrendingUp size={16} className="mr-1.5 text-primary-start" /> 近7日收支
+              </h3>
+              <div className="space-y-3">
+                {dailyBreakdown.map((day, idx) => {
+                  const net = day.net ?? '0.00';
+                  const netVal = parseFloat(net);
+                  const isPositive = netVal > 0;
+                  const isNegative = netVal < 0;
+                  return (
+                    <div
+                      key={day.date ?? idx}
+                      className="flex justify-between items-center py-2 border-b border-border-main last:border-0 last:pb-0"
+                    >
+                      <div className="text-[13px] text-text-sub">{day.date ?? '--'}</div>
+                      <div className="flex items-center space-x-4 text-[12px]">
+                        <div className="text-right">
+                          <div className="text-text-sub">收入</div>
+                          <div className="text-green-500 font-medium">
+                            +{(day.incomeTotal ?? '0.00')}
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-text-sub">支出</div>
+                          <div className="text-text-main font-medium">
+                            -{(day.expenseTotal ?? '0.00')}
+                          </div>
+                        </div>
+                        <div className="text-right w-16">
+                          <div className="text-text-sub">净收益</div>
+                          <div
+                            className={`font-bold ${
+                              isPositive
+                                ? 'text-primary-start'
+                                : isNegative
+                                  ? 'text-red-500'
+                                  : 'text-text-main'
+                            }`}
+                          >
+                            {isPositive ? '+' : ''}
+                            {net}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
-            ))}
-          </div>
-        </section>
+            </Card>
+          )}
+        </div>
       </div>
     );
   };
 
   return (
-    <div className="accumulated-rights-dark-scope flex flex-1 flex-col overflow-hidden bg-bg-base">
+    <div className="flex flex-1 flex-col overflow-hidden bg-bg-base">
       <WalletPageHeader
         title="累计权益"
         onBack={() => goBackOr('user')}
         offline={isOffline}
         onRefresh={refreshStatus}
       />
-
       <PullToRefreshContainer onRefresh={handleRefresh} disabled={isOffline}>
-        <div ref={scrollContainerRef} className="flex-1 overflow-y-auto no-scrollbar pb-6">
+        <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
           {renderContent()}
         </div>
       </PullToRefreshContainer>

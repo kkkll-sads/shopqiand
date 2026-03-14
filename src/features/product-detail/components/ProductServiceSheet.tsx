@@ -97,7 +97,7 @@ export const ProductServiceSheet = ({
         <div className="border-t border-border-light p-4 pb-safe">
           <button
             type="button"
-            className="w-full rounded-full bg-gradient-to-r from-primary-start to-primary-end py-3 text-base font-medium text-white active:opacity-90"
+            className="w-full rounded-full gradient-primary-r py-3 text-base font-medium text-white active:opacity-90"
             onClick={onClose}
           >
             我知道了

@@ -468,6 +468,14 @@ const MallCashierView = () => {
   const { showToast, showLoading, hideLoading } = useFeedback();
 
   const orderId = Number(searchParams.get('order_id')) || 0;
+  const orderIds = useMemo(() => {
+    const raw = searchParams.get('order_ids');
+    if (raw) {
+      const ids = raw.split(',').map(Number).filter((n) => Number.isFinite(n) && n > 0);
+      if (ids.length > 0) return ids;
+    }
+    return orderId > 0 ? [orderId] : [];
+  }, [searchParams, orderId]);
   const [snapshot, setSnapshot] = useState<MallCashierSnapshot>({
     orderNo: searchParams.get('order_no') ?? '',
     amount: Number(searchParams.get('amount')) || 0,
@@ -488,9 +496,17 @@ const MallCashierView = () => {
   const isScoreOnly = snapshot.payType === 'score' || (snapshot.totalScore > 0 && snapshot.amount <= 0);
   const isMoneyOnly = snapshot.payType === 'money' || (snapshot.amount > 0 && snapshot.totalScore <= 0);
 
+  const hasCreateSnapshot =
+    orderId > 0 && !!searchParams.get('order_no') && !!searchParams.get('amount');
+
   const loadOrderSnapshot = React.useCallback(async () => {
     if (orderId <= 0) {
       setModuleError(true);
+      setLoading(false);
+      return;
+    }
+
+    if (hasCreateSnapshot) {
       setLoading(false);
       return;
     }
@@ -514,7 +530,9 @@ const MallCashierView = () => {
     } finally {
       setLoading(false);
     }
-  }, [orderId, showToast]);
+  }, [orderId, hasCreateSnapshot, showToast]);
+
+  const isMixedPay = !isScoreOnly && !isMoneyOnly && snapshot.amount > 0 && snapshot.totalScore > 0;
 
   const paymentMethods = useMemo<PaymentMethod[]>(() => {
     if (isScoreOnly) {
@@ -545,20 +563,12 @@ const MallCashierView = () => {
 
     return [
       {
-        id: 'balance',
-        name: '余额支付',
-        desc: `可用余额 ¥${Number(snapshot.balance).toLocaleString('zh-CN', { minimumFractionDigits: 2 })}`,
+        id: 'mixed',
+        name: '余额 + 消费金支付',
+        desc: `可用余额 ¥${Number(snapshot.balance).toLocaleString('zh-CN', { minimumFractionDigits: 2 })}　可用消费金 ${Number(snapshot.scoreBalance).toLocaleString('zh-CN')}`,
         icon: Wallet,
         color: 'text-primary-start',
         bg: 'bg-primary-start/10 dark:bg-red-500/15',
-      },
-      {
-        id: 'score',
-        name: '消费金支付',
-        desc: `可用消费金 ${Number(snapshot.scoreBalance).toLocaleString('zh-CN')}`,
-        icon: Coins,
-        color: 'text-orange-500',
-        bg: 'bg-orange-50 dark:bg-orange-500/15',
       },
     ];
   }, [isMoneyOnly, isScoreOnly, snapshot.balance, snapshot.scoreBalance]);
@@ -568,8 +578,8 @@ const MallCashierView = () => {
   }, [loadOrderSnapshot]);
 
   useEffect(() => {
-    setSelectedMethod(isScoreOnly ? 'score' : 'balance');
-  }, [isScoreOnly]);
+    setSelectedMethod(isScoreOnly ? 'score' : isMixedPay ? 'mixed' : 'balance');
+  }, [isScoreOnly, isMixedPay]);
 
   useEffect(() => {
     if (timeLeft <= 0 || loading || moduleError) {
@@ -597,11 +607,9 @@ const MallCashierView = () => {
   };
 
   const handlePay = async () => {
-    if (paying) {
-      return;
-    }
+    if (paying) return;
 
-    if (orderId <= 0) {
+    if (orderIds.length === 0) {
       showToast({ message: '订单信息无效，请返回重新下单', type: 'error' });
       return;
     }
@@ -610,35 +618,50 @@ const MallCashierView = () => {
     showLoading('支付中...');
 
     try {
-      const payParams: { order_id: number; pay_money?: number; pay_score?: number } = {
-        order_id: orderId,
-      };
+      let totalPayMoney = 0;
+      let totalPayScore = 0;
+      let lastOrderNo = snapshot.orderNo;
 
-      if (isScoreOnly) {
-        payParams.pay_score = snapshot.totalScore;
-        payParams.pay_money = 0;
-      } else if (isMoneyOnly) {
-        payParams.pay_money = snapshot.amount;
-        payParams.pay_score = 0;
+      if (orderIds.length === 1) {
+        const payParams: { order_id: number; pay_money?: number; pay_score?: number } = {
+          order_id: orderIds[0],
+        };
+        if (isScoreOnly) {
+          payParams.pay_score = snapshot.totalScore;
+          payParams.pay_money = 0;
+        } else if (isMoneyOnly) {
+          payParams.pay_money = snapshot.amount;
+          payParams.pay_score = 0;
+        } else {
+          payParams.pay_money = snapshot.amount;
+          payParams.pay_score = snapshot.totalScore;
+        }
+        const result = await shopOrderApi.pay(payParams);
+        totalPayMoney = result.pay_money;
+        totalPayScore = result.pay_score;
+        lastOrderNo = result.order_no || lastOrderNo;
       } else {
-        payParams.pay_money = snapshot.amount;
-        payParams.pay_score = snapshot.totalScore;
+        for (const oid of orderIds) {
+          const result = await shopOrderApi.pay({ order_id: oid });
+          totalPayMoney += result.pay_money;
+          totalPayScore += result.pay_score;
+          if (result.order_no) lastOrderNo = result.order_no;
+        }
       }
 
-      const result = await shopOrderApi.pay(payParams);
       const params = new URLSearchParams({
         status: 'success',
-        order_no: result.order_no,
+        order_no: lastOrderNo,
         pay_type: snapshot.payType,
       });
 
       if (isScoreOnly) {
-        params.set('amount', String(result.pay_score ?? 0));
+        params.set('amount', String(totalPayScore));
       } else if (isMoneyOnly) {
-        params.set('amount', String(result.pay_money ?? 0));
+        params.set('amount', String(totalPayMoney));
       } else {
-        params.set('amount', String(result.pay_money ?? 0));
-        params.set('total_score', String(result.pay_score ?? 0));
+        params.set('amount', String(totalPayMoney));
+        params.set('total_score', String(totalPayScore));
       }
 
       navigate(`/payment/result?${params.toString()}`, { replace: true });
@@ -777,28 +800,50 @@ const MallCashierView = () => {
             </div>
 
             <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm mb-4 overflow-hidden">
-              {paymentMethods.map((method, index) => (
-                <div
-                  key={method.id}
-                  className={`flex items-center p-4 cursor-pointer ${
-                    index !== paymentMethods.length - 1 ? 'border-b border-border-light/50' : ''
-                  }`}
-                  onClick={() => setSelectedMethod(method.id)}
-                >
-                  <div className={`w-6 h-6 rounded-full ${method.bg} flex items-center justify-center shrink-0`}>
-                    <method.icon size={14} className={method.color} />
+              {isMixedPay ? (
+                <div className="p-4">
+                  <div className="flex items-center mb-3">
+                    <div className="w-6 h-6 rounded-full bg-primary-start/10 dark:bg-red-500/15 flex items-center justify-center shrink-0">
+                      <Wallet size={14} className="text-primary-start" />
+                    </div>
+                    <span className="ml-2 text-md text-text-main font-medium">余额 + 消费金支付</span>
+                    <CheckCircle2 size={20} className="ml-auto text-primary-start fill-primary-start/10" />
                   </div>
-                  <div className="flex-1 ml-3 min-w-0">
-                    <div className="text-md text-text-main font-medium truncate">{method.name}</div>
-                    <div className="text-sm text-text-sub truncate mt-0.5">{method.desc}</div>
+                  <div className="space-y-2 ml-8">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-text-sub">余额支付</span>
+                      <span className="text-text-main font-medium">可用余额 ¥{Number(snapshot.balance).toLocaleString('zh-CN', { minimumFractionDigits: 2 })}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-text-sub">消费金支付</span>
+                      <span className="text-text-main font-medium">可用消费金 {Number(snapshot.scoreBalance).toLocaleString('zh-CN')}</span>
+                    </div>
                   </div>
-                  {selectedMethod === method.id ? (
-                    <CheckCircle2 size={20} className="text-primary-start fill-primary-start/10" />
-                  ) : (
-                    <Circle size={20} className="text-text-aux" />
-                  )}
                 </div>
-              ))}
+              ) : (
+                paymentMethods.map((method, index) => (
+                  <div
+                    key={method.id}
+                    className={`flex items-center p-4 cursor-pointer ${
+                      index !== paymentMethods.length - 1 ? 'border-b border-border-light/50' : ''
+                    }`}
+                    onClick={() => setSelectedMethod(method.id)}
+                  >
+                    <div className={`w-6 h-6 rounded-full ${method.bg} flex items-center justify-center shrink-0`}>
+                      <method.icon size={14} className={method.color} />
+                    </div>
+                    <div className="flex-1 ml-3 min-w-0">
+                      <div className="text-md text-text-main font-medium truncate">{method.name}</div>
+                      <div className="text-sm text-text-sub truncate mt-0.5">{method.desc}</div>
+                    </div>
+                    {selectedMethod === method.id ? (
+                      <CheckCircle2 size={20} className="text-primary-start fill-primary-start/10" />
+                    ) : (
+                      <Circle size={20} className="text-text-aux" />
+                    )}
+                  </div>
+                ))
+              )}
             </div>
 
             <div className="flex items-center justify-center text-text-sub text-s">
@@ -813,7 +858,7 @@ const MallCashierView = () => {
         <button
           onClick={handlePay}
           disabled={paying || orderId <= 0}
-          className="w-full h-11 rounded-full bg-gradient-to-r from-primary-start to-primary-end text-white text-lg font-medium shadow-sm active:opacity-80 flex items-center justify-center disabled:opacity-60"
+          className="w-full h-11 rounded-full gradient-primary-r text-white text-lg font-medium shadow-sm active:opacity-80 flex items-center justify-center disabled:opacity-60"
         >
           {paying ? '支付中...' : payButtonText()}
         </button>
@@ -841,7 +886,7 @@ const MallCashierView = () => {
                   setShowFailureModal(false);
                   void handlePay();
                 }}
-                className="flex-1 h-10 rounded-full bg-gradient-to-r from-primary-start to-primary-end text-md font-medium text-white"
+                className="flex-1 h-10 rounded-full gradient-primary-r text-md font-medium text-white"
               >
                 重新支付
               </button>

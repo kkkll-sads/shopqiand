@@ -1,4 +1,4 @@
-﻿/**
+/**
  * @file Recharge/index.tsx - 充值页面
  * @description 用户充值页面，支持多种充值方式和金额选择。
  */
@@ -898,7 +898,7 @@ export function RechargePage() {
               disabled={!canSubmit}
               className={`mb-3 flex w-full items-center justify-center gap-2 rounded-xl py-4 text-base font-bold transition-all ${
                 canSubmit
-                  ? 'bg-gradient-to-r from-red-600 to-red-500 text-white shadow-lg shadow-orange-200 active:scale-[0.98]'
+                  ? 'gradient-primary-r text-white shadow-lg shadow-orange-200 active:scale-[0.98]'
                   : 'cursor-not-allowed bg-gray-200 text-gray-400 shadow-none'
               }`}
             >
@@ -946,7 +946,7 @@ export function RechargePage() {
         <div ref={scrollContainerRef} className="flex-1 overflow-y-auto no-scrollbar pb-[112px]">
           <div className="space-y-3 px-4 py-4">
           <Card className="relative overflow-hidden p-4">
-            <div className="pointer-events-none absolute top-0 right-0 h-24 w-24 rounded-bl-full bg-gradient-to-bl from-primary-start/5 to-transparent" />
+            <div className="pointer-events-none absolute top-0 right-0 h-24 w-24 rounded-bl-full" style={{ background: 'linear-gradient(to bottom left, rgba(233,59,59,0.05), transparent)' }} />
             {mainLoading ? (
               <div className="space-y-3">
                 <Skeleton className="h-4 w-24" />
@@ -1084,7 +1084,7 @@ export function RechargePage() {
                 disabled={!transferAmount || transferring}
                 className={`flex w-full items-center justify-center gap-2 rounded-xl py-3 text-base font-bold transition-all ${
                   transferAmount && !transferring
-                    ? 'bg-gradient-to-r from-brand-start to-brand-end text-white shadow-lg shadow-red-200 active:scale-[0.98]'
+                    ? 'gradient-primary-r text-white shadow-lg shadow-red-200 active:scale-[0.98]'
                     : 'cursor-not-allowed bg-gray-200 text-gray-400 shadow-none dark:bg-gray-800 dark:text-gray-500'
                 }`}
               >
@@ -1473,7 +1473,7 @@ export function RechargePage() {
               (matchStep === 'matched'
                 ? canSubmit
                 : isAuthenticated && !isOffline && !submitting && !mainLoading && matchStep !== 'matching' && numAmount > 0 && Boolean(selectedPaymentOption))
-                ? 'bg-gradient-to-r from-primary-start to-primary-end text-white shadow-md shadow-red-500/20 active:scale-[0.98]'
+                ? 'gradient-primary-r text-white shadow-md shadow-red-500/20 active:scale-[0.98]'
                 : 'bg-gray-200 text-gray-400 dark:bg-gray-800 dark:text-gray-500'
             }`}
           >

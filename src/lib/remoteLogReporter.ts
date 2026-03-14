@@ -101,24 +101,50 @@ function normalizeLevel(level?: string): RemoteLogLevel | null {
   return null;
 }
 
+function testCssSupport(property: string, value: string): boolean {
+  try {
+    return CSS.supports(property, value);
+  } catch {
+    return false;
+  }
+}
+
 function collectStartupDiagnostics(): StartupDiagnosticEntry[] {
   if (typeof window === 'undefined' || typeof document === 'undefined') {
     return [];
   }
 
-  return [
-    { at: Date.now(), name: 'online', value: navigator.onLine },
-    { at: Date.now(), name: 'visibilityState', value: document.visibilityState },
-    { at: Date.now(), name: 'readyState', value: document.readyState },
+  const now = Date.now();
+
+  const entries: StartupDiagnosticEntry[] = [
+    { at: now, name: 'online', value: navigator.onLine },
+    { at: now, name: 'visibilityState', value: document.visibilityState },
+    { at: now, name: 'readyState', value: document.readyState },
     {
-      at: Date.now(),
+      at: now,
       name: 'prefersDark',
       value:
         typeof window.matchMedia === 'function'
           ? window.matchMedia('(prefers-color-scheme: dark)').matches
           : null,
     },
+    { at: now, name: 'css.oklch', value: testCssSupport('color', 'oklch(0.5 0.2 120)') },
+    { at: now, name: 'css.colorMix', value: testCssSupport('color', 'color-mix(in srgb, red 50%, blue)') },
+    { at: now, name: 'css.rgbFrom', value: testCssSupport('color', 'rgb(from red r g b)') },
+    { at: now, name: 'css.linearGradientOklab', value: testCssSupport('background-image', 'linear-gradient(in oklab, red, blue)') },
+    { at: now, name: 'userAgent', value: navigator.userAgent },
   ];
+
+  // Log CSS diagnostics to console for on-device debugging
+  const cssInfo = entries.filter((e) => e.name.startsWith('css.'));
+  console.info(
+    '[CSS compat]',
+    Object.fromEntries(cssInfo.map((e) => [e.name.replace('css.', ''), e.value])),
+    '| UA:',
+    navigator.userAgent.slice(0, 120),
+  );
+
+  return entries;
 }
 
 function getStoredEnabledFlag(): boolean | null {

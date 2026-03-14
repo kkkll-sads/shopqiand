@@ -181,7 +181,7 @@ export const MessageDetailPage = () => {
             <button
               type="button"
               onClick={handleOpenTarget}
-              className="flex h-[48px] w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-primary-start to-primary-end text-base font-medium text-white shadow-sm active:opacity-90"
+              className="flex h-[48px] w-full items-center justify-center gap-2 rounded-full gradient-primary-r text-base font-medium text-white shadow-sm active:opacity-90"
             >
               <span>{actionText}</span>
               <ExternalLink size={16} />

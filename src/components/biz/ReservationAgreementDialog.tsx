@@ -99,7 +99,7 @@ export const ReservationAgreementDialog: React.FC<ReservationAgreementDialogProp
           <button
             type="button"
             onClick={onClose}
-            className="h-[46px] w-full rounded-full bg-gradient-to-r from-primary-start to-primary-end text-base font-bold text-white transition-opacity active:opacity-80"
+            className="h-[46px] w-full rounded-full gradient-primary-r text-base font-bold text-white transition-opacity active:opacity-80"
           >
             我已知晓
           </button>

@@ -1,4 +1,4 @@
-﻿import type { ButtonHTMLAttributes, PropsWithChildren, ReactNode } from 'react';
+import type { ButtonHTMLAttributes, PropsWithChildren, ReactNode } from 'react';
 import { Loader2 } from 'lucide-react';
 
 type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger';
@@ -31,7 +31,7 @@ const sizeStyles: Record<ButtonSize, string> = {
 
 const variantStyles: Record<ButtonVariant, string> = {
   primary:
-    'bg-gradient-to-r from-primary-start to-primary-end text-white shadow-soft enabled:hover:brightness-[1.03] enabled:active:brightness-[0.98]',
+    'gradient-primary-r text-white shadow-soft enabled:hover:brightness-[1.03] enabled:active:brightness-[0.98]',
   secondary:
     'border border-border-light bg-bg-card text-text-main shadow-soft enabled:hover:border-border-main enabled:hover:bg-bg-hover enabled:active:border-border-main enabled:active:bg-bg-hover',
   outline:

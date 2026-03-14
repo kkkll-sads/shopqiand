@@ -269,7 +269,7 @@ export const SearchPage = () => {
           <button
             type="button"
             onClick={() => handleSearch(query)}
-            className="shrink-0 rounded-full bg-gradient-to-r from-primary-start to-primary-end px-3.5 py-1.5 text-base font-medium text-white shadow-sm active:opacity-80"
+            className="shrink-0 rounded-full gradient-primary-r px-3.5 py-1.5 text-base font-medium text-white shadow-sm active:opacity-80"
           >
             搜索
           </button>

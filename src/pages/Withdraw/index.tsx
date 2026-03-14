@@ -30,9 +30,9 @@ import { useRouteScrollRestoration } from '../../hooks/useRouteScrollRestoration
 import { getBillingPath } from '../../lib/billing';
 import { useAppNavigate } from '../../lib/navigation';
 
-const BANK_CARD_MIN_WITHDRAW_AMOUNT = 100;
-const ESTIMATED_FEE_RATE = 0.001;
-const ESTIMATED_MIN_FEE = 0.1;
+const MIN_WITHDRAW_AMOUNT = 100;
+const ESTIMATED_FEE_RATE = 0.01;
+const ESTIMATED_MIN_FEE = 1;
 
 function formatMoney(value: number | string | undefined, fractionDigits = 2) {
   const nextValue = typeof value === 'string' ? Number(value) : value;
@@ -92,10 +92,6 @@ function buildPaymentSubtitle(account: PaymentAccount) {
   }
 
   return maskAccountNumber(account.accountNumber);
-}
-
-function isBankCardPaymentType(type: string | undefined) {
-  return type === 'bank_card' || type === 'unionpay';
 }
 
 export const WithdrawPage = () => {
@@ -177,20 +173,19 @@ export const WithdrawPage = () => {
     paymentAccountList.length === 0 &&
     (Boolean(accountOverviewError) || Boolean(paymentAccountsError));
   const isLoading = isAuthenticated && (accountOverviewLoading || paymentAccountsLoading);
-  const isBankCardWithdraw = isBankCardPaymentType(selectedMethod?.type);
   const isPayPasswordValid = /^\d{6}$/.test(payPassword.trim());
   const amountValidationMessage =
     numAmount > withdrawableBalance
       ? '输入金额超过可提现余额'
-      : numAmount > 0 && isBankCardWithdraw && numAmount < BANK_CARD_MIN_WITHDRAW_AMOUNT
-        ? `银行卡提现金额不得低于 ${BANK_CARD_MIN_WITHDRAW_AMOUNT} 元`
+      : numAmount > 0 && numAmount < MIN_WITHDRAW_AMOUNT
+        ? `提现金额不得低于 ${MIN_WITHDRAW_AMOUNT} 元`
         : '';
   const payPasswordValidationMessage =
     payPassword.trim().length > 0 && !isPayPasswordValid ? '请输入 6 位数字支付密码' : '';
   const isAmountValid =
     numAmount > 0 &&
     numAmount <= withdrawableBalance &&
-    (!isBankCardWithdraw || numAmount >= BANK_CARD_MIN_WITHDRAW_AMOUNT);
+    numAmount >= MIN_WITHDRAW_AMOUNT;
   const canSubmit =
     isAuthenticated &&
     !isOffline &&
@@ -254,9 +249,9 @@ export const WithdrawPage = () => {
       return;
     }
 
-    if (isBankCardPaymentType(selectedMethod.type) && numAmount < BANK_CARD_MIN_WITHDRAW_AMOUNT) {
+    if (numAmount < MIN_WITHDRAW_AMOUNT) {
       showToast({
-        message: `银行卡提现金额不得低于 ${BANK_CARD_MIN_WITHDRAW_AMOUNT} 元`,
+        message: `提现金额不得低于 ${MIN_WITHDRAW_AMOUNT} 元`,
         type: 'warning',
       });
       return;
@@ -373,7 +368,7 @@ export const WithdrawPage = () => {
         <div ref={scrollContainerRef} className="pb-[112px]">
           <div className="space-y-3 px-4 py-4">
             <Card className="relative overflow-hidden p-4">
-              <div className="pointer-events-none absolute right-0 top-0 h-24 w-24 rounded-bl-full bg-gradient-to-bl from-primary-start/5 to-transparent" />
+              <div className="pointer-events-none absolute right-0 top-0 h-24 w-24 rounded-bl-full" style={{ background: 'linear-gradient(to bottom left, rgba(233,59,59,0.05), transparent)' }} />
               {isLoading ? (
                 <div className="space-y-3">
                   <Skeleton className="h-4 w-24" />
@@ -473,11 +468,7 @@ export const WithdrawPage = () => {
                       type="text"
                       value={amount}
                       onChange={(event) => handleAmountChange(event.target.value)}
-                      placeholder={
-                        isBankCardWithdraw
-                          ? `银行卡最低提现 ${BANK_CARD_MIN_WITHDRAW_AMOUNT} 元`
-                          : '请输入提现金额'
-                      }
+                      placeholder={`最低提现 ${MIN_WITHDRAW_AMOUNT} 元`}
                       className="min-w-0 flex-1 bg-transparent text-6xl font-bold text-text-main outline-none placeholder:text-xl placeholder:font-normal placeholder:text-text-aux"
                     />
                     {amount && (
@@ -573,7 +564,7 @@ export const WithdrawPage = () => {
             onClick={() => void handleSubmit()}
             className={`h-[44px] w-[160px] rounded-full text-lg font-medium transition-all shadow-sm ${
               canSubmit
-                ? 'bg-gradient-to-r from-primary-start to-primary-end text-white active:opacity-80'
+                ? 'gradient-primary-r text-white active:opacity-80'
                 : 'border border-border-light bg-bg-base text-text-aux shadow-none'
             }`}
           >
@@ -657,7 +648,7 @@ export const WithdrawPage = () => {
             <div className="max-h-[60vh] space-y-4 overflow-y-auto text-base text-text-sub">
               <div>
                 <h4 className="mb-1 font-medium text-text-main">1. 提现金额</h4>
-                <p>银行卡收款时，单笔提现金额不得低于 {BANK_CARD_MIN_WITHDRAW_AMOUNT} 元。</p>
+                <p>单笔提现金额不得低于 {MIN_WITHDRAW_AMOUNT} 元。</p>
               </div>
               <div>
                 <h4 className="mb-1 font-medium text-text-main">2. 手续费</h4>

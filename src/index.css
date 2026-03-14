@@ -879,6 +879,63 @@
   --tw-gradient-position: to top left;
 }
 
+/* Flatten Tailwind v4's deeply nested var() gradient chain.
+   Old WebView can't resolve var(--a, var(--b) var(--c), var(--d) var(--e)).
+   Using [class*="bg-gradient-to"] avoids the "from-" keyword which
+   gets stripped by LightningCSS during build. Every Tailwind gradient
+   element has a bg-gradient-to-* class, so this selector matches all. */
+[class*="bg-gradient-to"] {
+  background-image: linear-gradient(var(--tw-gradient-position, to bottom), var(--tw-gradient-from, transparent), var(--tw-gradient-to, transparent)) !important;
+}
+
+[class*="bg-gradient-to"][class*="via-"] {
+  background-image: linear-gradient(var(--tw-gradient-position, to bottom), var(--tw-gradient-from, transparent), var(--tw-gradient-via, transparent), var(--tw-gradient-to, transparent)) !important;
+}
+
+/* ---- Direct gradient classes ----
+   Bypass Tailwind v4's nested var() chain which breaks on older WebView.
+   These write background-image directly with plain CSS values. */
+
+.gradient-warm-br {
+  background-color: #f59e0b;
+  background-image: linear-gradient(to bottom right, #f59e0b 0%, #f97316 50%, #f43f5e 100%);
+}
+
+.gradient-dark-br {
+  background-color: #1e293b;
+  background-image: linear-gradient(to bottom right, #1e293b 0%, #334155 50%, #0f172a 100%);
+}
+
+.gradient-primary-r {
+  background-color: #E93B3B;
+  background-image: linear-gradient(to right, #E93B3B 0%, #FF5C5C 100%);
+}
+
+.gradient-red-r {
+  background-color: #ef4444;
+  background-image: linear-gradient(to right, #ef4444 0%, #f97316 100%);
+}
+
+.gradient-green-r {
+  background-color: #22c55e;
+  background-image: linear-gradient(to right, #10b981 0%, #22c55e 100%);
+}
+
+.gradient-orange-r {
+  background-color: #fb923c;
+  background-image: linear-gradient(to right, #fb923c 0%, #f97316 100%);
+}
+
+/* Light: gradient-warm-br, Dark: gradient-dark-br (for MessageCenter summary card) */
+.gradient-warm-br-light-dark-br-dark {
+  background-color: #f59e0b;
+  background-image: linear-gradient(to bottom right, #f59e0b 0%, #f97316 50%, #f43f5e 100%);
+}
+.dark .gradient-warm-br-light-dark-br-dark {
+  background-color: #1e293b;
+  background-image: linear-gradient(to bottom right, #1e293b 0%, #334155 50%, #0f172a 100%);
+}
+
 @supports (height: 100dvh) {
   #root,
   .app-min-viewport-height {

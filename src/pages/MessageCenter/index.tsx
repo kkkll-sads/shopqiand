@@ -332,7 +332,7 @@ export const MessageCenterPage = () => {
 
   const renderSummary = () => (
     <div className="px-3 pt-3">
-      <div className="overflow-hidden rounded-[28px] border border-orange-100 bg-gradient-to-br from-amber-50 via-white to-rose-50 p-4 shadow-[0_10px_30px_rgba(244,63,94,0.08)] dark:border-white/10 dark:from-gray-900 dark:via-gray-900 dark:to-gray-950">
+      <div className="overflow-hidden rounded-[28px] border border-orange-100 gradient-warm-br-light-dark-br-dark p-4 shadow-[0_10px_30px_rgba(244,63,94,0.08)] dark:border-white/10">
         <div className="flex items-start justify-between gap-3">
           <div>
             <p className="text-sm font-medium text-orange-500 dark:text-orange-300">消息概览</p>

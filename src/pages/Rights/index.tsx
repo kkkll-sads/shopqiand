@@ -1,4 +1,4 @@
-﻿/**
+/**
  * @file Rights/index.tsx - 确权中心页面
  * @description 资产确权中心，展示寄售、藏品管理、成长权益等功能。
  */
@@ -613,7 +613,7 @@ export function RightsPage() {
           <button
             type="button"
             className={`flex min-h-[44px] items-center justify-center rounded-[16px] px-2 py-3 text-center transition-all ${activeTab === 'apply'
-              ? 'bg-gradient-to-r from-primary-start to-primary-end text-white shadow-[0_10px_24px_rgba(239,68,68,0.22)]'
+              ? 'gradient-primary-r text-white shadow-[0_10px_24px_rgba(239,68,68,0.22)]'
               : 'bg-transparent text-text-sub'
               }`}
             onClick={() => setActiveTab('apply')}
@@ -624,7 +624,7 @@ export function RightsPage() {
           <button
             type="button"
             className={`flex min-h-[44px] items-center justify-center rounded-[16px] px-2 py-3 text-center transition-all ${activeTab === 'unlock'
-              ? 'bg-gradient-to-r from-primary-start to-primary-end text-white shadow-[0_10px_24px_rgba(239,68,68,0.22)]'
+              ? 'gradient-primary-r text-white shadow-[0_10px_24px_rgba(239,68,68,0.22)]'
               : 'bg-transparent text-text-sub'
               }`}
             onClick={() => setActiveTab('unlock')}
@@ -635,7 +635,7 @@ export function RightsPage() {
           <button
             type="button"
             className={`flex min-h-[44px] items-center justify-center rounded-[16px] px-2 py-3 text-center transition-all ${activeTab === 'growth'
-              ? 'bg-gradient-to-r from-primary-start to-primary-end text-white shadow-[0_10px_24px_rgba(239,68,68,0.22)]'
+              ? 'gradient-primary-r text-white shadow-[0_10px_24px_rgba(239,68,68,0.22)]'
               : 'bg-transparent text-text-sub'
               }`}
             onClick={() => setActiveTab('growth')}

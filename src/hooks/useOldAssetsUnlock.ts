@@ -27,13 +27,17 @@ function mapStatusToUnlockState(raw: OldAssetsUnlockStatusRaw | null): UnlockSta
   const hasSelfTrade = cond?.has_transaction ?? false;
   const qualifiedCount = cond?.qualified_referrals;
   const requiredRef = raw.required_referrals;
+  const unlockedCount =
+    raw.unlocked_count ?? cond?.unlocked_count ?? (raw.unlock_status === 1 ? 1 : 0);
+  const availableQuota =
+    raw.available_quota ?? cond?.available_quota ?? (raw.can_unlock ? 1 : 0);
 
   return {
     currentGold: raw.current_gold,
     canUnlock: raw.can_unlock ?? false,
     alreadyUnlocked: raw.unlock_status === 1,
-    unlockedCount: raw.unlock_status === 1 ? 1 : 0,
-    availableQuota: raw.can_unlock ? 1 : 0,
+    unlockedCount: typeof unlockedCount === 'number' ? unlockedCount : undefined,
+    availableQuota: typeof availableQuota === 'number' ? availableQuota : undefined,
     requiredGold: raw.required_gold,
     rewardValue: raw.reward_value,
     isLoading: false,

@@ -30,7 +30,7 @@ export const DesignSystemPage = () => {
         <section>
           <h2 className="text-3xl font-bold text-text-main mb-3">Colors</h2>
           <div className="grid grid-cols-2 gap-3">
-            <div className="h-16 rounded-2xl bg-gradient-to-r from-primary-start to-primary-end flex items-end p-2 shadow-soft">
+            <div className="h-16 rounded-2xl gradient-primary-r flex items-end p-2 shadow-soft">
               <span className="text-white text-sm font-medium">Primary Gradient</span>
             </div>
             <div className="h-16 rounded-2xl bg-bg-base border border-border-light flex items-end p-2 shadow-soft">

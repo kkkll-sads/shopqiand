@@ -1,3 +1,4 @@
+import { ApiError } from '../core/errors';
 import { createApiHeaders, type ApiAuthOptions } from '../core/headers';
 import { http } from '../http';
 
@@ -5,7 +6,13 @@ export interface MembershipCardRequestOptions extends ApiAuthOptions {
   signal?: AbortSignal;
 }
 
+export type MembershipCardType = 'membership' | 'node_amplify';
+
 interface MembershipCardProductRaw {
+  amplify_type?: string;
+  amplify_type_text?: string;
+  amplify_value?: number | string;
+  card_type?: string;
   cycle_type?: string;
   cycle_type_text?: string;
   daily_limit?: number | string;
@@ -17,14 +24,14 @@ interface MembershipCardProductRaw {
   name?: string;
   pending_activation_price?: number | string;
   price?: number | string;
-  stackable?: boolean | number | string;
+  score_amplify_value?: number | string;
   valid_days?: number | string;
 }
 
 interface MembershipCardProductsResponseRaw {
-  enabled?: boolean | number | string;
   list?: MembershipCardProductRaw[];
-  min_pay_ratio?: number | string;
+  membership_enabled?: boolean | number | string;
+  node_amplify_enabled?: boolean | number | string;
 }
 
 interface MembershipCardBuyResponseRaw {
@@ -34,6 +41,7 @@ interface MembershipCardBuyResponseRaw {
 interface MembershipCardOwnedCardRaw {
   card_name?: string;
   card_product_id?: number | string;
+  card_type?: string;
   cycle_type_text?: string;
   daily_limit?: number | string;
   deduct_amount_per_use?: number | string;
@@ -50,8 +58,34 @@ interface MembershipCardOwnedCardRaw {
   today_usage?: number | string;
 }
 
+interface AmplifyCardOwnedCardRaw {
+  amplify_type?: string;
+  amplify_type_text?: string;
+  amplify_value?: number | string;
+  card_type?: string;
+  collection_image?: string;
+  collection_price?: number | string;
+  collection_title?: string;
+  cycle_type?: string;
+  cycle_type_text?: string;
+  end_time_text?: string;
+  id?: number | string;
+  is_active?: boolean | number | string;
+  level?: number | string;
+  level_text?: string;
+  product_id?: number | string;
+  product_name?: string;
+  remaining_days?: number | string;
+  score_amplify_value?: number | string;
+  source?: string;
+  start_time_text?: string;
+  status?: number | string;
+  user_collection_id?: number | string;
+}
+
 interface MembershipCardOwnedCardsResponseRaw {
-  list?: MembershipCardOwnedCardRaw[];
+  amplify_list?: AmplifyCardOwnedCardRaw[];
+  membership_list?: MembershipCardOwnedCardRaw[];
 }
 
 interface MembershipCardDeductionPreviewCardRaw {
@@ -69,6 +103,10 @@ interface MembershipCardDeductionPreviewRaw {
 }
 
 export interface MembershipCardProduct {
+  amplifyType?: string;
+  amplifyTypeText?: string;
+  amplifyValue: number;
+  cardType: MembershipCardType;
   cycleType: string;
   cycleTypeText?: string;
   dailyLimit: number;
@@ -80,20 +118,18 @@ export interface MembershipCardProduct {
   name: string;
   pendingActivationPrice: number;
   price: number;
-  stackable: boolean;
+  scoreAmplifyValue: number;
   validDays: number;
 }
 
 export interface MembershipCardProductsResponse {
-  enabled: boolean;
   list: MembershipCardProduct[];
-  minPayRatio: number;
+  membershipEnabled: boolean;
+  nodeAmplifyEnabled: boolean;
 }
 
 export interface BuyMembershipCardPayload {
   cardProductId: number;
-  payPendingActivationAmount: number;
-  paySupplyChainAmount: number;
 }
 
 export interface BuyMembershipCardResult {
@@ -105,6 +141,7 @@ export type MembershipCardSource = 'purchase' | 'manual';
 export interface MembershipCardOwnedCard {
   cardName: string;
   cardProductId: number;
+  cardType: 'membership';
   cycleTypeText?: string;
   dailyLimit: number;
   deductAmountPerUse: number;
@@ -119,6 +156,36 @@ export interface MembershipCardOwnedCard {
   status: number;
   todayRemaining: number;
   todayUsage: number;
+}
+
+export interface AmplifyCardOwnedCard {
+  amplifyType?: string;
+  amplifyTypeText?: string;
+  amplifyValue: number;
+  cardType: 'node_amplify';
+  collectionImage?: string;
+  collectionPrice: number;
+  collectionTitle?: string;
+  cycleType: string;
+  cycleTypeText?: string;
+  endTimeText?: string;
+  id: number;
+  isActive: boolean;
+  level: number;
+  levelText?: string;
+  productId: number;
+  productName: string;
+  remainingDays: number;
+  scoreAmplifyValue: number;
+  source: MembershipCardSource | string;
+  startTimeText?: string;
+  status: number;
+  userCollectionId: number;
+}
+
+export interface MyCardsResponse {
+  amplifyList: AmplifyCardOwnedCard[];
+  membershipList: MembershipCardOwnedCard[];
 }
 
 export interface MembershipCardDeductionPreviewCard {
@@ -167,19 +234,24 @@ function readOptionalString(value: string | undefined): string | undefined {
 }
 
 function normalizeProduct(payload: MembershipCardProductRaw): MembershipCardProduct {
+  const cardType = payload.card_type === 'node_amplify' ? 'node_amplify' : 'membership';
   return {
+    amplifyType: readOptionalString(payload.amplify_type),
+    amplifyTypeText: readOptionalString(payload.amplify_type_text),
+    amplifyValue: readNumber(payload.amplify_value),
+    cardType,
     cycleType: readOptionalString(payload.cycle_type) || 'quarter',
     cycleTypeText: readOptionalString(payload.cycle_type_text),
     dailyLimit: readNumber(payload.daily_limit),
     deductAmountPerUse: readNumber(payload.deduct_amount_per_use),
     id: readNumber(payload.id),
-    level: readNumber(payload.level, 1),
+    level: readNumber(payload.level),
     levelText: readOptionalString(payload.level_text),
     minFee: readNumber(payload.min_fee),
-    name: readOptionalString(payload.name) || '权益卡',
+    name: readOptionalString(payload.name) || (cardType === 'node_amplify' ? '节点赋能卡' : '权益卡'),
     pendingActivationPrice: readNumber(payload.pending_activation_price),
     price: readNumber(payload.price),
-    stackable: readBoolean(payload.stackable),
+    scoreAmplifyValue: readNumber(payload.score_amplify_value),
     validDays: readNumber(payload.valid_days),
   };
 }
@@ -188,6 +260,7 @@ function normalizeOwnedCard(payload: MembershipCardOwnedCardRaw): MembershipCard
   return {
     cardName: readOptionalString(payload.card_name) || '权益卡',
     cardProductId: readNumber(payload.card_product_id),
+    cardType: 'membership',
     cycleTypeText: readOptionalString(payload.cycle_type_text),
     dailyLimit: readNumber(payload.daily_limit),
     deductAmountPerUse: readNumber(payload.deduct_amount_per_use),
@@ -202,6 +275,33 @@ function normalizeOwnedCard(payload: MembershipCardOwnedCardRaw): MembershipCard
     status: readNumber(payload.status),
     todayRemaining: readNumber(payload.today_remaining),
     todayUsage: readNumber(payload.today_usage),
+  };
+}
+
+function normalizeAmplifyOwnedCard(payload: AmplifyCardOwnedCardRaw): AmplifyCardOwnedCard {
+  return {
+    amplifyType: readOptionalString(payload.amplify_type),
+    amplifyTypeText: readOptionalString(payload.amplify_type_text),
+    amplifyValue: readNumber(payload.amplify_value),
+    cardType: 'node_amplify',
+    collectionImage: readOptionalString(payload.collection_image),
+    collectionPrice: readNumber(payload.collection_price),
+    collectionTitle: readOptionalString(payload.collection_title),
+    cycleType: readOptionalString(payload.cycle_type) || 'quarter',
+    cycleTypeText: readOptionalString(payload.cycle_type_text),
+    endTimeText: readOptionalString(payload.end_time_text),
+    id: readNumber(payload.id),
+    isActive: readBoolean(payload.is_active),
+    level: readNumber(payload.level),
+    levelText: readOptionalString(payload.level_text),
+    productId: readNumber(payload.product_id),
+    productName: readOptionalString(payload.product_name) || '节点赋能卡',
+    remainingDays: readNumber(payload.remaining_days),
+    scoreAmplifyValue: readNumber(payload.score_amplify_value),
+    source: readOptionalString(payload.source) || 'purchase',
+    startTimeText: readOptionalString(payload.start_time_text),
+    status: readNumber(payload.status),
+    userCollectionId: readNumber(payload.user_collection_id),
   };
 }
 
@@ -220,32 +320,37 @@ export const membershipCardApi = {
     payload: BuyMembershipCardPayload,
     options: MembershipCardRequestOptions = {},
   ): Promise<BuyMembershipCardResult> {
-    const response = await http.post<
-      MembershipCardBuyResponseRaw,
-      {
-        card_product_id: number;
-        pay_pending_activation_amount: number;
-        pay_supply_chain_amount: number;
-      }
-    >(
+    interface BuyEnvelope {
+      code?: number | string;
+      data: MembershipCardBuyResponseRaw | null;
+      message?: string;
+      msg?: string;
+    }
+
+    const envelope = await http.post<BuyEnvelope, { card_product_id: number }>(
       '/api/membershipCard/buy',
-      {
-        card_product_id: payload.cardProductId,
-        pay_pending_activation_amount: payload.payPendingActivationAmount,
-        pay_supply_chain_amount: payload.paySupplyChainAmount,
-      },
+      { card_product_id: payload.cardProductId },
       {
         headers: createApiHeaders(options),
         signal: options.signal,
+        unwrapEnvelope: false,
       },
     );
 
+    const data = envelope?.data;
+    if (data == null) {
+      throw new ApiError(
+        envelope?.message || envelope?.msg || '购买失败',
+        { code: envelope?.code, details: envelope },
+      );
+    }
+
     return {
-      cardId: readNumber(response.card_id),
+      cardId: readNumber(data.card_id),
     };
   },
 
-  async myCards(options: MembershipCardRequestOptions = {}): Promise<MembershipCardOwnedCard[]> {
+  async myCards(options: MembershipCardRequestOptions = {}): Promise<MyCardsResponse> {
     const payload = await http.get<MembershipCardOwnedCardsResponseRaw>(
       '/api/membershipCard/myCards',
       {
@@ -254,7 +359,10 @@ export const membershipCardApi = {
       },
     );
 
-    return (payload.list ?? []).map(normalizeOwnedCard);
+    return {
+      amplifyList: (payload.amplify_list ?? []).map(normalizeAmplifyOwnedCard),
+      membershipList: (payload.membership_list ?? []).map(normalizeOwnedCard),
+    };
   },
 
   async previewDeduction(
@@ -296,9 +404,9 @@ export const membershipCardApi = {
     );
 
     return {
-      enabled: readBoolean(payload.enabled),
       list: (payload.list ?? []).map(normalizeProduct),
-      minPayRatio: readNumber(payload.min_pay_ratio),
+      membershipEnabled: readBoolean(payload.membership_enabled),
+      nodeAmplifyEnabled: readBoolean(payload.node_amplify_enabled),
     };
   },
 };

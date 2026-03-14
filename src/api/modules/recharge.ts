@@ -1,4 +1,4 @@
-﻿import { createApiHeaders, type ApiAuthOptions } from '../core/headers';
+import { createApiHeaders, type ApiAuthOptions } from '../core/headers';
 import { http } from '../http';
 import { resolveUploadUrl } from './upload';
 
@@ -371,8 +371,17 @@ export const rechargeApi = {
       },
     );
 
+    if (response == null || typeof response !== 'object') {
+      throw new Error('提交订单失败，未获取到订单信息');
+    }
+
+    const orderId = readNumber(response.order_id ?? 0);
+    if (orderId <= 0) {
+      throw new Error('提交订单失败，未获取到有效订单');
+    }
+
     return {
-      orderId: readNumber(response.order_id),
+      orderId,
       orderNo: readOptionalString(response.order_no) || '',
       payUrl: readOptionalString(response.pay_url),
     };

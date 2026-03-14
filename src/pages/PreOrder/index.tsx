@@ -616,7 +616,7 @@ export const PreOrderPage = () => {
             onClick={handleSubmit}
             className={`w-full h-[48px] rounded-full text-lg font-bold text-white shadow-sm transition-all ${
               canSubmit && !previewLoading
-                ? 'bg-gradient-to-r from-primary-start to-primary-end active:opacity-80'
+                ? 'gradient-primary-r active:opacity-80'
                 : 'bg-border-light text-text-aux cursor-not-allowed dark:bg-white/10 dark:text-white/45'
             }`}
           >
@@ -1044,7 +1044,7 @@ const PreviewSheet: React.FC<PreviewSheetProps> = ({
             className={`w-full h-[48px] rounded-full text-lg font-bold text-white transition-opacity shadow-sm ${
               previewError || refreshing || submitting
                 ? 'bg-border-light text-text-aux cursor-not-allowed'
-                : 'bg-gradient-to-r from-primary-start to-primary-end active:opacity-80'
+                : 'gradient-primary-r active:opacity-80'
             }`}
           >
             {submitting ? (

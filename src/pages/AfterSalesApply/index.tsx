@@ -1,4 +1,4 @@
-﻿import { useCallback, useEffect, useRef, useState, type ChangeEvent } from 'react';
+import { useCallback, useEffect, useRef, useState, type ChangeEvent } from 'react';
 import { useParams } from 'react-router-dom';
 import {
   AlertCircle,
@@ -262,7 +262,7 @@ export const AfterSalesApplyPage = () => {
               <div className="min-w-0 flex-1">
                 <h2 className="text-lg font-semibold text-text-main">当前订单暂不可申请售后</h2>
                 <p className="mt-2 text-sm leading-6 text-text-sub">
-                  仅实物类且处于待收货或已完成状态的订单支持在线申请售后。你可以先回到订单详情查看当前状态。
+                  仅实物类且处于待发货、待收货或已完成状态的订单支持在线申请售后。你可以先回到订单详情查看当前状态。
                 </p>
               </div>
             </div>

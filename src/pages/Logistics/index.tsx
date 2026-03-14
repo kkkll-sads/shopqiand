@@ -1,15 +1,14 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import type { LucideIcon } from 'lucide-react';
+import { useCallback, useEffect, useState } from 'react';
 import {
-  Building2,
-  CircleAlert,
-  Clock3,
+  ChevronLeft,
   Copy,
+  HeadphonesIcon,
   MapPin,
-  PackageCheck,
+  Package,
   RefreshCcw,
-  ScanLine,
+  CheckCircle2,
   Truck,
+  WifiOff,
 } from 'lucide-react';
 import { useParams } from 'react-router-dom';
 import {
@@ -18,248 +17,25 @@ import {
   type ShopOrderLogisticsTimelineItem,
 } from '../../api';
 import { getErrorMessage } from '../../api/core/errors';
-import { PageHeader } from '../../components/layout/PageHeader';
-import { Card } from '../../components/ui/Card';
-import { ErrorState } from '../../components/ui/ErrorState';
 import { PullToRefreshContainer } from '../../components/ui/PullToRefreshContainer';
 import { Skeleton } from '../../components/ui/Skeleton';
 import { useFeedback } from '../../components/ui/FeedbackProvider';
+import { useNetworkStatus } from '../../hooks/useNetworkStatus';
 import { copyToClipboard } from '../../lib/clipboard';
+import { openCustomerServiceLink } from '../../lib/customerService';
 import { useAppNavigate } from '../../lib/navigation';
-
-type StatusUI = {
-  badge: string;
-  iconWrap: string;
-  latestCard: string;
-  latestDot: string;
-  line: string;
-  note: string;
-};
-
-function readText(value: string | undefined, fallback = '--') {
-  const nextValue = value?.trim();
-  return nextValue ? nextValue : fallback;
-}
 
 function maskPhone(value: string | undefined) {
   const nextValue = value?.trim();
-  if (!nextValue) {
-    return '';
-  }
-
-  const digits = nextValue.replace(/\s+/g, '');
-  if (digits.length < 7) {
-    return digits;
-  }
-
+  if (!nextValue) return '--';
+  const digits = nextValue.replace(/\D/g, '');
+  if (digits.length < 7) return digits;
   return `${digits.slice(0, 3)}****${digits.slice(-4)}`;
 }
 
-function splitDateTime(value: string | undefined) {
+function readText(value: string | undefined, fallback = '--') {
   const nextValue = value?.trim();
-  if (!nextValue) {
-    return { date: '--', time: '--', full: '--' };
-  }
-
-  const normalized = nextValue.replace('T', ' ').replace(/\//g, '-');
-  const parts = normalized.split(/\s+/);
-
-  return {
-    date: parts[0] || nextValue,
-    time: parts[1] || '--',
-    full: nextValue,
-  };
-}
-
-function getLatestTimelineItem(timeline: ShopOrderLogisticsTimelineItem[]) {
-  return timeline.find((item) => item.is_latest) ?? timeline[0] ?? null;
-}
-
-function getStatusUI(data: ShopOrderLogisticsResponse | null): StatusUI {
-  if (!data) {
-    return {
-      badge: 'border-slate-200 bg-slate-50 text-slate-600 dark:border-slate-700/60 dark:bg-slate-900/70 dark:text-slate-200',
-      iconWrap: 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-200',
-      latestCard: 'border-slate-200 bg-slate-50 dark:border-slate-700/60 dark:bg-slate-900/72',
-      latestDot: 'bg-slate-400',
-      line: 'bg-slate-200 dark:bg-slate-700',
-      note: 'border-slate-200 bg-slate-50 text-slate-700 dark:border-slate-700/60 dark:bg-slate-900/72 dark:text-slate-200',
-    };
-  }
-
-  if (data.status_is_final) {
-    return {
-      badge: 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/25 dark:bg-emerald-500/12 dark:text-emerald-200',
-      iconWrap: 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/12 dark:text-emerald-200',
-      latestCard: 'border-emerald-200 bg-emerald-50 dark:border-emerald-500/25 dark:bg-emerald-500/10',
-      latestDot: 'bg-emerald-500',
-      line: 'bg-emerald-200 dark:bg-emerald-500/30',
-      note: 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/25 dark:bg-emerald-500/10 dark:text-emerald-200',
-    };
-  }
-
-  if (data.query_success) {
-    return {
-      badge: 'border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-500/25 dark:bg-sky-500/12 dark:text-sky-200',
-      iconWrap: 'bg-sky-50 text-sky-600 dark:bg-sky-500/12 dark:text-sky-200',
-      latestCard: 'border-sky-200 bg-sky-50 dark:border-sky-500/25 dark:bg-sky-500/10',
-      latestDot: 'bg-sky-500',
-      line: 'bg-sky-200 dark:bg-sky-500/30',
-      note: 'border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-500/25 dark:bg-sky-500/10 dark:text-sky-200',
-    };
-  }
-
-  return {
-    badge: 'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-500/25 dark:bg-amber-500/12 dark:text-amber-200',
-    iconWrap: 'bg-amber-50 text-amber-600 dark:bg-amber-500/12 dark:text-amber-200',
-    latestCard: 'border-amber-200 bg-amber-50 dark:border-amber-500/25 dark:bg-amber-500/10',
-    latestDot: 'bg-amber-500',
-    line: 'bg-amber-200 dark:bg-amber-500/30',
-    note: 'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-500/25 dark:bg-amber-500/10 dark:text-amber-200',
-  };
-}
-
-function getHeroCopy(data: ShopOrderLogisticsResponse | null, latestItem: ShopOrderLogisticsTimelineItem | null) {
-  if (!data) {
-    return '物流信息加载中';
-  }
-  if (latestItem?.content) {
-    return latestItem.content;
-  }
-  if (data.query_message) {
-    return data.query_message;
-  }
-  if (data.status_is_final) {
-    return '包裹已完成签收，建议及时核对商品是否完好。';
-  }
-  if (data.query_success) {
-    return '包裹正在运输途中，物流轨迹会持续同步更新。';
-  }
-  return '物流公司暂未回传完整轨迹，请稍后下拉刷新重试。';
-}
-
-function getProgressLabel(data: ShopOrderLogisticsResponse | null) {
-  if (!data) {
-    return '待更新';
-  }
-  if (data.status_is_final) {
-    return '已签收';
-  }
-  if (data.query_success) {
-    return '运输中';
-  }
-  return '待回传';
-}
-
-function StatusIcon({
-  data,
-  className = '',
-}: {
-  data: ShopOrderLogisticsResponse | null;
-  className?: string;
-}) {
-  const mergedClassName = `h-6 w-6 ${className}`.trim();
-
-  if (!data) {
-    return <Clock3 className={mergedClassName} />;
-  }
-  if (data.status_is_final) {
-    return <PackageCheck className={mergedClassName} />;
-  }
-  if (data.query_success) {
-    return <Truck className={mergedClassName} />;
-  }
-  return <CircleAlert className={mergedClassName} />;
-}
-
-function LogisticsSkeleton() {
-  return (
-    <div className="space-y-4 p-4">
-      <Card className="border border-border-light/70 bg-white/95 p-5 shadow-[0_18px_36px_-28px_rgba(15,23,42,0.22)] dark:border-white/8 dark:bg-slate-900/80">
-        <Skeleton className="h-6 w-24" />
-        <Skeleton className="mt-4 h-8 w-40" />
-        <Skeleton className="mt-3 h-4 w-5/6" />
-        <Skeleton className="mt-5 h-9 w-32 rounded-full" />
-      </Card>
-
-      <Card className="border border-border-light/70 bg-white/95 p-4 shadow-[0_18px_36px_-28px_rgba(15,23,42,0.18)] dark:border-white/8 dark:bg-slate-900/80">
-        <Skeleton className="h-6 w-24" />
-        <div className="mt-4 space-y-3">
-          <Skeleton className="h-[78px] rounded-[18px]" />
-          <Skeleton className="h-[78px] rounded-[18px]" />
-        </div>
-      </Card>
-
-      <Card className="border border-border-light/70 bg-white/95 p-4 shadow-[0_18px_36px_-28px_rgba(15,23,42,0.18)] dark:border-white/8 dark:bg-slate-900/80">
-        <Skeleton className="h-6 w-24" />
-        <div className="mt-4 space-y-4">
-          {[1, 2, 3].map((item) => (
-            <div key={item} className="flex gap-3">
-              <Skeleton className="mt-1 h-3.5 w-3.5 rounded-full" />
-              <Skeleton className="h-[88px] flex-1 rounded-[18px]" />
-            </div>
-          ))}
-        </div>
-      </Card>
-    </div>
-  );
-}
-
-function SectionTitle({
-  title,
-  description,
-}: {
-  title: string;
-  description?: string;
-}) {
-  return (
-    <div>
-      <div className="text-lg font-semibold tracking-[-0.02em] text-text-main dark:text-white">{title}</div>
-      {description ? <div className="mt-1 text-sm text-text-sub dark:text-slate-300/84">{description}</div> : null}
-    </div>
-  );
-}
-
-function DetailField({
-  icon: Icon,
-  label,
-  value,
-  subValue,
-  onCopy,
-}: {
-  icon: LucideIcon;
-  label: string;
-  value: string;
-  subValue?: string;
-  onCopy?: () => void;
-}) {
-  return (
-    <div className="rounded-[18px] border border-border-light/70 bg-bg-base/72 px-4 py-3.5 dark:border-white/8 dark:bg-white/[0.03]">
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex min-w-0 gap-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-white text-text-main shadow-[0_10px_20px_-18px_rgba(15,23,42,0.35)] dark:bg-slate-800 dark:text-slate-100">
-            <Icon size={18} />
-          </div>
-          <div className="min-w-0">
-            <div className="text-sm font-medium text-text-sub dark:text-slate-300">{label}</div>
-            <div className="mt-1 break-all text-[15px] font-semibold leading-6 text-text-main dark:text-white">{value}</div>
-            {subValue ? <div className="mt-1 text-sm text-text-sub dark:text-slate-300/84">{subValue}</div> : null}
-          </div>
-        </div>
-
-        {onCopy ? (
-          <button
-            type="button"
-            onClick={onCopy}
-            className="inline-flex shrink-0 items-center rounded-full border border-border-light bg-white px-3 py-1.5 text-xs font-medium text-text-sub transition-transform duration-200 active:scale-[0.98] dark:border-white/10 dark:bg-slate-800 dark:text-slate-200"
-          >
-            <Copy size={12} className="mr-1.5" />
-            复制
-          </button>
-        ) : null}
-      </div>
-    </div>
-  );
+  return nextValue || fallback;
 }
 
 export const LogisticsPage = () => {
@@ -267,39 +43,34 @@ export const LogisticsPage = () => {
   const orderId = Number.parseInt(id || '0', 10);
   const { goBackOr } = useAppNavigate();
   const { showToast } = useFeedback();
+  const { isOffline, refreshStatus } = useNetworkStatus();
 
   const [loading, setLoading] = useState(true);
-  const [errorMessage, setErrorMessage] = useState('');
+  const [moduleError, setModuleError] = useState(false);
   const [data, setData] = useState<ShopOrderLogisticsResponse | null>(null);
 
+  const isEmpty = !loading && !moduleError && (!data || (data.timeline?.length ?? 0) === 0);
+
   const fetchData = useCallback(
-    async (options?: { keepData?: boolean; silent?: boolean }) => {
+    async (options?: { keepData?: boolean }) => {
       const keepData = options?.keepData ?? false;
-      const silent = options?.silent ?? false;
 
       if (orderId <= 0) {
-        setErrorMessage('订单参数错误');
+        setModuleError(true);
         setLoading(false);
         return;
       }
 
-      if (!keepData) {
-        setLoading(true);
-      }
+      if (!keepData) setLoading(true);
 
       try {
         const next = await shopOrderApi.logistics({ id: orderId });
         setData(next);
-        setErrorMessage('');
+        setModuleError(false);
       } catch (error) {
-        const message = getErrorMessage(error) || '物流详情加载失败';
-        setErrorMessage(message);
-        if (!keepData) {
-          setData(null);
-        }
-        if (silent) {
-          showToast({ message, type: 'error' });
-        }
+        setModuleError(true);
+        if (!keepData) setData(null);
+        showToast({ message: getErrorMessage(error) || '物流详情加载失败', type: 'error' });
       } finally {
         setLoading(false);
       }
@@ -311,247 +82,246 @@ export const LogisticsPage = () => {
     void fetchData();
   }, [fetchData]);
 
-  const handleRefresh = useCallback(async () => {
-    await fetchData({ keepData: true, silent: true });
-  }, [fetchData]);
+  const handleBack = () => goBackOr('order');
 
   const handleCopy = useCallback(
-    async (text: string, label: string) => {
-      if (!text) {
-        return;
-      }
-
+    async (text: string) => {
       const ok = await copyToClipboard(text);
       showToast({
-        message: ok ? `${label}已复制` : '复制失败，请稍后重试',
+        message: ok ? '运单号已复制' : '复制失败',
         type: ok ? 'success' : 'error',
       });
     },
     [showToast],
   );
 
-  const timeline = data?.timeline ?? [];
-  const latestItem = useMemo(() => getLatestTimelineItem(timeline), [timeline]);
-  const statusUI = useMemo(() => getStatusUI(data), [data]);
-  const progressLabel = getProgressLabel(data);
-  const heroCopy = getHeroCopy(data, latestItem);
-  const lastUpdate = splitDateTime(data?.last_update_time || latestItem?.time);
-  const recipientPhone = maskPhone(data?.recipient_phone);
-  const showPageError = !loading && !data && errorMessage !== '';
+  const handleRefresh = useCallback(() => {
+    refreshStatus();
+    void fetchData({ keepData: true });
+  }, [fetchData, refreshStatus]);
 
-  return (
-    <div className="flex h-full flex-1 flex-col overflow-hidden bg-[#f6f4ef] dark:bg-[#0b1220]">
-      <PageHeader
-        title="物流详情"
-        onBack={() => goBackOr('order')}
-        className="border-b border-border-light bg-white/95 backdrop-blur-sm dark:border-white/8 dark:bg-slate-950/88"
-        titleClassName="tracking-[-0.03em]"
-        rightAction={
+  const handleRetry = useCallback(() => {
+    setModuleError(false);
+    setLoading(true);
+    void fetchData();
+  }, [fetchData]);
+
+  const handleCustomerService = useCallback(() => {
+    void openCustomerServiceLink(showToast);
+  }, [showToast]);
+
+  const statusText = data?.status_is_final ? '已签收' : data?.query_success ? '运输中' : readText(data?.status_text, '待更新');
+  const timeline = data?.timeline ?? [];
+
+  const renderHeader = () => (
+    <div className="relative z-40 shrink-0 border-b border-border-light bg-white dark:bg-gray-900">
+      {isOffline && (
+        <div className="flex items-center justify-between bg-red-50 px-4 py-2 text-[12px] text-primary-start dark:bg-red-500/15 dark:text-red-300">
+          <div className="flex items-center">
+            <WifiOff size={14} className="mr-2" />
+            <span>网络不稳定，请检查网络设置</span>
+          </div>
           <button
             type="button"
-            onClick={() => void fetchData({ keepData: true, silent: true })}
-            className="inline-flex h-9 items-center justify-center rounded-full border border-border-light bg-white px-3 text-sm font-medium text-text-sub shadow-sm transition-transform duration-200 active:scale-[0.98] dark:border-white/10 dark:bg-slate-900/80 dark:text-slate-200"
+            onClick={handleRefresh}
+            className="rounded bg-white px-2 py-1 font-medium shadow-sm active:opacity-80 dark:bg-gray-900"
           >
-            <RefreshCcw size={14} className="mr-1.5" />
             刷新
           </button>
-        }
-      />
+        </div>
+      )}
+      <div className="flex h-12 items-center justify-between px-3 pt-safe">
+        <div className="flex w-1/3 items-center">
+          <button
+            type="button"
+            onClick={handleBack}
+            className="-ml-1 p-1 text-text-main active:opacity-70"
+          >
+            <ChevronLeft size={24} />
+          </button>
+        </div>
+        <h1 className="w-1/3 text-center text-[16px] font-bold text-text-main">物流详情</h1>
+        <div className="w-1/3" />
+      </div>
+    </div>
+  );
 
-      <PullToRefreshContainer className="flex-1" onRefresh={handleRefresh}>
-        <div className="h-full overflow-y-auto pb-8">
-          {loading && !data ? <LogisticsSkeleton /> : null}
-          {showPageError ? <ErrorState message={errorMessage} onRetry={() => void fetchData()} /> : null}
+  const renderSkeleton = () => (
+    <div className="p-3">
+      <div className="mb-3 rounded-[16px] bg-white p-4 shadow-sm dark:bg-gray-900">
+        <div className="mb-3 flex items-center">
+          <Skeleton className="mr-3 h-10 w-10 rounded-full" />
+          <div>
+            <Skeleton className="mb-1 h-5 w-20" />
+            <Skeleton className="h-4 w-32" />
+          </div>
+        </div>
+      </div>
+      <div className="mb-3 flex items-center rounded-[16px] bg-white p-4 shadow-sm dark:bg-gray-900">
+        <Skeleton className="mr-3 h-6 w-6 shrink-0 rounded-full" />
+        <div className="flex-1">
+          <Skeleton className="mb-1 h-4 w-3/4" />
+          <Skeleton className="h-4 w-1/2" />
+        </div>
+      </div>
+      <div className="mb-3 rounded-[16px] bg-white p-4 shadow-sm dark:bg-gray-900">
+        {[1, 2, 3, 4].map((i) => (
+          <div key={i} className="mb-6 flex last:mb-0">
+            <div className="mr-3 flex w-6 flex-col items-center">
+              <Skeleton className="mb-2 h-3 w-3 rounded-full" />
+              <Skeleton className="h-12 w-0.5" />
+            </div>
+            <div className="flex-1">
+              <Skeleton className="mb-1 h-4 w-full" />
+              <Skeleton className="mb-2 h-4 w-2/3" />
+              <Skeleton className="h-3 w-24" />
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 
-          {!loading && data ? (
-            <div className="space-y-4 p-4">
-              <section className="overflow-hidden rounded-[28px] border border-border-light bg-white p-5 shadow-[0_18px_36px_-28px_rgba(15,23,42,0.22)] dark:border-white/8 dark:bg-slate-900/88">
-                <div className="flex items-start gap-3">
-                  <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl ${statusUI.iconWrap}`}>
-                    <StatusIcon data={data} className="h-5 w-5" />
-                  </div>
+  const renderContent = () => {
+    if (moduleError) {
+      return (
+        <div className="flex flex-1 flex-col items-center justify-center p-4">
+          <RefreshCcw size={32} className="mb-3 text-text-aux" />
+          <p className="mb-4 text-[14px] text-text-sub">加载失败，请检查网络</p>
+          <button
+            type="button"
+            onClick={handleRetry}
+            className="rounded-full border border-border-light bg-white px-6 py-2 text-[13px] text-text-main shadow-sm active:bg-bg-base dark:bg-gray-900"
+          >
+            重试
+          </button>
+        </div>
+      );
+    }
 
-                  <div className="min-w-0 flex-1">
-                    <div className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium ${statusUI.badge}`}>
-                      {progressLabel}
-                    </div>
-                    <h2 className="mt-3 text-[24px] font-semibold leading-tight tracking-[-0.03em] text-text-main dark:text-white">
-                      {readText(data.status_text, '物流待更新')}
-                    </h2>
-                    <p className="mt-2 text-sm leading-6 text-text-sub dark:text-slate-300/88">{heroCopy}</p>
+    if (isEmpty) {
+      return (
+        <div className="flex flex-1 flex-col items-center justify-center p-4">
+          <Package size={48} className="mb-4 text-border-light" />
+          <p className="mb-1 text-[15px] font-medium text-text-main">暂无物流信息</p>
+          <p className="text-[13px] text-text-sub">商家正快马加鞭为您准备商品，请耐心等待</p>
+        </div>
+      );
+    }
 
-                    <div className="mt-4 flex flex-wrap gap-2">
-                      <span className="rounded-full border border-border-light bg-bg-base px-3 py-1.5 text-xs font-medium text-text-sub dark:border-white/8 dark:bg-white/[0.04] dark:text-slate-200">
-                        {readText(data.shipping_company, '待分配物流公司')}
-                      </span>
-                      {lastUpdate.full !== '--' ? (
-                        <span className="rounded-full border border-border-light bg-bg-base px-3 py-1.5 text-xs font-medium text-text-sub dark:border-white/8 dark:bg-white/[0.04] dark:text-slate-200">
-                          {lastUpdate.full}
-                        </span>
-                      ) : null}
-                    </div>
-                  </div>
-                </div>
+    if (loading && !data) {
+      return renderSkeleton();
+    }
 
-                <div className="mt-4">
-                  <button
-                    type="button"
-                    onClick={() => void handleCopy(data.shipping_no, '运单号')}
-                    className="inline-flex items-center rounded-full border border-border-light bg-bg-base px-3 py-2 text-sm font-medium text-text-main transition-transform duration-200 active:scale-[0.98] dark:border-white/8 dark:bg-white/[0.04] dark:text-white"
-                  >
-                    <Copy size={14} className="mr-1.5" />
-                    复制运单号
-                  </button>
-                </div>
-              </section>
+    return (
+      <div className="p-3 pb-24">
+        {/* Top Info Card */}
+        <div className="mb-3 flex items-center rounded-[16px] bg-white p-4 shadow-sm dark:bg-gray-900">
+          <div className="mr-3 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary-start/10">
+            {data?.status_is_final ? (
+              <CheckCircle2 size={20} className="text-primary-start" />
+            ) : (
+              <Truck size={20} className="text-primary-start" />
+            )}
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="mb-1 flex items-center">
+              <span className="mr-2 text-[16px] font-bold text-text-main">{statusText}</span>
+              <span className="text-[13px] text-text-sub">
+                {readText(data?.shipping_company, '树交所物流')}
+              </span>
+            </div>
+            <div className="flex items-center text-[12px] text-text-sub">
+              <span className="mr-2">运单号：{readText(data?.shipping_no)}</span>
+              <button
+                type="button"
+                onClick={() => void handleCopy(data?.shipping_no ?? '')}
+                className="flex items-center text-text-main active:opacity-70"
+              >
+                <Copy size={12} className="mr-1" />
+                复制
+              </button>
+            </div>
+          </div>
+        </div>
 
-              <Card className="border border-border-light/70 bg-white/96 p-4 shadow-[0_18px_36px_-28px_rgba(15,23,42,0.18)] dark:border-white/8 dark:bg-slate-900/80">
-                <SectionTitle title="物流信息" />
-                <div className="mt-4 grid gap-3">
-                  <DetailField
-                    icon={ScanLine}
-                    label="运单号"
-                    value={readText(data.shipping_no)}
-                    subValue={data.status_detail_text || undefined}
-                    onCopy={() => void handleCopy(data.shipping_no, '运单号')}
+        {/* Address Card */}
+        <div className="mb-3 flex items-start rounded-[16px] bg-white p-4 shadow-sm dark:bg-gray-900">
+          <MapPin size={16} className="mr-2 mt-0.5 shrink-0 text-text-main" />
+          <div className="min-w-0 flex-1">
+            <div className="mb-1 text-[13px] leading-snug text-text-main">
+              [收货地址] {readText(data?.recipient_address)}
+            </div>
+            <div className="text-[12px] text-text-sub">
+              {readText(data?.recipient_name)} {maskPhone(data?.recipient_phone)}
+            </div>
+          </div>
+        </div>
+
+        {/* Timeline Card */}
+        <div className="rounded-[16px] bg-white p-4 shadow-sm dark:bg-gray-900">
+          {timeline.map((item: ShopOrderLogisticsTimelineItem, index: number) => {
+            const isLast = index === timeline.length - 1;
+            const isLatest = item.is_latest ?? false;
+
+            return (
+              <div key={`${item.time}-${index}`} className="flex">
+                <div className="relative flex w-8 shrink-0 flex-col items-center">
+                  <div
+                    className={`z-10 mt-1 h-3 w-3 rounded-full ${
+                      isLatest
+                        ? 'bg-primary-start shadow-[0_0_0_4px_rgba(255,77,77,0.15)]'
+                        : 'bg-border-light'
+                    }`}
                   />
-                  <DetailField
-                    icon={Building2}
-                    label="物流公司"
-                    value={readText(data.shipping_company, '待分配物流公司')}
-                  />
-                </div>
-              </Card>
-
-              <Card className="border border-border-light/70 bg-white/96 p-4 shadow-[0_18px_36px_-28px_rgba(15,23,42,0.18)] dark:border-white/8 dark:bg-slate-900/80">
-                <SectionTitle title="收货信息" />
-                <div className="mt-4 rounded-[20px] border border-border-light/70 bg-bg-base/72 p-4 dark:border-white/8 dark:bg-white/[0.03]">
-                  <div className="flex items-start gap-3">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-rose-50 text-rose-500 dark:bg-rose-500/10 dark:text-rose-300">
-                      <MapPin size={18} />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="text-base font-semibold text-text-main dark:text-white">
-                          {readText(data.recipient_name, '收货人')}
-                        </span>
-                        {recipientPhone ? (
-                          <span className="rounded-full border border-border-light bg-white px-2.5 py-1 text-xs font-medium text-text-sub dark:border-white/10 dark:bg-slate-800 dark:text-slate-200">
-                            {recipientPhone}
-                          </span>
-                        ) : null}
-                      </div>
-                      <p className="mt-3 text-sm leading-6 text-text-sub dark:text-slate-300/88">
-                        {readText(data.recipient_address, '暂无收货地址')}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </Card>
-
-              {!data.query_success ? (
-                <Card className={`border p-4 shadow-[0_18px_36px_-28px_rgba(15,23,42,0.18)] ${statusUI.note}`}>
-                  <div className="flex items-start gap-3">
-                    <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-white/75 dark:bg-white/10">
-                      <CircleAlert size={18} />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <SectionTitle title="查询说明" />
-                      <p className="mt-2 text-sm leading-6 text-text-sub dark:text-slate-200/88">
-                        {readText(data.query_message, '物流信息暂不可用，请稍后刷新重试。')}
-                      </p>
-                      <button
-                        type="button"
-                        onClick={() => void fetchData({ keepData: true, silent: true })}
-                        className="mt-4 inline-flex items-center rounded-full border border-current/15 bg-white/75 px-4 py-2 text-sm font-medium text-text-main transition-transform duration-200 active:scale-[0.98] dark:bg-white/8 dark:text-white"
-                      >
-                        <RefreshCcw size={15} className="mr-1.5" />
-                        重新查询
-                      </button>
-                    </div>
-                  </div>
-                </Card>
-              ) : null}
-
-              <Card className="border border-border-light/70 bg-white/96 p-4 shadow-[0_18px_36px_-28px_rgba(15,23,42,0.18)] dark:border-white/8 dark:bg-slate-900/80">
-                <SectionTitle
-                  title="物流轨迹"
-                  description={lastUpdate.full !== '--' ? `最近更新 ${lastUpdate.full}` : '下拉可刷新最新轨迹'}
-                />
-
-                <div className="mt-4">
-                  {timeline.length === 0 ? (
-                    <div className="rounded-[22px] border border-dashed border-border-light px-5 py-12 text-center dark:border-white/8">
-                      <Clock3 size={30} className="mx-auto mb-3 text-text-aux dark:text-slate-400" />
-                      <p className="text-base font-semibold text-text-main dark:text-white">暂无物流轨迹</p>
-                      <p className="mt-2 text-sm leading-6 text-text-sub dark:text-slate-300/84">
-                        可能刚发货、物流尚未回传，或该运单号暂时查不到轨迹，请稍后下拉刷新。
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="space-y-4">
-                      {timeline.map((item, index) => {
-                        const timeParts = splitDateTime(item.time);
-                        const isLast = index === timeline.length - 1;
-
-                        return (
-                          <div key={`${item.time}-${index}`} className="relative flex gap-3">
-                            <div className="relative flex w-5 shrink-0 justify-center">
-                              <div
-                                className={`relative z-[1] mt-1 h-3.5 w-3.5 rounded-full ${
-                                  item.is_latest ? statusUI.latestDot : 'bg-slate-300 dark:bg-slate-600'
-                                }`}
-                              />
-                              {!isLast ? (
-                                <div
-                                  className={`absolute top-5 h-[calc(100%+8px)] w-[2px] rounded-full ${
-                                    item.is_latest ? statusUI.line : 'bg-border-light dark:bg-slate-700'
-                                  }`}
-                                />
-                              ) : null}
-                            </div>
-
-                            <div
-                              className={`min-w-0 flex-1 rounded-[18px] border px-4 py-3.5 ${
-                                item.is_latest
-                                  ? statusUI.latestCard
-                                  : 'border-border-light/70 bg-white dark:border-white/8 dark:bg-white/[0.03]'
-                              }`}
-                            >
-                              <div className="flex items-start justify-between gap-3">
-                                <p className="min-w-0 flex-1 text-[15px] leading-7 text-text-main dark:text-white">
-                                  {readText(item.content, '暂无物流说明')}
-                                </p>
-                                {item.is_latest ? (
-                                  <span className="shrink-0 rounded-full bg-text-main px-2.5 py-1 text-[10px] font-semibold text-white dark:bg-white dark:text-slate-900">
-                                    最新
-                                  </span>
-                                ) : null}
-                              </div>
-
-                              <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-text-sub dark:text-slate-300">
-                                <span className="rounded-full bg-bg-base px-2.5 py-1 font-medium dark:bg-slate-800 dark:text-slate-200">
-                                  {timeParts.date}
-                                </span>
-                                {timeParts.time !== '--' ? <span>{timeParts.time}</span> : null}
-                                {item.zone ? (
-                                  <span className="rounded-full border border-border-light bg-white px-2.5 py-1 font-medium dark:border-white/8 dark:bg-slate-800 dark:text-slate-200">
-                                    {item.zone}
-                                  </span>
-                                ) : null}
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
+                  {!isLast && (
+                    <div className="absolute left-1/2 top-4 h-[calc(100%+16px)] w-[1px] -translate-x-1/2 bg-border-light" />
                   )}
                 </div>
-              </Card>
-            </div>
-          ) : null}
+                <div className={`flex-1 pb-6 ${isLatest ? '' : 'opacity-70'}`}>
+                  <div
+                    className={`mb-1 text-[14px] leading-snug ${
+                      isLatest ? 'font-medium text-text-main' : 'text-text-sub'
+                    }`}
+                  >
+                    {readText(item.content)}
+                  </div>
+                  <div className={`text-[12px] ${isLatest ? 'text-text-main' : 'text-text-aux'}`}>
+                    {readText(item.time)}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
         </div>
+      </div>
+    );
+  };
+
+  return (
+    <div className="relative flex h-full flex-1 flex-col overflow-hidden bg-bg-base">
+      {renderHeader()}
+
+      <PullToRefreshContainer
+        className="relative flex-1 overflow-y-auto no-scrollbar"
+        onRefresh={() => void fetchData({ keepData: true })}
+        disabled={isOffline}
+      >
+        {renderContent()}
       </PullToRefreshContainer>
+
+      {!moduleError && !loading && !isEmpty && (
+        <div className="absolute bottom-0 left-0 right-0 z-40 border-t border-border-light bg-white px-4 py-2 pb-safe dark:bg-gray-900">
+          <button
+            type="button"
+            className="flex w-full items-center justify-center rounded-full border border-border-light text-[14px] font-medium text-text-main active:bg-bg-base"
+            onClick={handleCustomerService}
+          >
+            <HeadphonesIcon size={16} className="mr-1.5 text-text-sub" />
+            联系客服
+          </button>
+        </div>
+      )}
     </div>
   );
 };

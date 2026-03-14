@@ -28,9 +28,20 @@ interface AccountBalanceOverviewRaw {
   withdrawable_money?: string;
 }
 
+interface AccountIncomeItemRaw {
+  withdrawable_income?: string;
+  score_income?: number | string;
+}
+
 interface AccountIncomeSummaryRaw {
   total_income_score?: number | string;
   total_income_withdrawable?: string;
+  consignment_income?: AccountIncomeItemRaw;
+  mining_dividend?: AccountIncomeItemRaw;
+  friend_commission?: AccountIncomeItemRaw;
+  sign_in?: AccountIncomeItemRaw;
+  register_reward?: AccountIncomeItemRaw;
+  other?: AccountIncomeItemRaw;
 }
 
 interface AccountCollectionSummaryRaw {
@@ -41,12 +52,22 @@ interface AccountCollectionSummaryRaw {
   sold_count?: number | string;
   total_count?: number | string;
   total_value?: string;
+  avg_price?: string;
+  mining_value?: string;
+}
+
+interface AccountDailyBreakdownItemRaw {
+  date?: string;
+  income?: { total?: string };
+  expense?: { total?: string };
+  net?: string;
 }
 
 interface AccountOverviewRaw {
   balance?: AccountBalanceOverviewRaw;
   collection?: AccountCollectionSummaryRaw;
   income?: AccountIncomeSummaryRaw;
+  daily_breakdown?: AccountDailyBreakdownItemRaw[];
 }
 
 interface AccountProfileUserInfoRaw {
@@ -155,9 +176,20 @@ export interface AccountBalanceOverview {
   withdrawableMoney: string;
 }
 
+export interface AccountIncomeItem {
+  withdrawableIncome: string;
+  scoreIncome: number;
+}
+
 export interface AccountIncomeSummary {
   totalIncomeScore: number;
   totalIncomeWithdrawable: string;
+  consignmentIncome?: AccountIncomeItem;
+  miningDividend?: AccountIncomeItem;
+  friendCommission?: AccountIncomeItem;
+  signIn?: AccountIncomeItem;
+  registerReward?: AccountIncomeItem;
+  other?: AccountIncomeItem;
 }
 
 export interface AccountCollectionSummary {
@@ -167,12 +199,22 @@ export interface AccountCollectionSummary {
   soldCount: number;
   totalCount: number;
   totalValue: string;
+  avgPrice?: string;
+  miningValue?: string;
+}
+
+export interface AccountDailyBreakdownItem {
+  date: string;
+  incomeTotal: string;
+  expenseTotal: string;
+  net: string;
 }
 
 export interface AccountOverview {
   balance: AccountBalanceOverview;
   collection: AccountCollectionSummary;
   income: AccountIncomeSummary;
+  dailyBreakdown?: AccountDailyBreakdownItem[];
 }
 
 export interface AccountProfileUserInfo {
@@ -385,6 +427,26 @@ function readBreakdown(value: unknown): Record<string, unknown> | undefined {
     : undefined;
 }
 
+function normalizeIncomeItem(raw: AccountIncomeItemRaw | undefined): AccountIncomeItem | undefined {
+  if (!raw) return undefined;
+  return {
+    withdrawableIncome: readString(raw.withdrawable_income, '0.00'),
+    scoreIncome: readNumber(raw.score_income),
+  };
+}
+
+function normalizeDailyBreakdownItem(
+  raw: AccountDailyBreakdownItemRaw | undefined,
+): AccountDailyBreakdownItem | undefined {
+  if (!raw || !raw.date) return undefined;
+  return {
+    date: readOptionalString(raw.date) ?? '',
+    incomeTotal: readOptionalString(raw.income?.total) ?? '0.00',
+    expenseTotal: readOptionalString(raw.expense?.total) ?? '0.00',
+    net: readOptionalString(raw.net) ?? '0.00',
+  };
+}
+
 function normalizeOverview(payload: AccountOverviewRaw): AccountOverview {
   return {
     balance: {
@@ -396,16 +458,27 @@ function normalizeOverview(payload: AccountOverviewRaw): AccountOverview {
       withdrawableMoney: readString(payload.balance?.withdrawable_money),
     },
     collection: {
+      avgPrice: readOptionalString(payload.collection?.avg_price),
       consignmentCount: readNumber(
         payload.collection?.consignment_count ?? payload.collection?.consigning_count,
       ),
       holdingCount: readNumber(payload.collection?.holding_count),
       miningCount: readNumber(payload.collection?.mining_count),
+      miningValue: readOptionalString(payload.collection?.mining_value),
       soldCount: readNumber(payload.collection?.sold_count),
       totalCount: readNumber(payload.collection?.total_count),
       totalValue: readString(payload.collection?.total_value),
     },
+    dailyBreakdown: (payload.daily_breakdown ?? [])
+      .map(normalizeDailyBreakdownItem)
+      .filter((d): d is AccountDailyBreakdownItem => !!d),
     income: {
+      consignmentIncome: normalizeIncomeItem(payload.income?.consignment_income),
+      friendCommission: normalizeIncomeItem(payload.income?.friend_commission),
+      miningDividend: normalizeIncomeItem(payload.income?.mining_dividend),
+      other: normalizeIncomeItem(payload.income?.other),
+      registerReward: normalizeIncomeItem(payload.income?.register_reward),
+      signIn: normalizeIncomeItem(payload.income?.sign_in),
       totalIncomeScore: readNumber(payload.income?.total_income_score),
       totalIncomeWithdrawable: readString(payload.income?.total_income_withdrawable),
     },
@@ -843,11 +916,15 @@ export interface OldAssetsUnlockConditionsRaw {
   direct_referrals_count?: number;
   qualified_referrals?: number;
   is_qualified?: boolean;
+  unlocked_count?: number;
+  available_quota?: number;
   messages?: string[];
 }
 
 export interface OldAssetsUnlockStatusRaw {
   unlock_status?: number;
+  unlocked_count?: number;
+  available_quota?: number;
   unlock_conditions?: OldAssetsUnlockConditionsRaw;
   required_gold?: number;
   current_gold?: number;

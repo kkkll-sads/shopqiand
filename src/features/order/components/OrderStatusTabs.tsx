@@ -15,7 +15,7 @@ export const OrderStatusTabs = ({
         <button
           key={tab}
           onClick={() => onChange(tab)}
-          className={`${tabs.length <= 5 ? 'flex-1' : ''} px-4 py-3 text-base whitespace-nowrap relative ${
+          className={`${tabs.length <= 6 ? 'flex-1' : ''} px-4 py-3 text-base whitespace-nowrap relative ${
             activeTab === tab ? 'text-primary-start font-bold' : 'text-text-main'
           }`}
         >

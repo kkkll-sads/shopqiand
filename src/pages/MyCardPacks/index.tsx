@@ -3,13 +3,17 @@
  * @description 我的卡包页面，展示可购买权益卡与已持有权益卡。
  */
 
-import { Coins, CreditCard, ShieldCheck, Ticket, Wallet } from 'lucide-react';
-import { useMemo, useRef } from 'react';
+import { Check, Coins, CreditCard, Loader2, ShieldCheck, Ticket, TrendingUp, Wallet, X, Zap } from 'lucide-react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   accountApi,
+  type BindableMiningItem,
   membershipCardApi,
+  nodeAmplifyCardApi,
+  type AmplifyCardOwnedCard,
   type MembershipCardOwnedCard,
   type MembershipCardProduct,
+  type MembershipCardType,
 } from '../../api';
 import { getErrorMessage } from '../../api/core/errors';
 import { WalletPageHeader } from '../../components/layout/WalletPageHeader';
@@ -26,18 +30,7 @@ import { useRouteScrollRestoration } from '../../hooks/useRouteScrollRestoration
 import { useSessionState } from '../../hooks/useSessionState';
 import { useAppNavigate } from '../../lib/navigation';
 
-type CardTab = 'owned' | 'market';
-type PurchaseMethod = 'supply' | 'pending' | 'mixed';
-
-interface PurchasePlan {
-  canBuy: boolean;
-  displayPendingPay: number;
-  displaySupplyPay: number;
-  paymentMethod?: PurchaseMethod;
-  pendingPay: number;
-  reason?: string;
-  supplyPay: number;
-}
+type CardTab = MembershipCardType | 'owned';
 
 function formatMoney(value: number | string | undefined, fractionDigits = 2) {
   const nextValue = typeof value === 'string' ? Number(value) : value;
@@ -57,178 +50,24 @@ function formatPercent(value: number) {
   return `${formatMoney(nextValue, Number.isInteger(nextValue) ? 0 : 2)}%`;
 }
 
-function ceilMoney(value: number) {
-  return Math.ceil((value + Number.EPSILON) * 100) / 100;
+function getCardGradient(levelText?: string, isExpired = false): string {
+  if (isExpired) return 'from-gray-400 to-gray-600';
+  if (!levelText) return 'from-emerald-600 to-emerald-800';
+  if (levelText.includes('尊享')) return 'from-yellow-600 to-yellow-800';
+  if (levelText.includes('高级')) return 'from-slate-600 to-slate-800';
+  return 'from-emerald-600 to-emerald-800';
 }
 
-function computeMixedPaymentPlan(
-  product: MembershipCardProduct,
-  minPayRatio: number,
-  balanceAvailable: number,
-  pendingActivationGold: number,
-): PurchasePlan {
-  const price = Math.max(0, Number(product.price) || 0);
-  const supply = Math.max(0, Number(balanceAvailable) || 0);
-  const pending = Math.max(0, Number(pendingActivationGold) || 0);
 
-  if (supply + pending < price) {
-    return {
-      canBuy: false,
-      displayPendingPay: 0,
-      displaySupplyPay: price,
-      pendingPay: 0,
-      reason: '总余额不足',
-      supplyPay: 0,
-    };
-  }
 
-  const minSupply = Math.max(0.01, ceilMoney(price * Math.min(Math.max(minPayRatio, 0), 0.99)));
-  const supplyPay = Math.max(minSupply, Math.max(0.01, ceilMoney(price - pending)));
-  const pendingPay = Math.round((price - supplyPay) * 100) / 100;
-
-  if (pendingPay <= 0 || supplyPay >= price) {
-    return {
-      canBuy: false,
-      displayPendingPay: pendingPay,
-      displaySupplyPay: supplyPay,
-      pendingPay,
-      reason: '待激活确权金余额不足',
-      supplyPay,
-    };
-  }
-
-  if (supply < supplyPay) {
-    return {
-      canBuy: false,
-      displayPendingPay: pendingPay,
-      displaySupplyPay: supplyPay,
-      pendingPay,
-      reason: `专项金至少需支付 ¥${formatMoney(supplyPay)}`,
-      supplyPay,
-    };
-  }
-
-  if (pending < pendingPay) {
-    return {
-      canBuy: false,
-      displayPendingPay: pendingPay,
-      displaySupplyPay: supplyPay,
-      pendingPay,
-      reason: '待激活确权金余额不足',
-      supplyPay,
-    };
-  }
-
-  return {
-    canBuy: true,
-    displayPendingPay: pendingPay,
-    displaySupplyPay: supplyPay,
-    paymentMethod: 'mixed',
-    pendingPay,
-    supplyPay,
-  };
-}
-
-function computePlan(
-  product: MembershipCardProduct,
-  minPayRatio: number,
-  balanceAvailable: number,
-  pendingActivationGold: number,
-): PurchasePlan {
-  const supplyPrice = Math.max(0, Number(product.price) || 0);
-  const pendingPrice = Math.max(0, Number(product.pendingActivationPrice) || 0);
-  const supply = Math.max(0, Number(balanceAvailable) || 0);
-  const pending = Math.max(0, Number(pendingActivationGold) || 0);
-
-  if (pendingPrice > 0) {
-    const canUseSupply = supplyPrice > 0 && supply >= supplyPrice;
-    const canUsePending = pending >= pendingPrice;
-
-    if (canUseSupply) {
-      return {
-        canBuy: true,
-        displayPendingPay: pendingPrice,
-        displaySupplyPay: supplyPrice,
-        paymentMethod: 'supply',
-        pendingPay: 0,
-        supplyPay: supplyPrice,
-      };
-    }
-
-    if (canUsePending) {
-      return {
-        canBuy: true,
-        displayPendingPay: pendingPrice,
-        displaySupplyPay: supplyPrice,
-        paymentMethod: 'pending',
-        pendingPay: pendingPrice,
-        reason: '当前将使用待激活确权金支付',
-        supplyPay: 0,
-      };
-    }
-
-    const shortageMessages: string[] = [];
-    if (supplyPrice > 0) {
-      shortageMessages.push(`专项金需 ¥${formatMoney(supplyPrice)}`);
-    }
-    shortageMessages.push(`待激活确权金需 ¥${formatMoney(pendingPrice)}`);
-
-    return {
-      canBuy: false,
-      displayPendingPay: pendingPrice,
-      displaySupplyPay: supplyPrice,
-      pendingPay: 0,
-      reason: shortageMessages.join('，'),
-      supplyPay: 0,
-    };
-  }
-
-  return computeMixedPaymentPlan(product, minPayRatio, balanceAvailable, pendingActivationGold);
-}
-
-function buildConfirmMessage(product: MembershipCardProduct, plan: PurchasePlan) {
-  const lines = [`确认购买“${product.name}”吗？`, ''];
-
-  if (plan.paymentMethod === 'pending') {
-    lines.push(`待激活确权金支付：¥${formatMoney(plan.pendingPay)}`);
-  } else if (plan.paymentMethod === 'supply') {
-    lines.push(`专项金支付：¥${formatMoney(plan.supplyPay)}`);
-  } else {
-    lines.push(`专项金支付：¥${formatMoney(plan.supplyPay)}`);
-    lines.push(`待激活确权金支付：¥${formatMoney(plan.pendingPay)}`);
-  }
-
-  return lines.join('\n');
-}
-
-function getStatusMeta(card: MembershipCardOwnedCard) {
-  if (card.isActive) {
-    return {
-      badge: 'bg-green-50 text-green-700 dark:bg-green-500/15 dark:text-green-300',
-      label: '生效中',
-    };
-  }
-
-  if (card.status === 2) {
-    return {
-      badge: 'bg-orange-50 text-orange-700 dark:bg-orange-500/15 dark:text-orange-300',
-      label: '已过期',
-    };
-  }
-
-  return {
-    badge: 'bg-gray-100 text-gray-600 dark:bg-gray-700/60 dark:text-gray-300',
-    label: '已停用',
-  };
-}
 
 export function MyCardPacksPage() {
   const { goBack, goTo } = useAppNavigate();
   const { isAuthenticated } = useAuthSession();
   const { isOffline, refreshStatus } = useNetworkStatus();
-  const { hideLoading, showConfirm, showLoading, showToast } = useFeedback();
+  const { showConfirm, showLoading, showToast } = useFeedback();
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
-  const [activeTab, setActiveTab] = useSessionState<CardTab>('my-card-packs:tab', 'owned');
+  const [activeTab, setActiveTab] = useSessionState<CardTab>('my-card-packs:tab', 'membership');
 
   const productsRequest = useRequest((signal) => membershipCardApi.products({ signal }), {
     cacheKey: 'membership-card:products',
@@ -246,29 +85,25 @@ export function MyCardPacksPage() {
   });
 
   const productsData = productsRequest.data;
-  const ownedCards = Array.isArray(myCardsRequest.data) ? myCardsRequest.data : [];
-  const productList = Array.isArray(productsData?.list) ? productsData.list : [];
+  const myCardsData = myCardsRequest.data;
+  const ownedMembershipCards = myCardsData?.membershipList ?? [];
+  const ownedAmplifyCards = myCardsData?.amplifyList ?? [];
+  const allProducts = Array.isArray(productsData?.list) ? productsData.list : [];
+  const productList = activeTab === 'owned' ? [] : allProducts.filter((p) => p.cardType === activeTab);
   const balanceAvailable = Number(profileRequest.data?.userInfo?.balanceAvailable ?? 0);
   const pendingActivationGold = Number(profileRequest.data?.userInfo?.pendingActivationGold ?? 0);
-  const activeCardsCount = ownedCards.filter((card) => card.isActive).length;
-  const todayRemainingCount = ownedCards.reduce((total, card) => total + card.todayRemaining, 0);
-  const usesDualPricing = productList.some((product) => product.pendingActivationPrice > 0);
-
-  const plans = useMemo(() => {
-    const map = new Map<number, PurchasePlan>();
-    for (const product of productList) {
-      map.set(
-        product.id,
-        computePlan(product, productsData?.minPayRatio ?? 0, balanceAvailable, pendingActivationGold),
-      );
-    }
-    return map;
-  }, [balanceAvailable, pendingActivationGold, productList, productsData?.minPayRatio]);
+  const activeCardsCount =
+    ownedMembershipCards.filter((c) => c.isActive).length +
+    ownedAmplifyCards.filter((c) => c.isActive).length;
+  const todayRemainingCount = ownedMembershipCards.reduce((total, card) => total + card.todayRemaining, 0);
+  const isTabEnabled =
+    activeTab === 'owned' ? true :
+    activeTab === 'membership' ? productsData?.membershipEnabled : productsData?.nodeAmplifyEnabled;
 
   useRouteScrollRestoration({
     containerRef: scrollContainerRef,
     namespace: `my-card-packs:${activeTab}`,
-    restoreDeps: [activeTab, ownedCards.length, productList.length, isAuthenticated],
+    restoreDeps: [activeTab, ownedMembershipCards.length, ownedAmplifyCards.length, allProducts.length, isAuthenticated],
     restoreWhen: !productsRequest.loading && (!isAuthenticated || (!profileRequest.loading && !myCardsRequest.loading)),
   });
 
@@ -281,53 +116,136 @@ export function MyCardPacksPage() {
     return Promise.allSettled(tasks);
   };
 
+  const [miningSheetOpen, setMiningSheetOpen] = useState(false);
+  const [miningSheetProduct, setMiningSheetProduct] = useState<MembershipCardProduct | null>(null);
+  const [miningList, setMiningList] = useState<BindableMiningItem[]>([]);
+  const [miningLoading, setMiningLoading] = useState(false);
+  const [miningLoadingMore, setMiningLoadingMore] = useState(false);
+  const [miningHasMore, setMiningHasMore] = useState(false);
+  const [miningPage, setMiningPage] = useState(1);
+  const [selectedMiningId, setSelectedMiningId] = useState<number | null>(null);
+  const [amplifyBuying, setAmplifyBuying] = useState(false);
+
+  const openMiningSheet = useCallback(async (product: MembershipCardProduct) => {
+    if (!isAuthenticated) {
+      goTo('login');
+      return;
+    }
+    setMiningSheetProduct(product);
+    setSelectedMiningId(null);
+    setMiningSheetOpen(true);
+    setMiningLoading(true);
+    setMiningPage(1);
+    setMiningHasMore(false);
+    try {
+      const res = await nodeAmplifyCardApi.bindableMining({ page: 1, limit: 10 });
+      setMiningList(res.list);
+      setMiningHasMore(res.hasMore);
+    } catch (error) {
+      showToast({ message: getErrorMessage(error), type: 'error' });
+      setMiningList([]);
+    } finally {
+      setMiningLoading(false);
+    }
+  }, [goTo, isAuthenticated, showToast]);
+
+  const loadMoreMining = useCallback(async () => {
+    if (miningLoadingMore || !miningHasMore) return;
+    const nextPage = miningPage + 1;
+    setMiningLoadingMore(true);
+    try {
+      const res = await nodeAmplifyCardApi.bindableMining({ page: nextPage, limit: 10 });
+      setMiningList((prev) => [...prev, ...res.list]);
+      setMiningPage(nextPage);
+      setMiningHasMore(res.hasMore);
+    } catch (error) {
+      showToast({ message: getErrorMessage(error), type: 'error' });
+    } finally {
+      setMiningLoadingMore(false);
+    }
+  }, [miningLoadingMore, miningHasMore, miningPage, showToast]);
+
+  const closeMiningSheet = useCallback(() => {
+    setMiningSheetOpen(false);
+    setMiningSheetProduct(null);
+    setSelectedMiningId(null);
+  }, []);
+
+  const handleAmplifyBuy = useCallback(async () => {
+    if (!miningSheetProduct || selectedMiningId === null) return;
+
+    const confirmLines = [`确认购买"${miningSheetProduct.name}"并绑定所选矿机吗？`, ''];
+    confirmLines.push(`专项金：¥${formatMoney(miningSheetProduct.price)}`);
+    if (miningSheetProduct.pendingActivationPrice > 0) {
+      confirmLines.push(`待激活确权金：¥${formatMoney(miningSheetProduct.pendingActivationPrice)}`);
+    }
+
+    const confirmed = await showConfirm({
+      title: '购买节点赋能卡',
+      message: confirmLines.join('\n'),
+      confirmText: '确认购买',
+      cancelText: '取消',
+    });
+    if (!confirmed) return;
+
+    setAmplifyBuying(true);
+    try {
+      await nodeAmplifyCardApi.buy({
+        productId: miningSheetProduct.id,
+        userCollectionId: selectedMiningId,
+      });
+      showToast({ message: `${miningSheetProduct.name} 购买成功`, type: 'success' });
+      closeMiningSheet();
+      await Promise.allSettled([profileRequest.reload(), myCardsRequest.reload()]);
+    } catch (error) {
+      showToast({ message: getErrorMessage(error), type: 'error', duration: 3000 });
+    } finally {
+      setAmplifyBuying(false);
+    }
+  }, [closeMiningSheet, miningSheetProduct, myCardsRequest, profileRequest, selectedMiningId, showConfirm, showToast]);
+
   const handleBuy = async (product: MembershipCardProduct) => {
     if (!isAuthenticated) {
       goTo('login');
       return;
     }
 
-    const plan = plans.get(product.id);
-    if (!plan?.canBuy) {
-      showToast({ message: plan?.reason || '当前条件暂不支持购买', type: 'warning' });
+    if (product.cardType === 'node_amplify') {
+      void openMiningSheet(product);
       return;
+    }
+
+    const priceLines = [`确认购买"${product.name}"吗？`, ''];
+    priceLines.push(`专项金：¥${formatMoney(product.price)}`);
+    if (product.pendingActivationPrice > 0) {
+      priceLines.push(`待激活确权金：¥${formatMoney(product.pendingActivationPrice)}`);
     }
 
     const confirmed = await showConfirm({
       title: '购买卡包',
-      message: buildConfirmMessage(product, plan),
+      message: priceLines.join('\n'),
       confirmText: '确认购买',
       cancelText: '取消',
     });
-    if (!confirmed) {
-      return;
-    }
+    if (!confirmed) return;
 
-    showLoading({
-      message: '正在购买卡包',
-      subMessage: '购买成功后会自动刷新持卡记录',
-    });
+    showLoading({ message: '正在购买...' });
 
     try {
-      await membershipCardApi.buy({
-        cardProductId: product.id,
-        paySupplyChainAmount: plan.supplyPay,
-        payPendingActivationAmount: plan.pendingPay,
-      });
+      await membershipCardApi.buy({ cardProductId: product.id });
       showToast({ message: `${product.name} 购买成功`, type: 'success' });
-      setActiveTab('owned');
       await Promise.allSettled([profileRequest.reload(), myCardsRequest.reload()]);
     } catch (error) {
       showToast({ message: getErrorMessage(error), type: 'error', duration: 3000 });
     } finally {
-      hideLoading();
+      showLoading(false);
     }
   };
 
   const renderSummary = () => {
     if (!isAuthenticated) {
       return (
-        <Card className="border-0 bg-gradient-to-br from-slate-800 via-slate-700 to-slate-900 text-white">
+        <Card className="border-0 gradient-dark-br text-white">
           <div className="mb-2 flex items-center text-sm text-white/75">
             <Ticket size={16} className="mr-2" />
             卡包购买与持卡抵扣
@@ -349,7 +267,7 @@ export function MyCardPacksPage() {
 
     if (profileRequest.loading && !profileRequest.data) {
       return (
-        <Card className="space-y-3 border-0 bg-gradient-to-br from-amber-500 via-orange-500 to-rose-500 text-white">
+        <Card className="space-y-3 border-0 gradient-warm-br text-white">
           <Skeleton className="h-5 w-28 bg-white/25" />
           <Skeleton className="h-9 w-40 bg-white/25" />
           <div className="grid grid-cols-3 gap-2">
@@ -362,37 +280,197 @@ export function MyCardPacksPage() {
     }
 
     return (
-      <Card className="border-0 bg-gradient-to-br from-amber-500 via-orange-500 to-rose-500 text-white">
+      <Card className="border-0 gradient-warm-br text-white">
         <div className="mb-3 flex items-center justify-between">
           <div>
             <div className="mb-1 text-sm text-white/80">我的卡包</div>
             <div className="text-3xl font-bold">{activeCardsCount}</div>
           </div>
           <div className="rounded-full border border-white/20 bg-white/15 px-3 py-1 text-sm text-white/85">
-            {usesDualPricing ? '支持双账户购买' : `专项金至少支付 ${formatPercent(productsData?.minPayRatio ?? 0)}`}
+            生效中
           </div>
         </div>
         <div className="grid grid-cols-3 gap-2">
-          <div className="rounded-2xl bg-white/14 p-3">
+          <div className="min-w-0 rounded-2xl bg-white/14 p-3 overflow-hidden">
             <div className="mb-2 flex items-center text-xs text-white/75">
-              <ShieldCheck size={14} className="mr-1.5" />
-              专项金
+              <ShieldCheck size={14} className="mr-1.5 shrink-0" />
+              <span className="truncate">专项金</span>
             </div>
-            <div className="text-lg font-semibold">¥{formatMoney(balanceAvailable)}</div>
+            <div className="truncate text-lg font-semibold" title={`¥${formatMoney(balanceAvailable)}`}>
+              ¥{formatMoney(balanceAvailable)}
+            </div>
           </div>
-          <div className="rounded-2xl bg-white/14 p-3">
+          <div className="min-w-0 rounded-2xl bg-white/14 p-3 overflow-hidden">
             <div className="mb-2 flex items-center text-xs text-white/75">
-              <Coins size={14} className="mr-1.5" />
-              待激活确权金
+              <Coins size={14} className="mr-1.5 shrink-0" />
+              <span className="truncate">待激活确权金</span>
             </div>
-            <div className="text-lg font-semibold">¥{formatMoney(pendingActivationGold)}</div>
+            <div className="truncate text-lg font-semibold" title={`¥${formatMoney(pendingActivationGold)}`}>
+              ¥{formatMoney(pendingActivationGold)}
+            </div>
           </div>
-          <div className="rounded-2xl bg-white/14 p-3">
+          <div className="min-w-0 rounded-2xl bg-white/14 p-3 overflow-hidden">
             <div className="mb-2 flex items-center text-xs text-white/75">
-              <CreditCard size={14} className="mr-1.5" />
-              今日剩余
+              <CreditCard size={14} className="mr-1.5 shrink-0" />
+              <span className="truncate">今日剩余</span>
             </div>
-            <div className="text-lg font-semibold">{todayRemainingCount} 次</div>
+            <div className="truncate text-lg font-semibold" title={`${todayRemainingCount} 次`}>
+              {todayRemainingCount} 次
+            </div>
+          </div>
+        </div>
+      </Card>
+    );
+  };
+
+  const getStatusMeta = (status: number, isActive: boolean) => {
+    if (isActive) {
+      return {
+        badge: 'bg-green-600 text-white',
+        label: '生效中',
+      };
+    }
+    if (status === 2) {
+      return {
+        badge: 'bg-orange-50 text-orange-700 dark:bg-orange-500/15 dark:text-orange-300',
+        label: '已过期',
+      };
+    }
+    return {
+      badge: 'bg-gray-100 text-gray-600 dark:bg-gray-700/60 dark:text-gray-300',
+      label: '已停用',
+    };
+  };
+
+  const getOwnedCardStatusBadge = (status: number, isActive: boolean) => {
+    if (isActive) return 'bg-green-600 text-white';
+    if (status === 2) return 'bg-gray-500/90 text-white';
+    return 'bg-gray-500/70 text-white';
+  };
+
+  const renderOwnedMembershipCard = (card: MembershipCardOwnedCard) => {
+    const status = getStatusMeta(card.status, card.isActive);
+    const gradient = getCardGradient(card.levelText, !card.isActive);
+    const statusBadge = getOwnedCardStatusBadge(card.status, card.isActive);
+    return (
+      <div key={`m-${card.id}`} className={`rounded-[16px] p-5 mb-4 bg-gradient-to-br ${gradient} text-white shadow-md relative overflow-hidden`}>
+        <div className="absolute -right-6 -top-6 w-24 h-24 rounded-full bg-white/10 blur-xl" />
+        <div className="relative z-10">
+          <div className="mb-4 flex items-start justify-between">
+            <div>
+              <div className="mb-2 flex items-center gap-2">
+                <span className="text-lg font-semibold">{card.cardName}</span>
+                <span className="rounded-full border border-white/20 bg-white/15 px-2 py-0.5 text-xs text-white/85">
+                  {card.levelText || '权益卡'}
+                </span>
+              </div>
+              <div className="text-sm text-white/75">
+                {card.cycleTypeText || '周期卡'} · {card.source === 'manual' ? '后台发放' : '购买获得'}
+              </div>
+            </div>
+            <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${statusBadge}`}>
+              {status.label}
+            </span>
+          </div>
+          <div className="grid grid-cols-3 gap-2">
+            <div className="rounded-2xl bg-white/14 p-3">
+              <div className="mb-1 text-xs text-white/70">单次抵扣</div>
+              <div className="text-lg font-semibold">¥{formatMoney(card.deductAmountPerUse)}</div>
+            </div>
+            <div className="rounded-2xl bg-white/14 p-3">
+              <div className="mb-1 text-xs text-white/70">今日剩余</div>
+              <div className="text-lg font-semibold">{card.todayRemaining} 次</div>
+            </div>
+            <div className="rounded-2xl bg-white/14 p-3">
+              <div className="mb-1 text-xs text-white/70">最低手续费</div>
+              <div className="text-lg font-semibold">¥{formatMoney(card.minFee)}</div>
+            </div>
+          </div>
+        </div>
+        <div className="space-y-3 p-4 pt-2 text-sm">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="rounded-full bg-white/20 px-2.5 py-1 text-xs text-white">每日限用 {card.dailyLimit} 次</span>
+            <span className="rounded-full bg-white/20 px-2.5 py-1 text-xs text-white">已用 {card.todayUsage} 次</span>
+            <span className="rounded-full bg-white/20 px-2.5 py-1 text-xs text-white">剩余 {card.remainingDays} 天</span>
+          </div>
+          <div className="flex items-center justify-between gap-4 border-t border-white/20 pt-2 text-xs text-white">
+            <span className="min-w-0 flex-1 truncate" title={card.startTimeText}>生效：{card.startTimeText || '--'}</span>
+            <span className="min-w-0 flex-1 truncate text-right" title={card.endTimeText}>失效：{card.endTimeText || '--'}</span>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const renderOwnedAmplifyCard = (card: AmplifyCardOwnedCard) => {
+    const status = getStatusMeta(card.status, card.isActive);
+    const amplifyDisplay =
+      card.amplifyType === 'percentage'
+        ? formatPercent(card.amplifyValue / 100)
+        : `¥${formatMoney(card.amplifyValue)}`;
+    const scoreDisplay =
+      card.amplifyType === 'percentage'
+        ? formatPercent(card.scoreAmplifyValue / 100)
+        : `¥${formatMoney(card.scoreAmplifyValue)}`;
+
+    return (
+      <Card key={`a-${card.id}`} className="overflow-hidden p-0">
+        <div className="gradient-dark-br p-4 text-white">
+          <div className="mb-4 flex items-start justify-between">
+            <div>
+              <div className="mb-2 flex items-center gap-2">
+                <Zap size={18} className="text-amber-300" />
+                <span className="text-lg font-semibold">{card.productName}</span>
+                {card.levelText ? (
+                  <span className="rounded-full border border-white/20 bg-white/15 px-2 py-0.5 text-xs text-white/85">
+                    {card.levelText}
+                  </span>
+                ) : null}
+              </div>
+              <div className="text-sm text-white/75">
+                {card.cycleTypeText || '周期卡'} · {card.source === 'manual' ? '后台发放' : '购买获得'}
+              </div>
+            </div>
+            <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${status.badge}`}>
+              {status.label}
+            </span>
+          </div>
+          <div className="grid grid-cols-3 gap-2">
+            <div className="rounded-2xl bg-white/14 p-3">
+              <div className="mb-1 flex items-center text-xs text-white/70">
+                <TrendingUp size={12} className="mr-1" />
+                余额增幅
+              </div>
+              <div className="text-lg font-semibold">{amplifyDisplay}</div>
+            </div>
+            <div className="rounded-2xl bg-white/14 p-3">
+              <div className="mb-1 text-xs text-white/70">消费金增幅</div>
+              <div className="text-lg font-semibold">{scoreDisplay}</div>
+            </div>
+            <div className="rounded-2xl bg-white/14 p-3">
+              <div className="mb-1 text-xs text-white/70">增幅类型</div>
+              <div className="text-base font-semibold">{card.amplifyTypeText || (card.amplifyType === 'percentage' ? '比例' : '固定')}</div>
+            </div>
+          </div>
+          {card.collectionTitle ? (
+            <div className="mt-2 flex items-center gap-2 rounded-2xl bg-white/14 p-3">
+              {card.collectionImage ? (
+                <img src={card.collectionImage} alt="" className="size-10 rounded-lg object-cover" />
+              ) : null}
+              <div className="min-w-0 flex-1">
+                <div className="truncate text-sm font-medium">{card.collectionTitle}</div>
+                <div className="text-xs text-white/70">绑定矿机 · ¥{formatMoney(card.collectionPrice)}</div>
+              </div>
+            </div>
+          ) : null}
+        </div>
+        <div className="space-y-3 border-t border-border-main p-4 text-sm text-text-sub">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="rounded-full bg-bg-base px-2.5 py-1 text-xs">剩余 {card.remainingDays} 天</span>
+          </div>
+          <div className="flex justify-between gap-3 text-xs">
+            <span className="min-w-0 flex-1 truncate">生效：{card.startTimeText || '--'}</span>
+            <span className="min-w-0 flex-1 truncate text-right">失效：{card.endTimeText || '--'}</span>
           </div>
         </div>
       </Card>
@@ -414,7 +492,7 @@ export function MyCardPacksPage() {
       );
     }
 
-    if (myCardsRequest.loading && !myCardsRequest.data) {
+    if (myCardsRequest.loading && !myCardsData) {
       return (
         <div className="space-y-3">
           {[1, 2].map((item) => (
@@ -428,7 +506,7 @@ export function MyCardPacksPage() {
       );
     }
 
-    if (myCardsRequest.error && !myCardsRequest.data) {
+    if (myCardsRequest.error && !myCardsData) {
       return (
         <Card>
           <ErrorState
@@ -439,15 +517,18 @@ export function MyCardPacksPage() {
       );
     }
 
-    if (!ownedCards.length) {
+    const hasMembership = ownedMembershipCards.length > 0;
+    const hasAmplify = ownedAmplifyCards.length > 0;
+
+    if (!hasMembership && !hasAmplify) {
       return (
         <Card>
           <EmptyState
             icon={<Ticket size={48} />}
-            message="你还没有购买任何卡包"
+            message="你还没有持有任何卡"
             actionText="去购买"
             actionVariant="primary"
-            onAction={() => setActiveTab('market')}
+            onAction={() => setActiveTab('membership')}
           />
         </Card>
       );
@@ -455,58 +536,145 @@ export function MyCardPacksPage() {
 
     return (
       <div className="space-y-3">
-        {ownedCards.map((card) => {
-          const status = getStatusMeta(card);
+        {hasMembership ? (
+          <>
+            <div className="text-sm font-medium text-text-sub">寄售权益卡</div>
+            {ownedMembershipCards.map(renderOwnedMembershipCard)}
+          </>
+        ) : null}
+        {hasAmplify ? (
+          <>
+            <div className="text-sm font-medium text-text-sub">节点赋能卡</div>
+            {ownedAmplifyCards.map(renderOwnedAmplifyCard)}
+          </>
+        ) : null}
+      </div>
+    );
+  };
 
-          return (
-            <Card key={card.id} className="overflow-hidden p-0">
-              <div className="bg-gradient-to-br from-slate-800 via-slate-700 to-slate-900 p-4 text-white">
-                <div className="mb-4 flex items-start justify-between">
-                  <div>
-                    <div className="mb-2 flex items-center gap-2">
-                      <span className="text-lg font-semibold">{card.cardName}</span>
-                      <span className="rounded-full border border-white/20 bg-white/15 px-2 py-0.5 text-xs text-white/85">
-                        {card.levelText || '权益卡'}
-                      </span>
-                    </div>
-                    <div className="text-sm text-white/75">
-                      {card.cycleTypeText || '周期卡'} · {card.source === 'manual' ? '后台发放' : '购买获得'}
-                    </div>
-                  </div>
-                  <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${status.badge}`}>
-                    {status.label}
+  const renderMembershipProduct = (product: MembershipCardProduct) => (
+    <div key={product.id} className={`rounded-[16px] p-5 mb-4 bg-gradient-to-br ${getCardGradient(product.levelText)} text-white shadow-md relative overflow-hidden`}>
+      <div className="absolute -right-6 -top-6 w-24 h-24 rounded-full bg-white/10 blur-xl" />
+      <div className="absolute -left-6 -bottom-6 w-24 h-24 rounded-full bg-black/10 blur-xl" />
+      <div className="relative z-10 p-0">
+        <div className="mb-3 flex items-start justify-between gap-3">
+          <div>
+            <div className="mb-2 flex items-center gap-2">
+              <span className="text-lg font-semibold">{product.name}</span>
+              <span className="rounded-full border border-white/20 bg-white/15 px-2 py-0.5 text-xs text-white/85">
+                {product.levelText || '权益卡'}
+              </span>
+            </div>
+            <div className="text-sm text-white/75">
+              {product.cycleTypeText || '周期卡'} · 有效期 {product.validDays} 天
+            </div>
+          </div>
+          <div className="text-right">
+            <div className="text-xs text-white/70">专项金</div>
+            <div className="text-2xl font-bold">¥{formatMoney(product.price)}</div>
+            {product.pendingActivationPrice > 0 ? (
+              <div className="mt-0.5 text-xs text-white/70">
+                确权金 ¥{formatMoney(product.pendingActivationPrice)}
+              </div>
+            ) : null}
+          </div>
+        </div>
+        <div className="grid grid-cols-3 gap-2">
+          <div className="rounded-2xl bg-white/14 p-3">
+            <div className="mb-1 text-xs text-white/70">单次抵扣</div>
+            <div className="text-lg font-semibold">¥{formatMoney(product.deductAmountPerUse)}</div>
+          </div>
+          <div className="rounded-2xl bg-white/14 p-3">
+            <div className="mb-1 text-xs text-white/70">每日上限</div>
+            <div className="text-lg font-semibold">{product.dailyLimit} 次</div>
+          </div>
+          <div className="rounded-2xl bg-white/14 p-3">
+            <div className="mb-1 text-xs text-white/70">最低手续费</div>
+            <div className="text-lg font-semibold">¥{formatMoney(product.minFee)}</div>
+          </div>
+        </div>
+      </div>
+
+      <div className="relative z-10 mt-4">
+        <button
+          type="button"
+          onClick={() => void handleBuy(product)}
+          className="w-full py-2.5 bg-white text-gray-900 rounded-full text-[14px] font-bold active:bg-gray-100 transition-colors shadow-sm"
+        >
+          {isAuthenticated ? '立即购买' : '登录后购买'}
+        </button>
+      </div>
+    </div>
+  );
+
+  const renderNodeAmplifyProduct = (product: MembershipCardProduct) => {
+    const amplifyDisplay =
+      product.amplifyType === 'percentage'
+        ? formatPercent(product.amplifyValue / 100)
+        : `¥${formatMoney(product.amplifyValue)}`;
+    const scoreDisplay =
+      product.amplifyType === 'percentage'
+        ? formatPercent(product.scoreAmplifyValue / 100)
+        : `¥${formatMoney(product.scoreAmplifyValue)}`;
+
+    return (
+      <div key={product.id} className={`rounded-[16px] p-5 mb-4 bg-gradient-to-br ${getCardGradient(product.levelText)} text-white shadow-md relative overflow-hidden`}>
+        <div className="absolute -right-6 -top-6 w-24 h-24 rounded-full bg-white/10 blur-xl" />
+        <div className="absolute -left-6 -bottom-6 w-24 h-24 rounded-full bg-black/10 blur-xl" />
+        <div className="relative z-10">
+          <div className="mb-3 flex items-start justify-between gap-3">
+            <div>
+              <div className="mb-2 flex items-center gap-2">
+                <Zap size={18} className="text-amber-300" />
+                <span className="text-lg font-semibold">{product.name}</span>
+                {product.levelText ? (
+                  <span className="rounded-full border border-white/20 bg-white/15 px-2 py-0.5 text-xs text-white/85">
+                    {product.levelText}
                   </span>
-                </div>
-                <div className="grid grid-cols-3 gap-2">
-                  <div className="rounded-2xl bg-white/14 p-3">
-                    <div className="mb-1 text-xs text-white/70">单次抵扣</div>
-                    <div className="text-lg font-semibold">¥{formatMoney(card.deductAmountPerUse)}</div>
-                  </div>
-                  <div className="rounded-2xl bg-white/14 p-3">
-                    <div className="mb-1 text-xs text-white/70">今日剩余</div>
-                    <div className="text-lg font-semibold">{card.todayRemaining} 次</div>
-                  </div>
-                  <div className="rounded-2xl bg-white/14 p-3">
-                    <div className="mb-1 text-xs text-white/70">最低手续费</div>
-                    <div className="text-lg font-semibold">¥{formatMoney(card.minFee)}</div>
-                  </div>
-                </div>
+                ) : null}
               </div>
-              <div className="space-y-3 p-4 text-sm text-text-sub">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="rounded-full bg-bg-base px-2.5 py-1 text-xs">每日限用 {card.dailyLimit} 次</span>
-                  <span className="rounded-full bg-bg-base px-2.5 py-1 text-xs">已用 {card.todayUsage} 次</span>
-                  <span className="rounded-full bg-bg-base px-2.5 py-1 text-xs">剩余 {card.remainingDays} 天</span>
-                </div>
-                <div>
-                  生效时间：{card.startTimeText || '--'}
-                  <br />
-                  到期时间：{card.endTimeText || '--'}
-                </div>
+              <div className="text-sm text-white/75">
+                {product.cycleTypeText || '周期卡'} · 有效期 {product.validDays} 天
               </div>
-            </Card>
-          );
-        })}
+            </div>
+            <div className="text-right">
+              <div className="text-xs text-white/70">专项金</div>
+              <div className="text-2xl font-bold">¥{formatMoney(product.price)}</div>
+              {product.pendingActivationPrice > 0 ? (
+                <div className="mt-0.5 text-xs text-white/70">
+                  确权金 ¥{formatMoney(product.pendingActivationPrice)}
+                </div>
+              ) : null}
+            </div>
+          </div>
+          <div className="grid grid-cols-3 gap-2">
+            <div className="rounded-2xl bg-white/14 p-3">
+              <div className="mb-1 flex items-center text-xs text-white/70">
+                <TrendingUp size={12} className="mr-1" />
+                余额增幅
+              </div>
+              <div className="text-lg font-semibold">{amplifyDisplay}</div>
+            </div>
+            <div className="rounded-2xl bg-white/14 p-3">
+              <div className="mb-1 text-xs text-white/70">消费金增幅</div>
+              <div className="text-lg font-semibold">{scoreDisplay}</div>
+            </div>
+            <div className="rounded-2xl bg-white/14 p-3">
+              <div className="mb-1 text-xs text-white/70">增幅类型</div>
+              <div className="text-base font-semibold">{product.amplifyTypeText || (product.amplifyType === 'percentage' ? '比例' : '固定')}</div>
+            </div>
+          </div>
+        </div>
+
+        <div className="relative z-10 mt-4">
+          <button
+            type="button"
+            onClick={() => void handleBuy(product)}
+            className="w-full py-2.5 bg-white text-gray-900 rounded-full text-[14px] font-bold active:bg-gray-100 transition-colors shadow-sm"
+          >
+            {isAuthenticated ? '选择矿机购买' : '登录后购买'}
+          </button>
+        </div>
       </div>
     );
   };
@@ -537,12 +705,12 @@ export function MyCardPacksPage() {
       );
     }
 
-    if (!productsData?.enabled) {
+    if (!isTabEnabled) {
       return (
         <Card>
           <EmptyState
-            icon={<Wallet size={48} />}
-            message="卡包功能暂未开启"
+            icon={activeTab === 'membership' ? <Ticket size={48} /> : <Zap size={48} />}
+            message={activeTab === 'membership' ? '寄售权益卡功能暂未开启' : '节点赋能卡功能暂未开启'}
             actionText="刷新"
             onAction={() => void productsRequest.reload().catch(() => undefined)}
           />
@@ -554,8 +722,8 @@ export function MyCardPacksPage() {
       return (
         <Card>
           <EmptyState
-            icon={<Wallet size={48} />}
-            message="当前没有可购买的卡包"
+            icon={activeTab === 'membership' ? <Ticket size={48} /> : <Zap size={48} />}
+            message={activeTab === 'membership' ? '当前没有可购买的寄售权益卡' : '当前没有可购买的节点赋能卡'}
             actionText="刷新"
             onAction={() => void productsRequest.reload().catch(() => undefined)}
           />
@@ -565,85 +733,11 @@ export function MyCardPacksPage() {
 
     return (
       <div className="space-y-3">
-
-
-        {productList.map((product) => {
-          const plan = plans.get(product.id);
-
-          return (
-            <Card key={product.id} className="overflow-hidden p-0">
-              <div className="bg-gradient-to-br from-amber-500 via-orange-500 to-rose-500 p-4 text-white">
-                <div className="mb-3 flex items-start justify-between gap-3">
-                  <div>
-                    <div className="mb-2 flex items-center gap-2">
-                      <span className="text-lg font-semibold">{product.name}</span>
-                      <span className="rounded-full border border-white/20 bg-white/15 px-2 py-0.5 text-xs text-white/85">
-                        {product.levelText || '权益卡'}
-                      </span>
-                    </div>
-                    <div className="text-sm text-white/75">
-                      {product.cycleTypeText || '周期卡'} · 有效期 {product.validDays} 天
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-xs text-white/70">售价</div>
-                    <div className="text-2xl font-bold">¥{formatMoney(product.price)}</div>
-                  </div>
-                </div>
-                <div className="grid grid-cols-3 gap-2">
-                  <div className="rounded-2xl bg-white/14 p-3">
-                    <div className="mb-1 text-xs text-white/70">单次抵扣</div>
-                    <div className="text-lg font-semibold">¥{formatMoney(product.deductAmountPerUse)}</div>
-                  </div>
-                  <div className="rounded-2xl bg-white/14 p-3">
-                    <div className="mb-1 text-xs text-white/70">每日上限</div>
-                    <div className="text-lg font-semibold">{product.dailyLimit} 次</div>
-                  </div>
-                  <div className="rounded-2xl bg-white/14 p-3">
-                    <div className="mb-1 text-xs text-white/70">最低手续费</div>
-                    <div className="text-lg font-semibold">¥{formatMoney(product.minFee)}</div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-3 p-4">
-                {isAuthenticated ? (
-                  <div className="rounded-2xl bg-bg-base p-3 text-sm text-text-sub">
-                    <div className="flex items-center justify-between">
-                      <span>专项金支付</span>
-                      <span className="font-medium text-text-main">¥{formatMoney(plan?.displaySupplyPay ?? 0)}</span>
-                    </div>
-                    <div className="mt-2 flex items-center justify-between">
-                      <span>待激活确权金支付</span>
-                      <span className="font-medium text-text-main">¥{formatMoney(plan?.displayPendingPay ?? 0)}</span>
-                    </div>
-                    {plan?.reason ? (
-                      <div className="mt-2 text-xs text-orange-600 dark:text-orange-300">{plan.reason}</div>
-                    ) : null}
-                  </div>
-                ) : (
-                  <div className="rounded-2xl bg-bg-base p-3 text-sm text-text-sub">
-                    登录后可查看余额与购买方式。
-                  </div>
-                )}
-
-                <button
-                  type="button"
-                  onClick={() => void handleBuy(product)}
-                  disabled={isAuthenticated ? !plan?.canBuy : false}
-                  className={`flex h-11 w-full items-center justify-center rounded-full text-base font-medium ${isAuthenticated
-                      ? plan?.canBuy
-                        ? 'bg-gradient-to-r from-primary-start to-primary-end text-white'
-                        : 'bg-gray-200 text-gray-400 dark:bg-gray-800 dark:text-gray-500'
-                      : 'bg-gradient-to-r from-primary-start to-primary-end text-white'
-                    }`}
-                >
-                  {!isAuthenticated ? '登录后购买' : plan?.canBuy ? '立即购买' : '暂不可购买'}
-                </button>
-              </div>
-            </Card>
-          );
-        })}
+        {productList.map((product) =>
+          product.cardType === 'node_amplify'
+            ? renderNodeAmplifyProduct(product)
+            : renderMembershipProduct(product),
+        )}
       </div>
     );
   };
@@ -673,15 +767,16 @@ export function MyCardPacksPage() {
 
             <div className="flex rounded-2xl bg-bg-card p-1 shadow-soft">
               {[
-                { id: 'owned', label: '我的卡包' },
-                { id: 'market', label: '可购买' },
+                { id: 'membership' as const, label: '寄售权益卡' },
+                { id: 'node_amplify' as const, label: '节点赋能卡' },
+                { id: 'owned' as const, label: '持有中' },
               ].map((tab) => (
                 <button
                   key={tab.id}
                   type="button"
-                  onClick={() => setActiveTab(tab.id as CardTab)}
+                  onClick={() => setActiveTab(tab.id)}
                   className={`flex-1 rounded-[14px] px-4 py-2.5 text-sm font-medium ${activeTab === tab.id
-                      ? 'bg-gradient-to-r from-primary-start to-primary-end text-white shadow-sm'
+                      ? 'gradient-primary-r text-white shadow-sm'
                       : 'text-text-sub'
                     }`}
                 >
@@ -694,6 +789,218 @@ export function MyCardPacksPage() {
           </div>
         </div>
       </PullToRefreshContainer>
+
+      {miningSheetOpen ? (
+        <MiningSelectionSheet
+          product={miningSheetProduct}
+          loading={miningLoading}
+          loadingMore={miningLoadingMore}
+          hasMore={miningHasMore}
+          list={miningList}
+          selectedId={selectedMiningId}
+          buying={amplifyBuying}
+          onSelect={setSelectedMiningId}
+          onBuy={handleAmplifyBuy}
+          onClose={closeMiningSheet}
+          onLoadMore={loadMoreMining}
+        />
+      ) : null}
+    </div>
+  );
+}
+
+interface MiningSelectionSheetProps {
+  buying: boolean;
+  hasMore: boolean;
+  list: BindableMiningItem[];
+  loading: boolean;
+  loadingMore: boolean;
+  onBuy: () => void;
+  onClose: () => void;
+  onLoadMore: () => void;
+  onSelect: (id: number | null) => void;
+  product: MembershipCardProduct | null;
+  selectedId: number | null;
+}
+
+function MiningSelectionSheet({
+  buying,
+  hasMore,
+  list,
+  loading,
+  loadingMore,
+  onBuy,
+  onClose,
+  onLoadMore,
+  onSelect,
+  product,
+  selectedId,
+}: MiningSelectionSheetProps) {
+  const [isVisible, setIsVisible] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        setIsVisible(true);
+      });
+    });
+  }, []);
+
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el || !hasMore || loadingMore) return;
+
+    const handleScroll = () => {
+      const threshold = 80;
+      if (el.scrollHeight - el.scrollTop - el.clientHeight < threshold) {
+        onLoadMore();
+      }
+    };
+
+    el.addEventListener('scroll', handleScroll, { passive: true });
+    return () => el.removeEventListener('scroll', handleScroll);
+  }, [hasMore, loadingMore, onLoadMore]);
+
+  const handleClose = () => {
+    if (buying) return;
+    setIsVisible(false);
+    setTimeout(onClose, 300);
+  };
+
+  const toggleSelect = (id: number) => {
+    onSelect(selectedId === id ? null : id);
+  };
+
+  return (
+    <div className="fixed inset-0 z-[100] flex flex-col justify-end">
+      <div
+        className={`absolute inset-0 bg-black/60 transition-opacity duration-300 ${isVisible ? 'opacity-100' : 'opacity-0'}`}
+        onClick={handleClose}
+      />
+      <div
+        className={`relative mx-auto flex w-full max-h-[80vh] flex-col rounded-t-2xl bg-bg-card shadow-lg transition-transform duration-300 ease-out sm:max-w-[430px] ${isVisible ? 'translate-y-0' : 'translate-y-full'}`}
+      >
+        <div className="flex shrink-0 items-center justify-between border-b border-border-main px-4 py-3.5">
+          <div>
+            <h3 className="text-base font-semibold text-text-main">选择绑定矿机</h3>
+            {product ? (
+              <p className="mt-0.5 text-xs text-text-sub">
+                {product.name} · ¥{formatMoney(product.price)}
+              </p>
+            ) : null}
+          </div>
+          <button
+            type="button"
+            onClick={handleClose}
+            disabled={buying}
+            className="rounded-full p-1.5 text-text-sub active:bg-bg-hover"
+          >
+            <X size={20} />
+          </button>
+        </div>
+
+        <div ref={scrollRef} className="flex-1 overflow-y-auto no-scrollbar px-4 py-3">
+          {loading ? (
+            <div className="space-y-3">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="flex items-center gap-3 rounded-2xl bg-bg-base p-3">
+                  <Skeleton className="size-14 shrink-0 rounded-xl" />
+                  <div className="flex-1 space-y-2">
+                    <Skeleton className="h-4 w-32" />
+                    <Skeleton className="h-3 w-20" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : !list.length ? (
+            <EmptyState
+              icon={<Zap size={48} />}
+              message="暂无可绑定的矿机"
+              actionText="关闭"
+              onAction={handleClose}
+            />
+          ) : (
+            <div className="space-y-2">
+              {list.map((item) => {
+                const isSelected = selectedId === item.userCollectionId;
+                return (
+                  <button
+                    key={item.userCollectionId}
+                    type="button"
+                    onClick={() => toggleSelect(item.userCollectionId)}
+                    disabled={buying}
+                    className={`flex w-full items-center gap-3 rounded-2xl border-2 p-3 text-left transition-colors ${
+                      isSelected
+                        ? 'border-primary bg-primary/10'
+                        : 'border-transparent bg-bg-base active:bg-bg-hover'
+                    }`}
+                  >
+                    <div className={`relative z-10 flex size-5 shrink-0 items-center justify-center rounded-md border-2 transition-colors ${
+                      isSelected
+                        ? 'border-primary bg-primary text-white'
+                        : 'border-gray-300 bg-white dark:border-gray-600 dark:bg-gray-700'
+                    }`}>
+                      {isSelected ? <Check size={14} strokeWidth={3} /> : null}
+                    </div>
+                    {item.image ? (
+                      <img
+                        src={item.image}
+                        alt=""
+                        className="size-14 shrink-0 rounded-xl object-cover"
+                      />
+                    ) : (
+                      <div className="flex size-14 shrink-0 items-center justify-center rounded-xl bg-gray-100 dark:bg-gray-800">
+                        <Zap size={20} className="text-gray-400" />
+                      </div>
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-sm font-medium text-text-main">{item.title}</div>
+                      <div className="mt-1 text-xs text-text-sub">
+                        买入价 ¥{formatMoney(item.price)}
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+              {loadingMore ? (
+                <div className="flex items-center justify-center py-3 text-text-sub">
+                  <Loader2 size={18} className="mr-2 animate-spin" />
+                  <span className="text-xs">加载更多...</span>
+                </div>
+              ) : !hasMore && list.length > 0 ? (
+                <div className="py-3 text-center text-xs text-text-sub">已加载全部</div>
+              ) : null}
+            </div>
+          )}
+        </div>
+
+        {!loading && list.length > 0 ? (
+          <div className="shrink-0 border-t border-border-main px-4 py-3 pb-safe">
+            <button
+              type="button"
+              onClick={onBuy}
+              disabled={selectedId === null || buying}
+              className={`flex h-11 w-full items-center justify-center rounded-full text-base font-medium transition-colors ${
+                selectedId !== null && !buying
+                  ? 'gradient-primary-r text-white'
+                  : 'bg-gray-200 text-gray-400 dark:bg-gray-800 dark:text-gray-500'
+              }`}
+            >
+              {buying ? (
+                <>
+                  <Loader2 size={18} className="mr-2 animate-spin" />
+                  购买中...
+                </>
+              ) : selectedId === null ? (
+                '请选择矿机'
+              ) : (
+                '确认购买'
+              )}
+            </button>
+          </div>
+        ) : null}
+      </div>
     </div>
   );
 }

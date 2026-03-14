@@ -1,4 +1,4 @@
-﻿import { apiConfig } from '../../api/config';
+import { apiConfig } from '../../api/config';
 import type {
   ShopProductDetail,
   ShopProductItem,
@@ -116,6 +116,10 @@ export function resolveShopProductImageUrl(url?: string | null) {
 
   if (/^https?:\/\//i.test(nextUrl)) {
     return nextUrl;
+  }
+
+  if (/^[\w-]+\.[\w-]+\.\w+\//.test(nextUrl)) {
+    return `https://${nextUrl}`;
   }
 
   return withApiBase(nextUrl);
@@ -368,6 +372,34 @@ export function getSelectedSkuId(
   });
 
   return sku?.id != null && Number.isFinite(sku.id) ? sku.id : undefined;
+}
+
+/**
+ * 根据当前选中的规格选项解析出对应的 SKU 对象，用于展示价格、库存等。
+ * 多规格商品选中完整规格时返回匹配的 SKU；无规格或未完全选择时返回 undefined。
+ */
+export function getSelectedSku(
+  product: ShopProductDetail | null | undefined,
+  optionGroups: ShopProductOptionGroup[],
+  selectedOptions: Record<string, string>,
+): ShopProductSku | undefined {
+  if (!product?.skus?.length || !optionGroups.length) {
+    return undefined;
+  }
+
+  const selectedValues = optionGroups
+    .map((g) => selectedOptions[g.name]?.trim())
+    .filter(Boolean);
+
+  if (selectedValues.length !== optionGroups.length) {
+    return undefined;
+  }
+
+  return product.skus.find((s) => {
+    const specValues = readSkuSpecValues(s);
+    if (specValues.length !== selectedValues.length) return false;
+    return selectedValues.every((v, i) => specValues[i] === v);
+  });
 }
 
 export function buildShopProductDescription(product: ShopProductDetail | null | undefined) {

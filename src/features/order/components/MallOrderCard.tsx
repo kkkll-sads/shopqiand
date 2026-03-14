@@ -66,7 +66,7 @@ function getOrderActions(order: ShopOrderListItem) {
   };
 }
 
-const ACTION_BTN = 'text-sm h-[30px] px-3.5 !rounded-full';
+const ACTION_BTN = 'text-xs h-[28px] px-3.5 !rounded-md';
 
 export const MallOrderCard: FC<MallOrderCardProps> = ({
   order,

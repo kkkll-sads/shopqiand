@@ -326,7 +326,7 @@ export const CartPage = () => {
           <p className="text-base text-text-sub mb-6">去看看心仪的商品吧~</p>
           <button 
             onClick={goToStore}
-            className="px-8 py-2 bg-gradient-to-r from-primary-start to-primary-end rounded-full text-md font-medium text-white shadow-sm active:opacity-80"
+            className="px-8 py-2 gradient-primary-r rounded-full text-md font-medium text-white shadow-sm active:opacity-80"
           >
             去逛逛
           </button>
@@ -527,7 +527,7 @@ export const CartPage = () => {
                 if (cartItemIds.length === 0) return;
                 navigate('/checkout', { state: { cartItemIds } });
               }}
-              className="h-10 px-6 rounded-full bg-gradient-to-r from-primary-start to-primary-end text-white text-md font-medium shadow-sm active:opacity-80 disabled:opacity-50 disabled:from-text-aux disabled:to-text-sub"
+              className="h-10 px-6 rounded-full gradient-primary-r text-white text-md font-medium shadow-sm active:opacity-80 disabled:opacity-50 disabled:from-text-aux disabled:to-text-sub"
             >
               去结算({selectedItems.size})
             </button>

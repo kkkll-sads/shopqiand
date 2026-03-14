@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { ArrowLeft, Copy } from 'lucide-react';
 import { Button } from '../../../components/ui/Button';
 import { Card } from '../../../components/ui/Card';
@@ -93,7 +93,7 @@ export const CollectibleOrderDetail = ({
     return (
       <>
         {/* 状态头部 */}
-        <div className="bg-gradient-to-r from-primary-start to-primary-end p-6 text-white">
+        <div className="gradient-primary-r p-6 text-white">
           <h2 className="text-4xl font-bold mb-1">{order.order_status_text}</h2>
           <p className="text-sm opacity-90">{order.pay_type_text}</p>
         </div>

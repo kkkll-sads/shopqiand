@@ -301,7 +301,7 @@ export const CouponPage = () => {
                     className={`h-[26px] w-[64px] shrink-0 rounded-full text-sm font-medium shadow-sm ${
                       claimingId === coupon.id
                         ? 'bg-gray-200 text-gray-500 dark:bg-gray-700 dark:text-gray-400'
-                        : 'bg-gradient-to-r from-primary-start to-primary-end text-white active:opacity-80'
+                        : 'gradient-primary-r text-white active:opacity-80'
                     }`}
                   >
                     {claimingId === coupon.id ? '领取中' : '领取'}

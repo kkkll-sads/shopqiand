@@ -39,6 +39,32 @@ import {
 } from '../../lib/auth';
 import { useAppNavigate } from '../../lib/navigation';
 
+const SAVED_CREDENTIALS_KEY = 'saved_login_credentials';
+
+function loadSavedCredentials(): { username: string; password: string } | null {
+  try {
+    const raw = localStorage.getItem(SAVED_CREDENTIALS_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed.username === 'string' && typeof parsed.password === 'string') {
+      return parsed;
+    }
+  } catch { /* ignore */ }
+  return null;
+}
+
+function saveCred(username: string, password: string) {
+  try {
+    localStorage.setItem(SAVED_CREDENTIALS_KEY, JSON.stringify({ username, password }));
+  } catch { /* ignore */ }
+}
+
+function clearSavedCredentials() {
+  try {
+    localStorage.removeItem(SAVED_CREDENTIALS_KEY);
+  } catch { /* ignore */ }
+}
+
 const TAB_LABELS: Record<LoginTab, string> = {
   login: '密码登录',
   sms_login: '验证码登录',
@@ -78,13 +104,17 @@ export const LoginPage = () => {
   const location = useLocation();
   const { showToast } = useFeedback();
 
+  const saved = useMemo(() => loadSavedCredentials(), []);
+
   const [showPassword, setShowPassword] = useState(false);
-  const [remember, setRemember] = useState(false);
+  const [remember, setRemember] = useState(!!saved);
   const [agree, setAgree] = useState(false);
   const [currentTab, setCurrentTab] = useState<LoginTab>('login');
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [mobile, setMobile] = useState('');
+  const [username, setUsername] = useState(saved?.username ?? '');
+  const [password, setPassword] = useState(saved?.password ?? '');
+  const [mobile, setMobile] = useState(
+    saved && !saved.password && saved.username ? saved.username : '',
+  );
   const [verifyCode, setVerifyCode] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [config, setConfig] = useState<CheckInConfig | null>(null);
@@ -221,7 +251,7 @@ export const LoginPage = () => {
       const session = createAuthSession(response.data, sessionIdentity);
 
       const didPersistSession = persistAuthSession(session, {
-        persistent: remember,
+        persistent: true,
       });
       if (!didPersistSession) {
         showToast({
@@ -229,6 +259,16 @@ export const LoginPage = () => {
           type: 'error',
         });
         return;
+      }
+
+      if (remember) {
+        if (currentTab === 'login') {
+          saveCred(username.trim(), password.trim());
+        } else {
+          saveCred(mobile.trim(), '');
+        }
+      } else {
+        clearSavedCredentials();
       }
 
       showToast({ message: '登录成功', type: 'success' });

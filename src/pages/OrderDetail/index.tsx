@@ -1,4 +1,4 @@
-﻿/**
+/**
  * @file OrderDetail/index.tsx - 订单详情页面
  * @description 展示单个订单的详细信息，包括商品、物流、支付等。
  */
@@ -214,7 +214,7 @@ export const OrderDetailPage = () => {
   };
 
   const hasBottomBar = !loading && !error && order &&
-    (order.status === 'pending' || isPendingReceiptOrderStatus(order.status) || order.status === 'completed');
+    (order.status === 'pending' || order.status === 'paid' || isPendingReceiptOrderStatus(order.status) || order.status === 'completed');
   const canApplyAfterSale = order
     ? (order.product_type === 'physical' || order.product_type === 'mixed') &&
       isAfterSaleEligibleOrderStatus(order.status) &&
@@ -480,7 +480,7 @@ export const OrderDetailPage = () => {
           <button onClick={handleBack} className="p-1.5 -ml-1 text-text-main active:opacity-70 rounded-full">
             <ChevronLeft size={22} />
           </button>
-          <h1 className="text-lg font-bold text-text-main flex-1 text-center -ml-8">订单详情</h1>
+          <h1 className="text-lg font-bold text-text-main flex-1 text-center -ml-8 pointer-events-none">订单详情</h1>
           <div className="w-8" />
         </div>
       </div>
@@ -509,6 +509,26 @@ export const OrderDetailPage = () => {
               立即付款
             </button>
           </div>
+        </div>
+      )}
+
+      {!loading && !error && order?.status === 'paid' && canApplyAfterSale && (
+        <div className="absolute bottom-0 left-0 right-0 bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm border-t border-gray-100 dark:border-gray-800 px-4 py-3 pb-safe flex justify-end items-center gap-2.5 z-40">
+          {order.after_sale_status === 'processing' ? (
+            <button
+              className="px-5 py-2 rounded-full text-sm font-medium text-text-sub border border-gray-200 dark:border-gray-700 active:bg-gray-50 dark:active:bg-gray-800 transition-colors"
+              onClick={handleCancelAfterSale}
+            >
+              取消申请
+            </button>
+          ) : (
+            <button
+              className="px-5 py-2 rounded-full text-sm font-medium text-text-sub border border-gray-200 dark:border-gray-700 active:bg-gray-50 dark:active:bg-gray-800 transition-colors"
+              onClick={handleApplyAfterSale}
+            >
+              申请售后
+            </button>
+          )}
         </div>
       )}
 

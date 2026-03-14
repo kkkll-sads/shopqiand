@@ -295,7 +295,7 @@ export const HelpCenterPage = () => {
                 <button
                   type="button"
                   onClick={() => void handleOpenCS()}
-                  className="flex h-11 w-full items-center justify-center rounded-full bg-gradient-to-r from-primary-start to-primary-end text-[15px] font-medium text-white shadow-sm disabled:cursor-not-allowed disabled:opacity-70"
+                  className="flex h-11 w-full items-center justify-center rounded-full gradient-primary-r text-[15px] font-medium text-white shadow-sm disabled:cursor-not-allowed disabled:opacity-70"
                 >
                   <MessageSquare size={18} className="mr-2" />
                   立即咨询

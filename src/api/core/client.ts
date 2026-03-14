@@ -1,4 +1,4 @@
-﻿import { ApiError, isAbortError } from './errors';
+import { ApiError, isAbortError } from './errors';
 import { appendQueryParams, type QueryParams } from './query';
 import { clearAuthSession, persistAuthRedirectPath } from '../../lib/auth';
 import { emitGlobalToast } from '../../lib/feedback';
@@ -546,6 +546,20 @@ export class HttpClient {
         }
 
         throw new ApiError(payload.message || payload.msg || 'Request failed.', {
+          code: getBizCode(payload),
+          details: payload,
+          status,
+        });
+      }
+
+      // 部分接口在 code 为成功时仍通过 message 返回业务错误（如提现：支付密码错误）
+      const bizMsg = payload.message || payload.msg;
+      if (
+        payload.data == null &&
+        typeof bizMsg === 'string' &&
+        bizMsg.trim().length > 0
+      ) {
+        throw new ApiError(bizMsg.trim(), {
           code: getBizCode(payload),
           details: payload,
           status,

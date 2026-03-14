@@ -317,7 +317,7 @@ export const AddressPage = () => {
           <button
             type="button"
             onClick={handleAdd}
-            className="h-11 w-full rounded-full bg-gradient-to-r from-primary-start to-primary-end text-lg font-medium text-white shadow-sm active:opacity-80"
+            className="h-11 w-full rounded-full gradient-primary-r text-lg font-medium text-white shadow-sm active:opacity-80"
           >
             新增收货地址
           </button>
@@ -449,7 +449,7 @@ export const AddressPage = () => {
           disabled={!isFormValid || saving}
           className={`h-11 w-full rounded-full text-lg font-medium shadow-sm transition-all ${
             isFormValid && !saving
-              ? 'bg-gradient-to-r from-primary-start to-primary-end text-white active:opacity-80'
+              ? 'gradient-primary-r text-white active:opacity-80'
               : 'cursor-not-allowed bg-gray-200 text-gray-400 dark:bg-gray-800 dark:text-gray-500'
           }`}
         >

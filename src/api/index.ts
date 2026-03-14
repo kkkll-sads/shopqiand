@@ -1,4 +1,4 @@
-﻿export * from './modules/address';
+export * from './modules/address';
 export * from './modules/appVersion';
 export * from './modules/account';
 export * from './modules/activityCenter';
@@ -12,6 +12,7 @@ export * from './modules/common';
 export * from './modules/flashSale';
 export * from './modules/message';
 export * from './modules/membershipCard';
+export * from './modules/nodeAmplifyCard';
 export * from './modules/questionnaire';
 export * from './modules/recharge';
 export * from './modules/reservation';

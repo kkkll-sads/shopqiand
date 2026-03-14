@@ -168,6 +168,9 @@ export const CheckoutPage = () => {
         balance: result.balance_available,
         score_balance: result.score,
       });
+      if (result.order_ids && result.order_ids.length > 1) {
+        cashierParams.set('order_ids', result.order_ids.join(','));
+      }
       navigate(`/cashier?${cashierParams.toString()}`, { replace: true });
     } catch (err) {
       showToast({ message: getErrorMessage(err) || '创建订单失败', type: 'error' });
@@ -408,7 +411,7 @@ export const CheckoutPage = () => {
           <button
             onClick={handleSubmit}
             disabled={!canSubmit || submitting}
-            className="h-10 px-8 rounded-full bg-gradient-to-r from-primary-start to-primary-end text-white text-md font-medium shadow-sm active:opacity-80 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="h-10 px-8 rounded-full gradient-primary-r text-white text-md font-medium shadow-sm active:opacity-80 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {submitting ? '提交中...' : '提交订单'}
           </button>

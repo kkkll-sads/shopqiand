@@ -16,7 +16,7 @@ export const Badge = ({
     default: 'bg-bg-base text-text-sub border border-border-light',
     primary: 'bg-red-50 text-primary-start border border-red-100',
     score: 'bg-amber-500 text-white font-medium',
-    solid: 'bg-gradient-to-r from-primary-start to-primary-end text-white',
+    solid: 'gradient-primary-r text-white',
   };
 
   return (

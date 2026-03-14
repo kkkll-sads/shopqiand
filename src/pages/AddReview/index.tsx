@@ -1,4 +1,4 @@
-﻿/**
+/**
  * @file AddReview/index.tsx - 发表评价页面
  * @description 用户对已购商品进行评价，支持星级评分、快捷标签、文字输入、图片上传（最多9张）、匿名评价。
  */
@@ -397,7 +397,7 @@ export default function AddReviewPage() {
           className={`flex h-10 w-full items-center justify-center rounded-full text-lg font-medium transition-all ${
             rating === 0 || submitting
               ? 'cursor-not-allowed bg-bg-sub text-text-sub'
-              : 'bg-gradient-to-r from-primary-start to-primary-end text-white active:opacity-90'
+              : 'gradient-primary-r text-white active:opacity-90'
           }`}
         >
           {submitting ? (

@@ -1,4 +1,4 @@
-﻿/**
+/**
  * @file 路由配置
  * @description 使用 createHashRouter 创建路由配置。
  *   - 5 个 Tab 页同步导入（首屏加载）
@@ -173,7 +173,7 @@ const RootErrorBoundary = () => {
           sessionStorage.removeItem('app_reload_count');
           window.location.href = '/';
         }}
-        className="px-8 py-3 rounded-full bg-gradient-to-r from-primary-start to-primary-end text-white font-medium shadow-sm active:opacity-80"
+        className="px-8 py-3 rounded-full gradient-primary-r text-white font-medium shadow-sm active:opacity-80"
       >
         刷新页面并返回首页
       </button>

@@ -390,7 +390,7 @@ export const StorePage = () => {
           {isLoading ? (
             <Skeleton className="h-[100px] w-full rounded-2xl" />
           ) : (
-            <div className="relative flex h-[100px] items-center justify-between overflow-hidden rounded-2xl bg-gradient-to-r from-primary-start to-primary-end p-4 shadow-soft">
+            <div className="relative flex h-[100px] items-center justify-between overflow-hidden rounded-2xl gradient-primary-r p-4 shadow-soft">
               <div className="absolute -right-6 -top-8 h-24 w-24 rounded-full bg-white/10" />
               <div className="absolute right-10 top-8 h-12 w-12 rounded-full bg-white/10" />
               <div className="relative z-10">

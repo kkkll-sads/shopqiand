@@ -51,6 +51,10 @@ export function resolveUploadUrl(url: string): string {
     return url;
   }
 
+  if (/^[\w-]+\.[\w-]+\.\w+\//.test(url)) {
+    return `https://${url}`;
+  }
+
   /* baseURL 为空时使用当前页面 origin，资源路径（如 /uploads/xxx）会通过代理访问后端 */
   const base = apiConfig.baseURL || window.location.origin;
   return new URL(url.startsWith('/') ? url : `/${url}`, base).toString();

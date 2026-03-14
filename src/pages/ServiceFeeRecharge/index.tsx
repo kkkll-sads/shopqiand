@@ -181,7 +181,7 @@ export function ServiceFeeRechargePage() {
       <div className="flex-1 overflow-y-auto no-scrollbar px-4 py-4 pb-28">
         <div className="space-y-4">
           <Card className="relative overflow-hidden p-5">
-            <div className="pointer-events-none absolute top-0 right-0 h-28 w-28 rounded-bl-full bg-gradient-to-bl from-primary-start/10 to-transparent" />
+            <div className="pointer-events-none absolute top-0 right-0 h-28 w-28 rounded-bl-full" style={{ background: 'linear-gradient(to bottom left, rgba(233,59,59,0.10), transparent)' }} />
             {loading ? (
               <div className="space-y-3">
                 <Skeleton className="h-4 w-24" />
@@ -308,7 +308,7 @@ export function ServiceFeeRechargePage() {
             onClick={handleSubmit}
             className={`flex h-12 min-w-[148px] items-center justify-center rounded-full px-6 text-lg font-medium transition ${
               !isOffline && !loading && !submitting
-                ? 'bg-gradient-to-r from-primary-start to-primary-end text-white shadow-md shadow-red-500/20 active:scale-[0.98]'
+                ? 'gradient-primary-r text-white shadow-md shadow-red-500/20 active:scale-[0.98]'
                 : 'bg-gray-200 text-gray-400 dark:bg-gray-800 dark:text-gray-500'
             }`}
           >

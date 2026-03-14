@@ -1,4 +1,4 @@
-﻿import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
   AlertCircle,
@@ -418,7 +418,7 @@ export const PaymentResultPage = () => {
           type="button"
           onClick={handleRetryPay}
           disabled={polling}
-          className="h-11 flex-1 rounded-full bg-gradient-to-r from-primary-start to-primary-end text-lg font-medium text-white shadow-sm active:opacity-80 disabled:opacity-50"
+          className="h-11 flex-1 rounded-full gradient-primary-r text-lg font-medium text-white shadow-sm active:opacity-80 disabled:opacity-50"
         >
           去支付
         </button>
@@ -475,7 +475,7 @@ export const PaymentResultPage = () => {
         <button
           type="button"
           onClick={() => goTo('order')}
-          className="h-11 flex-1 rounded-full bg-gradient-to-r from-primary-start to-primary-end text-lg font-medium text-white shadow-sm active:opacity-80"
+          className="h-11 flex-1 rounded-full gradient-primary-r text-lg font-medium text-white shadow-sm active:opacity-80"
         >
           查看订单
         </button>
@@ -513,7 +513,7 @@ export const PaymentResultPage = () => {
         <button
           type="button"
           onClick={handleRetryPay}
-          className="h-11 flex-1 rounded-full bg-gradient-to-r from-primary-start to-primary-end text-lg font-medium text-white shadow-sm active:opacity-80"
+          className="h-11 flex-1 rounded-full gradient-primary-r text-lg font-medium text-white shadow-sm active:opacity-80"
         >
           重新支付
         </button>

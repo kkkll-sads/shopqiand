@@ -122,7 +122,7 @@ export const FriendsPage = () => {
         </button>
         <h1 className="text-2xl font-medium text-text-main">我的好友</h1>
         <button
-          className="bg-gradient-to-r from-primary-start to-primary-end text-white text-sm font-medium px-3 py-1.5 rounded-full shadow-sm active:opacity-80 flex items-center"
+          className="gradient-primary-r text-white text-sm font-medium px-3 py-1.5 rounded-full shadow-sm active:opacity-80 flex items-center"
           onClick={() => goTo('/invite')}
         >
           <UserPlus size={14} className="mr-1" /> 邀请
@@ -141,7 +141,7 @@ export const FriendsPage = () => {
           <p className="text-base text-text-sub mb-6 text-center">请检查网络连接后重试</p>
           <button
             onClick={() => loadData(true)}
-            className="px-6 py-2 bg-gradient-to-r from-primary-start to-primary-end text-white rounded-full text-md font-medium shadow-sm active:opacity-80"
+            className="px-6 py-2 gradient-primary-r text-white rounded-full text-md font-medium shadow-sm active:opacity-80"
           >
             重新加载
           </button>
@@ -159,7 +159,7 @@ export const FriendsPage = () => {
 
           {/* Stats Overview */}
           <Card className="p-4 mb-4 relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-primary-start/5 to-transparent rounded-bl-full pointer-events-none" />
+            <div className="absolute top-0 right-0 w-32 h-32 rounded-bl-full pointer-events-none" style={{ background: 'linear-gradient(to bottom left, rgba(233,59,59,0.05), transparent)' }} />
             {loading ? (
               <div className="space-y-4">
                 <div className="flex justify-between">
@@ -268,7 +268,7 @@ export const FriendsPage = () => {
                 <p className="text-md text-text-main mb-2">暂无符合条件的好友</p>
                 <p className="text-sm text-text-sub mb-6">快去邀请更多好友加入吧</p>
                 <button
-                  className="px-6 py-2 bg-gradient-to-r from-primary-start to-primary-end text-white rounded-full text-md font-medium shadow-sm active:opacity-80"
+                  className="px-6 py-2 gradient-primary-r text-white rounded-full text-md font-medium shadow-sm active:opacity-80"
                   onClick={() => goTo('/invite')}
                 >
                   立即邀请好友

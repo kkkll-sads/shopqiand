@@ -1,4 +1,4 @@
-﻿/**
+/**
  * @file 资产申购详情页
  * @description 根据专场 ID 加载商品列表，支持分页、筛选、下拉刷新。
  */
@@ -255,7 +255,7 @@ export const TradingDetailPage = () => {
                   className={`h-[36px] rounded-2xl px-5 text-base font-medium text-white shadow-sm transition-opacity ${
                     poolStatus !== 'in_progress'
                       ? 'cursor-not-allowed bg-border-light text-text-aux'
-                      : 'bg-gradient-to-r from-primary-start to-primary-end active:opacity-80'
+                      : 'gradient-primary-r active:opacity-80'
                   }`}
                   disabled={poolStatus !== 'in_progress'}
                   onClick={(event) => {

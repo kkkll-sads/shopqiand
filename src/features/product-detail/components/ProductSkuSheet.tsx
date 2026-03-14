@@ -5,6 +5,7 @@ import { Button } from '../../../components/ui/Button';
 import type { ShopProductOptionGroup } from '../../shop-product/utils';
 import {
   buildShopProductSelectedSummary,
+  getSelectedSku,
   getShopProductPrimaryPrice,
   resolveShopProductImageUrl,
 } from '../../shop-product/utils';
@@ -55,6 +56,25 @@ export const ProductSkuSheet = ({
     ? addresses.filter((address) => address.id !== selectedAddress.id)
     : addresses;
 
+  const matchedSku = getSelectedSku(product, optionGroups, selectedOptions);
+  const priceSource =
+    matchedSku != null
+      ? {
+          ...product,
+          price: matchedSku.price ?? product.price,
+          score_price: matchedSku.score_price ?? product.score_price,
+        }
+      : product;
+  const displayStock =
+    matchedSku != null && typeof matchedSku.stock === 'number'
+      ? matchedSku.stock
+      : matchedSku?.available_stock != null
+        ? matchedSku.available_stock
+        : product.stock;
+
+  const isOutOfStock = displayStock <= 0;
+  const canConfirm = !isOutOfStock && quantity <= displayStock;
+
   return (
     <div className="fixed inset-0 z-50 flex flex-col justify-end">
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
@@ -75,9 +95,9 @@ export const ProductSkuSheet = ({
           />
           <div className="flex flex-col justify-end pb-1">
             <div className="mb-1 text-xl font-bold text-primary-start">
-              {getShopProductPrimaryPrice(product)}
+              {getShopProductPrimaryPrice(priceSource)}
             </div>
-            <span className="mb-1 text-sm text-text-sub">库存 {product.stock}</span>
+            <span className="mb-1 text-sm text-text-sub">库存 {displayStock}</span>
             <span className="line-clamp-1 text-sm text-text-main">
               已选 {buildShopProductSelectedSummary(optionGroups, selectedOptions, quantity)}
             </span>

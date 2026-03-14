@@ -33,6 +33,18 @@ const checks = [
     name: 'TAILWIND_SPECIFICITY_HACK',
     pattern: /:not\(#\\#\)/,
   },
+  {
+    message:
+      'Found oklch() color function; not supported on Chrome < 111 / iOS < 16.4 / older WebView.',
+    name: 'OKLCH_COLOR',
+    pattern: /oklch\(/i,
+  },
+  {
+    message:
+      'Found "in oklab" gradient interpolation; not supported on Chrome < 111 / iOS < 16.4 / older WebView.',
+    name: 'OKLAB_GRADIENT',
+    pattern: /\bin\s+oklab\b/i,
+  },
 ];
 
 const cssFiles = readdirSync(distAssetsDir)

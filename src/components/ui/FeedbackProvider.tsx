@@ -207,7 +207,7 @@ export const FeedbackProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     };
 
     return (
-      <div className="fixed bottom-[120px] left-1/2 -translate-x-1/2 z-[110] animate-in fade-in slide-in-from-bottom-4 duration-200 pointer-events-none w-full px-8 flex justify-center">
+      <div className="fixed bottom-[120px] left-0 right-0 z-[110] animate-in fade-in slide-in-from-bottom-4 duration-200 pointer-events-none w-full px-8 flex justify-center">
         <div className="bg-gray-900/90 dark:bg-gray-800/95 text-white px-4 py-2.5 rounded-2xl flex items-center shadow-sm max-w-full">
           {toast.type && icons[toast.type]}
           <span className="text-md leading-snug line-clamp-2 text-center break-words">

@@ -1,4 +1,4 @@
-﻿/**
+/**
  * @file 商城订单 API
  * @description 商城订单相关接口
  */
@@ -305,13 +305,15 @@ export interface ShopOrderCreatePayload {
 
 /** 创建订单响应数据 */
 export interface ShopOrderCreateResult {
-  /** 订单 ID */
+  /** 订单 ID（拆单时为第一个子订单 ID） */
   order_id: number;
+  /** 拆单时包含所有子订单 ID，单订单时为 undefined */
+  order_ids?: number[];
   /** 订单号 */
   order_no: string;
-  /** 应付人民币金额 */
+  /** 应付人民币金额（合计） */
   total_amount: number;
-  /** 应付消费金金额 */
+  /** 应付消费金金额（合计） */
   total_score: number;
   /** 订单状态 */
   status: string;
@@ -347,6 +349,7 @@ export const shopOrderApi = {
     const data = await http.post<
       {
         order_id?: number | string;
+        order_ids?: (number | string)[];
         order_no?: string;
         total_amount?: number | string;
         total_score?: number | string;
@@ -360,8 +363,15 @@ export const shopOrderApi = {
       headers: createApiHeaders(options),
       signal: options.signal,
     });
+
+    const rawIds = Array.isArray(data?.order_ids) ? data.order_ids : undefined;
+    const orderIds = rawIds
+      ?.map((id) => readNumber(id as number))
+      .filter((n) => n > 0);
+
     return {
       order_id: readNumber(data?.order_id ?? 0),
+      order_ids: orderIds && orderIds.length > 1 ? orderIds : undefined,
       order_no: readString(data?.order_no ?? ''),
       total_amount: readNumber(data?.total_amount ?? 0),
       total_score: readNumber(data?.total_score ?? 0),
@@ -527,11 +537,9 @@ export const shopOrderApi = {
     payload: ShopOrderPayPayload,
     options: ShopOrderPayOptions = {},
   ): Promise<ShopOrderPayResult> {
-    const body = {
-      order_id: payload.order_id,
-      pay_money: payload.pay_money ?? 0,
-      pay_score: payload.pay_score ?? 0,
-    };
+    const body: Record<string, number> = { order_id: payload.order_id };
+    if (payload.pay_money != null) body.pay_money = payload.pay_money;
+    if (payload.pay_score != null) body.pay_score = payload.pay_score;
 
     const data = await http.post<ShopOrderPayRaw, typeof body>(
       '/api/shopOrder/pay',

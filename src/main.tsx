@@ -1,4 +1,4 @@
-﻿/**
+/**
  * @file 应用入口
  */
 
@@ -17,6 +17,25 @@ import './index.css';
 rewriteLegacyBrowserLocationToHashRoute();
 startAppLifecycleObserver();
 initializeClientLogReporting();
+
+if (import.meta.env.DEV || import.meta.env.PROD) {
+  requestAnimationFrame(() => {
+    const root = document.documentElement;
+    const cs = getComputedStyle(root);
+    const vars = [
+      '--color-amber-500',
+      '--color-orange-500',
+      '--color-rose-500',
+      '--color-slate-800',
+      '--tw-gradient-position',
+    ];
+    const resolved: Record<string, string> = {};
+    vars.forEach((v) => {
+      resolved[v] = cs.getPropertyValue(v).trim() || '(empty)';
+    });
+    console.info('[CSS vars on :root]', resolved);
+  });
+}
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

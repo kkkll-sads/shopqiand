@@ -39,7 +39,7 @@ export const NotFoundPage = () => {
 
         <button
           onClick={() => goTo('/')}
-          className="flex items-center justify-center px-8 py-3 rounded-full bg-gradient-to-r from-primary-start to-primary-end text-white font-medium active:opacity-80 transition-opacity shadow-sm"
+          className="flex items-center justify-center px-8 py-3 rounded-full gradient-primary-r text-white font-medium active:opacity-80 transition-opacity shadow-sm"
         >
           <Home size={18} className="mr-2" />
           返回首页
