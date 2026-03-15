@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
-import { AlertTriangle, Clock3, Copy, Loader2, Store, Ticket, Wallet, X } from 'lucide-react';
-import type { CollectionConsignmentCheckData } from '../../../api';
+import { AlertTriangle, ChevronRight, Clock3, Copy, CreditCard, Loader2, Store, Ticket, Wallet, X } from 'lucide-react';
+import type { CollectionConsignmentCheckData, ConsignmentEquityCard } from '../../../api';
 import type { UserCollectionDetail } from '../../../api/modules/userCollection';
 
 interface MyCollectionConsignmentModalProps {
   availableConsignmentCouponCount: number;
+  availableEquityCards: ConsignmentEquityCard[];
   checkData: CollectionConsignmentCheckData | null;
   checkError: string | null;
   checkLoading: boolean;
@@ -18,11 +19,13 @@ interface MyCollectionConsignmentModalProps {
   membershipDeduction: number;
   onClose: () => void;
   onCopy: (text: string, successMessage?: string) => void | Promise<void>;
+  onOpenCardSelect: () => void;
   onOpenVoucherCenter: () => void;
   onRetry: () => void;
   onSubmit: () => void;
   originalServiceFee: number;
   requiredConsignmentCouponCount: number;
+  selectedEquityCardId: number | null;
   serviceFee: number;
   serviceFeeBalance: string;
   submitError: string | null;
@@ -47,6 +50,7 @@ function formatCountdown(totalSeconds: number): string {
 
 export function MyCollectionConsignmentModal({
   availableConsignmentCouponCount,
+  availableEquityCards,
   checkData,
   checkError,
   checkLoading,
@@ -60,11 +64,13 @@ export function MyCollectionConsignmentModal({
   membershipDeduction,
   onClose,
   onCopy,
+  onOpenCardSelect,
   onOpenVoucherCenter,
   onRetry,
   onSubmit,
   originalServiceFee,
   requiredConsignmentCouponCount,
+  selectedEquityCardId,
   serviceFee,
   serviceFeeBalance,
   submitError,
@@ -242,6 +248,28 @@ export function MyCollectionConsignmentModal({
                     <span className="text-gray-500">原始手续费</span>
                     <span className="font-semibold text-gray-900">¥{formatCurrency(originalServiceFee)}</span>
                   </div>
+                ) : null}
+                {!isFreeResend && availableEquityCards.length > 0 ? (
+                  <button
+                    type="button"
+                    onClick={onOpenCardSelect}
+                    className="flex w-full items-center justify-between gap-3 rounded-xl border border-[#eadfce] bg-[#fcf8f1] px-3 py-2.5 text-left transition-colors active:bg-[#f6eee2]"
+                  >
+                    <span className="inline-flex items-center gap-1.5 text-sm text-gray-600">
+                      <CreditCard size={15} className="text-[#8c6136]" />
+                      权益卡
+                    </span>
+                    <span className="inline-flex items-center gap-1 text-sm">
+                      {selectedEquityCardId ? (
+                        <span className="font-semibold text-emerald-600">
+                          已选择 · 抵扣 ¥{formatCurrency(membershipDeduction)}
+                        </span>
+                      ) : (
+                        <span className="text-[#8c6136]">选择权益卡</span>
+                      )}
+                      <ChevronRight size={14} className="text-gray-400" />
+                    </span>
+                  </button>
                 ) : null}
                 {!isFreeResend && membershipDeduction > 0 ? (
                   <div className="flex items-center justify-between gap-3">

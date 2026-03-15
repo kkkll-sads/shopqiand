@@ -69,7 +69,6 @@ export function usePullToRefresh({
       const container = containerRef.current;
       if (!container) return;
 
-      /* 仅在顶部时响应 */
       if (container.scrollTop > 0) {
         if (isPullingRef.current) {
           isPullingRef.current = false;
@@ -89,7 +88,6 @@ export function usePullToRefresh({
         return;
       }
 
-      /* 阻尼后的拉伸距离 */
       const dampedDistance = Math.min(deltaY * DAMPING, MAX_PULL_DISTANCE);
 
       if (!isPullingRef.current) {
@@ -99,7 +97,6 @@ export function usePullToRefresh({
 
       setPullDistance(dampedDistance);
 
-      /* 阻止页面默认滚动 */
       if (dampedDistance > 0) {
         event.preventDefault();
       }
@@ -113,7 +110,6 @@ export function usePullToRefresh({
     isPullingRef.current = false;
 
     if (pullDistance >= TRIGGER_THRESHOLD) {
-      /* 达到阈值，触发刷新 */
       isRefreshingRef.current = true;
       setRefreshing(true);
       setPullDistance(TRIGGER_THRESHOLD);
@@ -129,7 +125,6 @@ export function usePullToRefresh({
         setPullDistance(0);
       }
     } else {
-      /* 未达阈值，回弹 */
       setPulling(false);
       setPullDistance(0);
     }

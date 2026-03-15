@@ -23,6 +23,7 @@ import { OfflineBanner } from '../../components/layout/OfflineBanner';
 import { Card } from '../../components/ui/Card';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { ErrorState } from '../../components/ui/ErrorState';
+import { useFeedback } from '../../components/ui/FeedbackProvider';
 import { PullToRefreshContainer } from '../../components/ui/PullToRefreshContainer';
 import { Skeleton } from '../../components/ui/Skeleton';
 import { ShopProductPriceDisplay } from '../../features/shop-product/components/ShopProductPriceDisplay';
@@ -85,6 +86,7 @@ export const SearchResultPage = () => {
   const [searchParams] = useSearchParams();
   const { goBack, goTo } = useAppNavigate();
   const { isOffline, refreshStatus } = useNetworkStatus();
+  const { showToast } = useFeedback();
 
   const keyword = searchParams.get('keyword')?.trim() ?? '';
   const sessionKeyPrefix = keyword ? `search-result:${keyword}` : 'search-result:empty';
@@ -243,6 +245,7 @@ export const SearchResultPage = () => {
     } catch (error) {
       if (version === queryVersionRef.current) {
         setLoadMoreError(error instanceof Error ? error : new Error('加载更多失败'));
+        showToast({ message: '加载更多失败，请重试', type: 'error' });
       }
     } finally {
       if (version === queryVersionRef.current) {

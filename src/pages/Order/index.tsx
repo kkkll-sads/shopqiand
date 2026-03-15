@@ -7,6 +7,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { collectionTradeApi, shopOrderApi, type CollectionBuyOrder, type CollectionSellOrder, type ShopOrderListItem } from '../../api';
 import { getErrorMessage } from '../../api/core/errors';
 import { OfflineBanner } from '../../components/layout/OfflineBanner';
+import { PullToRefreshContainer } from '../../components/ui/PullToRefreshContainer';
 import { useFeedback } from '../../components/ui/FeedbackProvider';
 import { CollectibleOrderDetail } from '../../features/order/components/CollectibleOrderDetail';
 import { OrderHeader } from '../../features/order/components/OrderHeader';
@@ -191,6 +192,14 @@ export const OrderPage = () => {
     }
   };
 
+  const handleRefresh = useCallback(async () => {
+    await Promise.allSettled([
+      mallOrdersRequest.reload(),
+      buyOrdersRequest.reload(),
+      sellOrdersRequest.reload(),
+    ]);
+  }, [mallOrdersRequest, buyOrdersRequest, sellOrdersRequest]);
+
   const handleOpenSupport = useCallback(() => {
     void openCustomerServiceLink(({ duration, message, type }) => {
       showToast({ duration, message, type });
@@ -283,6 +292,7 @@ export const OrderPage = () => {
       <OrderTypeSwitcher orderType={orderType} onChange={setOrderType} />
       <OrderStatusTabs tabs={ORDER_TABS[orderType]} activeTab={activeTab} onChange={handleTabChange} />
 
+      <PullToRefreshContainer onRefresh={handleRefresh} disabled={isOffline}>
       <div ref={scrollContainerRef} className="flex-1 overflow-y-auto no-scrollbar p-4 pb-4">
         <OrderListContent
           orderType={orderType}
@@ -320,6 +330,7 @@ export const OrderPage = () => {
           onRefundMallOrder={handleRefundOrder}
         />
       </div>
+      </PullToRefreshContainer>
 
       {selectedOrder && (
         <CollectibleOrderDetail

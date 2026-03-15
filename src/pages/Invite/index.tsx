@@ -1,30 +1,24 @@
 /**
- * @file Invite/index.tsx - 邀请推广页面
- * @description 展示用户专属邀请码、二维码、邀请链接，支持复制、分享、保存图片。
+ * @file Invite/index.tsx - 推广名片 / 邀请推广页面
+ * @description 展示推广名片卡片：头像、邀请码、二维码、团队数据，支持复制链接、保存图片。
  */
 
-import React, { useState, useEffect } from 'react'; // React 核心 Hook
-import { ChevronLeft, WifiOff, Copy, QrCode, Download, Share2, Link as LinkIcon, Image as ImageIcon, MessageCircle, ChevronDown, ChevronUp, AlertTriangle } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { ChevronLeft, Copy, Download, Share2 } from 'lucide-react';
 import { useAppNavigate } from '../../lib/navigation';
 import { ErrorState } from '../../components/ui/ErrorState';
 import { useFeedback } from '../../components/ui/FeedbackProvider';
 import { copyToClipboard } from '../../lib/clipboard';
 import { teamApi, type PromotionCardData } from '../../api';
+import { Skeleton } from '../../components/ui/Skeleton';
 
-/**
- * InvitePage - 邀请推广页面
- * 功能：展示邀请码/二维码 → 复制链接 → 分享至微信/朋友圈 → 保存图片
- */
 export const InvitePage = () => {
   const { goBack } = useAppNavigate();
   const { showToast } = useFeedback();
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
-  const [offline, setOffline] = useState(false);
   const [cardData, setCardData] = useState<PromotionCardData | null>(null);
-  const [rulesExpanded, setRulesExpanded] = useState(false);
-  const [saveError, setSaveError] = useState(false);
 
   const fetchData = async () => {
     setLoading(true);
@@ -43,188 +37,174 @@ export const InvitePage = () => {
     void fetchData();
   }, []);
 
-  const inviteCode = cardData?.invite_code ?? '';
-  const inviteLink = cardData?.invite_link ?? '';
-  const qrcodeUrl = cardData?.qrcode_url ?? '';
-
   const handleCopy = async (text: string, type: string) => {
     const ok = await copyToClipboard(text);
     showToast({ message: ok ? `${type}已复制` : '复制失败，请稍后重试', type: ok ? 'success' : 'error' });
   };
 
   const handleSaveImage = () => {
+    const qrcodeUrl = cardData?.qrcode_url;
     if (qrcodeUrl) {
       window.open(qrcodeUrl, '_blank');
     } else {
-      setSaveError(true);
+      showToast({ message: '请长按二维码图片保存', type: 'info' });
     }
   };
 
-  const renderHeader = () => (
-    <div className="bg-white dark:bg-gray-900 z-40 relative shrink-0 border-b border-gray-100 dark:border-gray-800">
-      {offline && (
-        <div className="bg-red-50 dark:bg-red-900/30 text-brand-start dark:text-red-400 px-4 py-2 flex items-center justify-between text-sm">
-          <div className="flex items-center">
-            <WifiOff size={14} className="mr-2" />
-            <span>网络不稳定，请检查网络设置</span>
-          </div>
-          <button onClick={() => setOffline(false)} className="font-medium px-2 py-1 bg-white dark:bg-gray-800 rounded shadow-sm">刷新</button>
-        </div>
-      )}
-      <div className="h-12 flex items-center justify-between px-3 pt-safe">
-        <div className="flex items-center w-1/3">
-          <button onClick={() => goBack()} className="p-1 -ml-1 text-gray-900 dark:text-gray-100 active:opacity-70">
+  if (loading) {
+    return (
+      <div className="relative flex flex-1 flex-col bg-bg-base">
+        <div className="flex h-12 items-center justify-between border-b border-border-light bg-white px-4 dark:bg-gray-900">
+          <button type="button" onClick={() => goBack()} className="-ml-2 p-2 text-text-main active:opacity-70">
             <ChevronLeft size={24} />
           </button>
+          <span className="text-[17px] font-medium text-text-main">推广名片</span>
+          <div className="w-8" />
         </div>
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 text-center w-1/3">邀请推广</h1>
-        <div className="w-1/3" />
-      </div>
-    </div>
-  );
-
-  const renderSkeleton = () => (
-    <div className="p-4 space-y-4">
-      <div className="bg-white dark:bg-gray-900 rounded-2xl p-6 shadow-sm animate-pulse flex flex-col items-center">
-        <div className="w-24 h-4 bg-gray-200 dark:bg-gray-800 rounded mb-4" />
-        <div className="w-48 h-10 bg-gray-200 dark:bg-gray-800 rounded mb-6" />
-        <div className="w-32 h-32 bg-gray-200 dark:bg-gray-800 rounded-xl mb-6" />
-        <div className="w-full h-10 bg-gray-100 dark:bg-gray-800 rounded-lg" />
-      </div>
-    </div>
-  );
-
-  const renderContent = () => {
-    if (loading) return renderSkeleton();
-    if (error) return <ErrorState onRetry={fetchData} />;
-
-    return (
-      <div className="p-4 pb-10 space-y-4">
-
-        {/* Invite Card */}
-        <div className="bg-white dark:bg-gray-900 rounded-2xl p-6 shadow-sm dark:shadow-none border border-transparent dark:border-gray-800 flex flex-col items-center relative overflow-hidden">
-          <div className="absolute top-0 left-0 w-full h-24 bg-gradient-to-b from-red-50 dark:from-transparent to-transparent" />
-
-          <div className="text-md text-gray-500 dark:text-gray-400 mb-2 relative z-10">我的专属邀请码</div>
-          <div className="flex items-center justify-center mb-6 relative z-10">
-            <span className="text-7xl font-bold text-brand-start tracking-wider leading-none mr-3">{inviteCode}</span>
-            <button
-              onClick={() => handleCopy(inviteCode, '邀请码')}
-              className="w-8 h-8 rounded-full bg-red-50 dark:bg-red-900/20 flex items-center justify-center text-brand-start active:opacity-70"
-            >
-              <Copy size={16} />
-            </button>
-          </div>
-
-          <div className="w-40 h-40 bg-gray-50 dark:bg-gray-800 rounded-2xl p-3 mb-6 relative z-10 border border-gray-100 dark:border-gray-700 flex items-center justify-center overflow-hidden">
-            {qrcodeUrl ? (
-              <img src={qrcodeUrl} alt="QR Code" className="w-full h-full object-contain" referrerPolicy="no-referrer" />
-            ) : (
-              <QrCode size={120} className="text-gray-800 dark:text-gray-200" strokeWidth={1} />
-            )}
-          </div>
-
-          <div className="w-full bg-gray-50 dark:bg-gray-800 rounded-lg p-3 flex items-center justify-between relative z-10">
-            <div className="flex-1 min-w-0 mr-3">
-              <div className="text-sm text-gray-400 dark:text-gray-500 mb-1">专属邀请链接</div>
-              <div className="text-base text-gray-900 dark:text-gray-100 truncate">{inviteLink}</div>
-            </div>
-            <button
-              onClick={() => handleCopy(inviteLink, '邀请链接')}
-              className="px-4 py-1.5 rounded-full border border-[#FF4142] text-brand-start text-sm font-medium active:bg-red-50 dark:active:bg-red-900/20 whitespace-nowrap"
-            >
-              复制链接
-            </button>
-          </div>
-
-          {/* Team stats */}
-          {cardData && (
-            <div className="w-full mt-4 flex justify-around text-center relative z-10">
-              <div>
-                <div className="text-2xl font-bold text-text-main">{cardData.team_count}</div>
-                <div className="text-xs text-text-sub">团队人数</div>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Save Error Banner */}
-        {saveError && (
-          <div className="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-xl p-3 flex items-start">
-            <AlertTriangle size={16} className="text-orange-500 mt-0.5 mr-2 shrink-0" />
-            <div className="flex-1">
-              <div className="text-base text-orange-700 dark:text-orange-400 font-medium mb-1">保存图片失败</div>
-              <div className="text-sm text-orange-600/80 dark:text-orange-400/80 mb-2">请长按二维码图片保存</div>
-            </div>
-          </div>
-        )}
-
-        {/* Share Methods */}
-        <div className="bg-white dark:bg-gray-900 rounded-2xl p-4 shadow-sm dark:shadow-none border border-transparent dark:border-gray-800">
-          <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">分享至</h3>
-          <div className="grid grid-cols-4 gap-4">
-            <div className="flex flex-col items-center cursor-pointer active:opacity-70">
-              <div className="w-12 h-12 rounded-full bg-success/10 flex items-center justify-center text-success mb-2">
-                <MessageCircle size={24} />
-              </div>
-              <span className="text-sm text-gray-600 dark:text-gray-400">微信好友</span>
-            </div>
-            <div className="flex flex-col items-center cursor-pointer active:opacity-70">
-              <div className="w-12 h-12 rounded-full bg-success/10 flex items-center justify-center text-success mb-2">
-                <Share2 size={24} />
-              </div>
-              <span className="text-sm text-gray-600 dark:text-gray-400">朋友圈</span>
-            </div>
-            <div
-              className="flex flex-col items-center cursor-pointer active:opacity-70"
-              onClick={() => handleCopy(inviteLink, '链接')}
-            >
-              <div className="w-12 h-12 rounded-full bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center text-blue-500 mb-2">
-                <LinkIcon size={24} />
-              </div>
-              <span className="text-sm text-gray-600 dark:text-gray-400">复制链接</span>
-            </div>
-            <div
-              className="flex flex-col items-center cursor-pointer active:opacity-70"
-              onClick={handleSaveImage}
-            >
-              <div className="w-12 h-12 rounded-full bg-orange-50 dark:bg-orange-900/20 flex items-center justify-center text-orange-500 mb-2">
-                <Download size={24} />
-              </div>
-              <span className="text-sm text-gray-600 dark:text-gray-400">保存图片</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Rules Foldable Card */}
-        <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm dark:shadow-none border border-transparent dark:border-gray-800 overflow-hidden">
-          <div
-            className="px-4 py-4 flex justify-between items-center cursor-pointer active:bg-gray-50 dark:active:bg-gray-800 transition-colors"
-            onClick={() => setRulesExpanded(!rulesExpanded)}
-          >
-            <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">奖励说明与注意事项</h3>
-            {rulesExpanded ? <ChevronUp size={20} className="text-gray-400 dark:text-gray-500" /> : <ChevronDown size={20} className="text-gray-400 dark:text-gray-500" />}
-          </div>
-
-          {rulesExpanded && (
-            <div className="px-4 pb-4 pt-1 border-t border-gray-100 dark:border-gray-800 text-base text-gray-500 dark:text-gray-400 leading-relaxed space-y-2">
-              <p>1. 邀请好友注册并完成首次实名认证，您和好友各得相应奖励。</p>
-              <p>2. 好友完成签到或首笔交易后，您将获得额外奖励，具体以当前活动规则为准。</p>
-              <p>3. 邀请奖励将在满足条件后自动发放到您的账户。</p>
-              <p>4. 严禁通过作弊手段获取奖励，一经发现将取消奖励并封禁账号。</p>
-              <p>5. 本活动最终解释权归平台所有。</p>
-            </div>
-          )}
+        <div className="flex flex-1 flex-col items-center justify-center p-6">
+          <Skeleton className="h-[480px] w-full max-w-sm rounded-2xl" />
         </div>
       </div>
     );
-  };
+  }
+
+  if (error) {
+    return (
+      <div className="relative flex flex-1 flex-col bg-bg-base">
+        <div className="flex h-12 items-center border-b border-border-light bg-white px-4 dark:bg-gray-900">
+          <button type="button" onClick={() => goBack()} className="-ml-2 p-2 text-text-main active:opacity-70">
+            <ChevronLeft size={24} />
+          </button>
+          <span className="ml-2 text-[17px] font-medium text-text-main">推广名片</span>
+        </div>
+        <div className="flex-1">
+          <ErrorState onRetry={fetchData} />
+        </div>
+      </div>
+    );
+  }
+
+  if (!cardData) return null;
+
+  const { user_info, invite_code, invite_link, qrcode_url, team_count, total_performance } = cardData;
+  const displayName = user_info?.nickname || user_info?.username || '邀请您';
 
   return (
-    <div className="flex-1 flex flex-col bg-[#FFF8F8] dark:bg-gray-950 relative h-full overflow-hidden">
-      {renderHeader()}
-      <div className="flex-1 overflow-y-auto no-scrollbar relative">
-        {renderContent()}
+    <div className="relative flex flex-1 flex-col">
+      {/* 透明头部 */}
+      <div className="absolute left-0 right-0 top-0 z-20 flex h-12 items-center justify-between px-4">
+        <button type="button" onClick={() => goBack()} className="-ml-2 p-2 text-white active:opacity-70">
+          <ChevronLeft size={24} />
+        </button>
+        <span className="text-[17px] font-medium text-white">推广名片</span>
+        <button type="button" className="-mr-2 p-2 text-white active:opacity-70" aria-label="分享">
+          <Share2 size={20} />
+        </button>
+      </div>
+
+      {/* 渐变背景 */}
+      <div className="absolute inset-0 z-0 bg-gradient-to-br from-primary-start via-red-500 to-orange-500" />
+
+      {/* 装饰元素 */}
+      <div className="absolute top-20 left-10 z-0 h-32 w-32 rounded-full bg-white/10 blur-2xl" />
+      <div className="absolute bottom-40 right-10 z-0 h-48 w-48 rounded-full bg-white/10 blur-3xl" />
+
+      <div className="relative z-10 flex flex-1 flex-col items-center justify-center p-6 pt-16">
+        {/* 名片卡片 */}
+        <div className="flex w-full max-w-sm flex-col overflow-hidden rounded-[24px] bg-white shadow-2xl dark:bg-gray-900">
+          {/* 顶部：头像 + 昵称 */}
+          <div className="relative flex items-center space-x-4 border-b border-border-light p-6 pb-4">
+            <div className="absolute top-0 right-0 h-24 w-24 rounded-bl-[100px] bg-primary-start/5" />
+            <div className="relative flex h-16 w-16 shrink-0 overflow-hidden rounded-full border-2 border-white bg-gray-100 shadow-sm dark:bg-gray-800">
+              {user_info?.avatar ? (
+                <img
+                  src={user_info.avatar}
+                  alt=""
+                  className="h-full w-full object-cover"
+                  referrerPolicy="no-referrer"
+                />
+              ) : (
+                <div className="flex h-full w-full items-center justify-center text-text-aux">
+                  <span className="text-2xl font-bold">{displayName.slice(0, 1)}</span>
+                </div>
+              )}
+            </div>
+            <div className="relative z-10">
+              <h2 className="mb-1 text-[18px] font-bold text-text-main">{displayName}</h2>
+              <div className="text-[12px] text-text-sub">邀请您加入数字藏品平台</div>
+            </div>
+          </div>
+
+          {/* 中部：二维码 + 邀请码 */}
+          <div className="flex flex-1 flex-col items-center justify-center p-8">
+            <div className="relative mb-6 flex h-48 w-48 items-center justify-center rounded-xl border border-border-light bg-white p-2 shadow-sm">
+              {qrcode_url ? (
+                <img
+                  src={qrcode_url}
+                  alt="邀请二维码"
+                  className="h-full w-full object-cover"
+                  referrerPolicy="no-referrer"
+                />
+              ) : (
+                <div className="flex h-full w-full items-center justify-center text-text-aux">二维码加载中</div>
+              )}
+              <img
+                src="/img/photo_2025-12-29_21-08-24%20(2).jpg"
+                alt="品牌LOGO"
+                className="absolute top-1/2 left-1/2 h-12 w-12 -translate-x-1/2 -translate-y-1/2 rounded-lg object-contain bg-white p-1 shadow-md"
+              />
+            </div>
+
+            <div className="w-full space-y-2 text-center">
+              <div className="text-[13px] text-text-sub">我的邀请码</div>
+              <div className="flex items-center justify-center space-x-2 rounded-xl bg-gray-50 py-2 px-4 dark:bg-gray-800">
+                <span className="tracking-widest text-[24px] font-bold text-primary-start">{invite_code}</span>
+                <button
+                  type="button"
+                  onClick={() => handleCopy(invite_code, '邀请码')}
+                  className="p-1 active:opacity-70"
+                  aria-label="复制邀请码"
+                >
+                  <Copy size={16} className="text-text-aux" />
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* 底部：团队数据 */}
+          <div className="grid grid-cols-2 gap-4 bg-gray-50 p-4 dark:bg-gray-800">
+            <div className="text-center">
+              <div className="mb-1 text-[11px] text-text-sub">团队人数</div>
+              <div className="text-[16px] font-bold text-text-main">{team_count ?? 0}</div>
+            </div>
+            <div className="border-l border-border-light text-center">
+              <div className="mb-1 text-[11px] text-text-sub">总业绩</div>
+              <div className="text-[16px] font-bold text-text-main">
+                ¥{Number(total_performance ?? 0).toLocaleString('zh-CN')}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* 操作按钮 */}
+        <div className="mt-8 grid w-full max-w-sm grid-cols-2 gap-4">
+          <button
+            type="button"
+            onClick={() => handleCopy(invite_link || '', '邀请链接')}
+            className="flex items-center justify-center space-x-2 rounded-full bg-white/20 py-3 font-medium text-white backdrop-blur-md transition-colors active:bg-white/30"
+          >
+            <Copy size={18} />
+            <span>复制链接</span>
+          </button>
+          <button
+            type="button"
+            onClick={handleSaveImage}
+            className="flex items-center justify-center space-x-2 rounded-full bg-white py-3 font-medium text-primary-start shadow-lg transition-colors active:bg-gray-50"
+          >
+            <Download size={18} />
+            <span>保存图片</span>
+          </button>
+        </div>
       </div>
     </div>
   );

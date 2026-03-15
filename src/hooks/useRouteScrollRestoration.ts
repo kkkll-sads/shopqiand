@@ -10,6 +10,9 @@ interface UseRouteScrollRestorationOptions {
   restoreWhen?: boolean;
 }
 
+const RETRY_INTERVAL = 60;
+const MAX_WAIT_MS = 800;
+
 export function useRouteScrollRestoration({
   containerRef,
   enabled = true,
@@ -91,34 +94,51 @@ export function useRouteScrollRestoration({
       return;
     }
 
+    if (Math.abs(container.scrollTop - targetScrollTop) < 2) {
+      hasRestoredRef.current = true;
+      return;
+    }
+
+    container.style.visibility = 'hidden';
+    const startTime = Date.now();
     let attempt = 0;
-    let frameId = 0;
+    let timerId = 0;
+
+    const finish = () => {
+      container.style.visibility = '';
+      hasRestoredRef.current = true;
+    };
 
     const restore = () => {
-      const currentContainer = containerRef.current;
-      if (!currentContainer) {
+      const el = containerRef.current;
+      if (!el) {
+        finish();
         return;
       }
 
-      const maxScrollTop = Math.max(0, currentContainer.scrollHeight - currentContainer.clientHeight);
+      const maxScrollTop = Math.max(0, el.scrollHeight - el.clientHeight);
       const nextScrollTop = Math.min(targetScrollTop, maxScrollTop);
 
-      currentContainer.scrollTop = nextScrollTop;
+      el.scrollTop = nextScrollTop;
       lastKnownScrollTopRef.current = nextScrollTop;
 
-      if (maxScrollTop >= targetScrollTop || attempt >= maxRestoreAttempts) {
-        hasRestoredRef.current = true;
+      const elapsed = Date.now() - startTime;
+      if (maxScrollTop >= targetScrollTop || attempt >= maxRestoreAttempts || elapsed >= MAX_WAIT_MS) {
+        finish();
         return;
       }
 
       attempt += 1;
-      frameId = window.requestAnimationFrame(restore);
+      timerId = window.setTimeout(restore, RETRY_INTERVAL);
     };
 
-    frameId = window.requestAnimationFrame(restore);
+    timerId = window.setTimeout(restore, 0);
 
     return () => {
-      window.cancelAnimationFrame(frameId);
+      window.clearTimeout(timerId);
+      if (!hasRestoredRef.current) {
+        container.style.visibility = '';
+      }
     };
   }, [
     containerRef,

@@ -29,6 +29,7 @@ import { CartCountBadge } from '../../components/ui/CartCountBadge';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { ErrorState } from '../../components/ui/ErrorState';
 import { Skeleton } from '../../components/ui/Skeleton';
+import { useFeedback } from '../../components/ui/FeedbackProvider';
 import { PullToRefreshContainer } from '../../components/ui/PullToRefreshContainer';
 import { ShopProductPriceDisplay } from '../../features/shop-product/components/ShopProductPriceDisplay';
 import {
@@ -134,6 +135,7 @@ function GridProductSkeleton() {
 export const StorePage = () => {
   const { goTo } = useAppNavigate();
   const { isOffline, refreshStatus } = useNetworkStatus();
+  const { showToast } = useFeedback();
   const { cartCount } = useCartCount();
 
   const [latestProducts, setLatestProducts] = useState<ShopProductItem[]>([]);
@@ -147,6 +149,7 @@ export const StorePage = () => {
   const latestPageRef = useRef(1);
   const latestProductsRef = useRef<ShopProductItem[]>([]);
   const latestLoadingMoreRef = useRef(false);
+  const latestTotalRef = useRef(0);
 
   const flashSaleRequest = useRequest(
     (signal) => flashSaleApi.getProducts({ limit: 6, page: 1 }, signal),
@@ -176,6 +179,7 @@ export const StorePage = () => {
     const nextProducts = latestRequest.data?.list ?? [];
     latestProductsRef.current = nextProducts;
     latestPageRef.current = 1;
+    latestTotalRef.current = latestRequest.data?.total ?? 0;
     latestLoadingMoreRef.current = false;
     setLatestProducts(nextProducts);
     setHasMoreLatest(nextProducts.length < (latestRequest.data?.total ?? 0));
@@ -221,12 +225,14 @@ export const StorePage = () => {
       const mergedProducts = mergeProducts(latestProductsRef.current, response.list);
       latestProductsRef.current = mergedProducts;
       latestPageRef.current = nextPage;
+      latestTotalRef.current = response.total;
       setLatestProducts(mergedProducts);
       setHasMoreLatest(mergedProducts.length < response.total);
     } catch (error) {
       setLoadMoreLatestError(
         error instanceof Error ? error : new Error('精选商品加载更多失败'),
       );
+      showToast({ message: '加载更多失败，请重试', type: 'error' });
     } finally {
       latestLoadingMoreRef.current = false;
       setLoadingMoreLatest(false);
@@ -279,6 +285,7 @@ export const StorePage = () => {
   const reloadAll = () => {
     latestProductsRef.current = [];
     latestPageRef.current = 1;
+    latestTotalRef.current = 0;
     latestLoadingMoreRef.current = false;
     setLatestProducts([]);
     setHasMoreLatest(false);

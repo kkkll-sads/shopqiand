@@ -232,6 +232,10 @@ interface MyCollectionItemRaw {
   payout_total_withdrawable?: number | string;
   payout_total_consume?: number | string;
   service_fee?: number | string;
+  /** 已售出时返回 */
+  order_no?: string;
+  /** 已售出时返回 */
+  flow_no?: string;
 }
 
 interface MyCollectionResponseRaw {
@@ -283,6 +287,10 @@ export interface MyCollectionItem {
   payout_total_withdrawable: number;
   payout_total_consume: number;
   service_fee: number;
+  /** 已售出时返回：成交订单号 */
+  order_no?: string;
+  /** 已售出时返回：卖家收益流水号 */
+  flow_no?: string;
 }
 
 export interface MyCollectionResponse {
@@ -374,6 +382,8 @@ function normalizeMyCollectionItem(item: MyCollectionItemRaw): MyCollectionItem 
     payout_total_withdrawable: readNumber(item.payout_total_withdrawable),
     payout_total_consume: readNumber(item.payout_total_consume),
     service_fee: readNumber(item.service_fee),
+    order_no: readString(item.order_no) || undefined,
+    flow_no: readString(item.flow_no) || undefined,
   };
 }
 

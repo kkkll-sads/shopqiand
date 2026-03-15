@@ -304,24 +304,60 @@ export const OrderDetailPage = () => {
         </div>
 
         {/* ===== Logistics Entry ===== */}
-        {order.shipping_no && (
-          <div
-            className="bg-white dark:bg-gray-900 rounded-2xl p-4 flex items-center active:bg-gray-50 dark:active:bg-gray-800 cursor-pointer shadow-sm transition-colors"
-            onClick={() => navigate(`/logistics/${orderId}`)}
-          >
-            <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-900/20 text-blue-500 flex items-center justify-center mr-3 shrink-0">
-              <Truck size={20} />
+        {(order.shipping_no || (order.shipments && order.shipments.length > 0)) && (
+          order.shipments && order.shipments.length > 1 ? (
+            <div className="bg-white dark:bg-gray-900 rounded-2xl p-4 shadow-sm">
+              <div className="flex items-center mb-2">
+                <Truck size={18} className="text-blue-500 mr-2" />
+                <span className="text-base font-medium text-text-main">物流信息</span>
+                {(order.shipment_count ?? order.shipments.length) > 1 && (
+                  <span className="ml-2 text-xs text-text-aux">
+                    {order.shipment_count ?? order.shipments.length}个包裹
+                  </span>
+                )}
+              </div>
+              <div className="space-y-2">
+                {order.shipments.map((s, idx) => (
+                  <div
+                    key={s.id}
+                    role="button"
+                    tabIndex={0}
+                    className="flex items-center py-2 rounded-lg active:bg-gray-50 dark:active:bg-gray-800 cursor-pointer"
+                    onClick={() => navigate(`/logistics/${orderId}?shipment_id=${s.id}`)}
+                    onKeyDown={(e) => e.key === 'Enter' && navigate(`/logistics/${orderId}?shipment_id=${s.id}`)}
+                  >
+                    <div className="flex-1 min-w-0 pr-2">
+                      <p className="text-sm font-medium text-text-main">
+                        包裹{idx + 1}：{s.shipping_company_display || s.shipping_company} {s.shipping_no}
+                      </p>
+                      {s.ship_time && (
+                        <p className="text-xs text-text-aux mt-0.5">{s.ship_time}</p>
+                      )}
+                    </div>
+                    <ChevronRight size={16} className="text-text-aux shrink-0" />
+                  </div>
+                ))}
+              </div>
             </div>
-            <div className="flex-1 min-w-0 pr-2">
-              <p className="text-base font-medium text-text-main leading-snug line-clamp-1">
-                {order.shipping_company_display || order.shipping_company} {order.shipping_no}
-              </p>
-              {order.ship_time > 0 && (
-                <p className="text-xs text-text-aux mt-0.5">{formatTime(order.ship_time)}</p>
-              )}
+          ) : (
+            <div
+              className="bg-white dark:bg-gray-900 rounded-2xl p-4 flex items-center active:bg-gray-50 dark:active:bg-gray-800 cursor-pointer shadow-sm transition-colors"
+              onClick={() => navigate(`/logistics/${orderId}`)}
+            >
+              <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-900/20 text-blue-500 flex items-center justify-center mr-3 shrink-0">
+                <Truck size={20} />
+              </div>
+              <div className="flex-1 min-w-0 pr-2">
+                <p className="text-base font-medium text-text-main leading-snug line-clamp-1">
+                  {order.shipping_company_display || order.shipping_company} {order.shipping_no}
+                </p>
+                {order.ship_time > 0 && (
+                  <p className="text-xs text-text-aux mt-0.5">{formatTime(order.ship_time)}</p>
+                )}
+              </div>
+              <ChevronRight size={18} className="text-text-aux shrink-0" />
             </div>
-            <ChevronRight size={18} className="text-text-aux shrink-0" />
-          </div>
+          )
         )}
 
         {order.after_sale_status_text && order.after_sale_info && (

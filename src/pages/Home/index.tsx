@@ -83,10 +83,11 @@ export const HomePage = () => {
   /* ---- 弹出公告 ---- */
   const popupRequest = useRequest(
     (signal) => announcementApi.getPopupList(signal),
-    { cacheKey: 'home:popup-announcements' },
+    { cacheKey: 'home:popup-announcements', cache: false },
   );
   const popupList = popupRequest.data?.list ?? [];
-  const unreadPopups = popupList.filter((a) => !a.is_read);
+  /** 弹出公告：直接使用接口返回列表，该接口应只返回需要弹出的公告 */
+  const popupsToShow = popupList;
 
   const [showPopupIndex, setShowPopupIndex] = useState(0);
   const [popupVisible, setPopupVisible] = useState(false);
@@ -98,12 +99,13 @@ export const HomePage = () => {
   }, [popupList.length]);
 
   useEffect(() => {
-    if (unreadPopups.length === 0) return;
+    if (popupsToShow.length === 0) return;
 
-    const item = unreadPopups[showPopupIndex];
+    const item = popupsToShow[showPopupIndex];
     if (!item) return;
 
-    const delayMs = Math.max(0, item.popup_delay ?? 0) * 1000;
+    const raw = Math.max(0, item.popup_delay ?? 0);
+    const delayMs = raw >= 100 ? raw : raw * 1000;
 
     popupDelayRef.current = window.setTimeout(() => {
       setPopupVisible(true);
@@ -115,14 +117,14 @@ export const HomePage = () => {
         popupDelayRef.current = null;
       }
     };
-  }, [unreadPopups, showPopupIndex]);
+  }, [popupsToShow, showPopupIndex]);
 
   const handlePopupClose = useCallback(() => {
     setPopupVisible(false);
-    if (showPopupIndex < unreadPopups.length - 1) {
+    if (showPopupIndex < popupsToShow.length - 1) {
       setShowPopupIndex((i) => i + 1);
     }
-  }, [showPopupIndex, unreadPopups.length]);
+  }, [showPopupIndex, popupsToShow.length]);
 
   /** 下拉刷新回调 */
   const handleRefresh = useCallback(async () => {
@@ -544,16 +546,16 @@ export const HomePage = () => {
       </PullToRefreshContainer>
 
       {/* 弹出公告 */}
-      {popupVisible && unreadPopups[showPopupIndex] && (
+      {popupVisible && popupsToShow[showPopupIndex] && (
         <ForceAnnouncementModal
-          item={unreadPopups[showPopupIndex]}
+          item={popupsToShow[showPopupIndex]}
           isOpen={popupVisible}
           loading={popupRequest.loading}
           error={Boolean(popupRequest.error)}
           onClose={handlePopupClose}
           onRetry={() => void popupRequest.reload()}
           onViewDetail={() => {
-            const currentAnnouncement = unreadPopups[showPopupIndex];
+            const currentAnnouncement = popupsToShow[showPopupIndex];
             handlePopupClose();
             goTo(currentAnnouncement ? `/announcement/${currentAnnouncement.id}` : 'announcement');
           }}

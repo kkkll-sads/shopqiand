@@ -89,6 +89,7 @@ export function RightsTransferPage() {
       setSummary(null);
       setSelectedTargetId('');
       setError(nextError instanceof Error ? nextError : new Error('加载划转信息失败'));
+      showToast({ message: '加载划转信息失败', type: 'error' });
     } finally {
       if (!signal?.aborted) {
         setIsLoading(false);

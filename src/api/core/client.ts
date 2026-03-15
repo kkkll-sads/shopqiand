@@ -262,7 +262,7 @@ function redirectToLogin(message?: string) {
     return;
   }
 
-  window.location.hash = '#/login';
+  window.location.replace('#/login');
 }
 
 async function delay(duration: number, signal: AbortSignal): Promise<void> {

@@ -55,6 +55,19 @@ export interface PopupAnnouncementItem {
   is_read: boolean;
 }
 
+interface PopupAnnouncementRaw {
+  id?: number | string;
+  title?: string;
+  content?: string;
+  type?: string;
+  popup_delay?: number | string;
+  is_read?: boolean | number | string;
+}
+
+interface PopupAnnouncementResponseRaw {
+  list?: PopupAnnouncementRaw[];
+}
+
 export interface PopupAnnouncementResponse {
   list: PopupAnnouncementItem[];
 }
@@ -160,6 +173,17 @@ function resolveTypeText(type: string, typeText: string): string {
   return '平台公告';
 }
 
+function normalizePopupAnnouncement(item: PopupAnnouncementRaw): PopupAnnouncementItem {
+  return {
+    id: readNumber(item.id),
+    title: readString(item.title),
+    content: readString(item.content),
+    type: readString(item.type, 'normal'),
+    popup_delay: Math.max(0, readNumber(item.popup_delay)),
+    is_read: readBoolean(item.is_read, false),
+  };
+}
+
 function normalizeAnnouncement(item: AnnouncementRecordRaw): AnnouncementItem {
   const content = readString(item.content);
   const timestamp = readTimestamp(item.createtime) || readTimestamp(item.updatetime);
@@ -219,10 +243,12 @@ export const announcementApi = {
     });
   },
 
-  async getPopupList(signal?: AbortSignal) {
-    return http.get<PopupAnnouncementResponse>('/api/Announcement/popup', {
+  async getPopupList(signal?: AbortSignal): Promise<PopupAnnouncementResponse> {
+    const response = await http.get<{ list?: PopupAnnouncementRaw[] }>('/api/Announcement/popup', {
       headers: createApiHeaders(),
       signal,
     });
+    const list = Array.isArray(response?.list) ? response.list.map(normalizePopupAnnouncement) : [];
+    return { list };
   },
 };

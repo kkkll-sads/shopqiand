@@ -92,6 +92,7 @@ interface UserCollectionDetailRaw {
   last_dividend_time?: number | string;
   create_time?: number | string;
   create_time_text?: string;
+  consignment_id?: number | string;
 }
 
 export interface UserCollectionDetail {
@@ -126,6 +127,7 @@ export interface UserCollectionDetail {
   mining_start_time: string;
   last_dividend_time: string;
   create_time_text: string;
+  consignment_id?: number;
 }
 
 function normalizeUserCollectionDetail(raw: UserCollectionDetailRaw): UserCollectionDetail {
@@ -168,6 +170,7 @@ function normalizeUserCollectionDetail(raw: UserCollectionDetailRaw): UserCollec
     mining_start_time: readDateTime(raw.mining_start_time),
     last_dividend_time: readDateTime(raw.last_dividend_time),
     create_time_text: readString(raw.create_time_text) || readDateTime(raw.create_time),
+    consignment_id: readNumber(raw.consignment_id) || undefined,
   };
 }
 

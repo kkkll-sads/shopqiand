@@ -8,12 +8,16 @@ import { Box, ChevronRight, RefreshCcw, Search, X, Zap } from 'lucide-react';
 import {
   collectionConsignmentApi,
   collectionTradeApi,
+  membershipCardApi,
   type BatchConsignResult,
   type BatchConsignableListData,
+  type BatchConsignableListItem,
+  type ConsignmentEquityCard,
   type MyCollectionItem,
   type MyCollectionResponse,
   type MyCollectionStatus,
 } from '../../api';
+import { resolveUploadUrl } from '../../api/modules/upload';
 import { getErrorMessage } from '../../api/core/errors';
 import { OfflineBanner } from '../../components/layout/OfflineBanner';
 import { PageHeader } from '../../components/layout/PageHeader';
@@ -28,6 +32,7 @@ import { useNetworkStatus } from '../../hooks/useNetworkStatus';
 import { useRequest } from '../../hooks/useRequest';
 import { useRouteScrollRestoration } from '../../hooks/useRouteScrollRestoration';
 import { useAppNavigate } from '../../lib/navigation';
+import { ConsignableCollectionSelectSheet } from './components/ConsignableCollectionSelectSheet';
 
 const PAGE_SIZE = 10;
 const EMPTY_RESPONSE: MyCollectionResponse = {
@@ -374,6 +379,7 @@ export const MyCollectionPage = () => {
   const [hasMore, setHasMore] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [loadMoreError, setLoadMoreError] = useState<string | null>(null);
+  const [consignableSelectSheetOpen, setConsignableSelectSheetOpen] = useState(false);
   const activeStatus = CATEGORY_STATUS_MAP[activeTab];
   const visibleItems = useMemo(() => {
     if (activeTab === 'consign') {
@@ -420,12 +426,104 @@ export const MyCollectionPage = () => {
   );
 
   const batchConsignRequest = useRequest<BatchConsignableListData | null>(
-    (signal) => collectionConsignmentApi.batchConsignableList(signal),
+    (signal) => collectionConsignmentApi.batchConsignableList({ page: 1, limit: 20 }, signal),
     {
       cacheKey: 'my-collection:batch-consignable',
       initialData: null,
     },
   );
+
+  const equityCardsRequest = useRequest(
+    async (signal) => {
+      const res = await membershipCardApi.myCards({ signal });
+      const cards: ConsignmentEquityCard[] = res.membershipList
+        .filter((c) => c.isActive && c.status === 1)
+        .map((c) => ({
+          id: c.id,
+          card_name: c.cardName,
+          deduct_amount_per_use: c.deductAmountPerUse,
+          actual_deduct_amount: c.deductAmountPerUse,
+          remaining_days: c.remainingDays,
+          today_remaining: c.todayRemaining,
+          end_time_text: c.endTimeText ?? '',
+          end_time: 0,
+        }));
+      return cards;
+    },
+    {
+      cacheKey: 'my-collection:equity-cards',
+      initialData: [] as ConsignmentEquityCard[],
+    },
+  );
+
+  const [consignableItems, setConsignableItems] = useState<BatchConsignableListItem[]>([]);
+  const [consignablePage, setConsignablePage] = useState(1);
+  const [consignableHasMore, setConsignableHasMore] = useState(false);
+  const [consignableLoadingMore, setConsignableLoadingMore] = useState(false);
+
+  useEffect(() => {
+    const data = batchConsignRequest.data;
+    if (data && data.current_page === 1) {
+      setConsignableItems(data.items);
+      setConsignablePage(1);
+      setConsignableHasMore(data.has_more);
+    }
+  }, [batchConsignRequest.data]);
+
+  const loadMoreConsignable = useCallback(async () => {
+    if (consignableLoadingMore || !consignableHasMore) return;
+    const nextPage = consignablePage + 1;
+    setConsignableLoadingMore(true);
+    try {
+      const res = await collectionConsignmentApi.batchConsignableList(
+        { page: nextPage, limit: 20 },
+      );
+      setConsignableItems((prev) => [...prev, ...res.items]);
+      setConsignablePage(res.current_page);
+      setConsignableHasMore(res.has_more);
+    } finally {
+      setConsignableLoadingMore(false);
+    }
+  }, [consignableHasMore, consignableLoadingMore, consignablePage]);
+
+  const itemsById = useMemo(() => {
+    const map = new Map<number, MyCollectionItem>();
+    for (const item of items) {
+      const id = item.user_collection_id ?? item.id;
+      if (typeof id === 'number' && id > 0) {
+        map.set(id, item);
+      }
+    }
+    return map;
+  }, [items]);
+
+  const enrichedConsignableItems = useMemo(() => {
+    if (!consignableItems.length) return [];
+    return consignableItems.map((batchItem) => {
+      const id = batchItem.user_collection_id;
+      const detail = itemsById.get(id);
+      const title = batchItem.title ?? detail?.title ?? detail?.name ?? detail?.item_title ?? `藏品 #${id}`;
+      const rawImage = batchItem.image ?? detail?.image;
+      const image = rawImage ? (rawImage.startsWith('/') || !rawImage.startsWith('http') ? resolveUploadUrl(rawImage) : rawImage) : null;
+      return {
+        user_collection_id: id,
+        title,
+        image,
+        session_title: detail?.session_title,
+        zone_name: detail?.zone_name ?? detail?.price_zone,
+        buy_price: batchItem.buy_price,
+        consignment_price: batchItem.consignment_price,
+        service_fee: batchItem.service_fee,
+        service_fee_rate: batchItem.service_fee_rate,
+      };
+    });
+  }, [consignableItems, itemsById]);
+
+  const batchConsignButtonData = useMemo((): BatchConsignableListData | null => {
+    const data = batchConsignRequest.data;
+    if (!data) return null;
+    return { ...data, items: consignableItems };
+  }, [batchConsignRequest.data, consignableItems]);
 
   const loadMore = useCallback(async () => {
     if (loadingMore || !hasMore) {
@@ -486,8 +584,9 @@ export const MyCollectionPage = () => {
     await Promise.allSettled([
       firstRequest.reload(),
       batchConsignRequest.reload(),
+      equityCardsRequest.reload(),
     ]);
-  }, [batchConsignRequest, firstRequest, refreshStatus]);
+  }, [batchConsignRequest, equityCardsRequest, firstRequest, refreshStatus]);
 
   const handleSearchSubmit = useCallback((event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -508,7 +607,7 @@ export const MyCollectionPage = () => {
     navigate(`/my-collection/detail/${targetId}`, { state: { item } });
   }, [navigate]);
 
-  const handleBatchConsign = useCallback(async () => {
+  const handleOpenConsignableSheet = useCallback(() => {
     const batchData = batchConsignRequest.data;
     if (!batchData || batchData.items.length === 0) {
       showToast({ type: 'warning', message: '暂无可一键寄售的藏品' });
@@ -520,78 +619,78 @@ export const MyCollectionPage = () => {
       return;
     }
 
-    const availableCount = batchData.available_now_count || batchData.stats.available_collections || batchData.items.length;
-    const confirmed = await showConfirm({
-      title: '一键寄售',
-      message: (
-        <div className="space-y-2 text-left text-sm leading-6">
-          <p>将为 {availableCount} 个符合条件的藏品提交寄售申请。</p>
-          {batchData.note ? <p className="text-text-sub">{batchData.note}</p> : null}
-        </div>
-      ),
-      confirmText: '确认寄售',
-      cancelText: '取消',
-    });
+    setConsignableSelectSheetOpen(true);
+  }, [batchConsignRequest.data, showToast]);
 
-    if (!confirmed) {
-      return;
-    }
-
-    showLoading({ message: '一键寄售处理中...' });
-
-    try {
-      const result = await collectionConsignmentApi.batchConsign({
-        consignments: batchData.items.map((item) => ({
-          user_collection_id: item.user_collection_id,
-        })),
-      });
-
-      await Promise.allSettled([
-        firstRequest.reload(),
-        batchConsignRequest.reload(),
-      ]);
-
-      hideLoading();
-
-      if (result.success_count > 0 && result.failure_count === 0) {
-        showToast({ type: 'success', message: `成功寄售 ${result.success_count} 个藏品` });
+  const handleConsignableConfirm = useCallback(
+    async (selectedIds: number[], equityCardId: number | null) => {
+      if (selectedIds.length === 0) {
+        showToast({ type: 'warning', message: '请至少选择一件藏品' });
         return;
       }
 
-      const failureLines = buildBatchFailureLines(result);
-      await showConfirm({
-        title: '一键寄售完成',
-        message: (
-          <div className="space-y-2 text-left text-sm leading-6">
-            <p>总计 {result.total_count} 个</p>
-            <p>成功 {result.success_count} 个，失败 {result.failure_count} 个</p>
-            {result.note ? <p className="text-text-sub">{result.note}</p> : null}
-            {failureLines.length > 0 ? (
-              <div className="max-h-48 overflow-y-auto rounded-xl bg-bg-base px-3 py-2 text-xs text-text-sub">
-                {failureLines.map((line) => (
-                  <div key={line}>{line}</div>
-                ))}
-              </div>
-            ) : null}
-          </div>
-        ),
-        confirmText: '知道了',
-        cancelText: '关闭',
-      });
-    } catch (error) {
-      hideLoading();
-      showToast({ type: 'error', message: getErrorMessage(error) || '一键寄售失败' });
-    } finally {
-      hideLoading();
-    }
-  }, [
-    batchConsignRequest,
-    firstRequest,
-    hideLoading,
-    showConfirm,
-    showLoading,
-    showToast,
-  ]);
+      setConsignableSelectSheetOpen(false);
+
+      showLoading({ message: '寄售处理中...' });
+
+      try {
+        const result = await collectionConsignmentApi.batchConsign({
+          consignments: selectedIds.map((id) => ({
+            user_collection_id: id,
+            equity_card_id: equityCardId ?? undefined,
+          })),
+        });
+
+        await Promise.allSettled([
+          firstRequest.reload(),
+          batchConsignRequest.reload(),
+          equityCardsRequest.reload(),
+        ]);
+
+        hideLoading();
+
+        if (result.success_count > 0 && result.failure_count === 0) {
+          showToast({ type: 'success', message: `成功寄售 ${result.success_count} 个藏品` });
+          return;
+        }
+
+        const failureLines = buildBatchFailureLines(result);
+        await showConfirm({
+          title: '寄售完成',
+          message: (
+            <div className="space-y-2 text-left text-sm leading-6">
+              <p>总计 {result.total_count} 个</p>
+              <p>成功 {result.success_count} 个，失败 {result.failure_count} 个</p>
+              {result.note ? <p className="text-text-sub">{result.note}</p> : null}
+              {failureLines.length > 0 ? (
+                <div className="max-h-48 overflow-y-auto rounded-xl bg-bg-base px-3 py-2 text-xs text-text-sub">
+                  {failureLines.map((line) => (
+                    <div key={line}>{line}</div>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+          ),
+          confirmText: '知道了',
+          cancelText: '关闭',
+        });
+      } catch (error) {
+        hideLoading();
+        showToast({ type: 'error', message: getErrorMessage(error) || '寄售失败' });
+      } finally {
+        hideLoading();
+      }
+    },
+    [
+      batchConsignRequest,
+      equityCardsRequest,
+      firstRequest,
+      hideLoading,
+      showConfirm,
+      showLoading,
+      showToast,
+    ],
+  );
 
   const total = activeTab === 'consign'
     ? visibleItems.length
@@ -727,9 +826,9 @@ export const MyCollectionPage = () => {
 
         <BatchConsignButton
           checking={batchConsignRequest.loading}
-          data={batchConsignRequest.data}
+          data={batchConsignButtonData}
           disabled={isOffline || batchConsignRequest.loading}
-          onClick={() => void handleBatchConsign()}
+          onClick={() => void handleOpenConsignableSheet()}
         />
 
         <div className="mt-3 flex items-center justify-between text-[12px] text-text-aux">
@@ -743,6 +842,21 @@ export const MyCollectionPage = () => {
           {renderContent()}
         </div>
       </PullToRefreshContainer>
+
+      {batchConsignButtonData ? (
+        <ConsignableCollectionSelectSheet
+          isOpen={consignableSelectSheetOpen}
+          items={enrichedConsignableItems}
+          onClose={() => setConsignableSelectSheetOpen(false)}
+          onConfirm={handleConsignableConfirm}
+          stats={batchConsignButtonData.stats}
+          hasMore={consignableHasMore}
+          loadingMore={consignableLoadingMore}
+          onLoadMore={loadMoreConsignable}
+          totalCount={batchConsignButtonData.total}
+          equityCards={equityCardsRequest.data ?? []}
+        />
+      ) : null}
     </div>
   );
 };

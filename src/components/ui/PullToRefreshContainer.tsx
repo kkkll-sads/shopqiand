@@ -106,46 +106,37 @@ export const PullToRefreshContainer = ({
     const handleTouchMove = (event: TouchEvent) => {
       if (isRefreshingRef.current) return;
 
-      // 已决定为普通滚动，不干预
       if (gestureRef.current === 'scrolling') return;
 
       const deltaY = event.touches[0].clientY - startYRef.current;
 
-      // 待决定阶段：根据方向和 scrollTop 决定是下拉刷新还是正常滚动
       if (gestureRef.current === 'pending') {
-        // 向上移动（滚动内容向下）→ 正常滚动
         if (deltaY <= 0) {
           gestureRef.current = 'scrolling';
           return;
         }
 
-        // 向下移动但滚动容器不在顶部 → 正常滚动
         const scrollable = findScrollable(event.target);
         if (scrollable && scrollable.scrollTop > 0) {
           gestureRef.current = 'scrolling';
           return;
         }
 
-        // 向下移动量太小，还不确定 → 保持 pending 但不干预
         if (deltaY < START_THRESHOLD) {
           return;
         }
 
-        // 确认进入下拉模式
         gestureRef.current = 'pulling';
       }
 
-      // 下拉模式
       if (gestureRef.current === 'pulling') {
         const deltaFromStart = event.touches[0].clientY - startYRef.current;
         const dampedDistance = Math.min(Math.max(deltaFromStart * DAMPING, 0), MAX_PULL_DISTANCE);
 
         pullDistanceRef.current = dampedDistance;
 
-        // 使用 requestAnimationFrame 直接更新 DOM，避免 React 重绘引起掉帧
         requestAnimationFrame(() => updateDOM(dampedDistance, false));
 
-        // 阻止页面默认滚动和浏览器原生下拉刷新
         event.preventDefault();
       }
     };

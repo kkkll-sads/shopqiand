@@ -143,10 +143,12 @@ export const MallOrderCard: FC<MallOrderCardProps> = ({
           </div>
         </div>
 
-        {/* 多商品提示 */}
-        {itemCount > 1 && (
+        {/* 多商品/多包裹提示 */}
+        {(itemCount > 1 || (order.shipment_count != null && order.shipment_count > 1)) && (
           <div className="text-s text-text-sub mb-3 text-right">
-            共{itemCount}件商品，合计{totalQuantity}件
+            {itemCount > 1 && `共${itemCount}件商品，合计${totalQuantity}件`}
+            {itemCount > 1 && order.shipment_count != null && order.shipment_count > 1 && ' · '}
+            {order.shipment_count != null && order.shipment_count > 1 && `${order.shipment_count}个包裹`}
           </div>
         )}
 

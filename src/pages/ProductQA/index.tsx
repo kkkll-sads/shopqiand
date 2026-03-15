@@ -61,6 +61,7 @@ export const ProductQAPage = () => {
       }
       setQuestions([]);
       setError(nextError instanceof Error ? nextError : new Error('加载问答失败'));
+      showToast({ message: '加载问答失败', type: 'error' });
     } finally {
       if (!signal?.aborted) {
         setLoading(false);

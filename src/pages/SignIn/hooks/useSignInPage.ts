@@ -59,7 +59,7 @@ export function useSignInPage(): UseSignInPageResult {
   const [showRedPacket, setShowRedPacket] = useState(false);
   const [showCalendar, setShowCalendar] = useState(false);
   const [redPacketAmount, setRedPacketAmount] = useState(0);
-  const [inviteCount] = useState(0);
+  const [inviteCount, setInviteCount] = useState(0);
   const [signedInDates, setSignedInDates] = useState<string[]>([]);
   const [activityInfo, setActivityInfo] = useState<SignInRulesData | null>(null);
   const [progressInfo, setProgressInfo] = useState<SignInProgressData | null>(null);
@@ -89,6 +89,9 @@ export function useSignInPage(): UseSignInPageResult {
     }
     if (data.today_signed !== undefined) {
       setHasSignedIn(data.today_signed);
+    }
+    if (data.invite_count !== undefined) {
+      setInviteCount(data.invite_count);
     }
   }, []);
 

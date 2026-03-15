@@ -8,6 +8,7 @@ import {
   computeConsignmentPrice,
   getConsignFailureMessage,
   type CollectionConsignmentCheckData,
+  type ConsignmentEquityCard,
   type MyCollectionItem,
   userApi,
 } from '../../api';
@@ -21,6 +22,7 @@ import { useRequest } from '../../hooks/useRequest';
 import { copyToClipboard } from '../../lib/clipboard';
 import { useAppNavigate } from '../../lib/navigation';
 import { MyCollectionBottomActions } from './components/MyCollectionBottomActions';
+import { ConsignmentEquityCardSelectSheet } from './components/ConsignmentEquityCardSelectSheet';
 import { MyCollectionCertificateCard } from './components/MyCollectionCertificateCard';
 import { MyCollectionConsignmentModal } from './components/MyCollectionConsignmentModal';
 import { MyCollectionDetailHeader } from './components/MyCollectionDetailHeader';
@@ -239,6 +241,8 @@ export const MyCollectionDetailPage = () => {
   const [consignmentSubmitting, setConsignmentSubmitting] = useState(false);
   const [nodeSubmitting, setNodeSubmitting] = useState(false);
   const [countdownSeconds, setCountdownSeconds] = useState<number | null>(null);
+  const [selectedEquityCardId, setSelectedEquityCardId] = useState<number | null>(null);
+  const [equityCardSelectSheetOpen, setEquityCardSelectSheetOpen] = useState(false);
 
   const pageRequest = useRequest<MyCollectionDetailPageData>(
     async (signal) => {
@@ -266,6 +270,41 @@ export const MyCollectionDetailPage = () => {
 
   const item = pageRequest.data?.detail;
   const sourceItem = (location.state as { item?: MyCollectionItem } | null)?.item;
+  const consignmentId =
+    (item && 'consignment_id' in item && typeof item.consignment_id === 'number' && item.consignment_id > 0
+      ? item.consignment_id
+      : null) ?? (sourceItem?.consignment_id && sourceItem.consignment_id > 0 ? sourceItem.consignment_id : null);
+
+  /** 列表已含 order_no、flow_no 时无需再请求 */
+  const hasConsignmentFromList =
+    sourceItem && (sourceItem.order_no || sourceItem.flow_no);
+
+  const consignmentDetailRequest = useRequest(
+    async (signal) => {
+      if (hasConsignmentFromList || !consignmentId || !item || !isSoldItem(item)) {
+        return null;
+      }
+      return collectionConsignmentApi.consignmentDetail(consignmentId, signal);
+    },
+    {
+      deps: [consignmentId, hasConsignmentFromList, item],
+      initialData: null,
+    },
+  );
+
+  /** 优先用列表数据，否则用 API 结果 */
+  const consignmentDetail = useMemo(() => {
+    if (sourceItem && (sourceItem.order_no || sourceItem.flow_no)) {
+      return {
+        buy_price: sourceItem.buy_price ?? 0,
+        order_no: sourceItem.order_no ?? '',
+        flow_no: sourceItem.flow_no ?? '',
+      };
+    }
+    const api = consignmentDetailRequest.data;
+    if (!api || (!api.order_no && !api.flow_no)) return null;
+    return { ...api };
+  }, [sourceItem, consignmentDetailRequest.data]);
   const profile = pageRequest.data?.profile;
   const realNameStatus = pageRequest.data?.realNameStatus;
   const userInfo = profile?.userInfo;
@@ -326,30 +365,67 @@ export const MyCollectionDetailPage = () => {
 
     return Math.max(1, readNumber(consignmentCheckData?.required_coupon_count, 1));
   }, [consignmentCheckData?.required_coupon_count, isFreeResend]);
-  const consignmentServiceFee = useMemo(() => {
+  const baseFee = useMemo(
+    () => (isFreeResend ? 0 : readNumber(consignmentCheckData?.original_service_fee ?? consignmentCheckData?.base_fee)),
+    [consignmentCheckData?.original_service_fee, consignmentCheckData?.base_fee, isFreeResend],
+  );
+  const globalMinFee = useMemo(
+    () => (isFreeResend ? 0 : readNumber(consignmentCheckData?.global_min_fee)),
+    [consignmentCheckData?.global_min_fee, isFreeResend],
+  );
+  const availableEquityCards = useMemo(
+    () => consignmentCheckData?.available_equity_cards ?? [],
+    [consignmentCheckData?.available_equity_cards],
+  );
+  const { consignmentServiceFee, membershipDeduction } = useMemo(() => {
     if (isFreeResend) {
-      return 0;
+      return { consignmentServiceFee: 0, membershipDeduction: 0 };
     }
 
-    if (consignmentCheckData?.service_fee > 0) {
-      return Number(consignmentCheckData.service_fee.toFixed(2));
+    if (baseFee <= 0) {
+      const fallbackFee =
+        consignmentCheckData?.service_fee > 0
+          ? Number(consignmentCheckData.service_fee.toFixed(2))
+          : Number((consignmentPrice * (consignmentCheckData?.service_fee_rate || 0.03)).toFixed(2));
+      return {
+        consignmentServiceFee: fallbackFee,
+        membershipDeduction: readNumber(consignmentCheckData?.membership_deduction),
+      };
     }
 
-    const serviceFeeRate =
-      consignmentCheckData?.service_fee_rate && consignmentCheckData.service_fee_rate > 0
-        ? consignmentCheckData.service_fee_rate
-        : 0.03;
+    if (selectedEquityCardId == null) {
+      return {
+        consignmentServiceFee: baseFee,
+        membershipDeduction: 0,
+      };
+    }
 
-    return Number((consignmentPrice * serviceFeeRate).toFixed(2));
-  }, [consignmentCheckData, consignmentPrice, isFreeResend]);
-  const originalServiceFee = useMemo(
-    () => (isFreeResend ? 0 : readNumber(consignmentCheckData?.original_service_fee)),
-    [consignmentCheckData?.original_service_fee, isFreeResend],
-  );
-  const membershipDeduction = useMemo(
-    () => (isFreeResend ? 0 : readNumber(consignmentCheckData?.membership_deduction)),
-    [consignmentCheckData?.membership_deduction, isFreeResend],
-  );
+    const card = availableEquityCards.find((c: { id: number; actual_deduct_amount: number }) => c.id === selectedEquityCardId);
+    if (!card) {
+      return {
+        consignmentServiceFee: baseFee,
+        membershipDeduction: 0,
+      };
+    }
+
+    const deductAmount = card.actual_deduct_amount;
+    const finalFee = Math.max(globalMinFee, Number((baseFee - deductAmount).toFixed(2)));
+    return {
+      consignmentServiceFee: finalFee,
+      membershipDeduction: Number((baseFee - finalFee).toFixed(2)),
+    };
+  }, [
+    availableEquityCards,
+    baseFee,
+    consignmentCheckData?.membership_deduction,
+    consignmentCheckData?.service_fee,
+    consignmentCheckData?.service_fee_rate,
+    consignmentPrice,
+    globalMinFee,
+    isFreeResend,
+    selectedEquityCardId,
+  ]);
+  const originalServiceFee = baseFee;
   const serviceFeeBalance = useMemo(() => {
     if (hasFieldValue(consignmentCheckData, CHECK_SERVICE_FEE_BALANCE_KEYS)) {
       return readStringValue(consignmentCheckData?.service_fee_balance, '0.00');
@@ -394,6 +470,24 @@ export const MyCollectionDetailPage = () => {
     }, 1000);
 
     return () => window.clearInterval(timer);
+  }, [consignmentCheckData, consignmentModalOpen]);
+
+  useEffect(() => {
+    if (!consignmentModalOpen || !consignmentCheckData) {
+      return;
+    }
+
+    const recommended = consignmentCheckData.recommended_equity_card_id;
+    if (recommended != null && recommended > 0) {
+      const cards = consignmentCheckData.available_equity_cards ?? [];
+      const exists = cards.some((c: { id: number }) => c.id === recommended);
+      if (exists) {
+        setSelectedEquityCardId(recommended);
+        return;
+      }
+    }
+
+    setSelectedEquityCardId(null);
   }, [consignmentCheckData, consignmentModalOpen]);
 
   const handleCopy = useCallback(async (text: string, successMessage = '已复制') => {
@@ -465,8 +559,18 @@ export const MyCollectionDetailPage = () => {
     await Promise.allSettled([
       pageRequest.reload(),
       consignmentModalOpen ? loadConsignmentCheck() : Promise.resolve(undefined),
+      item && isSoldItem(item) && consignmentId && !hasConsignmentFromList ? consignmentDetailRequest.reload() : Promise.resolve(undefined),
     ]);
-  }, [consignmentModalOpen, loadConsignmentCheck, pageRequest, refreshStatus]);
+  }, [
+    consignmentDetailRequest,
+    consignmentId,
+    consignmentModalOpen,
+    hasConsignmentFromList,
+    item,
+    loadConsignmentCheck,
+    pageRequest,
+    refreshStatus,
+  ]);
 
   const handleOpenConsignment = useCallback(async () => {
     if (!item || consignmentCheckLoading) {
@@ -488,8 +592,19 @@ export const MyCollectionDetailPage = () => {
     }
 
     setConsignmentModalOpen(false);
+    setEquityCardSelectSheetOpen(false);
+    setSelectedEquityCardId(null);
     setConsignmentSubmitError(null);
   }, [consignmentSubmitting]);
+
+  const handleOpenEquityCardSelect = useCallback(() => {
+    setEquityCardSelectSheetOpen(true);
+  }, []);
+
+  const handleEquityCardConfirm = useCallback((cardId: number | null) => {
+    setSelectedEquityCardId(cardId);
+    setEquityCardSelectSheetOpen(false);
+  }, []);
 
   const handleUpgradeNode = useCallback(async () => {
     if (!item || nodeSubmitting) {
@@ -592,6 +707,7 @@ export const MyCollectionDetailPage = () => {
       const result = await collectionConsignmentApi.consign({
         user_collection_id: resolvedCollectionId,
         price: consignmentPrice,
+        equity_card_id: selectedEquityCardId ?? undefined,
       });
       const failureMessage = getConsignFailureMessage(result);
       if (failureMessage) {
@@ -653,6 +769,7 @@ export const MyCollectionDetailPage = () => {
       }, 700);
     } catch (error) {
       setConsignmentSubmitError(getErrorMessage(error));
+      showToast({ type: 'error', message: getErrorMessage(error) });
     } finally {
       setConsignmentSubmitting(false);
     }
@@ -672,6 +789,7 @@ export const MyCollectionDetailPage = () => {
     requiredConsignmentCouponCount,
     resolvedCollectionId,
     serviceFeeBalance,
+    selectedEquityCardId,
     showToast,
   ]);
 
@@ -724,6 +842,7 @@ export const MyCollectionDetailPage = () => {
         title={title}
         onCopy={handleCopy}
         onSearchHash={handleSearchHash}
+        consignmentDetail={consignmentDetail ?? null}
       />
     );
   };
@@ -768,33 +887,46 @@ export const MyCollectionDetailPage = () => {
       ) : null}
 
       {item ? (
-        <MyCollectionConsignmentModal
-          isOpen={consignmentModalOpen}
-          item={item}
-          checkData={consignmentCheckData}
-          checkError={consignmentCheckError}
-          checkLoading={consignmentCheckLoading}
-          availableConsignmentCouponCount={availableConsignmentCouponCount}
-          consignmentPrice={consignmentPrice}
-          countdownSeconds={countdownSeconds}
-          freeResendDescription={freeResendDescription}
-          isFreeResend={isFreeResend}
-          isSubmitting={consignmentSubmitting}
-          onClose={handleCloseConsignment}
-          onCopy={handleCopy}
-          onOpenVoucherCenter={() => {
-            setConsignmentModalOpen(false);
-            goTo('consignment_voucher');
-          }}
-          onRetry={() => void loadConsignmentCheck()}
-          requiredConsignmentCouponCount={requiredConsignmentCouponCount}
-          onSubmit={() => void handleSubmitConsignment()}
-          serviceFee={consignmentServiceFee}
-          serviceFeeBalance={serviceFeeBalance}
-          originalServiceFee={originalServiceFee}
-          membershipDeduction={membershipDeduction}
-          submitError={consignmentSubmitError}
-        />
+        <>
+          <MyCollectionConsignmentModal
+            isOpen={consignmentModalOpen}
+            item={item}
+            checkData={consignmentCheckData}
+            checkError={consignmentCheckError}
+            checkLoading={consignmentCheckLoading}
+            availableConsignmentCouponCount={availableConsignmentCouponCount}
+            availableEquityCards={availableEquityCards}
+            consignmentPrice={consignmentPrice}
+            countdownSeconds={countdownSeconds}
+            freeResendDescription={freeResendDescription}
+            isFreeResend={isFreeResend}
+            isSubmitting={consignmentSubmitting}
+            onClose={handleCloseConsignment}
+            onCopy={handleCopy}
+            onOpenCardSelect={handleOpenEquityCardSelect}
+            onOpenVoucherCenter={() => {
+              setConsignmentModalOpen(false);
+              goTo('consignment_voucher');
+            }}
+            onRetry={() => void loadConsignmentCheck()}
+            requiredConsignmentCouponCount={requiredConsignmentCouponCount}
+            selectedEquityCardId={selectedEquityCardId}
+            onSubmit={() => void handleSubmitConsignment()}
+            serviceFee={consignmentServiceFee}
+            serviceFeeBalance={serviceFeeBalance}
+            originalServiceFee={originalServiceFee}
+            membershipDeduction={membershipDeduction}
+            submitError={consignmentSubmitError}
+          />
+          <ConsignmentEquityCardSelectSheet
+            cards={availableEquityCards}
+            isOpen={equityCardSelectSheetOpen}
+            recommendedId={consignmentCheckData?.recommended_equity_card_id ?? null}
+            selectedId={selectedEquityCardId}
+            onClose={() => setEquityCardSelectSheetOpen(false)}
+            onConfirm={handleEquityCardConfirm}
+          />
+        </>
       ) : null}
     </div>
   );

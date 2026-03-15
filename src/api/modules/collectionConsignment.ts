@@ -103,13 +103,27 @@ function parseRemainingSeconds(value: string): number | null {
   return readNumber(hours) * 3600 + readNumber(minutes) * 60 + readNumber(seconds);
 }
 
+export interface ConsignmentEquityCard {
+  id: number;
+  card_name: string;
+  deduct_amount_per_use: number;
+  actual_deduct_amount: number;
+  remaining_days: number;
+  today_remaining: number;
+  end_time_text: string;
+  end_time: number;
+}
+
 interface CollectionConsignmentCheckRaw {
   [key: string]: unknown;
   appreciation_rate?: number | string;
   available_confirm_fee_balance?: number | string;
   available_consignment_coupon_count?: number | string;
   available_coupon_count?: number | string;
+  available_equity_cards?: Array<Record<string, unknown>>;
   available_service_fee_balance?: number | string;
+  base_fee?: number | string;
+  global_min_fee?: number | string;
   buy_price?: number | string;
   can_consign?: boolean | number | string;
   confirm_fee_balance?: number | string;
@@ -141,6 +155,7 @@ interface CollectionConsignmentCheckRaw {
   is_free_resend?: boolean | number | string;
   message?: string;
   sell_price?: number | string;
+  recommended_equity_card_id?: number | string | null;
   remaining_seconds?: number | string | null;
   remaining_text?: string;
   service_fee?: number | string;
@@ -153,12 +168,24 @@ interface CollectionConsignmentCheckRaw {
 
 interface BatchConsignableItemRaw {
   user_collection_id?: number | string;
+  title?: string;
+  image?: string;
+  buy_price?: number | string;
+  consignment_price?: number | string;
+  service_fee?: number | string;
+  service_fee_rate?: number | string;
+  session_title?: string;
+  zone_name?: string;
 }
 
 interface BatchConsignableListRaw {
   available_now_count?: number | string;
+  current_page?: number | string;
+  has_more?: boolean | number | string;
   items?: BatchConsignableItemRaw[];
+  last_page?: number | string;
   note?: string;
+  per_page?: number | string;
   returned_items_count?: number | string;
   stats?: {
     active_sessions?: number | string;
@@ -167,6 +194,7 @@ interface BatchConsignableListRaw {
     is_in_trading_time?: boolean | number | string;
     total_collections?: number | string;
   };
+  total?: number | string;
 }
 
 interface BatchConsignResultItemRaw {
@@ -216,11 +244,16 @@ export interface CollectionConsignmentCheckData {
   unlock_hours: number;
   unlocked: boolean;
   waive_type: string;
+  available_equity_cards: ConsignmentEquityCard[];
+  recommended_equity_card_id: number | null;
+  base_fee?: number;
+  global_min_fee?: number;
 }
 
 export interface ConsignCollectionPayload {
-  price: number;
   user_collection_id: number | string;
+  price: number;
+  equity_card_id?: number;
 }
 
 export interface ConsignCollectionResult {
@@ -240,12 +273,24 @@ export interface ConsignCollectionResult {
   waive_type: string;
 }
 
+export interface BatchConsignableListItem {
+  user_collection_id: number;
+  title?: string;
+  image?: string | null;
+  buy_price?: number;
+  consignment_price?: number;
+  service_fee?: number;
+  service_fee_rate?: number;
+}
+
 export interface BatchConsignableListData {
   available_now_count: number;
-  items: Array<{
-    user_collection_id: number;
-  }>;
+  current_page: number;
+  has_more: boolean;
+  items: BatchConsignableListItem[];
+  last_page: number;
   note: string;
+  per_page: number;
   returned_items_count: number;
   stats: {
     active_sessions: number;
@@ -254,6 +299,7 @@ export interface BatchConsignableListData {
     is_in_trading_time: boolean;
     total_collections: number;
   };
+  total: number;
 }
 
 export interface BatchConsignResultItem {
@@ -299,6 +345,30 @@ function normalizeConsignmentCheck(
     'sell_price',
     'price',
   ]);
+
+  const rawEquityCards = payload?.available_equity_cards ?? record?.available_equity_cards;
+  const equityCards: ConsignmentEquityCard[] = Array.isArray(rawEquityCards)
+    ? rawEquityCards.map((item) => {
+        const r = readRecord(item);
+        return {
+          id: readFirstNumber(r, ['id']),
+          card_name: readFirstString(r, ['card_name']) || '权益卡',
+          deduct_amount_per_use: readFirstNumber(r, ['deduct_amount_per_use']),
+          actual_deduct_amount: readFirstNumber(r, ['actual_deduct_amount']),
+          remaining_days: readFirstNumber(r, ['remaining_days']),
+          today_remaining: readFirstNumber(r, ['today_remaining']),
+          end_time_text: readFirstString(r, ['end_time_text']),
+          end_time: readFirstNumber(r, ['end_time']),
+        };
+      })
+    : [];
+
+  const recommendedId = payload?.recommended_equity_card_id ?? record?.recommended_equity_card_id;
+  const recommendedEquityCardId =
+    recommendedId == null || recommendedId === '' ? null : readNumber(recommendedId);
+
+  const baseFee = readNumber(payload?.base_fee ?? record?.base_fee);
+  const globalMinFee = readNumber(payload?.global_min_fee ?? record?.global_min_fee);
 
   return {
     ...payload,
@@ -355,20 +425,40 @@ function normalizeConsignmentCheck(
     unlock_hours: readNumber(payload?.unlock_hours),
     unlocked,
     waive_type: readString(payload?.waive_type),
+    available_equity_cards: equityCards,
+    recommended_equity_card_id: recommendedEquityCardId,
+    base_fee: baseFee > 0 ? baseFee : undefined,
+    global_min_fee: globalMinFee > 0 ? globalMinFee : undefined,
   };
 }
 
 function normalizeBatchConsignableList(
   payload: BatchConsignableListRaw | null | undefined,
 ): BatchConsignableListData {
+  const total = readNumber(payload?.total);
+  const perPage = Math.min(50, Math.max(1, readNumber(payload?.per_page, 20)));
+  const currentPage = readNumber(payload?.current_page, 1);
+  const lastPage = readNumber(payload?.last_page, 1);
+  const hasMore = readBoolean(payload?.has_more) || currentPage < lastPage;
+
   return {
     available_now_count: readNumber(payload?.available_now_count),
+    current_page: currentPage,
+    has_more: hasMore,
     items: Array.isArray(payload?.items)
       ? payload.items.map((item) => ({
           user_collection_id: readNumber(item.user_collection_id),
+          title: readString(item.title) || undefined,
+          image: readString(item.image) || undefined,
+          buy_price: readNumber(item.buy_price) || undefined,
+          consignment_price: readNumber(item.consignment_price) || undefined,
+          service_fee: readNumber(item.service_fee) || undefined,
+          service_fee_rate: readNumber(item.service_fee_rate) || undefined,
         }))
       : [],
+    last_page: lastPage,
     note: readString(payload?.note),
+    per_page: perPage,
     returned_items_count: readNumber(payload?.returned_items_count),
     stats: {
       active_sessions: readNumber(payload?.stats?.active_sessions),
@@ -377,6 +467,7 @@ function normalizeBatchConsignableList(
       is_in_trading_time: readBoolean(payload?.stats?.is_in_trading_time),
       total_collections: readNumber(payload?.stats?.total_collections),
     },
+    total,
   };
 }
 
@@ -449,6 +540,9 @@ export const collectionConsignmentApi = {
     const formData = new FormData();
     formData.append('user_collection_id', String(payload.user_collection_id));
     formData.append('price', String(payload.price));
+    if (payload.equity_card_id != null && payload.equity_card_id > 0) {
+      formData.append('equity_card_id', String(payload.equity_card_id));
+    }
 
     const response = await http.post<{
       biz_code?: number | string;
@@ -506,9 +600,29 @@ export const collectionConsignmentApi = {
     };
   },
 
-  batchConsignableList(signal?: AbortSignal) {
+  /** 寄售详情：用于已售出藏品的成交订单号、卖家收益流水号等 */
+  consignmentDetail(consignmentId: number | string, signal?: AbortSignal) {
+    return http
+      .get<{ buy_price?: number; order_no?: string; flow_no?: string }>(
+        '/api/collectionConsignment/consignmentDetail',
+        { query: { consignment_id: consignmentId }, signal },
+      )
+      .then((res) => ({
+        buy_price: readNumber(res?.buy_price),
+        order_no: readString(res?.order_no),
+        flow_no: readString(res?.flow_no),
+      }));
+  },
+
+  batchConsignableList(
+    params?: { page?: number; limit?: number },
+    signal?: AbortSignal,
+  ) {
+    const page = Math.max(1, params?.page ?? 1);
+    const limit = Math.min(50, Math.max(1, params?.limit ?? 20));
     return http
       .get<BatchConsignableListRaw>('/api/collectionConsignment/batchConsignableList', {
+        query: { page, limit },
         signal,
       })
       .then(normalizeBatchConsignableList);
@@ -518,6 +632,7 @@ export const collectionConsignmentApi = {
     payload: {
       consignments: Array<{
         user_collection_id: number | string;
+        equity_card_id?: number;
       }>;
     },
     signal?: AbortSignal,

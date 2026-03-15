@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <title>树交所</title>
     <script>
       (function() {
@@ -13,6 +13,12 @@
         var isDark = theme === 'dark' || (theme === 'system' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
         if (isDark) document.documentElement.classList.add('dark');
         else document.documentElement.classList.remove('dark');
+
+        function setAppVH() {
+          document.documentElement.style.setProperty('--app-vh', window.innerHeight + 'px');
+        }
+        setAppVH();
+        window.addEventListener('resize', setAppVH);
       })();
     </script>
   </head>

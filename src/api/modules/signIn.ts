@@ -82,6 +82,8 @@ export interface SignInProgressData {
   can_withdraw: boolean;
   total_money: number;
   today_signed: boolean;
+  /** 已邀请人数（一级直推） */
+  invite_count?: number;
   activity: Pick<SignInActivity, 'id' | 'name' | 'withdraw_min_amount' | 'withdraw_daily_limit' | 'withdraw_audit_hours'> | null;
 }
 

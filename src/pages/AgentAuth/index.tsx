@@ -90,6 +90,7 @@ export const AgentAuthPage = () => {
       setLicenseImage(result?.licenseImage ?? '');
     } catch (loadError) {
       setError(getErrorMessage(loadError));
+      showToast({ message: getErrorMessage(loadError), type: 'error' });
     } finally {
       setLoading(false);
     }

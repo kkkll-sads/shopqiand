@@ -21,6 +21,7 @@ import { Card } from '../../components/ui/Card';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { ErrorState } from '../../components/ui/ErrorState';
 import { Skeleton } from '../../components/ui/Skeleton';
+import { useFeedback } from '../../components/ui/FeedbackProvider';
 import { PullToRefreshContainer } from '../../components/ui/PullToRefreshContainer';
 import { useAuthSession } from '../../hooks/useAuthSession';
 import { useNetworkStatus } from '../../hooks/useNetworkStatus';
@@ -159,6 +160,7 @@ export const RealNameAuthPage = () => {
   const { goBack, goTo } = useAppNavigate();
   const { isAuthenticated } = useAuthSession();
   const { isOffline, refreshStatus } = useNetworkStatus();
+  const { showToast } = useFeedback();
   const persistedFaceAuthState = readPersistedFaceAuthState();
   const autoSubmittedTokenRef = useRef('');
   const [name, setName] = useState('');
@@ -281,6 +283,7 @@ export const RealNameAuthPage = () => {
       setAuditStatus(nextStatus === 'none' ? 'passed' : nextStatus);
     } catch (submitErr) {
       setSubmitError(getErrorMessage(submitErr));
+      showToast({ message: getErrorMessage(submitErr), type: 'error' });
       if (mode === 'auto') {
         setAuthMessage('已收到回跳 token，但自动提交失败，请手动重试。');
       }
@@ -338,6 +341,7 @@ export const RealNameAuthPage = () => {
       setAuthToken('');
       setAuthUrl('');
       setAuthMessage(getErrorMessage(authErr));
+      showToast({ message: getErrorMessage(authErr), type: 'error' });
     } finally {
       setLoadingFaceAuth(false);
     }

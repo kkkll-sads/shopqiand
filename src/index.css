@@ -39,6 +39,7 @@
   body {
     background: var(--bg-base);
     overscroll-behavior-y: contain;
+    touch-action: pan-x pan-y;
     -webkit-touch-callout: none;
     user-select: none;
     -webkit-user-select: none;
@@ -90,7 +91,7 @@
     position: relative;
     width: 100%;
     max-width: 750px;
-    min-height: 100vh;
+    min-height: var(--app-vh, 100vh);
     margin: 0 auto;
     padding-left: var(--safe-left);
     padding-right: var(--safe-right);
@@ -214,6 +215,16 @@
 .no-scrollbar {
   -ms-overflow-style: none;
   scrollbar-width: none;
+}
+
+/* WebView 惯性滚动兼容：部分 Android/iOS WebView 需要此属性才能正常滚动 */
+.overflow-y-auto,
+.overflow-x-auto,
+.overflow-auto,
+.overflow-y-scroll,
+.overflow-x-scroll,
+.overflow-scroll {
+  -webkit-overflow-scrolling: touch;
 }
 
 @layer components {
@@ -483,11 +494,11 @@
 }
 
 .app-viewport-height {
-  height: 100vh;
+  height: var(--app-vh, 100vh);
 }
 
 .app-min-viewport-height {
-  min-height: 100vh;
+  min-height: var(--app-vh, 100vh);
 }
 
 /* Tailwind v4 theme tokens default to OKLCH, which breaks gradient and color
@@ -939,10 +950,10 @@
 @supports (height: 100dvh) {
   #root,
   .app-min-viewport-height {
-    min-height: 100dvh;
+    min-height: var(--app-vh, 100dvh);
   }
 
   .app-viewport-height {
-    height: 100dvh;
+    height: var(--app-vh, 100dvh);
   }
 }

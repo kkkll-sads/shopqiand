@@ -22,7 +22,7 @@ import {
   X,
   type LucideIcon,
 } from 'lucide-react';
-import { useSearchParams } from 'react-router-dom';
+import { useLocation, useNavigationType, useSearchParams } from 'react-router-dom';
 import {
   accountApi,
   rechargeApi,
@@ -597,9 +597,12 @@ export function BillingPage() {
   const { isAuthenticated } = useAuthSession();
   const { isOffline, refreshStatus } = useNetworkStatus();
   const { showToast } = useFeedback();
+  const location = useLocation();
+  const navigationType = useNavigationType();
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
   const queryKeyRef = useRef('');
+  const detailOpenRef = useRef(false);
   const [searchParams] = useSearchParams();
   const scene = resolveBillingScene(searchParams.get('scene'));
   const isRechargeScene = scene === 'recharge';
@@ -636,6 +639,34 @@ export function BillingPage() {
   const [selectedLog, setSelectedLog] = useState<AccountLogItem | null>(null);
   const [selectedRechargeRecord, setSelectedRechargeRecord] = useState<RechargeOrderRecord | null>(null);
   const [selectedWithdrawRecord, setSelectedWithdrawRecord] = useState<WithdrawRecord | null>(null);
+
+  const openLogDetail = useCallback((item: AccountLogItem) => {
+    setSelectedLog(item);
+    detailOpenRef.current = true;
+    navigate(location.pathname + location.search, { state: { _billingDetail: true } });
+  }, [navigate, location.pathname, location.search]);
+
+  const openRechargeDetail = useCallback((item: RechargeOrderRecord) => {
+    setSelectedRechargeRecord(item);
+    detailOpenRef.current = true;
+    navigate(location.pathname + location.search, { state: { _billingDetail: true } });
+  }, [navigate, location.pathname, location.search]);
+
+  const openWithdrawDetail = useCallback((item: WithdrawRecord) => {
+    setSelectedWithdrawRecord(item);
+    detailOpenRef.current = true;
+    navigate(location.pathname + location.search, { state: { _billingDetail: true } });
+  }, [navigate, location.pathname, location.search]);
+
+  useEffect(() => {
+    if (navigationType === 'POP' && detailOpenRef.current) {
+      detailOpenRef.current = false;
+      setSelectedLog(null);
+      setSelectedRechargeRecord(null);
+      setSelectedWithdrawRecord(null);
+    }
+  }, [location.key, navigationType]);
+
   const [copiedDetailField, setCopiedDetailField] = useState<string | null>(null);
   const [activeDropdown, setActiveDropdown] = useState<BillingFilterDropdown | null>(null);
   const [categorySearch, setCategorySearch] = useState('');
@@ -1000,18 +1031,8 @@ export function BillingPage() {
   };
 
   const handleBack = () => {
-    if (selectedLog) {
-      setSelectedLog(null);
-      return;
-    }
-
-    if (selectedRechargeRecord) {
-      setSelectedRechargeRecord(null);
-      return;
-    }
-
-    if (selectedWithdrawRecord) {
-      setSelectedWithdrawRecord(null);
+    if (selectedLog || selectedRechargeRecord || selectedWithdrawRecord) {
+      navigate(-1);
       return;
     }
 
@@ -1406,7 +1427,7 @@ export function BillingPage() {
           <button
             key={`${item.id}-${item.orderNo ?? item.createTime ?? index}`}
             type="button"
-            onClick={() => setSelectedRechargeRecord(item)}
+            onClick={() => openRechargeDetail(item)}
             className="group w-full rounded-xl border border-gray-100 bg-white p-4 text-left shadow-sm transition-all active:scale-[0.99] active:bg-gray-50"
           >
             <div className="mb-3 flex items-start justify-between gap-3">
@@ -1486,7 +1507,7 @@ export function BillingPage() {
           <button
             key={`${item.id}-${item.createTime ?? index}`}
             type="button"
-            onClick={() => setSelectedWithdrawRecord(item)}
+            onClick={() => openWithdrawDetail(item)}
             className="group w-full rounded-xl border border-gray-100 bg-white p-4 text-left shadow-sm transition-all active:scale-[0.99] active:bg-gray-50"
           >
             <div className="mb-3 flex items-start justify-between gap-3">
@@ -1577,7 +1598,7 @@ export function BillingPage() {
             <button
               key={`${item.id}-${item.flowNo ?? item.createTime ?? index}`}
               type="button"
-              onClick={() => setSelectedLog(item)}
+              onClick={() => openLogDetail(item)}
               className="group w-full rounded-xl border border-gray-100 bg-white p-4 text-left shadow-sm transition-all active:scale-[0.99] active:bg-gray-50"
             >
               <div className="mb-2 flex items-start justify-between gap-3">

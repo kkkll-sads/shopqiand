@@ -77,6 +77,7 @@ export const FavoritesPage = () => {
       setSelectedIds([]);
       setIsEditing(false);
       setError(nextError instanceof Error ? nextError : new Error('加载收藏失败'));
+      showToast({ message: '加载收藏失败', type: 'error' });
     } finally {
       if (!signal?.aborted) {
         setLoading(false);

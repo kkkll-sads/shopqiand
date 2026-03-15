@@ -22,6 +22,7 @@ import {
 import { getErrorMessage } from '../../api/core/errors';
 import { uploadApi, type UploadedFile } from '../../api/modules/upload';
 import { Card } from '../../components/ui/Card';
+import { PullToRefreshContainer } from '../../components/ui/PullToRefreshContainer';
 import { Button } from '../../components/ui/Button';
 import { ErrorState } from '../../components/ui/ErrorState';
 import { PageHeader } from '../../components/layout/PageHeader';
@@ -283,6 +284,14 @@ export function RightsPage() {
       setUnlockLoading(false);
     }
   };
+
+  const handleRefresh = useCallback(async () => {
+    if (activeTab === 'apply') {
+      await reloadReviewStatus().catch(() => undefined);
+    } else if (activeTab === 'unlock') {
+      await reloadUnlockStatus().catch(() => undefined);
+    }
+  }, [activeTab, reloadReviewStatus, reloadUnlockStatus]);
 
   const renderApplyContent = () => {
     if (reviewStatusLoading && !reviewStatusData) {
@@ -646,6 +655,7 @@ export function RightsPage() {
         </div>
       </div>
 
+      <PullToRefreshContainer onRefresh={handleRefresh} disabled={activeTab === 'growth'}>
       <div ref={scrollContainerRef} className="flex-1 overflow-y-auto px-4 pb-24 pt-4">
         {activeTab === 'apply' ? renderApplyContent() : null}
 
@@ -674,6 +684,7 @@ export function RightsPage() {
           </div>
         ) : null}
       </div>
+      </PullToRefreshContainer>
     </div>
   );
 }

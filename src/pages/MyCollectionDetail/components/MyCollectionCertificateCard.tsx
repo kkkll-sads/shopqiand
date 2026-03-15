@@ -1,11 +1,19 @@
-import { Award, Copy, ExternalLink, FileText, Fingerprint, Shield } from 'lucide-react';
+import { Award, Copy, ExternalLink, FileText, Fingerprint, Receipt, Shield } from 'lucide-react';
 import type { UserCollectionDetail } from '../../../api/modules/userCollection';
+
+export interface ConsignmentDetailData {
+  buy_price: number;
+  order_no: string;
+  flow_no: string;
+}
 
 interface MyCollectionCertificateCardProps {
   item: UserCollectionDetail;
   onCopy: (text: string, successMessage?: string) => void | Promise<void>;
   onSearchHash: (hash: string) => void;
   title: string;
+  /** 已售出藏品的寄售详情（成交订单号、卖家收益流水号等） */
+  consignmentDetail?: ConsignmentDetailData | null;
 }
 
 const DEFAULT_HASH =
@@ -28,6 +36,7 @@ export function MyCollectionCertificateCard({
   onCopy,
   onSearchHash,
   title,
+  consignmentDetail,
 }: MyCollectionCertificateCardProps) {
   const assetCode =
     item.asset_code || `37-DATA-****-${String(item.user_collection_id || item.id || 8821).padStart(4, '0')}`;
@@ -221,6 +230,65 @@ export function MyCollectionCertificateCard({
               </div>
             </div>
           </div>
+
+          {consignmentDetail && (consignmentDetail.order_no || consignmentDetail.flow_no) ? (
+            <div className="mb-6 rounded-lg border border-gray-100 bg-gray-50 p-4">
+              <div className="mb-3 flex items-start gap-3">
+                <Receipt size={16} className="mt-0.5 shrink-0 text-amber-600" />
+                <div className="min-w-0 flex-1">
+                  <label className="mb-2 block text-xs font-bold uppercase text-gray-400">
+                    寄售详情 / Consignment Detail
+                  </label>
+                  <div className="grid grid-cols-1 gap-x-4 gap-y-3 md:grid-cols-2">
+                    {consignmentDetail.buy_price > 0 ? (
+                      <div>
+                        <div className="text-[10px] text-gray-400">买入价</div>
+                        <div className="font-mono text-sm font-medium text-gray-700">
+                          ¥{consignmentDetail.buy_price.toFixed(2)}
+                        </div>
+                      </div>
+                    ) : null}
+                    {consignmentDetail.order_no ? (
+                      <div>
+                        <div className="text-[10px] text-gray-400">成交订单号</div>
+                        <div className="flex items-center gap-2">
+                          <span className="break-all font-mono text-sm font-medium text-gray-700">
+                            {consignmentDetail.order_no}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => void onCopy(consignmentDetail.order_no, '订单号已复制')}
+                            className="shrink-0 text-amber-600 transition-colors hover:text-amber-700"
+                            aria-label="复制订单号"
+                          >
+                            <Copy size={12} />
+                          </button>
+                        </div>
+                      </div>
+                    ) : null}
+                    {consignmentDetail.flow_no ? (
+                      <div>
+                        <div className="text-[10px] text-gray-400">卖家收益流水号</div>
+                        <div className="flex items-center gap-2">
+                          <span className="break-all font-mono text-sm font-medium text-gray-700">
+                            {consignmentDetail.flow_no}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => void onCopy(consignmentDetail.flow_no, '流水号已复制')}
+                            className="shrink-0 text-amber-600 transition-colors hover:text-amber-700"
+                            aria-label="复制流水号"
+                          >
+                            <Copy size={12} />
+                          </button>
+                        </div>
+                      </div>
+                    ) : null}
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : null}
 
           <div>
             <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-gray-400">

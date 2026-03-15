@@ -305,7 +305,18 @@ export const mockHandlers: MockHandlerMap = wrapMockHandlers({
   'GET /api/Announcement/popup': () => ({
     code: 1,
     message: 'ok',
-    data: { list: [] },
+    data: {
+      list: [
+        {
+          id: 1,
+          title: '平台公告',
+          content: '<p>欢迎使用本平台，请留意官方公告。</p>',
+          type: 'normal',
+          popup_delay: 1,
+          is_read: false,
+        },
+      ],
+    },
   }),
 
   'GET /api/messageCenter/list': ({ url }) => {

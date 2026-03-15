@@ -10,11 +10,13 @@ import {
   Truck,
   WifiOff,
 } from 'lucide-react';
-import { useParams } from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router-dom';
 import {
   shopOrderApi,
   type ShopOrderLogisticsResponse,
   type ShopOrderLogisticsTimelineItem,
+  type ShopOrderLogisticsShipmentItem,
+  type ShopOrderLogisticsMultiResponse,
 } from '../../api';
 import { getErrorMessage } from '../../api/core/errors';
 import { PullToRefreshContainer } from '../../components/ui/PullToRefreshContainer';
@@ -38,18 +40,70 @@ function readText(value: string | undefined, fallback = '--') {
   return nextValue || fallback;
 }
 
+/** 是否应隐藏的快递查询错误信息（如：单号不存在、已过期、参数异常等） */
+function isErrorLikeMessage(text: string | undefined): boolean {
+  if (!text?.trim()) return false;
+  return (
+    /单号不存在|已经过期|已过期|参数异常|快递公司参数异常|单号无效|运单号错误/i.test(text.trim())
+  );
+}
+
+function isMultiLogisticsResponse(
+  data: ShopOrderLogisticsResponse | ShopOrderLogisticsMultiResponse | null,
+): data is ShopOrderLogisticsMultiResponse {
+  return data != null && 'shipments' in data && Array.isArray(data.shipments);
+}
+
 export const LogisticsPage = () => {
   const { id } = useParams<{ id: string }>();
+  const [searchParams] = useSearchParams();
   const orderId = Number.parseInt(id || '0', 10);
+  const shipmentIdParam = searchParams.get('shipment_id');
+  const shipmentId = shipmentIdParam ? Number.parseInt(shipmentIdParam, 10) : undefined;
   const { goBackOr } = useAppNavigate();
   const { showToast } = useFeedback();
   const { isOffline, refreshStatus } = useNetworkStatus();
 
   const [loading, setLoading] = useState(true);
   const [moduleError, setModuleError] = useState(false);
-  const [data, setData] = useState<ShopOrderLogisticsResponse | null>(null);
+  const [data, setData] = useState<
+    ShopOrderLogisticsResponse | ShopOrderLogisticsMultiResponse | null
+  >(null);
+  const [activeShipmentIndex, setActiveShipmentIndex] = useState(0);
 
-  const isEmpty = !loading && !moduleError && (!data || (data.timeline?.length ?? 0) === 0);
+  const isMulti = isMultiLogisticsResponse(data);
+  const shipments = isMulti ? data.shipments : [];
+  const activeShipment = shipments[activeShipmentIndex];
+  const singleData = data && !isMulti ? data : null;
+  const timeline =
+    singleData?.timeline ??
+    activeShipment?.timeline ??
+    [];
+  const displayShippingNo = singleData?.shipping_no ?? activeShipment?.shipping_no ?? '';
+  const displayShippingCompany =
+    singleData?.shipping_company ?? activeShipment?.shipping_company ?? '';
+  const displayQuerySuccess = singleData?.query_success ?? activeShipment?.query_success ?? false;
+  const displayStatusIsFinal =
+    singleData?.status_is_final ?? false;
+  const rawStatusOrQuery =
+    singleData?.status_text ?? activeShipment?.query_message;
+  const statusText = displayStatusIsFinal
+    ? '已签收'
+    : displayQuerySuccess
+      ? '运输中'
+      : isErrorLikeMessage(rawStatusOrQuery)
+        ? '包裹等待揽收'
+        : readText(rawStatusOrQuery, '待更新');
+
+  const hasData = data != null;
+  /** 有数据但无轨迹（暂无轨迹） */
+  const hasDataNoTrajectory = hasData && timeline.length === 0;
+  /** 完全无数据时展示空态 */
+  const isEmpty = !loading && !moduleError && !hasData;
+
+  const handleTrack = useCallback(() => {
+    showToast({ message: '包裹等待揽收', type: 'info' });
+  }, [showToast]);
 
   const fetchData = useCallback(
     async (options?: { keepData?: boolean }) => {
@@ -64,9 +118,16 @@ export const LogisticsPage = () => {
       if (!keepData) setLoading(true);
 
       try {
-        const next = await shopOrderApi.logistics({ id: orderId });
+        const next = await shopOrderApi.logistics({
+          id: orderId,
+          ...(shipmentId != null && !Number.isNaN(shipmentId) && { shipment_id: shipmentId }),
+        });
         setData(next);
         setModuleError(false);
+        if (isMultiLogisticsResponse(next) && next.shipments.length > 0 && shipmentId != null) {
+          const idx = next.shipments.findIndex((s) => s.shipment_id === shipmentId);
+          if (idx >= 0) setActiveShipmentIndex(idx);
+        }
       } catch (error) {
         setModuleError(true);
         if (!keepData) setData(null);
@@ -75,7 +136,7 @@ export const LogisticsPage = () => {
         setLoading(false);
       }
     },
-    [orderId, showToast],
+    [orderId, shipmentId, showToast],
   );
 
   useEffect(() => {
@@ -109,9 +170,6 @@ export const LogisticsPage = () => {
   const handleCustomerService = useCallback(() => {
     void openCustomerServiceLink(showToast);
   }, [showToast]);
-
-  const statusText = data?.status_is_final ? '已签收' : data?.query_success ? '运输中' : readText(data?.status_text, '待更新');
-  const timeline = data?.timeline ?? [];
 
   const renderHeader = () => (
     <div className="relative z-40 shrink-0 border-b border-border-light bg-white dark:bg-gray-900">
@@ -216,9 +274,30 @@ export const LogisticsPage = () => {
     return (
       <div className="p-3 pb-24">
         {/* Top Info Card */}
+        {/* 多包裹 Tab */}
+        {isMulti && shipments.length > 1 && (
+          <div className="mb-3 flex gap-2 overflow-x-auto pb-1 no-scrollbar">
+            {shipments.map((s, idx) => (
+              <button
+                key={s.shipment_id}
+                type="button"
+                onClick={() => setActiveShipmentIndex(idx)}
+                className={`shrink-0 rounded-full px-4 py-2 text-[13px] font-medium transition-colors ${
+                  idx === activeShipmentIndex
+                    ? 'bg-primary-start text-white'
+                    : 'bg-white dark:bg-gray-900 text-text-sub border border-border-light'
+                }`}
+              >
+                包裹 {idx + 1}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Top Info Card */}
         <div className="mb-3 flex items-center rounded-[16px] bg-white p-4 shadow-sm dark:bg-gray-900">
           <div className="mr-3 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary-start/10">
-            {data?.status_is_final ? (
+            {displayStatusIsFinal ? (
               <CheckCircle2 size={20} className="text-primary-start" />
             ) : (
               <Truck size={20} className="text-primary-start" />
@@ -228,14 +307,14 @@ export const LogisticsPage = () => {
             <div className="mb-1 flex items-center">
               <span className="mr-2 text-[16px] font-bold text-text-main">{statusText}</span>
               <span className="text-[13px] text-text-sub">
-                {readText(data?.shipping_company, '树交所物流')}
+                {readText(displayShippingCompany, '树交所物流')}
               </span>
             </div>
             <div className="flex items-center text-[12px] text-text-sub">
-              <span className="mr-2">运单号：{readText(data?.shipping_no)}</span>
+              <span className="mr-2">运单号：{readText(displayShippingNo)}</span>
               <button
                 type="button"
-                onClick={() => void handleCopy(data?.shipping_no ?? '')}
+                onClick={() => void handleCopy(displayShippingNo)}
                 className="flex items-center text-text-main active:opacity-70"
               >
                 <Copy size={12} className="mr-1" />
@@ -245,26 +324,51 @@ export const LogisticsPage = () => {
           </div>
         </div>
 
-        {/* Address Card */}
-        <div className="mb-3 flex items-start rounded-[16px] bg-white p-4 shadow-sm dark:bg-gray-900">
-          <MapPin size={16} className="mr-2 mt-0.5 shrink-0 text-text-main" />
-          <div className="min-w-0 flex-1">
-            <div className="mb-1 text-[13px] leading-snug text-text-main">
-              [收货地址] {readText(data?.recipient_address)}
-            </div>
-            <div className="text-[12px] text-text-sub">
-              {readText(data?.recipient_name)} {maskPhone(data?.recipient_phone)}
+        {/* Address Card（仅单包裹有收货人信息） */}
+        {singleData && (
+          <div className="mb-3 flex items-start rounded-[16px] bg-white p-4 shadow-sm dark:bg-gray-900">
+            <MapPin size={16} className="mr-2 mt-0.5 shrink-0 text-text-main" />
+            <div className="min-w-0 flex-1">
+              <div className="mb-1 text-[13px] leading-snug text-text-main">
+                [收货地址] {readText(singleData.recipient_address)}
+              </div>
+              <div className="text-[12px] text-text-sub">
+                {readText(singleData.recipient_name)} {maskPhone(singleData.recipient_phone)}
+              </div>
             </div>
           </div>
-        </div>
+        )}
 
         {/* Timeline Card */}
         <div className="rounded-[16px] bg-white p-4 shadow-sm dark:bg-gray-900">
-          {timeline.map((item: ShopOrderLogisticsTimelineItem, index: number) => {
-            const isLast = index === timeline.length - 1;
-            const isLatest = item.is_latest ?? false;
+          {hasDataNoTrajectory ? (
+            <>
+              <div className="flex">
+                <div className="relative flex w-8 shrink-0 flex-col items-center">
+                  <div className="z-10 mt-1 h-3 w-3 rounded-full bg-primary-start shadow-[0_0_0_4px_rgba(255,77,77,0.15)]" />
+                  <div className="absolute left-1/2 top-4 h-[calc(100%+16px)] w-[1px] -translate-x-1/2 bg-border-light" />
+                </div>
+                <div className="flex-1 pb-6">
+                  <div className="mb-1 text-[14px] leading-snug font-medium text-text-main">包裹等待揽收</div>
+                  <div className="text-[12px] text-text-aux">—</div>
+                </div>
+              </div>
+              <div className="flex">
+                <div className="relative flex w-8 shrink-0 flex-col items-center">
+                  <div className="z-10 mt-1 h-3 w-3 rounded-full bg-border-light" />
+                </div>
+                <div className="flex-1 pb-6 opacity-70">
+                  <div className="mb-1 text-[14px] leading-snug text-text-sub">商家已发货</div>
+                  <div className="text-[12px] text-text-aux">—</div>
+                </div>
+              </div>
+            </>
+          ) : (
+            [...timeline].reverse().map((item: ShopOrderLogisticsTimelineItem, index: number) => {
+              const isLast = index === timeline.length - 1;
+              const isLatest = item.is_latest ?? false;
 
-            return (
+              return (
               <div key={`${item.time}-${index}`} className="flex">
                 <div className="relative flex w-8 shrink-0 flex-col items-center">
                   <div
@@ -292,7 +396,8 @@ export const LogisticsPage = () => {
                 </div>
               </div>
             );
-          })}
+          })
+          )}
         </div>
       </div>
     );

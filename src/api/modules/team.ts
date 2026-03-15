@@ -12,8 +12,8 @@ export interface TeamOverviewData {
   qrcode_url: string;
   team_total: number;
   today_register: number;
-  big_area_performance: number;
-  small_area_performance: number;
+  level1_active_count: number;
+  level2_active_count: number;
   level1_count: number;
   level2_count: number;
   level3_count: number;
@@ -28,6 +28,10 @@ export interface TeamMember {
   register_time: string;
   level: number;
   level_text: string;
+  /** 用户等级数值 0=L0, 1=L1, ..., 5=L5 */
+  user_level?: number;
+  /** 等级文案 如 L0共识节点、L1社区节点 等 */
+  user_level_text?: string;
 }
 
 export interface TeamMembersData {
@@ -83,9 +87,15 @@ export const teamApi = {
   /**
    * 团队成员列表
    * GET /api/Team/members
+   * @param params.user_type - 用于计算/筛选用户等级（可选）
    */
   async getMembers(
-    params: { level?: number; page?: number; page_size?: number } = {},
+    params: {
+      level?: number;
+      page?: number;
+      page_size?: number;
+      user_type?: number;
+    } = {},
     signal?: AbortSignal,
   ): Promise<TeamMembersData> {
     return http.get<TeamMembersData>('/api/Team/members', {

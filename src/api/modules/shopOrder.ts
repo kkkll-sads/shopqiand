@@ -73,12 +73,25 @@ function readString(value: string | undefined): string {
   return typeof value === 'string' ? value.trim() : '';
 }
 
+/** 包裹项（订单详情 shipments 数组元素） */
+export interface OrderShipment {
+  id: number;
+  shipping_company: string;
+  shipping_company_display: string;
+  shipping_company_code: string;
+  shipping_no: string;
+  ship_time: string | number;
+  shipment_count: number;
+}
+
 /** 订单详情接口响应：订单结构与列表项相同，额外包含余额信息 */
 export interface ShopOrderDetailResponse extends ShopOrderListItem {
   /** 用户可用余额 */
   balance_available: string;
   /** 用户消费金 */
   score: string;
+  /** 包裹列表（多包裹时使用，首包兼容主表 shipping_no/shipping_company/ship_time） */
+  shipments?: OrderShipment[];
 }
 
 export interface ShopOrderLogisticsTimelineItem {
@@ -111,6 +124,25 @@ export interface ShopOrderLogisticsResponse {
   timeline: ShopOrderLogisticsTimelineItem[];
   provider: string;
 }
+
+/** 物流多包裹响应 - 未传 shipment_id 时返回 */
+export interface ShopOrderLogisticsShipmentItem {
+  shipment_id: number;
+  shipping_no: string;
+  shipping_company: string;
+  query_success: boolean;
+  query_message: string;
+  timeline: ShopOrderLogisticsTimelineItem[];
+}
+
+export interface ShopOrderLogisticsMultiResponse {
+  shipments: ShopOrderLogisticsShipmentItem[];
+}
+
+/** 物流接口：传 shipment_id 返回单包裹（ShopOrderLogisticsResponse）；不传返回多包裹（ShopOrderLogisticsMultiResponse）或兼容单对象 */
+export type ShopOrderLogisticsResult =
+  | ShopOrderLogisticsResponse
+  | ShopOrderLogisticsMultiResponse;
 
 /** 支付方式筛选 */
 export type PendingPayType = 'money' | 'score' | 'combined';
@@ -270,6 +302,10 @@ export interface ShopOrderListItem {
   can_cancel_after_sale?: 0 | 1;
   /** 是否已评价：0=未评价, 1=已评价 */
   is_commented?: 0 | 1;
+  /** 包裹数量（enrichOrdersWithItems 补充） */
+  shipment_count?: number;
+  /** 包裹列表（订单详情返回，多包裹时使用） */
+  shipments?: OrderShipment[];
 }
 
 /** 我的订单列表 - 响应 data */
@@ -420,12 +456,13 @@ export const shopOrderApi = {
   /**
    * 订单物流详情
    * GET /api/shopOrder/logistics
+   * @param shipment_id 指定包裹 ID，传则返回单包裹；不传则返回 shipments 数组或兼容单对象
    */
   logistics(
-    params: { id?: number; order_no?: string },
+    params: { id?: number; order_no?: string; shipment_id?: number },
     signal?: AbortSignal,
-  ): Promise<ShopOrderLogisticsResponse> {
-    return http.get<ShopOrderLogisticsResponse>('/api/shopOrder/logistics', {
+  ): Promise<ShopOrderLogisticsResult> {
+    return http.get<ShopOrderLogisticsResult>('/api/shopOrder/logistics', {
       query: params,
       signal,
     });

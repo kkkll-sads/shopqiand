@@ -400,6 +400,13 @@ export function RechargePage() {
 
   const withdrawableBalance = profile?.userInfo?.withdrawableMoney ?? 0;
 
+  const handleTransferSelectAll = () => {
+    const num = Number(withdrawableBalance);
+    if (num > 0) {
+      setTransferAmount(num.toFixed(2));
+    }
+  };
+
   const handleTransfer = async () => {
     const numTransferAmount = parseFloat(transferAmount);
     if (!numTransferAmount || numTransferAmount <= 0) {
@@ -1069,6 +1076,13 @@ export function RechargePage() {
                     <XCircle size={18} />
                   </button>
                 ) : null}
+                <button
+                  type="button"
+                  onClick={handleTransferSelectAll}
+                  className="shrink-0 whitespace-nowrap border-l border-border-light pl-3 text-base font-medium text-brand-red active:opacity-70"
+                >
+                  全部
+                </button>
               </div>
 
               {transferAmount && (

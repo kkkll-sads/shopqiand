@@ -21,6 +21,7 @@ import { Input } from '../../components/ui/Input';
 import { useTheme } from '../../contexts/ThemeContext';
 import { clearAuthSession, PASSWORD_PATTERN } from '../../lib/auth';
 import { CURRENT_APP_VERSION, formatVersionLabel } from '../../lib/appVersion';
+import { clearRequestCache } from '../../hooks/useRequest';
 import { useAppNavigate } from '../../lib/navigation';
 
 function readCacheSizeLabel() {
@@ -68,6 +69,7 @@ export const SettingsPage = () => {
 
       keysToRemove.forEach((key) => localStorage.removeItem(key));
       sessionStorage.clear();
+      clearRequestCache();
     } catch {
       // Ignore cache cleanup failures.
     }

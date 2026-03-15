@@ -47,7 +47,7 @@ export const HashrateExchangePage: React.FC = () => {
         setGreenPower(profile.userInfo.greenPower);
       }
     } catch {
-      // 静默失败
+      showToast({ type: 'error', message: '余额加载失败' });
     } finally {
       setLoading(false);
     }

@@ -22,6 +22,11 @@ const globalCache = new Map<string, CacheEntry>();
 /** 默认缓存有效期：5 分钟 */
 const DEFAULT_CACHE_TTL = 5 * 60 * 1000;
 
+/** 清空全局内存缓存，供「清理缓存」等场景调用 */
+export function clearRequestCache() {
+  globalCache.clear();
+}
+
 /** 根据 deps 生成缓存 key */
 function buildCacheKey(deps: readonly unknown[]): string {
   return deps

@@ -10,12 +10,7 @@ import React, { lazy, Suspense } from 'react';
 import { Navigate, createHashRouter, useLocation, useParams, useRouteError } from 'react-router-dom';
 import { AppLayout } from '../components/layout/AppLayout';
 import { LEGACY_APP_PATH_TO_ROUTE } from '../lib/navigation';
-
-// ========== 首屏 Tab 页 - 同步导入 ==========
 import { HomePage } from '../pages/Home';
-import { StorePage } from '../pages/Store';
-import { RightsPage } from '../pages/Rights';
-import { OrderPage } from '../pages/Order';
 import { UserPage } from '../pages/User';
 
 // ========== 非首屏页面 - 懒加载 ==========
@@ -57,6 +52,7 @@ const MyCardPacksPage = lazy(() => import('../pages/MyCardPacks').then(m => ({ d
 const RealNameAuthPage = lazy(() => import('../pages/RealNameAuth').then(m => ({ default: m.RealNameAuthPage })));
 const InvitePage = lazy(() => import('../pages/Invite').then(m => ({ default: m.InvitePage })));
 const FriendsPage = lazy(() => import('../pages/Friends').then(m => ({ default: m.FriendsPage })));
+const FriendDetailPage = lazy(() => import('../pages/Friends/FriendDetailPage').then(m => ({ default: m.FriendDetailPage })));
 const TradingZonePage = lazy(() => import('../pages/TradingZone').then(m => ({ default: m.TradingZonePage })));
 const TradingDetailPage = lazy(() => import('../pages/TradingDetail').then(m => ({ default: m.TradingDetailPage })));
 const PreOrderPage = lazy(() => import('../pages/PreOrder').then(m => ({ default: m.PreOrderPage })));
@@ -192,11 +188,11 @@ export const router = createHashRouter([
     element: <AppLayout />,
     errorElement: <RootErrorBoundary />,
     children: [
-      // ========== 底部 Tab 页（同步加载） ==========
+      // ========== 底部 Tab 页（由 AppLayout KeepAlive 直接渲染） ==========
       { index: true, element: <HomePage /> },
-      { path: 'store', element: <StorePage /> },
-      { path: 'shield', element: <RightsPage /> },
-      { path: 'order', element: <OrderPage /> },
+      { path: 'store', element: null },
+      { path: 'shield', element: null },
+      { path: 'order', element: null },
       { path: 'user', element: <UserPage /> },
 
       // ========== 旧版路径兼容 ========== 
@@ -242,7 +238,7 @@ export const router = createHashRouter([
       { path: 'questionnaire', element: <Lazy><QuestionnairePage /></Lazy> },
       { path: 'consignment-voucher', element: <Lazy><ConsignmentCouponPage /></Lazy> },
       { path: 'billing', element: <Lazy><BillingPage /></Lazy> },
-      { path: 'my-collection', element: <Lazy><MyCollectionPage /></Lazy> },
+      { path: 'my-collection', element: null },
       { path: 'my-collection/detail/:id', element: <Lazy><MyCollectionDetailPage /></Lazy> },
       { path: 'my-card-packs', element: <Lazy><MyCardPacksPage /></Lazy> },
       { path: 'accumulated-rights', element: <Lazy><AccumulatedRightsPage /></Lazy> },
@@ -263,7 +259,8 @@ export const router = createHashRouter([
       { path: 'favorites', element: <Lazy><FavoritesPage /></Lazy> },
       { path: 'messages', element: <Lazy><MessageCenterPage /></Lazy> },
       { path: 'messages/detail/:messageKey', element: <Lazy><MessageDetailPage /></Lazy> },
-      { path: 'friends', element: <Lazy><FriendsPage /></Lazy> },
+      { path: 'friends/:id', element: <Lazy><FriendDetailPage /></Lazy> },
+      { path: 'friends', element: null },
       { path: 'invite', element: <Lazy><InvitePage /></Lazy> },
       { path: 'settings', element: <Lazy><SettingsPage /></Lazy> },
       { path: 'edit-profile', element: <Lazy><EditProfilePage /></Lazy> },
