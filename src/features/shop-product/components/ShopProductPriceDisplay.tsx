@@ -18,19 +18,19 @@ function ScorePriceChip({
 }) {
   return (
     <span
-      className={`inline-flex max-w-full items-center rounded-md border border-[#f1c8be] bg-[#fff6f2] text-[#d9482e] ${
+      className={`inline-flex max-w-full items-center rounded-md border border-red-200 bg-red-50 text-red-600 dark:border-red-400/35 dark:bg-red-500/12 dark:text-red-300 ${
         compact ? 'px-1.5 py-0.5' : 'px-2 py-0.75'
       }`}
     >
       {prefixed ? (
-        <span className={`mr-1 font-semibold text-[#e06c54] ${compact ? 'text-[10px]' : 'text-[11px]'}`}>
+        <span className={`mr-1 font-semibold text-red-500 dark:text-red-300 ${compact ? 'text-[10px]' : 'text-[11px]'}`}>
           +
         </span>
       ) : null}
       <span className={`tabular-nums font-semibold ${compact ? 'text-[10px]' : 'text-[11px]'}`}>
         {amount}
       </span>
-      <span className={`ml-1 font-medium text-[#ef755c] ${compact ? 'text-[9px]' : 'text-[10px]'}`}>
+      <span className={`ml-1 font-medium text-red-400 dark:text-red-200 ${compact ? 'text-[9px]' : 'text-[10px]'}`}>
         {"\u6d88\u8d39\u91d1"}
       </span>
     </span>
@@ -46,7 +46,7 @@ function SecondaryLabel({
 }) {
   return (
     <span
-      className={`inline-flex items-center rounded-md border border-[#e5e7eb] bg-white text-text-sub ${
+      className={`inline-flex items-center rounded-md border border-border-light bg-bg-card text-text-sub ${
         compact ? 'px-1.5 py-0.5 text-[10px]' : 'px-2 py-0.75 text-[11px]'
       }`}
     >

@@ -111,7 +111,7 @@ export const ReservationDetailPage = () => {
           <div className="flex items-center gap-2 mb-3 pb-3 border-b border-border-light">
             <CreditCard size={16} className="text-text-aux" />
             <span className="font-semibold text-text-main text-sm">支付明细</span>
-            <span className="ml-auto px-2 py-0.5 rounded text-[10px] bg-primary-start/10 text-primary-start font-medium">
+            <span className="ml-auto px-2 py-0.5 rounded text-2xs bg-primary-start/10 text-primary-start font-medium">
               {isMixed ? '混合支付' : '专项金支付'}
             </span>
           </div>

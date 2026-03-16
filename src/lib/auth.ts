@@ -63,6 +63,42 @@ function pickObject(source: UnknownRecord | undefined, keys: string[]): UnknownR
   return undefined;
 }
 
+function normalizeAssetUrl(value: string): string {
+  if (/^https?:\/\//i.test(value)) {
+    return value;
+  }
+
+  if (/^[\w-]+\.[\w-]+\.\w+\//.test(value)) {
+    return `https://${value}`;
+  }
+
+  const baseURL =
+    apiConfig.baseURL ||
+    (typeof window !== 'undefined' ? window.location.origin : 'http://localhost');
+
+  try {
+    return new URL(value.startsWith('/') ? value : `/${value}`, baseURL).toString();
+  } catch {
+    return value;
+  }
+}
+
+function normalizeSessionUserInfo(userInfo: UserInfo | undefined): UserInfo | undefined {
+  if (!userInfo || typeof userInfo !== 'object') {
+    return userInfo;
+  }
+
+  const avatar = readString(userInfo.avatar);
+  if (!avatar) {
+    return userInfo;
+  }
+
+  return {
+    ...userInfo,
+    avatar: normalizeAssetUrl(avatar),
+  };
+}
+
 function resolveSessionToken(
   session: Pick<AuthSession, 'accessToken' | 'baUserToken'> | null | undefined,
 ) {
@@ -86,7 +122,14 @@ function safeParse(value: string | null): AuthSession | null {
       return null;
     }
 
-    return hasValidAuthSession(parsed) ? parsed : null;
+    if (!hasValidAuthSession(parsed)) {
+      return null;
+    }
+
+    return {
+      ...parsed,
+      userInfo: normalizeSessionUserInfo(parsed.userInfo),
+    };
   } catch {
     return null;
   }
@@ -166,8 +209,10 @@ export function createAuthSession(
 ): Omit<AuthSession, 'persistent'> {
   const source = isObject(data) ? data : undefined;
   const nestedUserInfo = pickObject(source, ['userInfo', 'userinfo', 'user']);
-  const userInfo =
-    (nestedUserInfo as UserInfo | undefined) ?? (isObject(fallbackUserInfo) ? fallbackUserInfo : undefined);
+  const userInfo = normalizeSessionUserInfo(
+    (nestedUserInfo as UserInfo | undefined) ??
+      (isObject(fallbackUserInfo) ? fallbackUserInfo : undefined),
+  );
 
   const accessToken = pickString(source, [
     'accessToken',
@@ -269,6 +314,10 @@ export function patchAuthSessionUserInfo(patch: Partial<UserInfo>) {
     userInfo: {
       ...(currentSession.userInfo ?? {}),
       ...patch,
+      avatar:
+        typeof patch.avatar === 'string' && patch.avatar.trim()
+          ? normalizeAssetUrl(patch.avatar.trim())
+          : patch.avatar,
     },
   };
 

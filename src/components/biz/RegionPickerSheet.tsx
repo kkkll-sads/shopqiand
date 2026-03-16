@@ -1,4 +1,5 @@
-import React, { useEffect, useMemo, useState } from 'react';
+﻿import React, { useEffect, useMemo, useState } from 'react';
+import { BottomSheet } from '../ui/BottomSheet';
 import { WheelPicker, type WheelPickerItem } from '../ui/WheelPicker';
 import chinaAreaData from '../../data/chinaAreaData';
 
@@ -71,10 +72,6 @@ export const RegionPickerSheet: React.FC<RegionPickerSheetProps> = ({
     [pickerState.cityCode],
   );
 
-  if (!isOpen) {
-    return null;
-  }
-
   const handleProvinceChange = (nextValue: string | number) => {
     const provinceCode = String(nextValue);
     const nextCityCode = getEntries(provinceCode)[0]?.[0] ?? '';
@@ -99,34 +96,32 @@ export const RegionPickerSheet: React.FC<RegionPickerSheetProps> = ({
   };
 
   return (
-    <div className="absolute inset-0 z-50 flex items-end">
-      <button
-        type="button"
-        aria-label="关闭地区选择"
-        className="absolute inset-0 bg-black/50"
-        onClick={onCancel}
-      />
-      <div className="relative z-10 w-full rounded-t-[24px] bg-white dark:bg-gray-900 pb-safe">
-        <div className="flex items-center justify-between border-b border-border-light px-4 py-4">
-          <button type="button" onClick={onCancel} className="text-base text-text-sub active:opacity-70">
-            取消
-          </button>
-          <div className="text-lg font-semibold text-text-main">{title}</div>
-          <button
-            type="button"
-            onClick={handleConfirm}
-            className="text-base font-medium text-primary-start active:opacity-70"
-          >
-            确定
-          </button>
-        </div>
-        <div className="grid grid-cols-3 gap-2 px-3 py-4">
-          <WheelPicker items={provinceItems} value={pickerState.provinceCode} onChange={handleProvinceChange} />
-          <WheelPicker items={cityItems} value={pickerState.cityCode} onChange={handleCityChange} />
-          <WheelPicker items={districtItems} value={pickerState.districtCode} onChange={handleDistrictChange} />
-        </div>
+    <BottomSheet
+      isOpen={isOpen}
+      onClose={onCancel}
+      title={title}
+      maxHeight="72vh"
+      headerLeft={
+        <button type="button" onClick={onCancel} className="text-base text-text-sub active:opacity-70">
+          取消
+        </button>
+      }
+      headerRight={
+        <button
+          type="button"
+          onClick={handleConfirm}
+          className="text-base font-medium text-primary-start active:opacity-70"
+        >
+          确定
+        </button>
+      }
+      footer={null}
+    >
+      <div className="grid grid-cols-3 gap-2 px-3 py-4">
+        <WheelPicker items={provinceItems} value={pickerState.provinceCode} onChange={handleProvinceChange} />
+        <WheelPicker items={cityItems} value={pickerState.cityCode} onChange={handleCityChange} />
+        <WheelPicker items={districtItems} value={pickerState.districtCode} onChange={handleDistrictChange} />
       </div>
-    </div>
+    </BottomSheet>
   );
 };
-

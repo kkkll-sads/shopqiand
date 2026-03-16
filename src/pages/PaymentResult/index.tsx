@@ -328,16 +328,16 @@ export const PaymentResultPage = () => {
               ) : (
                 meta.icon
               )}
-              <h2 className={`mt-5 text-[28px] font-semibold ${polling ? 'text-text-sub' : meta.accentClass}`}>
+              <h2 className={`mt-5 text-5_5xl font-semibold ${polling ? 'text-text-sub' : meta.accentClass}`}>
                 {polling ? '查询中...' : meta.title}
               </h2>
-              <p className="mt-3 max-w-[280px] text-[14px] leading-6 text-text-sub">{meta.description}</p>
+              <p className="mt-3 max-w-[280px] text-base leading-6 text-text-sub">{meta.description}</p>
             </div>
 
             <div className="mt-8 rounded-[22px] border border-border-light bg-bg-base px-5 py-5">
-              <div className="text-center text-[14px] text-text-sub">支付金额</div>
+              <div className="text-center text-base text-text-sub">支付金额</div>
               <div className={`mt-3 flex items-end justify-center ${meta.amountClass}`}>
-                <span className="mr-1 pb-1 text-[22px] font-semibold text-text-main">¥</span>
+                <span className="mr-1 pb-1 text-4xl font-semibold text-text-main">¥</span>
                 <span className="text-[44px] font-bold leading-none">
                   {Number.isFinite(orderInfo.amount) ? Math.round(orderInfo.amount).toString() : '0'}
                 </span>
@@ -346,15 +346,15 @@ export const PaymentResultPage = () => {
               <button
                 type="button"
                 onClick={() => handleCopy(orderInfo.orderNo, '已复制订单号')}
-                className="mx-auto mt-4 flex items-center text-[13px] text-text-aux active:opacity-70"
+                className="mx-auto mt-4 flex items-center text-sm text-text-aux active:opacity-70"
               >
                 <span>订单号：{orderInfo.orderNo || '--'}</span>
                 <Copy size={13} className="ml-1.5" />
               </button>
             </div>
 
-            <div className="mt-6 rounded-[20px] border border-border-light bg-bg-base px-4 py-4 text-[13px] leading-6 text-text-sub">
-              <div className="mb-1 flex items-center text-[14px] font-medium text-text-main">
+            <div className="mt-6 rounded-[20px] border border-border-light bg-bg-base px-4 py-4 text-sm leading-6 text-text-sub">
+              <div className="mb-1 flex items-center text-base font-medium text-text-main">
                 <ShieldCheck size={14} className="mr-2 text-text-aux" />
                 支付提示
               </div>
@@ -367,14 +367,14 @@ export const PaymentResultPage = () => {
                 type="button"
                 onClick={meta.primaryAction}
                 disabled={polling}
-                className="flex h-12 w-full items-center justify-center rounded-full bg-gradient-to-r from-[#ff1530] to-[#ff0019] text-[17px] font-semibold text-white shadow-[0_14px_28px_rgba(255,0,25,0.18)] active:scale-[0.99] disabled:opacity-50"
+                className="flex h-12 w-full items-center justify-center rounded-full bg-gradient-to-r from-[#ff1530] to-[#ff0019] text-xl font-semibold text-white shadow-[0_14px_28px_rgba(255,0,25,0.18)] active:scale-[0.99] disabled:opacity-50"
               >
                 {meta.primaryText}
               </button>
               <button
                 type="button"
                 onClick={meta.secondaryAction}
-                className="flex h-12 w-full items-center justify-center rounded-full border border-border-light bg-bg-card text-[16px] font-medium text-text-main active:bg-bg-hover"
+                className="flex h-12 w-full items-center justify-center rounded-full border border-border-light bg-bg-card text-lg font-medium text-text-main active:bg-bg-hover"
               >
                 {meta.secondaryText}
               </button>

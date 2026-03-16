@@ -1,4 +1,5 @@
 import { http } from '../http';
+import { resolveUploadUrl } from './upload';
 
 function readNumber(value: unknown, fallback = 0): number {
   const nextValue = Number(value);
@@ -7,6 +8,11 @@ function readNumber(value: unknown, fallback = 0): number {
 
 function readString(value: unknown, fallback = ''): string {
   return typeof value === 'string' ? value : fallback;
+}
+
+function normalizeAssetUrl(value: unknown): string {
+  const rawUrl = readString(value).trim();
+  return rawUrl ? resolveUploadUrl(rawUrl) : '';
 }
 
 function padDatePart(value: number): string {
@@ -348,7 +354,7 @@ function normalizeMyCollectionItem(item: MyCollectionItemRaw): MyCollectionItem 
     consignment_id: consignmentId,
     unique_id: readString(item.unique_id, String(id || userCollectionId || consignmentId || 0)),
     title: readString(item.title),
-    image: readString(item.image),
+    image: normalizeAssetUrl(item.image),
     asset_code: readString(item.asset_code),
     hash: readString(item.hash),
     price: readNumber(item.price, buyPrice),

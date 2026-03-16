@@ -39,44 +39,46 @@ export const SignInPage: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-bg-base pb-safe flex items-center justify-center">
+      <div className="flex h-full flex-1 items-center justify-center bg-bg-base">
         <div className="animate-spin w-8 h-8 rounded-full border-2 border-red-500 border-t-transparent" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-bg-base pb-safe">
-      <SignInPageHeader
-        activityName={activityInfo?.activity?.name}
-        startTime={activityInfo?.activity?.start_time}
-        endTime={activityInfo?.activity?.end_time}
-        onBack={handleBack}
-      />
-
-      <div className="px-4 -mt-20 relative z-10 space-y-4">
-        <SignInBalanceCard
-          inviteCount={inviteCount}
-          balance={balance}
-          hasSignedIn={hasSignedIn}
-          onSignIn={() => {
-            void handleSignIn();
-          }}
-          onInvite={handleInvite}
+    <div className="relative flex h-full flex-1 flex-col overflow-hidden bg-bg-base">
+      <div className="min-h-0 flex-1 overflow-y-auto no-scrollbar pb-safe">
+        <SignInPageHeader
+          activityName={activityInfo?.activity?.name}
+          startTime={activityInfo?.activity?.start_time}
+          endTime={activityInfo?.activity?.end_time}
+          onBack={handleBack}
         />
 
-        <SignInWithdrawCard
-          currentBalance={currentBalance}
-          canWithdraw={canWithdraw}
-          deficitAmount={
-            withdrawMinAmount != null
-              ? Math.max(0, withdrawMinAmount - currentBalance)
-              : 0
-          }
-          onWithdraw={handleWithdrawClick}
-        />
+        <div className="relative z-10 -mt-20 space-y-4 px-4 pb-4">
+          <SignInBalanceCard
+            inviteCount={inviteCount}
+            balance={balance}
+            hasSignedIn={hasSignedIn}
+            onSignIn={() => {
+              void handleSignIn();
+            }}
+            onInvite={handleInvite}
+          />
 
-        <SignInRulesCard rules={activityInfo?.rules} />
+          <SignInWithdrawCard
+            currentBalance={currentBalance}
+            canWithdraw={canWithdraw}
+            deficitAmount={
+              withdrawMinAmount != null
+                ? Math.max(0, withdrawMinAmount - currentBalance)
+                : 0
+            }
+            onWithdraw={handleWithdrawClick}
+          />
+
+          <SignInRulesCard rules={activityInfo?.rules} />
+        </div>
       </div>
 
       <SignInRewardModal

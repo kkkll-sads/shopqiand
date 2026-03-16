@@ -125,6 +125,12 @@ export function resolveShopProductImageUrl(url?: string | null) {
   return withApiBase(nextUrl);
 }
 
+export const SHOP_PRODUCT_REVIEW_AVATAR_FALLBACK_URL = '/favicon.png';
+
+export function resolveShopProductReviewAvatarUrl(url?: string | null) {
+  return resolveShopProductImageUrl(url) || SHOP_PRODUCT_REVIEW_AVATAR_FALLBACK_URL;
+}
+
 /**
  * 商城统一使用 score_price 作为余额/消费金字段；
  * 部分商品为混合支付（score_price + 可用余额 balance_available_amount）。
@@ -419,7 +425,7 @@ export function buildShopProductServiceItems(product: ShopProductDetail | null |
   const items: string[] = [];
 
   if (product?.delivery_info?.free_shipping) {
-    items.push('包邮');
+    items.push('\u5305\u90ae');
   }
 
   if (product?.delivery_info?.delivery_time) {
@@ -427,7 +433,7 @@ export function buildShopProductServiceItems(product: ShopProductDetail | null |
   }
 
   if (product?.delivery_info?.support_same_day) {
-    items.push('支持当日达');
+    items.push('\u652f\u6301\u5f53\u65e5\u8fbe');
   }
 
   if (product?.after_sale?.return_policy) {
@@ -442,12 +448,7 @@ export function buildShopProductServiceItems(product: ShopProductDetail | null |
     items.push(product.after_sale.warranty);
   }
 
-  if (!items.length) {
-    items.push('平台发货');
-    items.push('售后保障');
-  }
-
-  return items;
+  return items.filter((item, index, source) => source.indexOf(item) === index);
 }
 
 export function getShopProductReviewUser(review: ShopProductReview) {

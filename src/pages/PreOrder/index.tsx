@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @file 预约申购页
  * @description 流程：
  *   1. 页面加载 → bySessionDetail → 获取分区列表 + 用户余额 + 算力配置
@@ -17,7 +17,6 @@ import {
   Image as ImageIcon,
   Check,
   ChevronDown,
-  AlertCircle,
   RefreshCcw,
   Tag,
   Wallet,
@@ -36,14 +35,13 @@ import {
   collectionItemApi,
   reservationApi,
   type CollectionZone,
-  type CollectionDetailResponse,
   type ReservationAgreementType,
   type ReservationPreviewResponse,
 } from '../../api';
 import { resolveUploadUrl } from '../../api/modules/upload';
 import { getErrorMessage } from '../../api/core/errors';
 import { WheelPicker, type WheelPickerItem } from '../../components/ui/WheelPicker';
-import { useFeedback } from '../../components/ui/FeedbackProvider';
+import { PreviewSheet } from './components/PreviewSheet';
 
 function roundCurrency(value: number) {
   return Math.round((Math.max(0, value) + Number.EPSILON) * 100) / 100;
@@ -644,421 +642,31 @@ export const PreOrderPage = () => {
         onClose={closeAgreement}
       />
 
-      {/* 预约预览弹窗 */}
-      {showPreview && (
-        <PreviewSheet
-          detailData={detailData}
-          selectedZone={selectedZone}
-          quantity={quantity}
-          setQuantity={setQuantity}
-          extraHashrate={extraHashrate}
-          setExtraHashrate={setExtraHashrate}
-          maxQuantity={maxQuantity}
-          config={config}
-          estimatedFreezeAmount={estimatedFreezeAmount}
-          fundingPlan={fundingPlan}
-          numQuantity={numQuantity}
-          numExtraHashrate={numExtraHashrate}
-          sessionId={sessionId}
-          packageId={packageId}
-          previewData={previewData}
-          setPreviewData={setPreviewData}
-          previewError={previewError}
-          setPreviewError={setPreviewError}
-          onClose={() => setShowPreview(false)}
-        />
-      )}
-
-      <style>{`
-        .pb-safe { padding-bottom: max(env(safe-area-inset-bottom), 12px); }
-        @keyframes slide-up {
-          from { transform: translateY(100%); }
-          to { transform: translateY(0); }
-        }
-        .animate-slide-up {
-          animation: slide-up 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-        }
-        @keyframes fade-in {
-          from { opacity: 0; transform: translateY(-8px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        .animate-fade-in {
-          animation: fade-in 0.25s ease-out;
-        }
-      `}</style>
-    </div>
-  );
-};
-
-/* ================================================================
- * 预约预览底部弹窗（独立组件，支持下拉关闭 + 数量变更重新预览）
- * ================================================================ */
-interface PreviewSheetProps {
-  detailData: CollectionDetailResponse | null;
-  selectedZone: CollectionZone | null;
-  quantity: number | string;
-  setQuantity: (v: number | string) => void;
-  extraHashrate: number | string;
-  setExtraHashrate: (v: number | string) => void;
-  maxQuantity: number;
-  config: CollectionDetailResponse['config'] | undefined;
-  estimatedFreezeAmount: number;
-  fundingPlan: ReturnType<typeof resolveReservationFundingPlan>;
-  numQuantity: number;
-  numExtraHashrate: number;
-  sessionId: number;
-  packageId: number | undefined;
-  previewData: ReservationPreviewResponse | null;
-  setPreviewData: (d: ReservationPreviewResponse | null) => void;
-  previewError: string;
-  setPreviewError: (e: string) => void;
-  onClose: () => void;
-}
-
-const PreviewSheet: React.FC<PreviewSheetProps> = ({
-  detailData,
-  selectedZone,
-  quantity,
-  setQuantity,
-  extraHashrate,
-  setExtraHashrate,
-  maxQuantity,
-  config,
-  estimatedFreezeAmount,
-  fundingPlan,
-  numQuantity,
-  numExtraHashrate,
-  sessionId,
-  packageId,
-  previewData,
-  setPreviewData,
-  previewError,
-  setPreviewError,
-  onClose,
-}) => {
-  const sheetRef = useRef<HTMLDivElement>(null);
-  const maskRef = useRef<HTMLDivElement>(null);
-  const dragRef = useRef({ startY: 0, currentY: 0, isDragging: false, offset: 0 });
-  const [isClosing, setIsClosing] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
-  const { showToast } = useFeedback();
-  const mixedPaymentRatioText = previewData?.payment?.mixed_payment_ratio || detailData?.mixed_payment?.ratio || '9:1';
-
-  // 数量/算力变更时重新预览
-  const refreshPreview = useCallback(async () => {
-    if (!selectedZone) return;
-    setRefreshing(true);
-    try {
-      const res = await reservationApi.previewBidBuy({
-        session_id: detailData?.session_id ?? sessionId,
-        zone_id: selectedZone.zone_id,
-        package_id: detailData?.package_id ?? packageId ?? 0,
-        extra_hashrate: numExtraHashrate,
-        quantity: numQuantity,
-      });
-      setPreviewData(res);
-      setPreviewError('');
-    } catch (err) {
-      setPreviewError(getErrorMessage(err));
-    } finally {
-      setRefreshing(false);
-    }
-  }, [selectedZone, detailData, sessionId, packageId, numExtraHashrate, numQuantity, setPreviewData, setPreviewError]);
-
-  /** 显示提示 */
-  const showTip = useCallback((msg: string) => {
-    showToast({ message: msg, type: 'warning', duration: 3000 });
-  }, [showToast]);
-
-  const [submitting, setSubmitting] = useState(false);
-
-  /** 执行申购提交 */
-  const handleBidBuy = useCallback(async () => {
-    if (!selectedZone || submitting) return;
-    setSubmitting(true);
-    try {
-      await reservationApi.bidBuy({
-        session_id: detailData?.session_id ?? sessionId,
-        zone_id: selectedZone.zone_id,
-        package_id: detailData?.package_id ?? packageId ?? 0,
-        extra_hashrate: numExtraHashrate,
-        quantity: numQuantity,
-      });
-      showToast({ message: '申购提交成功！', type: 'success' });
-      setTimeout(() => onClose(), 1500);
-    } catch (err) {
-      showToast({ message: getErrorMessage(err), type: 'error', duration: 3000 });
-      setSubmitting(false);
-    }
-  }, [selectedZone, submitting, detailData, sessionId, packageId, numExtraHashrate, numQuantity, showTip, onClose]);
-
-  // 数量变化时自动刷新预览（算力仅本地计算，不需重新请求）
-  const debounceTimer = useRef<ReturnType<typeof setTimeout>>();
-  useEffect(() => {
-    clearTimeout(debounceTimer.current);
-    debounceTimer.current = setTimeout(() => {
-      refreshPreview();
-    }, 500);
-    return () => clearTimeout(debounceTimer.current);
-  }, [numQuantity]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  /* ---- 下拉关闭手势 (Ref 驱动，避免掉帧) ---- */
-  const handleDragStart = useCallback((clientY: number) => {
-    dragRef.current = { startY: clientY, currentY: clientY, isDragging: true, offset: dragRef.current.offset };
-    if (sheetRef.current) sheetRef.current.style.transition = 'none';
-    if (maskRef.current) maskRef.current.style.transition = 'none';
-  }, []);
-
-  const handleDragMove = useCallback((clientY: number) => {
-    if (!dragRef.current.isDragging) return;
-    const delta = -Math.min(0, dragRef.current.startY - clientY); // 只允许向下拖拽 (delta >= 0)
-    dragRef.current.currentY = clientY;
-    dragRef.current.offset = delta;
-
-    // 使用 requestAnimationFrame 保证流畅更新 DOM，不触发 React Render
-    requestAnimationFrame(() => {
-      if (sheetRef.current) {
-        sheetRef.current.style.transform = `translateY(${delta}px)`;
-      }
-      if (maskRef.current) {
-        maskRef.current.style.opacity = `${Math.max(0, 1 - delta / 400)}`;
-      }
-    });
-  }, []);
-
-  const handleDragEnd = useCallback(() => {
-    if (!dragRef.current.isDragging) return;
-    dragRef.current.isDragging = false;
-    
-    const finalOffset = dragRef.current.offset;
-    if (sheetRef.current) sheetRef.current.style.transition = 'transform 0.3s cubic-bezier(0.16, 1, 0.3, 1)';
-    if (maskRef.current) maskRef.current.style.transition = 'opacity 0.3s cubic-bezier(0.16, 1, 0.3, 1)';
-
-    if (finalOffset > 120) {
-      setIsClosing(true);
-      if (sheetRef.current) sheetRef.current.style.transform = `translateY(100%)`;
-      if (maskRef.current) maskRef.current.style.opacity = '0';
-      setTimeout(onClose, 250);
-    } else {
-      dragRef.current.offset = 0;
-      if (sheetRef.current) sheetRef.current.style.transform = `translateY(0px)`;
-      if (maskRef.current) maskRef.current.style.opacity = '1';
-    }
-  }, [onClose]);
-
-  useEffect(() => {
-    const onTouchMove = (e: TouchEvent) => {
-      if (dragRef.current.isDragging) {
-        e.preventDefault();
-        handleDragMove(e.touches[0].clientY);
-      }
-    };
-    window.addEventListener('touchmove', onTouchMove, { passive: false });
-    window.addEventListener('touchend', handleDragEnd);
-    window.addEventListener('mouseup', handleDragEnd);
-    return () => {
-      window.removeEventListener('touchmove', onTouchMove);
-      window.removeEventListener('touchend', handleDragEnd);
-      window.removeEventListener('mouseup', handleDragEnd);
-    };
-  }, [handleDragMove, handleDragEnd]);
-
-  /** 数量变更提示 */
-  const handleQuantityChange = useCallback((val: number | string) => {
-    const n = typeof val === 'number' ? val : parseInt(val || '0', 10);
-    const remainingTimes = Number(previewData?.mixed_payment?.remaining_times ?? -1);
-
-    if (
-      previewData?.mixed_payment?.enabled &&
-      previewData?.mixed_payment?.available &&
-      remainingTimes > 0 &&
-      n > remainingTimes &&
-      numQuantity <= remainingTimes
-    ) {
-      showTip(`当前申购数量已超过混合支付剩余次数 ${remainingTimes} 次，将自动切换为专项金支付`);
-    }
-
-    setQuantity(val);
-  }, [numQuantity, previewData, setQuantity, showTip]);
-
-  const Stepper = ({
-    value, onChange, min = 0, max = 9999, onMaxReached,
-  }: { value: number | string; onChange: (v: number | string) => void; min?: number; max?: number; onMaxReached?: () => void }) => {
-    const numVal = typeof value === 'number' ? value : parseInt(value || '0', 10);
-    return (
-      <div className="flex items-center border border-border-light rounded-lg overflow-hidden h-9">
-        <button onClick={() => numVal > min && onChange(numVal - 1)} disabled={numVal <= min}
-          className="w-9 h-full flex items-center justify-center bg-bg-base text-text-main disabled:text-text-aux active:bg-border-light transition-colors">-</button>
-        <div className="w-px h-full bg-border-light" />
-        <input type="text" value={value}
-          onChange={(e) => { const val = e.target.value.replace(/[^\d]/g, ''); onChange(val === '' ? '' : parseInt(val, 10)); }}
-          onBlur={() => { const nv = typeof value === 'number' ? value : parseInt(value || '0', 10); if (value === '' || nv < min) onChange(min); else if (nv > max) onChange(max); }}
-          className="w-14 h-full text-center text-lg font-medium text-text-main bg-white dark:bg-gray-900 outline-none" />
-        <div className="w-px h-full bg-border-light" />
-        <button
-          onClick={() => { if (numVal >= max) { onMaxReached?.(); } else { onChange(numVal + 1); } }}
-          className={`w-9 h-full flex items-center justify-center bg-bg-base active:bg-border-light transition-colors ${numVal >= max ? 'text-text-aux' : 'text-text-main'}`}
-        >+</button>
-      </div>
-    );
-  };
-
-  return (
-    <>
-      <div
-        ref={maskRef}
-        className="absolute inset-0 bg-black/50 z-50 transition-opacity duration-300"
-        style={{ opacity: isClosing ? 0 : 1 }}
-        onClick={onClose}
+      <PreviewSheet
+        isOpen={showPreview}
+        detailData={detailData}
+        selectedZone={selectedZone}
+        quantity={quantity}
+        setQuantity={setQuantity}
+        extraHashrate={extraHashrate}
+        setExtraHashrate={setExtraHashrate}
+        maxQuantity={maxQuantity}
+        config={config}
+        estimatedFreezeAmount={estimatedFreezeAmount}
+        fundingPlan={fundingPlan}
+        numQuantity={numQuantity}
+        numExtraHashrate={numExtraHashrate}
+        sessionId={sessionId}
+        packageId={packageId}
+        previewData={previewData}
+        setPreviewData={setPreviewData}
+        previewError={previewError}
+        setPreviewError={setPreviewError}
+        formatCurrencyAmount={formatCurrencyAmount}
+        formatZoneAmountLabel={formatZoneAmountLabel}
+        onClose={() => setShowPreview(false)}
       />
-      <div
-        ref={sheetRef}
-        className={`absolute bottom-0 left-0 right-0 bg-white dark:bg-gray-900 rounded-t-[20px] z-50 flex flex-col max-h-[80vh] transition-transform duration-300 ${isClosing ? 'translate-y-full' : 'animate-slide-up'}`}
-      >
-        {/* 整个头部即为拖拽区域 */}
-        <div
-          className="shrink-0 cursor-grab active:cursor-grabbing"
-          onTouchStart={(e) => handleDragStart(e.touches[0].clientY)}
-          onMouseDown={(e) => { e.preventDefault(); handleDragStart(e.clientY); window.addEventListener('mousemove', (ev) => handleDragMove(ev.clientY)); }}
-        >
-          <div className="flex justify-center pt-3 pb-1">
-            <div className="w-10 h-1 bg-border-light rounded-full" />
-          </div>
-          <div className="flex items-center justify-between px-4 pb-3 border-b border-border-light">
-            <button onClick={onClose} className="text-md text-text-sub px-2 py-1">取消</button>
-            <h3 className="text-xl font-bold text-text-main">预约确认</h3>
-            <div className="w-14 flex justify-end">
-              {refreshing && <RefreshCcw size={16} className="animate-spin text-text-sub" />}
-            </div>
-          </div>
-        </div>
-
-        <div className="flex-1 overflow-y-auto p-4">
-          <div className="space-y-4">
-            {/* 分区 + 数量 */}
-            <Card className="p-4 border border-border-light/50">
-              <div className="flex justify-between items-center mb-3">
-                <span className="text-base text-text-sub">分区</span>
-                <span className="text-xl font-bold text-primary-start">¥{formatZoneAmountLabel(selectedZone)}</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-base text-text-sub">数量</span>
-                <Stepper
-                  value={quantity}
-                  onChange={handleQuantityChange}
-                  min={1}
-                  max={maxQuantity}
-                />
-              </div>
-            </Card>
-
-            {/* 额外算力 */}
-            {config && (
-              <Card className="p-4 border border-border-light/50">
-                <div className="flex justify-between items-center">
-                  <span className="text-base text-text-sub flex items-center">
-                    <Zap size={14} className="mr-1 text-primary-start" /> 额外算力
-                  </span>
-                  <Stepper value={extraHashrate} onChange={setExtraHashrate} min={0} max={config.max_extra_hashrate} />
-                </div>
-              </Card>
-            )}
-
-            {/* 冻结金额 */}
-            <div className="p-3 bg-bg-base rounded-xl">
-              <div className="flex justify-between items-center">
-                <span className="text-base text-text-sub">冻结金额</span>
-                <span className="text-2xl font-bold text-primary-start">
-                  ¥{formatCurrencyAmount(estimatedFreezeAmount)}
-                </span>
-              </div>
-              {/* 混合支付时显示明细 */}
-              {fundingPlan.useMixedPayment && (
-                <div className="mt-2 pt-2 border-t border-border-light/50 space-y-1.5">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-text-sub">专项金</span>
-                    <span className="text-text-main font-medium">¥{formatCurrencyAmount(fundingPlan.balanceAmount)}</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-text-sub">待激活确权金</span>
-                    <span className="text-text-main font-medium">¥{formatCurrencyAmount(fundingPlan.pendingAmount)}</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-text-sub">支付方式</span>
-                    <span className="text-text-main font-medium">混合支付（{mixedPaymentRatioText}）</span>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* 算力消耗 */}
-            {previewData && previewData.total_power_used > 0 && (
-              <div className="flex justify-between items-center p-3 bg-bg-base rounded-xl">
-                <span className="text-sm text-text-sub flex items-center">
-                  <Zap size={14} className="mr-1 text-primary-start" /> 算力消耗
-                </span>
-                <span className="text-sm font-medium text-primary-start">{previewData.total_power_used}</span>
-              </div>
-            )}
-
-            {/* 预览错误提示（如混合支付次数不足） */}
-            {previewError && (
-              <div className="p-3 bg-red-50 dark:bg-red-900/10 rounded-xl border border-red-100 dark:border-red-900/20 flex items-start">
-                <AlertCircle size={16} className="text-primary-start mr-2 mt-0.5 shrink-0" />
-                <p className="text-sm text-primary-start leading-relaxed">{previewError}</p>
-              </div>
-            )}
-
-            {/* 混合支付提示（切换原因说明） */}
-            {previewData?.mixed_payment?.notice && (
-              <div className="p-3 bg-amber-50 dark:bg-amber-900/10 rounded-xl border border-amber-100 dark:border-amber-900/20 flex items-start">
-                <AlertCircle size={16} className="text-amber-500 mr-2 mt-0.5 shrink-0" />
-                <p className="text-sm text-amber-600 dark:text-amber-400 leading-relaxed">{previewData.mixed_payment.notice}</p>
-              </div>
-            )}
-
-            {/* 混合支付剩余次数 */}
-            {previewData?.mixed_payment?.enabled && (
-              <div className="flex justify-between items-center p-3 bg-bg-base rounded-xl">
-                <span className="text-sm text-text-sub">混合支付剩余次数</span>
-                <span className={`text-sm font-medium ${previewData.mixed_payment.remaining_times <= 0 ? 'text-primary-start' : 'text-text-main'}`}>
-                  {previewData.mixed_payment.remaining_times}
-                </span>
-              </div>
-            )}
-
-            {/* 说明（来自 API） */}
-            {previewData?.message && (
-              <div className="p-3 bg-orange-50 dark:bg-orange-900/10 rounded-xl border border-orange-100 dark:border-orange-900/20">
-                <p className="text-sm text-orange-600 dark:text-orange-400 leading-relaxed">{previewData.message}</p>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* 底部提交按钮 */}
-        <div className="px-4 py-3 pb-safe border-t border-border-light shrink-0">
-          <button
-            disabled={!!previewError || refreshing || submitting}
-            onClick={handleBidBuy}
-            className={`w-full h-[48px] rounded-full text-lg font-bold text-white transition-opacity shadow-sm ${
-              previewError || refreshing || submitting
-                ? 'bg-border-light text-text-aux cursor-not-allowed'
-                : 'gradient-primary-r active:opacity-80'
-            }`}
-          >
-            {submitting ? (
-              <span className="inline-flex items-center">
-                <RefreshCcw size={16} className="mr-2 animate-spin" />
-                提交中...
-              </span>
-            ) : (
-              '确认并提交'
-            )}
-          </button>
-        </div>
-      </div>
-    </>
+    </div>
   );
 };
 

@@ -118,7 +118,7 @@ function GridProductSkeleton() {
       {Array.from({ length: 6 }).map((_, index) => (
         <div
           key={index}
-          className="overflow-hidden rounded-xl border border-[#ececec] bg-white"
+          className="overflow-hidden rounded-xl border border-border-light bg-bg-card"
         >
           <Skeleton className="aspect-square w-full rounded-none" />
           <div className="space-y-2 p-3">
@@ -499,14 +499,14 @@ export const StorePage = () => {
                     </Card>
                   ) : (
                     <div className="flex min-w-0 space-x-3 overflow-x-auto overflow-y-hidden pb-2 no-scrollbar overscroll-x-contain">
-                      {flashSaleProducts.map((item) => (
+                      {flashSaleProducts.map((item, index) => (
                         <button
-                          key={item.flash_sale_product_id}
+                          key={`flash-sale-${item.flash_sale_product_id || item.product_id || 0}-${index}`}
                           type="button"
-                          className="flex w-[112px] shrink-0 flex-col rounded-xl border border-[#ececec] bg-white p-2 text-left active:opacity-70"
+                          className="flex w-[112px] shrink-0 flex-col rounded-xl border border-border-light bg-bg-card p-2 text-left active:opacity-70"
                           onClick={() => goTo(buildShopProductPath(item.product_id))}
                         >
-                          <div className="mb-2 aspect-square overflow-hidden rounded-lg border border-[#f0f0f0] bg-[#f7f7f7]">
+                          <div className="mb-2 aspect-square overflow-hidden rounded-lg border border-border-light bg-bg-base">
                             <img
                               src={resolveUploadUrl(item.thumbnail)}
                               alt={item.product_name}
@@ -552,14 +552,14 @@ export const StorePage = () => {
                     </Card>
                   ) : (
                     <div className="flex min-w-0 space-x-3 overflow-x-auto overflow-y-hidden pb-2 no-scrollbar overscroll-x-contain">
-                      {hotSaleProducts.map((item) => (
+                      {hotSaleProducts.map((item, index) => (
                         <button
-                          key={item.id}
+                          key={`hot-sale-${item.id || 0}-${index}`}
                           type="button"
-                          className="flex w-[112px] shrink-0 flex-col rounded-xl border border-[#ececec] bg-white p-2 text-left active:opacity-70"
+                          className="flex w-[112px] shrink-0 flex-col rounded-xl border border-border-light bg-bg-card p-2 text-left active:opacity-70"
                           onClick={() => goTo(buildShopProductPath(item.id))}
                         >
-                          <div className="mb-2 aspect-square overflow-hidden rounded-lg border border-[#f0f0f0] bg-[#f7f7f7]">
+                          <div className="mb-2 aspect-square overflow-hidden rounded-lg border border-border-light bg-bg-base">
                             <img
                               src={resolveShopProductImageUrl(item.thumbnail)}
                               alt={item.name}
@@ -613,12 +613,12 @@ export const StorePage = () => {
               ) : (
                 <>
                   <div className="grid grid-cols-2 gap-3">
-                    {latestProducts.map((item) => (
+                    {latestProducts.map((item, index) => (
                       <div
-                        key={item.id}
+                        key={`latest-${item.id || 0}-${index}`}
                         role="button"
                         tabIndex={0}
-                        className="flex cursor-pointer flex-col overflow-hidden rounded-xl border border-[#ececec] bg-white text-left active:opacity-70"
+                        className="flex cursor-pointer flex-col overflow-hidden rounded-xl border border-border-light bg-bg-card text-left active:opacity-70"
                         onClick={() => goTo(buildShopProductPath(item.id))}
                       >
                         <div className="relative">
@@ -650,7 +650,7 @@ export const StorePage = () => {
                             <button
                               type="button"
                               aria-label={`查看 ${item.name} 购物车入口`}
-                              className="flex h-8 w-8 items-center justify-center rounded-full bg-[#f5f5f5] text-text-main active:bg-[#ececec]"
+                              className="flex h-8 w-8 items-center justify-center rounded-full bg-bg-base text-text-main active:bg-bg-hover"
                               onClick={(event) => {
                                 event.stopPropagation();
                                 goTo('cart');

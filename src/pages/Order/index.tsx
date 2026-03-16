@@ -4,6 +4,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { collectionTradeApi, shopOrderApi, type CollectionBuyOrder, type CollectionSellOrder, type ShopOrderListItem } from '../../api';
 import { getErrorMessage } from '../../api/core/errors';
 import { OfflineBanner } from '../../components/layout/OfflineBanner';
@@ -25,6 +26,7 @@ import { openCustomerServiceLink } from '../../lib/customerService';
 import { useAppNavigate } from '../../lib/navigation';
 
 export const OrderPage = () => {
+  const location = useLocation();
   const { goTo, navigate } = useAppNavigate();
   const { showToast, showConfirm } = useFeedback();
   const { isOffline, refreshStatus } = useNetworkStatus();
@@ -124,6 +126,27 @@ export const OrderPage = () => {
       : !sellOrdersRequest.loading && !sellOrdersRequest.error && sellOrders.length === 0;
 
   const activeTab = orderType === 'mall' ? mallTab : validCollectibleTab;
+  const routeQuery = new URLSearchParams(location.search);
+  const isFromTransferredCollection = routeQuery.get('from') === 'my_collection_transferred';
+
+  useEffect(() => {
+    const query = new URLSearchParams(location.search);
+    const routeOrderType = query.get('order_type');
+    const routeCollectibleTab = query.get('collectible_tab');
+    const routeSellId = Number(query.get('sell_id') || 0);
+
+    if (routeOrderType === 'collectible') {
+      setOrderType('collectible');
+    }
+
+    if (routeCollectibleTab && ORDER_TABS.collectible.includes(routeCollectibleTab)) {
+      setCollectibleTab(routeCollectibleTab);
+    }
+
+    if (routeSellId > 0) {
+      setSelectedOrder({ type: 'sell', id: routeSellId });
+    }
+  }, [location.search, setCollectibleTab, setOrderType]);
 
   useRouteScrollRestoration({
     containerRef: scrollContainerRef,
@@ -199,6 +222,15 @@ export const OrderPage = () => {
       sellOrdersRequest.reload(),
     ]);
   }, [mallOrdersRequest, buyOrdersRequest, sellOrdersRequest]);
+
+  const handleCollectibleDetailBack = useCallback(() => {
+    if (isFromTransferredCollection) {
+      navigate('/my-collection?tab=transferred', { replace: true });
+      return;
+    }
+
+    setSelectedOrder(null);
+  }, [isFromTransferredCollection, navigate]);
 
   const handleOpenSupport = useCallback(() => {
     void openCustomerServiceLink(({ duration, message, type }) => {
@@ -336,7 +368,7 @@ export const OrderPage = () => {
         <CollectibleOrderDetail
           type={selectedOrder.type}
           id={selectedOrder.id}
-          onBack={() => setSelectedOrder(null)}
+          onBack={handleCollectibleDetailBack}
           onOpenHelp={handleOpenSupport}
         />
       )}

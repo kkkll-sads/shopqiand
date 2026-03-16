@@ -1,7 +1,6 @@
 import React from 'react';
 import {
   Award,
-  ChevronRight,
   Gem,
   HeadphonesIcon,
   MessageSquare,
@@ -49,9 +48,6 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
   };
   const userType = readNumericValue(userInfoRecord.userType ?? userInfoRecord.user_type);
   const userTypeText = String(userInfoRecord.userTypeText ?? userInfoRecord.user_type_text ?? '');
-  const agentReviewStatus = readNumericValue(
-    userInfoRecord.agentReviewStatus ?? userInfoRecord.agent_review_status,
-  );
   const agentLevel = readNumericValue(userInfoRecord.agentLevel ?? userInfoRecord.agent_level);
   const agentLevelText = String(
     userInfoRecord.agentLevelText ?? userInfoRecord.agent_level_text ?? '',
@@ -104,6 +100,7 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
   };
   const statusMeta = statusConfig[userType] ?? { icon: UserCheck };
   const UserTypeIcon = statusMeta.icon;
+  const showLevelBadge = agentLevel > 0 && agentLevelText.length > 0;
 
   return (
     <div className="relative z-10 px-6 pb-2 pt-2 text-text-main">
@@ -117,12 +114,11 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
             {displayAvatarUrl ? (
               <img
                 src={displayAvatarUrl}
-                alt="用户头像"
+                alt={'\u7528\u6237\u5934\u50cf'}
                 className="h-full w-full object-cover"
-                referrerPolicy="no-referrer"
               />
             ) : (
-              displayAvatarText || '用'
+              displayAvatarText || '\u7528'
             )}
           </div>
 
@@ -131,10 +127,6 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
               <h2 className="max-w-[132px] truncate text-xl font-bold leading-tight text-text-main">
                 {displayName}
               </h2>
-              <span className="inline-flex items-center gap-0.5 rounded-full bg-bg-card px-2 py-0.5 text-[11px] font-medium text-text-sub shadow-sm">
-                编辑资料
-                <ChevronRight size={12} />
-              </span>
             </div>
 
             <div className="flex items-center gap-1.5">
@@ -142,10 +134,10 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
                 <div className="mr-0.5 flex h-3 w-3 items-center justify-center rounded-full bg-gradient-to-br from-primary-start to-primary-end">
                   <UserTypeIcon size={7} className="fill-current text-white" />
                 </div>
-                <span className="text-[9px] font-bold text-text-sub">{userTypeText || displayId}</span>
+                <span className="text-3xs font-bold text-text-sub">{userTypeText || displayId}</span>
               </div>
 
-              {agentLevelText.length > 0 && agentLevel >= 0 && (
+              {showLevelBadge && (
                 <div
                   className={`flex items-center whitespace-nowrap rounded-full border px-1.5 py-px ${lc.bg} ${lc.border}`}
                 >
@@ -154,23 +146,7 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
                   >
                     <Award size={7} className="text-white" />
                   </div>
-                  <span className={`text-[9px] font-bold ${lc.text}`}>{agentLevelText}</span>
-                </div>
-              )}
-
-              {agentReviewStatus === 1 && (
-                <div className="flex items-center whitespace-nowrap rounded-full border border-red-100 bg-red-50 px-1.5 py-px dark:border-red-800/40 dark:bg-red-900/20">
-                  <Award size={8} className="mr-0.5 text-red-500" />
-                  <span className="text-[9px] font-bold text-red-600 dark:text-red-400">代理</span>
-                </div>
-              )}
-
-              {agentReviewStatus === 0 && (
-                <div className="flex items-center whitespace-nowrap rounded-full border border-yellow-100 bg-yellow-50 px-1.5 py-px dark:border-yellow-800/40 dark:bg-yellow-900/20">
-                  <Award size={8} className="mr-0.5 text-yellow-600" />
-                  <span className="text-[9px] font-bold text-yellow-700 dark:text-yellow-400">
-                    待审核
-                  </span>
+                  <span className={`text-3xs font-bold ${lc.text}`}>{agentLevelText}</span>
                 </div>
               )}
             </div>
@@ -182,7 +158,7 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
             className="flex flex-col items-center text-text-main active:opacity-70"
           >
             <HeadphonesIcon size={26} strokeWidth={1.5} />
-            <span className="mt-0.5 text-[10px] font-medium">客服</span>
+            <span className="mt-0.5 text-2xs font-medium">{'\u5ba2\u670d'}</span>
           </button>
 
           <button
@@ -190,9 +166,9 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
             className="relative flex flex-col items-center text-text-main active:opacity-70"
           >
             <MessageSquare size={26} strokeWidth={1.5} />
-            <span className="mt-0.5 text-[10px] font-medium">消息</span>
+            <span className="mt-0.5 text-2xs font-medium">{'\u6d88\u606f'}</span>
             {unreadCount > 0 && (
-              <span className="absolute -right-3 -top-2 flex h-4 min-w-[16px] items-center justify-center rounded-full border border-white bg-red-500 px-1 text-[10px] font-bold leading-none text-white">
+              <span className="absolute -right-3 -top-2 flex h-4 min-w-[16px] items-center justify-center rounded-full border border-white bg-red-500 px-1 text-2xs font-bold leading-none text-white">
                 {unreadCount > 99 ? '99+' : unreadCount}
               </span>
             )}
@@ -203,7 +179,7 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
             className="flex flex-col items-center text-text-main active:opacity-70"
           >
             <Settings size={26} strokeWidth={1.5} />
-            <span className="mt-0.5 text-[10px] font-medium">设置</span>
+            <span className="mt-0.5 text-2xs font-medium">{'\u8bbe\u7f6e'}</span>
           </button>
         </div>
       </div>

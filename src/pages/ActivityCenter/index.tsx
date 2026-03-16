@@ -304,7 +304,7 @@ export function ActivityCenterPage() {
                 <div className="inline-flex items-center rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs uppercase tracking-[0.26em] text-white/80">
                   Activity Hub
                 </div>
-                <h1 className="mt-4 text-[28px] font-semibold leading-tight">统一查看当前奖励活动</h1>
+                <h1 className="mt-4 text-5_5xl font-semibold leading-tight">统一查看当前奖励活动</h1>
                 <p className="mt-2 max-w-[280px] text-sm leading-6 text-white/78">
                   完成首购、邀请、问卷、充值等任务后，奖励按活动规则自动到账。
                 </p>

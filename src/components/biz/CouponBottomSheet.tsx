@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { X, RefreshCcw, Ticket } from 'lucide-react';
+﻿import React, { useEffect, useState } from 'react';
+import { RefreshCcw, Ticket, X } from 'lucide-react';
+import { BottomSheet } from '../ui/BottomSheet';
 import { Skeleton } from '../ui/Skeleton';
 
 interface Coupon {
@@ -22,8 +23,6 @@ export const CouponBottomSheet: React.FC<CouponBottomSheetProps> = ({ isOpen, on
   const [error, setError] = useState(false);
   const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [isEmpty, setIsEmpty] = useState(false);
-  
-  // For demo purposes
   const [demoState, setDemoState] = useState<'normal' | 'empty' | 'error'>('normal');
 
   useEffect(() => {
@@ -48,29 +47,29 @@ export const CouponBottomSheet: React.FC<CouponBottomSheetProps> = ({ isOpen, on
           {
             id: '1',
             amount: 200,
-            threshold: '满3000可用',
+            threshold: '满1000可用',
             title: '手机数码品类券',
             validity: '2023.10.24-2023.11.11',
             scope: '仅可购买指定手机数码商品',
-            status: 'available'
+            status: 'available',
           },
           {
             id: '2',
             amount: 50,
-            threshold: '满500可用',
+            threshold: '满200可用',
             title: '全品类通用券',
             validity: '2023.10.24-2023.10.31',
             scope: '全平台自营商品可用',
-            status: 'received'
+            status: 'received',
           },
           {
             id: '3',
             amount: 10,
             threshold: '无门槛',
             title: '新用户专享券',
-            validity: '领取后3天内有效',
+            validity: '领取后7天内有效',
             scope: '全平台商品可用',
-            status: 'available'
+            status: 'available',
           },
           {
             id: '4',
@@ -79,8 +78,8 @@ export const CouponBottomSheet: React.FC<CouponBottomSheetProps> = ({ isOpen, on
             title: '家电品类券',
             validity: '2023.10.24-2023.11.11',
             scope: '仅可购买指定家电商品',
-            status: 'available'
-          }
+            status: 'available',
+          },
         ]);
       }
       setLoading(false);
@@ -88,70 +87,105 @@ export const CouponBottomSheet: React.FC<CouponBottomSheetProps> = ({ isOpen, on
   };
 
   const handleReceive = (id: string) => {
-    setCoupons(prev => prev.map(c => c.id === id ? { ...c, status: 'received' } : c));
+    setCoupons((prev) => prev.map((coupon) => (
+      coupon.id === id ? { ...coupon, status: 'received' } : coupon
+    )));
   };
 
-  if (!isOpen) return null;
-
   return (
-    <div className="fixed inset-0 z-[100] flex flex-col justify-end">
-      <div 
-        className="absolute inset-0 bg-black/50 backdrop-blur-sm transition-opacity" 
-        onClick={onClose}
-      />
-      
-      <div className="bg-bg-hover dark:bg-bg-base rounded-t-[16px] w-full h-[75vh] flex flex-col relative z-10 animate-in slide-in-from-bottom duration-300">
-        {/* Header */}
-        <div className="h-14 flex items-center justify-center relative bg-white dark:bg-bg-card rounded-t-[16px] shrink-0">
-          <h3 className="text-xl font-bold text-text-main dark:text-text-main">领取优惠券</h3>
-          <button 
+    <BottomSheet
+      isOpen={isOpen}
+      onClose={onClose}
+      title="领取优惠券"
+      maxHeight="75vh"
+      zIndex={100}
+      className="bg-bg-hover dark:bg-bg-base"
+      headerLeft={null}
+      headerRight={
+        <button
+          onClick={onClose}
+          className="rounded-full p-2 text-text-aux transition-colors active:bg-bg-hover dark:text-text-sub dark:active:bg-[#2A2A2A]"
+        >
+          <X size={20} />
+        </button>
+      }
+      footer={
+        <div className="border-border-light bg-white p-3 dark:bg-bg-card dark:border-border-light">
+          <button
             onClick={onClose}
-            className="absolute right-4 p-2 text-text-aux dark:text-text-sub active:bg-bg-hover dark:active:bg-[#2A2A2A] rounded-full transition-colors"
+            className="flex h-[44px] w-full items-center justify-center rounded-3xl bg-gradient-to-r from-brand-start to-brand-end text-lg font-medium text-white shadow-[0_4px_12px_rgba(226,35,26,0.2)] active:opacity-80"
           >
-            <X size={20} />
+            完成
+          </button>
+        </div>
+      }
+    >
+      <div className="bg-bg-hover dark:bg-bg-base">
+        <div className="flex space-x-2 overflow-x-auto border-b border-border-light bg-white px-4 py-2 text-xs no-scrollbar dark:border-border-light dark:bg-bg-card">
+          <span className="flex shrink-0 items-center text-text-aux">Demo:</span>
+          <button
+            onClick={() => setDemoState('normal')}
+            className={`rounded border px-2 py-1 ${
+              demoState === 'normal'
+                ? 'border-[#E2231A] bg-brand-start text-white'
+                : 'border-[#CCCCCC] text-text-main dark:border-[#666666] dark:text-text-main'
+            }`}
+          >
+            Normal
+          </button>
+          <button
+            onClick={() => setDemoState('empty')}
+            className={`rounded border px-2 py-1 ${
+              demoState === 'empty'
+                ? 'border-[#E2231A] bg-brand-start text-white'
+                : 'border-[#CCCCCC] text-text-main dark:border-[#666666] dark:text-text-main'
+            }`}
+          >
+            Empty
+          </button>
+          <button
+            onClick={() => setDemoState('error')}
+            className={`rounded border px-2 py-1 ${
+              demoState === 'error'
+                ? 'border-[#E2231A] bg-brand-start text-white'
+                : 'border-[#CCCCCC] text-text-main dark:border-[#666666] dark:text-text-main'
+            }`}
+          >
+            Error
           </button>
         </div>
 
-        {/* Demo Controls (Hidden in production) */}
-        <div className="px-4 py-2 flex space-x-2 overflow-x-auto no-scrollbar bg-white dark:bg-bg-card border-b border-border-light dark:border-border-light text-xs shrink-0">
-          <span className="text-text-aux flex items-center shrink-0">Demo:</span>
-          <button onClick={() => setDemoState('normal')} className={`px-2 py-1 rounded border ${demoState === 'normal' ? 'bg-brand-start text-white border-[#E2231A]' : 'border-[#CCCCCC] dark:border-[#666666] text-text-main dark:text-text-main'}`}>Normal</button>
-          <button onClick={() => setDemoState('empty')} className={`px-2 py-1 rounded border ${demoState === 'empty' ? 'bg-brand-start text-white border-[#E2231A]' : 'border-[#CCCCCC] dark:border-[#666666] text-text-main dark:text-text-main'}`}>Empty</button>
-          <button onClick={() => setDemoState('error')} className={`px-2 py-1 rounded border ${demoState === 'error' ? 'bg-brand-start text-white border-[#E2231A]' : 'border-[#CCCCCC] dark:border-[#666666] text-text-main dark:text-text-main'}`}>Error</button>
-        </div>
-
-        {/* Content */}
-        <div className="flex-1 overflow-y-auto p-4 relative">
+        <div className="relative min-h-[320px] p-4">
           {error ? (
-            <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <RefreshCcw size={48} className="text-text-aux dark:text-text-sub mb-4" />
-              <p className="text-md text-text-sub dark:text-text-aux mb-4">加载失败，请稍后再试</p>
-              <button 
+            <div className="absolute inset-0 flex flex-col items-center justify-center p-4">
+              <RefreshCcw size={48} className="mb-4 text-text-aux dark:text-text-sub" />
+              <p className="mb-4 text-md text-text-sub dark:text-text-aux">加载失败，请稍后再试</p>
+              <button
                 onClick={fetchCoupons}
-                className="px-6 py-2 border border-[#CCCCCC] dark:border-[#666666] rounded-full text-base text-text-main dark:text-text-main active:bg-bg-hover dark:active:bg-[#2A2A2A]"
+                className="rounded-full border border-[#CCCCCC] px-6 py-2 text-base text-text-main active:bg-bg-hover dark:border-[#666666] dark:text-text-main dark:active:bg-[#2A2A2A]"
               >
                 重新加载
               </button>
             </div>
           ) : isEmpty ? (
-            <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <Ticket size={64} className="text-text-aux dark:text-text-sub mb-4 opacity-50" strokeWidth={1.5} />
+            <div className="absolute inset-0 flex flex-col items-center justify-center p-4">
+              <Ticket size={64} className="mb-4 text-text-aux opacity-50 dark:text-text-sub" strokeWidth={1.5} />
               <p className="text-md text-text-sub dark:text-text-aux">暂无可领取的优惠券</p>
             </div>
           ) : loading ? (
             <div className="space-y-3">
-              {[1, 2, 3].map(i => (
-                <div key={i} className="bg-white dark:bg-bg-card rounded-xl h-[100px] flex overflow-hidden shadow-sm">
-                  <div className="w-[110px] bg-[#FFF3F3] dark:bg-[#3A1E1E] flex flex-col items-center justify-center shrink-0">
-                    <Skeleton className="w-16 h-8 mb-2 bg-white/50 dark:bg-black/20" />
-                    <Skeleton className="w-12 h-3 bg-white/50 dark:bg-black/20" />
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="flex h-[100px] overflow-hidden rounded-xl bg-white shadow-sm dark:bg-bg-card">
+                  <div className="flex w-[110px] shrink-0 flex-col items-center justify-center bg-[#FFF3F3] dark:bg-[#3A1E1E]">
+                    <Skeleton className="mb-2 h-8 w-16 bg-white/50 dark:bg-black/20" />
+                    <Skeleton className="h-3 w-12 bg-white/50 dark:bg-black/20" />
                   </div>
-                  <div className="flex-1 p-3 flex flex-col justify-between">
-                    <Skeleton className="w-3/4 h-4" />
-                    <Skeleton className="w-1/2 h-3" />
-                    <div className="flex justify-between items-end">
-                      <Skeleton className="w-2/3 h-3" />
-                      <Skeleton className="w-14 h-6 rounded-full" />
+                  <div className="flex flex-1 flex-col justify-between p-3">
+                    <Skeleton className="h-4 w-3/4" />
+                    <Skeleton className="h-3 w-1/2" />
+                    <div className="flex items-end justify-between">
+                      <Skeleton className="h-3 w-2/3" />
+                      <Skeleton className="h-6 w-14 rounded-full" />
                     </div>
                   </div>
                 </div>
@@ -159,65 +193,56 @@ export const CouponBottomSheet: React.FC<CouponBottomSheetProps> = ({ isOpen, on
             </div>
           ) : (
             <div className="space-y-3 pb-4">
-              {coupons.map(coupon => (
-                <div key={coupon.id} className="bg-white dark:bg-bg-card rounded-xl flex overflow-hidden shadow-sm relative">
-                  {/* Left Side: Amount & Threshold */}
-                  <div className={`w-[110px] flex flex-col items-center justify-center shrink-0 relative ${coupon.status === 'received' ? 'bg-bg-hover dark:bg-bg-hover' : 'bg-[#FFF3F3] dark:bg-[#3A1E1E]'}`}>
+              {coupons.map((coupon) => (
+                <div key={coupon.id} className="relative flex overflow-hidden rounded-xl bg-white shadow-sm dark:bg-bg-card">
+                  <div className={`relative flex w-[110px] shrink-0 flex-col items-center justify-center ${coupon.status === 'received' ? 'bg-bg-hover dark:bg-bg-hover' : 'bg-[#FFF3F3] dark:bg-[#3A1E1E]'}`}>
                     <div className={`flex items-baseline ${coupon.status === 'received' ? 'text-text-aux dark:text-text-sub' : 'text-brand-start dark:text-brand-start'}`}>
                       <span className="text-md font-bold">¥</span>
-                      <span className="text-6xl font-bold leading-none tracking-tight ml-0.5">{coupon.amount}</span>
+                      <span className="ml-0.5 text-6xl font-bold leading-none tracking-tight">{coupon.amount}</span>
                     </div>
-                    <span className={`text-s mt-1 ${coupon.status === 'received' ? 'text-text-aux dark:text-text-sub' : 'text-brand-start dark:text-brand-start'}`}>
+                    <span className={`mt-1 text-s ${coupon.status === 'received' ? 'text-text-aux dark:text-text-sub' : 'text-brand-start dark:text-brand-start'}`}>
                       {coupon.threshold}
                     </span>
-                    
-                    {/* Dashed line separator */}
-                    <div className="absolute right-0 top-2 bottom-2 w-px border-r border-dashed border-[#CCCCCC] dark:border-[#666666] opacity-50"></div>
-                    
-                    {/* Top/Bottom cutouts */}
-                    <div className="absolute -right-1.5 -top-1.5 w-3 h-3 rounded-full bg-bg-hover dark:bg-bg-base"></div>
-                    <div className="absolute -right-1.5 -bottom-1.5 w-3 h-3 rounded-full bg-bg-hover dark:bg-bg-base"></div>
+
+                    <div className="absolute bottom-2 right-0 top-2 w-px border-r border-dashed border-[#CCCCCC] opacity-50 dark:border-[#666666]" />
+                    <div className="absolute -right-1.5 -top-1.5 h-3 w-3 rounded-full bg-bg-hover dark:bg-bg-base" />
+                    <div className="absolute -bottom-1.5 -right-1.5 h-3 w-3 rounded-full bg-bg-hover dark:bg-bg-base" />
                   </div>
-                  
-                  {/* Right Side: Details & Action */}
-                  <div className="flex-1 p-3 flex flex-col justify-between relative">
-                    {coupon.status === 'received' && (
-                      <div className="absolute top-0 right-0 w-12 h-12 overflow-hidden">
-                        <div className="absolute top-2 -right-3 bg-[#CCCCCC] dark:bg-[#666666] text-white text-2xs py-0.5 px-4 rotate-45">
+
+                  <div className="relative flex flex-1 flex-col justify-between p-3">
+                    {coupon.status === 'received' ? (
+                      <div className="absolute right-0 top-0 h-12 w-12 overflow-hidden">
+                        <div className="absolute -right-3 top-2 rotate-45 bg-[#CCCCCC] px-4 py-0.5 text-2xs text-white dark:bg-[#666666]">
                           已领取
                         </div>
                       </div>
-                    )}
-                    
+                    ) : null}
+
                     <div>
-                      <div className="flex items-start mb-1 pr-6">
-                        <span className={`text-xs px-1 py-0.5 rounded mr-1 shrink-0 mt-0.5 ${coupon.status === 'received' ? 'bg-bg-hover text-text-aux dark:bg-bg-hover dark:text-text-sub' : 'bg-brand-start text-white'}`}>
+                      <div className="mb-1 flex items-start pr-6">
+                        <span className={`mr-1 mt-0.5 shrink-0 rounded px-1 py-0.5 text-xs ${coupon.status === 'received' ? 'bg-bg-hover text-text-aux dark:bg-bg-hover dark:text-text-sub' : 'bg-brand-start text-white'}`}>
                           优惠券
                         </span>
-                        <h4 className={`text-md font-bold line-clamp-1 ${coupon.status === 'received' ? 'text-text-aux dark:text-text-sub' : 'text-text-main dark:text-text-main'}`}>
+                        <h4 className={`line-clamp-1 text-md font-bold ${coupon.status === 'received' ? 'text-text-aux dark:text-text-sub' : 'text-text-main dark:text-text-main'}`}>
                           {coupon.title}
                         </h4>
                       </div>
-                      <p className="text-s text-text-aux dark:text-text-sub line-clamp-1 mb-2">
+                      <p className="mb-2 line-clamp-1 text-s text-text-aux dark:text-text-sub">
                         {coupon.scope}
                       </p>
                     </div>
-                    
+
                     <div className="flex items-end justify-between">
-                      <span className="text-xs text-text-aux dark:text-text-sub">
-                        {coupon.validity}
-                      </span>
+                      <span className="text-xs text-text-aux dark:text-text-sub">{coupon.validity}</span>
                       {coupon.status === 'available' ? (
-                        <button 
+                        <button
                           onClick={() => handleReceive(coupon.id)}
-                          className="w-[60px] h-[24px] rounded-full bg-gradient-to-r from-brand-start to-brand-end text-white text-sm font-medium active:opacity-80 flex items-center justify-center shadow-[0_2px_8px_rgba(226,35,26,0.2)]"
+                          className="flex h-[24px] w-[60px] items-center justify-center rounded-full bg-gradient-to-r from-brand-start to-brand-end text-sm font-medium text-white shadow-[0_2px_8px_rgba(226,35,26,0.2)] active:opacity-80"
                         >
                           领取
                         </button>
                       ) : (
-                        <button 
-                          className="w-[60px] h-[24px] rounded-full bg-transparent border border-[#CCCCCC] dark:border-[#666666] text-text-aux dark:text-text-sub text-sm font-medium flex items-center justify-center"
-                        >
+                        <button className="flex h-[24px] w-[60px] items-center justify-center rounded-full border border-[#CCCCCC] bg-transparent text-sm font-medium text-text-aux dark:border-[#666666] dark:text-text-sub">
                           去使用
                         </button>
                       )}
@@ -225,26 +250,15 @@ export const CouponBottomSheet: React.FC<CouponBottomSheetProps> = ({ isOpen, on
                   </div>
                 </div>
               ))}
-              
-              {/* Lazy Loading Indicator */}
-              <div className="py-4 flex justify-center items-center text-sm text-text-aux dark:text-text-sub">
-                <span className="w-4 h-4 border-2 border-[#CCCCCC] dark:border-[#666666] border-t-transparent rounded-full animate-spin mr-2"></span>
+
+              <div className="flex items-center justify-center py-4 text-sm text-text-aux dark:text-text-sub">
+                <span className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-[#CCCCCC] border-t-transparent dark:border-[#666666]" />
                 加载更多...
               </div>
             </div>
           )}
         </div>
-
-        {/* Bottom Action */}
-        <div className="p-3 pb-safe bg-white dark:bg-bg-card border-t border-border-light dark:border-border-light shrink-0">
-          <button 
-            onClick={onClose}
-            className="w-full h-[44px] rounded-3xl bg-gradient-to-r from-brand-start to-brand-end text-white font-medium text-lg active:opacity-80 flex items-center justify-center shadow-[0_4px_12px_rgba(226,35,26,0.2)]"
-          >
-            完成
-          </button>
-        </div>
       </div>
-    </div>
+    </BottomSheet>
   );
 };

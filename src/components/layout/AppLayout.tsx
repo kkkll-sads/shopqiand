@@ -12,6 +12,22 @@ import { RightsPage } from '../../pages/Rights';
 import { OrderPage } from '../../pages/Order';
 import { MyCollectionPage } from '../../pages/MyCollection';
 import { FriendsPage } from '../../pages/Friends';
+import { AppLaunchScreen } from './AppLaunchScreen';
+
+const LAUNCH_SHOW_MS = 900;
+const LAUNCH_FADE_MS = 320;
+
+function resolveLaunchTimings() {
+  const reduceMotion =
+    typeof window !== 'undefined' &&
+    typeof window.matchMedia === 'function' &&
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  return {
+    fadeMs: reduceMotion ? 160 : LAUNCH_FADE_MS,
+    showMs: reduceMotion ? 700 : LAUNCH_SHOW_MS,
+  };
+}
 
 const KEEP_ALIVE_CONFIG: { path: string; Component: React.ComponentType }[] = [
   { path: '/store', Component: StorePage },
@@ -103,6 +119,7 @@ function AppLayoutContent() {
   const swipeContentRef = useRef<HTMLDivElement>(null);
   const swipeShadowRef = useRef<HTMLDivElement>(null);
   const swipeArrowRef = useRef<HTMLDivElement>(null);
+  const [launchPhase, setLaunchPhase] = useState<'visible' | 'fading' | 'hidden'>('visible');
 
   useSwipeBack({
     containerRef: swipeContainerRef,
@@ -111,6 +128,37 @@ function AppLayoutContent() {
     arrowRef: swipeArrowRef,
     disabled: isTab || isBlocked,
   });
+
+  useEffect(() => {
+    if (launchPhase !== 'visible') {
+      return undefined;
+    }
+
+    const { showMs } = resolveLaunchTimings();
+
+    const fadeTimer = window.setTimeout(() => {
+      setLaunchPhase('fading');
+    }, showMs);
+
+    return () => {
+      window.clearTimeout(fadeTimer);
+    };
+  }, [launchPhase]);
+
+  useEffect(() => {
+    if (launchPhase !== 'fading') {
+      return undefined;
+    }
+
+    const { fadeMs } = resolveLaunchTimings();
+    const hideTimer = window.setTimeout(() => {
+      setLaunchPhase('hidden');
+    }, fadeMs);
+
+    return () => {
+      window.clearTimeout(hideTimer);
+    };
+  }, [launchPhase]);
 
   return (
     <div className="app-viewport-height flex w-full flex-col overflow-hidden bg-bg-base">
@@ -155,6 +203,8 @@ function AppLayoutContent() {
         </div>
 
         {showBottomTab && <BottomTab active={activeTab} />}
+
+        {launchPhase !== 'hidden' && <AppLaunchScreen fading={launchPhase === 'fading'} />}
       </div>
     </div>
   );

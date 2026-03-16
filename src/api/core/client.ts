@@ -41,8 +41,18 @@ export interface MockRequestContext {
 export type MockHandler = (context: MockRequestContext) => unknown | Promise<unknown>;
 export type MockHandlerMap = Record<string, MockHandler>;
 
+export interface BaseURLResolvedPayload {
+  baseURL: string;
+  line: number;
+  total: number;
+}
+
 export interface HttpClientOptions {
   baseURL?: string;
+  baseURLCacheKey?: string;
+  baseURLCandidates?: string[];
+  baseURLProbePath?: string;
+  baseURLProbeTimeout?: number;
   defaultHeaders?: HeadersInit;
   enableMock?: boolean;
   getAccessToken?: () => string | null;
@@ -50,7 +60,27 @@ export interface HttpClientOptions {
   isSuccessCode?: (code: EnvelopeCode) => boolean;
   mockDelay?: number;
   mockHandlers?: MockHandlerMap;
+  onBaseURLResolved?: (payload: BaseURLResolvedPayload) => void;
   timeout?: number;
+}
+
+function normalizeBaseURL(value: string): string {
+  return value.trim().replace(/\/+$/, '');
+}
+
+function appendUniqueBaseURL(target: string[], value: string | undefined) {
+  if (!value) {
+    return;
+  }
+
+  const normalizedValue = normalizeBaseURL(value);
+  if (!normalizedValue) {
+    return;
+  }
+
+  if (!target.includes(normalizedValue)) {
+    target.push(normalizedValue);
+  }
 }
 
 function ensureTrailingSlash(value: string): string {
@@ -287,13 +317,44 @@ async function delay(duration: number, signal: AbortSignal): Promise<void> {
 
 export class HttpClient {
   private readonly options: Required<
-    Pick<HttpClientOptions, 'defaultHeaders' | 'enableMock' | 'mockDelay' | 'timeout'>
+    Pick<
+      HttpClientOptions,
+      | 'defaultHeaders'
+      | 'enableMock'
+      | 'mockDelay'
+      | 'timeout'
+      | 'baseURLCandidates'
+      | 'baseURLProbePath'
+      | 'baseURLProbeTimeout'
+    >
   > &
-    Omit<HttpClientOptions, 'defaultHeaders' | 'enableMock' | 'mockDelay' | 'timeout'>;
+    Omit<
+      HttpClientOptions,
+      | 'defaultHeaders'
+      | 'enableMock'
+      | 'mockDelay'
+      | 'timeout'
+      | 'baseURLCandidates'
+      | 'baseURLProbePath'
+      | 'baseURLProbeTimeout'
+    >;
+  private resolvedBaseURL?: string;
+  private resolvingBaseURL?: Promise<string | undefined>;
+  private lastNotifiedBaseURL?: string;
 
   constructor(options: HttpClientOptions = {}) {
+    const baseURLCandidates: string[] = [];
+    (options.baseURLCandidates ?? []).forEach((candidate) => {
+      appendUniqueBaseURL(baseURLCandidates, candidate);
+    });
+    appendUniqueBaseURL(baseURLCandidates, options.baseURL);
+
     this.options = {
       baseURL: options.baseURL,
+      baseURLCacheKey: options.baseURLCacheKey,
+      baseURLCandidates,
+      baseURLProbePath: options.baseURLProbePath ?? '/api/User/checkIn',
+      baseURLProbeTimeout: options.baseURLProbeTimeout ?? 3500,
       defaultHeaders: options.defaultHeaders ?? {},
       enableMock: options.enableMock ?? false,
       getAccessToken: options.getAccessToken,
@@ -311,10 +372,11 @@ export class HttpClient {
   ): Promise<TResponse> {
     const method = options.method ?? 'GET';
     const headers = new Headers(this.options.defaultHeaders);
-    const url = appendQueryParams(resolveUrl(path, this.options.baseURL), options.query);
     const controller = new AbortController();
     const timeout = options.timeout ?? this.options.timeout;
     let timedOut = false;
+    const shouldResolveBaseURL = !/^https?:\/\//i.test(path);
+    let activeBaseURL = this.options.baseURL;
 
     if (options.headers) {
       new Headers(options.headers).forEach((value, key) => {
@@ -345,6 +407,10 @@ export class HttpClient {
     try {
       const preparedBody = this.prepareBody(options.body, headers);
       const enableMock = options.useMock ?? this.options.enableMock;
+      if (shouldResolveBaseURL) {
+        activeBaseURL = await this.resolveBaseURL(controller.signal);
+      }
+      const url = appendQueryParams(resolveUrl(path, activeBaseURL), options.query);
 
       if (enableMock) {
         const mockHandler = this.options.mockHandlers[buildMockKey(method, url)];
@@ -388,6 +454,9 @@ export class HttpClient {
       );
     } catch (error) {
       if (timedOut) {
+        if (shouldResolveBaseURL) {
+          this.markBaseURLAsUnhealthy(activeBaseURL);
+        }
         throw new ApiError('Request timed out.', { code: 'REQUEST_TIMEOUT' });
       }
 
@@ -395,6 +464,9 @@ export class HttpClient {
         throw error;
       }
 
+      if (shouldResolveBaseURL) {
+        this.markBaseURLAsUnhealthy(activeBaseURL);
+      }
       throw new ApiError('Network request failed.', { details: error });
     } finally {
       window.clearTimeout(timeoutId);
@@ -436,6 +508,203 @@ export class HttpClient {
     options: Omit<RequestOptions<TBody>, 'body' | 'method'> = {},
   ) {
     return this.request<TResponse, TBody>(path, { ...options, body, method: 'DELETE' });
+  }
+
+  getResolvedBaseURL(): string | undefined {
+    if (this.resolvedBaseURL) {
+      return this.resolvedBaseURL;
+    }
+
+    const cachedBaseURL = this.readCachedBaseURL();
+    if (cachedBaseURL) {
+      return cachedBaseURL;
+    }
+
+    return this.options.baseURL ? normalizeBaseURL(this.options.baseURL) : undefined;
+  }
+
+  private async resolveBaseURL(signal: AbortSignal): Promise<string | undefined> {
+    const candidates = this.options.baseURLCandidates;
+    if (candidates.length === 0) {
+      return this.options.baseURL;
+    }
+
+    if (this.resolvedBaseURL && candidates.includes(this.resolvedBaseURL)) {
+      return this.resolvedBaseURL;
+    }
+
+    if (!this.resolvingBaseURL) {
+      this.resolvingBaseURL = this.pickReachableBaseURL(candidates).finally(() => {
+        this.resolvingBaseURL = undefined;
+      });
+    }
+
+    const selectedBaseURL = await this.awaitWithAbortSignal(this.resolvingBaseURL, signal);
+    this.resolvedBaseURL = selectedBaseURL;
+    this.notifyResolvedBaseURL(selectedBaseURL);
+    return selectedBaseURL;
+  }
+
+  private async pickReachableBaseURL(candidates: string[]): Promise<string | undefined> {
+    const cachedBaseURL = this.readCachedBaseURL();
+    const orderedCandidates = cachedBaseURL
+      ? [cachedBaseURL, ...candidates.filter((candidate) => candidate !== cachedBaseURL)]
+      : [...candidates];
+
+    for (const candidate of orderedCandidates) {
+      const isReachable = await this.probeBaseURL(candidate);
+      if (isReachable) {
+        this.writeCachedBaseURL(candidate);
+        return candidate;
+      }
+    }
+
+    const fallbackBaseURL = orderedCandidates[0];
+    this.writeCachedBaseURL(fallbackBaseURL);
+    return fallbackBaseURL;
+  }
+
+  private readCachedBaseURL(): string | undefined {
+    const cacheKey = this.options.baseURLCacheKey;
+    if (!cacheKey || typeof window === 'undefined') {
+      return undefined;
+    }
+
+    try {
+      const cachedValue = window.localStorage.getItem(cacheKey);
+      if (!cachedValue) {
+        return undefined;
+      }
+
+      const normalizedCachedValue = normalizeBaseURL(cachedValue);
+      if (!this.options.baseURLCandidates.includes(normalizedCachedValue)) {
+        return undefined;
+      }
+
+      return normalizedCachedValue;
+    } catch {
+      return undefined;
+    }
+  }
+
+  private writeCachedBaseURL(baseURL: string | undefined) {
+    const cacheKey = this.options.baseURLCacheKey;
+    if (!cacheKey || typeof window === 'undefined') {
+      return;
+    }
+
+    try {
+      if (!baseURL) {
+        window.localStorage.removeItem(cacheKey);
+        return;
+      }
+
+      window.localStorage.setItem(cacheKey, baseURL);
+    } catch {
+      return;
+    }
+  }
+
+  private async probeBaseURL(baseURL: string): Promise<boolean> {
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(() => {
+      controller.abort();
+    }, this.options.baseURLProbeTimeout);
+
+    try {
+      const probeURL = appendQueryParams(
+        resolveUrl(this.options.baseURLProbePath, baseURL),
+        { __probe: Date.now() },
+      );
+      const response = await fetch(probeURL.toString(), {
+        cache: 'no-store',
+        method: 'GET',
+        signal: controller.signal,
+      });
+
+      return response.status < 500;
+    } catch (error) {
+      return false;
+    } finally {
+      window.clearTimeout(timeoutId);
+    }
+  }
+
+  private async awaitWithAbortSignal<T>(promise: Promise<T>, signal: AbortSignal): Promise<T> {
+    if (signal.aborted) {
+      throw createAbortError();
+    }
+
+    return new Promise<T>((resolve, reject) => {
+      const handleAbort = () => {
+        reject(createAbortError());
+      };
+
+      signal.addEventListener('abort', handleAbort, { once: true });
+
+      promise.then(
+        (value) => {
+          signal.removeEventListener('abort', handleAbort);
+          resolve(value);
+        },
+        (error) => {
+          signal.removeEventListener('abort', handleAbort);
+          reject(error);
+        },
+      );
+    });
+  }
+
+  private markBaseURLAsUnhealthy(baseURL: string | undefined) {
+    if (!baseURL) {
+      return;
+    }
+
+    const normalizedBaseURL = normalizeBaseURL(baseURL);
+
+    if (this.resolvedBaseURL === baseURL) {
+      this.resolvedBaseURL = undefined;
+    }
+    if (this.lastNotifiedBaseURL === normalizedBaseURL) {
+      this.lastNotifiedBaseURL = undefined;
+    }
+
+    const cacheKey = this.options.baseURLCacheKey;
+    if (cacheKey && typeof window !== 'undefined') {
+      try {
+        const cachedValue = window.localStorage.getItem(cacheKey);
+        if (cachedValue && normalizeBaseURL(cachedValue) === baseURL) {
+          window.localStorage.removeItem(cacheKey);
+        }
+      } catch {
+        return;
+      }
+    }
+  }
+
+  private notifyResolvedBaseURL(baseURL: string | undefined) {
+    if (!baseURL || !this.options.onBaseURLResolved) {
+      return;
+    }
+
+    const normalizedBaseURL = normalizeBaseURL(baseURL);
+    if (this.lastNotifiedBaseURL === normalizedBaseURL) {
+      return;
+    }
+
+    const lineIndex = this.options.baseURLCandidates.findIndex(
+      (candidate) => candidate === normalizedBaseURL,
+    );
+    if (lineIndex < 0) {
+      return;
+    }
+
+    this.lastNotifiedBaseURL = normalizedBaseURL;
+    this.options.onBaseURLResolved({
+      baseURL: normalizedBaseURL,
+      line: lineIndex + 1,
+      total: this.options.baseURLCandidates.length,
+    });
   }
 
   private bridgeAbortSignal(signal: AbortSignal | undefined, controller: AbortController) {

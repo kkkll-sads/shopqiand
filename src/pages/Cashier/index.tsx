@@ -355,35 +355,35 @@ const RechargeCashierView = ({
       : null;
 
   return (
-    <div className="relative flex h-full flex-1 flex-col overflow-hidden bg-[#f4f4f5]">
-      <div className="relative z-20 border-b border-[#e7e7ea] bg-white/92 px-4 pt-safe backdrop-blur">
+    <div className="cashier-dark-scope relative flex h-full flex-1 flex-col overflow-hidden bg-bg-base">
+      <div className="relative z-20 border-b border-border-light bg-bg-card/92 px-4 pt-safe backdrop-blur">
         <div className="flex h-14 items-center">
           <button
             type="button"
-            className="flex w-10 items-center justify-start text-[#5b6472] active:opacity-70"
+            className="flex w-10 items-center justify-start text-text-sub active:opacity-70"
             onClick={goBack}
           >
             <ChevronLeft size={24} />
           </button>
-          <h1 className="flex-1 text-center text-[18px] font-semibold text-[#111827]">支付收银台</h1>
+          <h1 className="flex-1 text-center text-[18px] font-semibold text-text-main">支付收银台</h1>
           <div className="flex w-10 justify-end" />
         </div>
       </div>
 
-      <div className="pointer-events-none absolute right-4 top-[calc(env(safe-area-inset-top,0px)+16px)] z-30 inline-flex items-center rounded-full bg-white/90 px-2.5 py-1 text-[13px] text-[#6b7280] shadow-sm">
-        <Clock3 size={13} className="mr-1 text-[#6b7280]" />
+      <div className="pointer-events-none absolute right-4 top-[calc(env(safe-area-inset-top,0px)+16px)] z-30 inline-flex items-center rounded-full bg-bg-card/90 px-2.5 py-1 text-[13px] text-text-sub shadow-sm">
+        <Clock3 size={13} className="mr-1 text-text-sub" />
         {formatMinuteClock(timeLeft)}
       </div>
 
       <div className="flex-1 overflow-y-auto px-4 pb-10 pt-6">
         <div className="mx-auto flex min-h-full max-w-[420px] flex-col gap-5 pb-6">
-          <div className="rounded-[28px] bg-white px-5 pb-6 pt-7 text-center shadow-[0_18px_44px_rgba(15,23,42,0.06)]">
-            <div className="mx-auto inline-flex items-center rounded-full bg-[#fff1f2] px-3 py-1 text-[12px] font-medium text-[#e11d48]">
+          <div className="rounded-[28px] bg-bg-card px-5 pb-6 pt-7 text-center shadow-[0_18px_44px_rgba(15,23,42,0.06)] dark:shadow-[0_18px_44px_rgba(0,0,0,0.45)]">
+            <div className="mx-auto inline-flex items-center rounded-full bg-rose-50 px-3 py-1 text-[12px] font-medium text-rose-600 dark:bg-rose-500/20 dark:text-rose-300">
               本次支付
             </div>
-            <div className="mt-5 text-[15px] text-[#6b7280]">支付金额</div>
-            <div className="mt-3 flex items-end justify-center text-[#e50019]">
-              <span className="mr-1 pb-1 text-[22px] font-semibold text-[#111827]">¥</span>
+            <div className="mt-5 text-[15px] text-text-sub">支付金额</div>
+            <div className="mt-3 flex items-end justify-center text-primary-start">
+              <span className="mr-1 pb-1 text-[22px] font-semibold text-text-main">¥</span>
               <span className="text-[62px] font-bold leading-none tracking-tight">
                 {Number.isFinite(amount) ? Math.round(amount).toString() : '0'}
               </span>
@@ -391,7 +391,7 @@ const RechargeCashierView = ({
 
             <button
               type="button"
-              className="mx-auto mt-5 flex max-w-full items-center rounded-full bg-[#f8fafc] px-4 py-2 text-[13px] text-[#8b95a7] shadow-[inset_0_0_0_1px_rgba(148,163,184,0.12)] active:opacity-70"
+              className="mx-auto mt-5 flex max-w-full items-center rounded-full bg-bg-base px-4 py-2 text-[13px] text-text-sub shadow-[inset_0_0_0_1px_rgba(148,163,184,0.12)] active:opacity-70 dark:shadow-[inset_0_0_0_1px_rgba(58,58,60,0.9)]"
               onClick={handleCopyOrderNo}
             >
               <span className="truncate">订单号：{orderNo || '--'}</span>
@@ -399,12 +399,12 @@ const RechargeCashierView = ({
             </button>
           </div>
 
-          <div className="rounded-[22px] border border-[#f2ca77] bg-[#fff6df] px-5 py-4 text-left shadow-[0_12px_28px_rgba(242,202,119,0.14)]">
-            <div className="mb-2 flex items-center text-[15px] font-semibold text-[#e46a00]">
+          <div className="rounded-[22px] border border-amber-300 bg-amber-50 px-5 py-4 text-left shadow-[0_12px_28px_rgba(242,202,119,0.14)] dark:border-amber-500/35 dark:bg-amber-500/16">
+            <div className="mb-2 flex items-center text-[15px] font-semibold text-amber-700 dark:text-amber-300">
               <AlertTriangle size={16} className="mr-2" />
               重要提醒
             </div>
-            <div className="space-y-1 text-[14px] leading-6 text-[#c75c00]">
+            <div className="space-y-1 text-[14px] leading-6 text-amber-700 dark:text-amber-200">
               <div>请核对支付金额，否则无法到账</div>
               <div>请勿保存二维码稍后支付</div>
               <div>支付链接 5 分钟内有效</div>
@@ -430,7 +430,7 @@ const RechargeCashierView = ({
                 type="button"
                 variant="secondary"
                 size="lg"
-                className="h-12 rounded-full border-white/80 bg-white text-[15px] font-medium text-[#4b5563] shadow-[0_12px_24px_rgba(148,163,184,0.14)]"
+                className="h-12 rounded-full border border-border-light bg-bg-card text-[15px] font-medium text-text-sub shadow-[0_12px_24px_rgba(148,163,184,0.14)] dark:shadow-[0_12px_24px_rgba(0,0,0,0.35)]"
                 onClick={secondaryAction.onClick}
                 leftIcon={secondaryAction.leftIcon}
               >
@@ -438,7 +438,7 @@ const RechargeCashierView = ({
               </Button>
             ) : null}
 
-            <div className="flex items-center justify-center text-[14px] text-[#9ca3af]">
+            <div className="flex items-center justify-center text-[14px] text-text-aux">
               <ShieldCheck size={14} className="mr-1.5" />
               安全支付保障
             </div>
@@ -447,11 +447,11 @@ const RechargeCashierView = ({
       </div>
 
       {timeLeft <= 0 ? (
-        <div className="absolute inset-x-4 bottom-6 z-30 rounded-2xl border border-[#fecaca] bg-white px-4 py-3 text-sm text-[#b91c1c] shadow-sm">
+        <div className="absolute inset-x-4 bottom-6 z-30 rounded-2xl border border-red-200 bg-bg-card px-4 py-3 text-sm text-red-700 shadow-sm dark:border-red-500/35 dark:bg-red-500/12 dark:text-red-300">
           支付链接已过期，请返回重新发起匹配。
           <button
             type="button"
-            className="ml-2 font-medium text-[#ef4444]"
+            className="ml-2 font-medium text-red-500 dark:text-red-300"
             onClick={() => handleOpenResult('failure')}
           >
             查看结果

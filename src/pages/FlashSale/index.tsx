@@ -224,7 +224,7 @@ export const FlashSalePage = () => {
 
             return (
               <Card
-                key={item.flash_sale_product_id ?? index}
+                key={`flash-sale-item-${item.flash_sale_product_id || item.product_id || 0}-${index}`}
                 className={`overflow-hidden border border-white/50 shadow-sm transition-opacity cursor-pointer ${soldOut ? 'opacity-60' : 'active:opacity-90'}`}
                 onClick={() => {
                   if (!soldOut) {

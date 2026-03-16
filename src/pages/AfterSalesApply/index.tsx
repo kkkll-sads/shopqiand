@@ -283,7 +283,7 @@ export const AfterSalesApplyPage = () => {
             <Sparkles size={14} />
             After Sales Request
           </div>
-          <h2 className="mt-3 text-[28px] font-semibold leading-tight">提交售后说明，平台将优先审核处理</h2>
+          <h2 className="mt-3 text-5_5xl font-semibold leading-tight">提交售后说明，平台将优先审核处理</h2>
           <p className="mt-2 max-w-[280px] text-sm leading-6 text-white/72">
             补充原因、问题描述和凭证图片后，客服会根据订单状态继续流转。
           </p>
@@ -439,7 +439,7 @@ export const AfterSalesApplyPage = () => {
                   {image.status === 'error' ? (
                     <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/60 px-2 text-white">
                       <AlertCircle size={18} className="text-[#ff8f8f]" />
-                      <span className="mt-1 line-clamp-2 text-center text-[11px]">
+                      <span className="mt-1 line-clamp-2 text-center text-xs">
                         {image.errorMessage || '上传失败'}
                       </span>
                       <button
@@ -462,7 +462,7 @@ export const AfterSalesApplyPage = () => {
                 >
                   <ImagePlus size={22} />
                   <span className="mt-2 text-xs">上传图片</span>
-                  <span className="mt-1 text-[11px] text-text-aux">破损、面单、聊天截图</span>
+                  <span className="mt-1 text-xs text-text-aux">破损、面单、聊天截图</span>
                 </button>
               ) : null}
             </div>

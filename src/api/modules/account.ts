@@ -144,6 +144,13 @@ interface AccountLogListRaw {
   total?: number | string;
 }
 
+interface AccountMergedLogItemsRaw {
+  list?: AccountLogItemRaw[];
+  merge_row_count?: number | string;
+  merge_scene?: string;
+  total?: number | string;
+}
+
 interface AccountMoneyLogDetailRaw {
   account_type?: string;
   after_value?: number | string;
@@ -310,6 +317,19 @@ export interface GetMoneyLogDetailParams {
   viewMode?: AccountLogViewMode;
 }
 
+export interface GetAllLogMergedItemsParams {
+  accountType?: string;
+  flowNo?: string;
+  id?: number;
+}
+
+export interface AccountMergedLogItems {
+  list: AccountLogItem[];
+  mergeRowCount?: number;
+  mergeScene?: string;
+  total: number;
+}
+
 export interface ChangePasswordPayload {
   oldPassword: string;
   newPassword: string;
@@ -404,6 +424,15 @@ function readOptionalTimestamp(value: number | string | undefined): number | und
   return typeof nextValue === 'number' && Number.isFinite(nextValue) ? nextValue : undefined;
 }
 
+function readOptionalNumber(value: unknown): number | undefined {
+  if (value == null) {
+    return undefined;
+  }
+
+  const nextValue = typeof value === 'string' ? Number(value) : value;
+  return typeof nextValue === 'number' && Number.isFinite(nextValue) ? nextValue : undefined;
+}
+
 function readBoolean(value: boolean | number | string | undefined): boolean {
   if (typeof value === 'boolean') {
     return value;
@@ -425,6 +454,39 @@ function readBreakdown(value: unknown): Record<string, unknown> | undefined {
   return value && typeof value === 'object' && !Array.isArray(value)
     ? (value as Record<string, unknown>)
     : undefined;
+}
+
+function readMergeRowCount(
+  mergeRowCountValue: number | string | undefined,
+  breakdown: Record<string, unknown> | undefined,
+): number | undefined {
+  if (mergeRowCountValue != null) {
+    return readNumber(mergeRowCountValue);
+  }
+
+  return readOptionalNumber(breakdown?.merge_row_count);
+}
+
+function hasMergeIndicators(
+  mergeKey: string | undefined,
+  breakdown: Record<string, unknown> | undefined,
+  mergeRowCount: number | undefined,
+): boolean {
+  if (mergeRowCount != null && mergeRowCount > 1) {
+    return true;
+  }
+
+  if (mergeKey) {
+    return true;
+  }
+
+  if (!breakdown) {
+    return false;
+  }
+
+  return (
+    breakdown.merge_scene != null || breakdown.merge_parts != null || breakdown.merge_row_count != null
+  );
 }
 
 function normalizeIncomeItem(raw: AccountIncomeItemRaw | undefined): AccountIncomeItem | undefined {
@@ -552,6 +614,10 @@ function normalizeVerificationTypes(payload: string[] | string | null | undefine
 }
 
 function normalizeLogItem(payload: AccountLogItemRaw): AccountLogItem {
+  const breakdown = readBreakdown(payload.breakdown);
+  const mergeKey = readOptionalString(payload.merge_key);
+  const mergeRowCount = readMergeRowCount(payload.merge_row_count, breakdown);
+
   return {
     accountType: readOptionalString(payload.account_type),
     afterValue: readNumber(payload.after_value),
@@ -560,21 +626,25 @@ function normalizeLogItem(payload: AccountLogItemRaw): AccountLogItem {
     beforeValue: readNumber(payload.before_value),
     bizId: readOptionalId(payload.biz_id),
     bizType: readOptionalString(payload.biz_type),
-    breakdown: readBreakdown(payload.breakdown),
+    breakdown,
     createTime: readOptionalTimestamp(payload.create_time),
     createTimeText: readOptionalString(payload.create_time_text),
     flowNo: readOptionalString(payload.flow_no),
     id: readNumber(payload.id),
     imageSnapshot: payload.image_snapshot ? resolveUploadUrl(payload.image_snapshot) : undefined,
-    isMerged: readBoolean(payload.is_merged),
-    mergeKey: readOptionalString(payload.merge_key),
-    mergeRowCount: payload.merge_row_count == null ? undefined : readNumber(payload.merge_row_count),
+    isMerged: readBoolean(payload.is_merged) || hasMergeIndicators(mergeKey, breakdown, mergeRowCount),
+    mergeKey,
+    mergeRowCount,
     memo: readOptionalString(payload.memo),
     titleSnapshot: readOptionalString(payload.title_snapshot),
   };
 }
 
 function normalizeMoneyLogDetail(payload: AccountMoneyLogDetailRaw): AccountMoneyLogDetail {
+  const breakdown = readBreakdown(payload.breakdown);
+  const mergeKey = readOptionalString(payload.merge_key);
+  const mergeRowCount = readMergeRowCount(payload.merge_row_count, breakdown);
+
   return {
     accountType: readOptionalString(payload.account_type),
     afterValue: readNumber(payload.after_value),
@@ -583,16 +653,16 @@ function normalizeMoneyLogDetail(payload: AccountMoneyLogDetailRaw): AccountMone
     beforeValue: readNumber(payload.before_value),
     bizId: readOptionalId(payload.biz_id),
     bizType: readOptionalString(payload.biz_type),
-    breakdown: readBreakdown(payload.breakdown),
+    breakdown,
     createTime: readOptionalTimestamp(payload.create_time),
     createTimeText: readOptionalString(payload.create_time_text),
     flowNo: readOptionalString(payload.flow_no),
     id: readNumber(payload.id),
     imageSnapshot: payload.image_snapshot ? resolveUploadUrl(payload.image_snapshot) : undefined,
-    isMerged: readBoolean(payload.is_merged),
+    isMerged: readBoolean(payload.is_merged) || hasMergeIndicators(mergeKey, breakdown, mergeRowCount),
     itemId: payload.item_id == null ? undefined : readNumber(payload.item_id),
-    mergeKey: readOptionalString(payload.merge_key),
-    mergeRowCount: payload.merge_row_count == null ? undefined : readNumber(payload.merge_row_count),
+    mergeKey,
+    mergeRowCount,
     memo: readOptionalString(payload.memo),
     titleSnapshot: readOptionalString(payload.title_snapshot),
     userCollectionId:
@@ -830,6 +900,28 @@ export const accountApi = {
     });
 
     return normalizeMoneyLogDetail(payload);
+  },
+
+  async getAllLogMergedItems(
+    params: GetAllLogMergedItemsParams,
+    options: AccountRequestOptions = {},
+  ): Promise<AccountMergedLogItems> {
+    const payload = await http.get<AccountMergedLogItemsRaw>('/api/Account/allLogMergedItems', {
+      headers: createApiHeaders(options),
+      query: {
+        account_type: params.accountType,
+        flow_no: params.flowNo,
+        id: params.id,
+      },
+      signal: options.signal,
+    });
+
+    return {
+      list: (payload.list ?? []).map(normalizeLogItem),
+      mergeRowCount: payload.merge_row_count == null ? undefined : readNumber(payload.merge_row_count),
+      mergeScene: readOptionalString(payload.merge_scene),
+      total: readNumber(payload.total),
+    };
   },
 
   /**

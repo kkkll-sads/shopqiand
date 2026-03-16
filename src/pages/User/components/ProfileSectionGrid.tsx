@@ -55,7 +55,7 @@ const ProfileSectionGrid: React.FC<ProfileSectionGridProps> = ({
                {/* Badge */}
                {item.badge !== undefined && item.badge > 0 && (
                 <div className="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 flex items-center justify-center px-1 bg-red-500 rounded-full border-2 border-white dark:border-gray-900 shadow-sm z-10">
-                  <span className="text-[9px] font-bold text-white leading-none whitespace-nowrap">
+                  <span className="text-3xs font-bold text-white leading-none whitespace-nowrap">
                     {item.badge > 99 ? '99+' : item.badge}
                   </span>
                 </div>
@@ -68,7 +68,7 @@ const ProfileSectionGrid: React.FC<ProfileSectionGridProps> = ({
             </div>
             
             <span
-              className={`text-[11px] font-medium leading-tight text-center ${
+              className={`text-xs font-medium leading-tight text-center ${
                 item.labelClassName || 'text-text-main'
               }`}
             >

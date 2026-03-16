@@ -86,6 +86,8 @@ export interface ReservationListQuery {
   /** 每页数量，默认 10 */
   limit?: number;
   /** 状态筛选：0=待撮合, 1=已撮合, 2=已退款, -1=全部 */
+  sstatus?: number;
+  /** 兼容字段，建议使用 sstatus */
   status?: number;
   /** 场次 ID */
   session_id?: number;
@@ -243,6 +245,8 @@ export const reservationApi = {
    * 查询预约记录列表
    */
   async getList(query: ReservationListQuery = {}, signal?: AbortSignal) {
+    const statusValue = query.sstatus ?? query.status ?? -1;
+
     const response = await http.get<ReservationListResponse>(
       '/api/collectionReservation/reservations',
       {
@@ -250,7 +254,7 @@ export const reservationApi = {
         query: {
           page: query.page ?? 1,
           limit: query.limit ?? 10,
-          status: query.status ?? -1,
+          sstatus: statusValue,
           ...(query.session_id != null && { session_id: query.session_id }),
           ...(query.zone_id != null && { zone_id: query.zone_id }),
           ...(query.start_time != null && { start_time: query.start_time }),

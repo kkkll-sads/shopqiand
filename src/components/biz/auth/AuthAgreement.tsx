@@ -21,7 +21,7 @@ export const AuthAgreement = ({
   return (
     <div className="flex items-start justify-center">
       <Checkbox checked={checked} onChange={onChange} className="mt-0.5" />
-      <div className="ml-2 text-[12px] leading-tight text-text-sub">
+      <div className="ml-2 text-s leading-tight text-text-sub">
         {prefix}即代表你已同意
         <button
           type="button"

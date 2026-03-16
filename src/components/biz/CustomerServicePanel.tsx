@@ -91,7 +91,7 @@ export const CustomerServicePanel = ({
       />
 
       <div
-        className={`relative flex h-[84vh] w-full max-w-[430px] flex-col overflow-hidden rounded-[28px] bg-white shadow-2xl transition-all duration-200 ${
+        className={`relative flex h-[84vh] w-full max-w-[430px] flex-col overflow-hidden rounded-[28px] bg-bg-card shadow-2xl transition-all duration-200 ${
           isVisible ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'
         }`}
       >
@@ -143,7 +143,7 @@ export const CustomerServicePanel = ({
               key={frameKey}
               title={title}
               src={url}
-              className="h-full w-full border-0 bg-white"
+              className="h-full w-full border-0 bg-bg-card"
               allow="clipboard-read; clipboard-write"
               referrerPolicy="no-referrer"
             />

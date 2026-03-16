@@ -202,7 +202,7 @@ export const TradingDetailPage = () => {
       <div className="space-y-3 px-4">
         {items.map((item, index) => (
           <Card
-            key={item.package_id ?? index}
+            key={`package-${item.package_id || 0}-${index}`}
             className={`flex border border-white/50 p-3 shadow-sm transition-opacity ${
               poolStatus === 'in_progress'
                 ? 'cursor-pointer active:opacity-90'
@@ -270,7 +270,7 @@ export const TradingDetailPage = () => {
           </Card>
         ))}
 
-        <div ref={loadMoreRef} className="py-4 text-center text-sm text-gray-400">
+        <div ref={loadMoreRef} className="py-4 text-center text-sm text-text-aux dark:text-white/45">
           {loadingMore ? (
             <span className="inline-flex items-center">
               <RefreshCcw size={14} className="mr-2 animate-spin" />
@@ -365,7 +365,7 @@ export const TradingDetailPage = () => {
                   </div>
                 ) : null}
                 {poolStatus === 'ended' ? (
-                  <div className="mt-3 flex items-center rounded-xl bg-gray-100/80 px-3 py-2 text-sm text-text-sub">
+                  <div className="mt-3 flex items-center rounded-xl bg-gray-100/80 px-3 py-2 text-sm text-text-sub dark:bg-white/10 dark:text-white/65">
                     <AlertCircle size={14} className="mr-2" />
                     本场申购已结束，请关注下一场开放时间
                   </div>
@@ -392,7 +392,7 @@ export const TradingDetailPage = () => {
                     ? 'bg-emerald-50 text-emerald-600'
                     : poolStatus === 'not_started'
                       ? 'bg-orange-50 text-orange-500'
-                      : 'bg-gray-100 text-text-sub'
+                      : 'bg-gray-100 text-text-sub dark:bg-white/10 dark:text-white/65'
                 }`}
               >
                 {poolStatus === 'in_progress' ? '进行中' : poolStatus === 'not_started' ? '即将开始' : '已结束'}

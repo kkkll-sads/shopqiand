@@ -473,7 +473,7 @@ export function RightsPage() {
                     {image.status === 'error' ? (
                       <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/65 px-2 text-white">
                         <AlertCircle size={18} className="mb-1 text-red-400" />
-                        <span className="mb-1 line-clamp-2 text-center text-[11px]">
+                        <span className="mb-1 line-clamp-2 text-center text-xs">
                           {image.errorMessage || '上传失败'}
                         </span>
                         <button
@@ -627,7 +627,7 @@ export function RightsPage() {
               }`}
             onClick={() => setActiveTab('apply')}
           >
-            <div className="w-full text-center text-[15px] font-bold leading-5">确权申请</div>
+            <div className="w-full text-center text-md font-bold leading-5">确权申请</div>
 
           </button>
           <button
@@ -638,7 +638,7 @@ export function RightsPage() {
               }`}
             onClick={() => setActiveTab('unlock')}
           >
-            <div className="w-full text-center text-[15px] font-bold leading-5">旧资产解锁</div>
+            <div className="w-full text-center text-md font-bold leading-5">旧资产解锁</div>
 
           </button>
           <button
@@ -649,42 +649,47 @@ export function RightsPage() {
               }`}
             onClick={() => setActiveTab('growth')}
           >
-            <div className="w-full text-center text-[15px] font-bold leading-5">成长权益</div>
+            <div className="w-full text-center text-md font-bold leading-5">成长权益</div>
 
           </button>
         </div>
       </div>
 
-      <PullToRefreshContainer onRefresh={handleRefresh} disabled={activeTab === 'growth'}>
-      <div ref={scrollContainerRef} className="flex-1 overflow-y-auto px-4 pb-24 pt-4">
-        {activeTab === 'apply' ? renderApplyContent() : null}
-
-        {activeTab === 'unlock' ? (
+      {activeTab === 'growth' ? (
+        <div ref={scrollContainerRef} className="flex-1 min-h-0 overflow-y-auto">
           <div className="animate-in fade-in duration-300">
-            {unlockStatusError ? (
-              <ErrorState
-                message={getErrorMessage(unlockStatusError)}
-                onRetry={() => {
-                  void reloadUnlockStatus().catch(() => undefined);
-                }}
-              />
-            ) : (
-              <UnlockPanel
-                unlockStatus={unlockStatus}
-                unlockLoading={unlockLoading}
-                onUnlock={handleUnlock}
-              />
-            )}
-          </div>
-        ) : null}
-
-        {activeTab === 'growth' ? (
-          <div className="-m-4 animate-in fade-in duration-300">
             <GrowthRightsContent />
           </div>
-        ) : null}
-      </div>
-      </PullToRefreshContainer>
+        </div>
+      ) : (
+        <PullToRefreshContainer onRefresh={handleRefresh}>
+          <div
+            ref={scrollContainerRef}
+            className="flex-1 min-h-0 overflow-y-auto px-4 pb-24 pt-4"
+          >
+            {activeTab === 'apply' ? renderApplyContent() : null}
+
+            {activeTab === 'unlock' ? (
+              <div className="animate-in fade-in duration-300">
+                {unlockStatusError ? (
+                  <ErrorState
+                    message={getErrorMessage(unlockStatusError)}
+                    onRetry={() => {
+                      void reloadUnlockStatus().catch(() => undefined);
+                    }}
+                  />
+                ) : (
+                  <UnlockPanel
+                    unlockStatus={unlockStatus}
+                    unlockLoading={unlockLoading}
+                    onUnlock={handleUnlock}
+                  />
+                )}
+              </div>
+            ) : null}
+          </div>
+        </PullToRefreshContainer>
+      )}
     </div>
   );
 }

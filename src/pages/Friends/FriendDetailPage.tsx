@@ -46,7 +46,7 @@ export const FriendDetailPage = () => {
           <button type="button" onClick={() => goBack()} className="-ml-2 p-2 text-text-main active:opacity-70">
             <ChevronLeft size={20} />
           </button>
-          <span className="ml-2 text-[17px] font-medium text-text-main">好友详情</span>
+          <span className="ml-2 text-xl font-medium text-text-main">好友详情</span>
         </div>
         <div className="flex-1">
           <ErrorState onRetry={() => window.location.reload()} />
@@ -62,7 +62,7 @@ export const FriendDetailPage = () => {
           <button type="button" onClick={() => goBack()} className="-ml-2 p-2 text-text-main">
             <ChevronLeft size={20} />
           </button>
-          <span className="ml-2 text-[17px] font-medium text-text-main">好友详情</span>
+          <span className="ml-2 text-xl font-medium text-text-main">好友详情</span>
         </div>
         <div className="space-y-4 p-4">
           <div className="flex flex-col items-center rounded-xl bg-white p-6 dark:bg-gray-900">
@@ -89,7 +89,7 @@ export const FriendDetailPage = () => {
         <button type="button" onClick={() => goBack()} className="-ml-2 p-2 text-text-main active:opacity-70">
           <ChevronLeft size={20} />
         </button>
-        <span className="ml-2 text-[17px] font-medium text-text-main">好友详情</span>
+        <span className="ml-2 text-xl font-medium text-text-main">好友详情</span>
       </div>
 
       <div className="space-y-4 p-4">
@@ -110,15 +110,15 @@ export const FriendDetailPage = () => {
             )}
           </div>
 
-          <h2 className="z-10 mb-1 mt-3 text-[18px] font-bold text-text-main">
+          <h2 className="z-10 mb-1 mt-3 text-2xl font-bold text-text-main">
             {user_info.username && user_info.username !== '未实名'
             ? user_info.username
             : user_info.nickname || user_info.username}
           </h2>
-          <div className="z-10 mb-3 font-mono text-[12px] text-text-sub">ID: {user_info.id}</div>
+          <div className="z-10 mb-3 font-mono text-s text-text-sub">ID: {user_info.id}</div>
 
           <span
-            className={`z-10 rounded-full border px-3 py-1 text-[12px] font-medium ${
+            className={`z-10 rounded-full border px-3 py-1 text-s font-medium ${
               level === 1
                 ? 'border-blue-100 bg-blue-50 text-blue-600 dark:border-blue-800 dark:bg-blue-900/20'
                 : 'border-orange-100 bg-orange-50 text-orange-600 dark:border-orange-800 dark:bg-orange-900/20'
@@ -135,8 +135,8 @@ export const FriendDetailPage = () => {
               <Calendar size={16} className="text-text-sub" />
             </div>
             <div className="flex-1">
-              <div className="mb-0.5 text-[13px] font-medium text-text-main">注册时间</div>
-              <div className="text-[12px] text-text-sub">{user_info.register_time}</div>
+              <div className="mb-0.5 text-sm font-medium text-text-main">注册时间</div>
+              <div className="text-s text-text-sub">{user_info.register_time}</div>
             </div>
           </div>
 
@@ -145,8 +145,8 @@ export const FriendDetailPage = () => {
               <Coins size={16} className="text-primary-start" />
             </div>
             <div className="flex-1">
-              <div className="mb-0.5 text-[13px] font-medium text-text-main">寄售可提现收益</div>
-              <div className="text-[16px] font-bold text-primary-start">
+              <div className="mb-0.5 text-sm font-medium text-text-main">寄售可提现收益</div>
+              <div className="text-lg font-bold text-primary-start">
                 ¥{consignment_income.withdrawable_income}
               </div>
             </div>
@@ -157,8 +157,8 @@ export const FriendDetailPage = () => {
               <Award size={16} className="text-orange-500" />
             </div>
             <div className="flex-1">
-              <div className="mb-0.5 text-[13px] font-medium text-text-main">消费金收益</div>
-              <div className="text-[16px] font-bold text-orange-500">
+              <div className="mb-0.5 text-sm font-medium text-text-main">消费金收益</div>
+              <div className="text-lg font-bold text-orange-500">
                 {consignment_income.score_income}
               </div>
             </div>

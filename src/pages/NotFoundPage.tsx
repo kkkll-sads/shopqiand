@@ -1,14 +1,13 @@
-import { Home, RefreshCw, AlertTriangle } from 'lucide-react';
+import { AlertTriangle, Home, RefreshCw } from 'lucide-react';
 
 /**
  * 通用 404 页面
  * - 未匹配路由时展示
- * - 重新构建后旧缓存导致乱码/资源失效时，引导用户刷新
+ * - 新版本发布后旧缓存导致资源失效时，引导用户刷新
  */
 const NotFoundPage = () => {
   const handleRefresh = () => {
-    // 强制从服务器拉取最新资源（跳过缓存）
-    window.location.replace(window.location.pathname + '?__t=' + Date.now());
+    window.location.replace(`${window.location.pathname}?__t=${Date.now()}`);
   };
 
   const handleGoHome = () => {
@@ -16,32 +15,28 @@ const NotFoundPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white flex items-center justify-center px-6 py-10">
+    <div className="min-h-screen bg-gradient-to-b from-bg-base to-bg-card flex items-center justify-center px-6 py-10">
       <div className="w-full max-w-sm text-center">
-        {/* 图标 */}
-        <div className="mx-auto mb-6 w-20 h-20 rounded-full bg-red-50 flex items-center justify-center">
-          <AlertTriangle size={36} className="text-red-400" />
+        <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-red-50 dark:bg-red-500/14">
+          <AlertTriangle size={36} className="text-red-400 dark:text-red-300" />
         </div>
 
-        {/* 标题 */}
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">页面未找到</h1>
-        <p className="text-sm text-gray-500 leading-6 mb-6">
+        <h1 className="mb-2 text-3xl font-bold text-text-main">页面未找到</h1>
+        <p className="mb-6 text-sm leading-6 text-text-sub">
           您访问的页面不存在或已失效。
           <br />
           如果刚刚进行了版本更新，请刷新页面以获取最新内容。
         </p>
 
-        {/* 提示卡片 */}
-        <div className="rounded-2xl border border-orange-100 bg-orange-50/80 px-4 py-3 text-sm text-orange-900 text-left mb-6">
-          <p className="font-medium mb-1">📌 可能的原因</p>
-          <ul className="space-y-1 text-[13px] text-orange-800 list-disc list-inside">
+        <div className="mb-6 rounded-2xl border border-orange-100 bg-orange-50/80 px-4 py-3 text-left text-sm text-orange-900 dark:border-orange-500/30 dark:bg-orange-500/14 dark:text-orange-200">
+          <p className="mb-1 font-medium">可能的原因</p>
+          <ul className="list-inside list-disc space-y-1 text-sm text-orange-800 dark:text-orange-200/90">
             <li>页面地址输入有误</li>
             <li>系统已发布新版本，旧页面资源已失效</li>
             <li>网络连接异常</li>
           </ul>
         </div>
 
-        {/* 按钮 */}
         <div className="flex gap-3">
           <button
             onClick={handleRefresh}
@@ -52,7 +47,7 @@ const NotFoundPage = () => {
           </button>
           <button
             onClick={handleGoHome}
-            className="flex-1 h-11 flex items-center justify-center gap-2 rounded-xl border border-gray-200 text-sm font-bold text-gray-600 active:bg-gray-50 transition-colors"
+            className="flex h-11 flex-1 items-center justify-center gap-2 rounded-xl border border-border-light text-sm font-bold text-text-sub transition-colors active:bg-bg-hover"
           >
             <Home size={16} />
             返回首页

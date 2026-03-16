@@ -42,7 +42,7 @@ export function RechargeBankCardConfirmModal({
   const disabled = submitting || lastFourDigits.length !== 4;
 
   return (
-    <div className="fixed inset-0 z-[140] flex items-center justify-center px-5">
+    <div className="recharge-dark-scope fixed inset-0 z-[140] flex items-center justify-center px-5">
       <button
         type="button"
         aria-label="关闭银行卡尾号确认弹窗"
@@ -55,10 +55,10 @@ export function RechargeBankCardConfirmModal({
         role="dialog"
         aria-modal="true"
         aria-labelledby="recharge-bank-card-confirm-title"
-        className="relative z-10 w-full max-w-[360px] overflow-hidden rounded-[28px] bg-white shadow-[0_20px_60px_rgba(15,23,42,0.25)]"
+        className="relative z-10 w-full max-w-[360px] overflow-hidden rounded-[28px] bg-bg-card shadow-[0_20px_60px_rgba(15,23,42,0.25)] dark:shadow-[0_24px_64px_rgba(0,0,0,0.45)]"
       >
         <div className="relative overflow-hidden px-5 pb-5 pt-6">
-          <div className="pointer-events-none absolute right-0 top-0 h-28 w-28 rounded-bl-full bg-gradient-to-bl from-red-100 to-transparent" />
+          <div className="pointer-events-none absolute right-0 top-0 h-28 w-28 rounded-bl-full bg-gradient-to-bl from-red-100 to-transparent dark:from-red-500/20" />
 
           <div className="relative">
             <div className="mb-5 flex items-start justify-between gap-4">
@@ -84,7 +84,7 @@ export function RechargeBankCardConfirmModal({
               </button>
             </div>
 
-            <div className="rounded-3xl border border-red-100 bg-gradient-to-br from-red-50 to-white p-4">
+            <div className="rounded-3xl border border-red-100 bg-gradient-to-br from-red-50 to-white p-4 dark:border-red-500/30 dark:from-red-500/10 dark:to-bg-card">
               <label htmlFor="recharge-bank-card-last-four" className="text-sm font-medium text-gray-700">
                 银行卡尾号
               </label>

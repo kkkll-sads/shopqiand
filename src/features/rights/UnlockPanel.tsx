@@ -81,10 +81,10 @@ export const UnlockPanel: React.FC<UnlockPanelProps> = ({
       <div className="rounded-3xl border border-gray-100/80 bg-white p-5 shadow-sm dark:border-border-light dark:bg-bg-card">
         <div className="mb-5 flex items-center border-b border-gray-50 pb-3 dark:border-border-light">
           <div className="mr-2.5 h-4 w-1.5 rounded-full bg-gradient-to-b from-[#FF6B6B] to-[#FF4757]" />
-          <h3 className="text-[15px] font-bold text-gray-800 dark:text-text-main">
+          <h3 className="text-md font-bold text-gray-800 dark:text-text-main">
             解锁条件检测
           </h3>
-          <span className="ml-auto text-[10px] font-normal text-gray-400 dark:text-text-sub">
+          <span className="ml-auto text-2xs font-normal text-gray-400 dark:text-text-sub">
             需全部达成
           </span>
         </div>
@@ -199,7 +199,7 @@ export const UnlockPanel: React.FC<UnlockPanelProps> = ({
       <div className="rounded-3xl border border-gray-100/80 bg-white p-5 shadow-sm dark:border-border-light dark:bg-bg-card">
         <div className="mb-5 flex items-center border-b border-gray-50 pb-3 dark:border-border-light">
           <div className="mr-2.5 h-4 w-1.5 rounded-full bg-gradient-to-b from-[#FF6B6B] to-[#FF4757]" />
-          <h3 className="text-[15px] font-bold text-gray-800 dark:text-text-main">
+          <h3 className="text-md font-bold text-gray-800 dark:text-text-main">
             解锁后将获得
           </h3>
         </div>
@@ -210,10 +210,10 @@ export const UnlockPanel: React.FC<UnlockPanelProps> = ({
             <div className="mb-2 flex h-10 w-10 items-center justify-center rounded-xl bg-[#FFEDD5] text-[#E65100] dark:bg-orange-500/20 dark:text-orange-400">
               <Gift size={22} strokeWidth={2} />
             </div>
-            <div className="mb-1.5 text-[15px] font-bold tracking-tight text-[#E65100] transition-transform group-hover:scale-105 dark:text-orange-400">
+            <div className="mb-1.5 text-md font-bold tracking-tight text-[#E65100] transition-transform group-hover:scale-105 dark:text-orange-400">
               权益资产包
             </div>
-            <div className="rounded-full bg-[#FFEDD5] px-2 py-0.5 text-[10px] font-medium text-[#9A3412] dark:bg-orange-500/20 dark:text-orange-400/80">
+            <div className="rounded-full bg-[#FFEDD5] px-2 py-0.5 text-2xs font-medium text-[#9A3412] dark:bg-orange-500/20 dark:text-orange-400/80">
               价值 ≈ {rewardValueText}
             </div>
           </div>
@@ -225,10 +225,10 @@ export const UnlockPanel: React.FC<UnlockPanelProps> = ({
             <div className="mb-2 flex h-10 w-10 items-center justify-center rounded-xl bg-[#FFDCDC] text-[#D32F2F] dark:bg-red-500/20 dark:text-red-400">
               <Ticket size={22} strokeWidth={2} />
             </div>
-            <div className="mb-1.5 text-[15px] font-bold tracking-tight text-[#D32F2F] transition-transform group-hover:scale-105 dark:text-red-400">
+            <div className="mb-1.5 text-md font-bold tracking-tight text-[#D32F2F] transition-transform group-hover:scale-105 dark:text-red-400">
               寄售券 x1
             </div>
-            <div className="rounded-full bg-[#FFDCDC] px-2 py-0.5 text-[10px] font-medium text-[#B71C1C] dark:bg-red-500/20 dark:text-red-400/80">
+            <div className="rounded-full bg-[#FFDCDC] px-2 py-0.5 text-2xs font-medium text-[#B71C1C] dark:bg-red-500/20 dark:text-red-400/80">
               解锁赠送
             </div>
           </div>
@@ -315,7 +315,7 @@ export const UnlockPanel: React.FC<UnlockPanelProps> = ({
         {!unlockStatus.canUnlock &&
           !unlockStatus.isLoading &&
           !unlockStatus.alreadyUnlocked && (
-            <div className="mt-3 text-center text-[10px] text-gray-400 dark:text-text-sub">
+            <div className="mt-3 text-center text-2xs text-gray-400 dark:text-text-sub">
               请先完成所有解锁条件
             </div>
           )}

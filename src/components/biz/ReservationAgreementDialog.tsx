@@ -1,8 +1,9 @@
-import React from 'react';
+﻿import React from 'react';
 import { X } from 'lucide-react';
 import { EmptyState } from '../ui/EmptyState';
 import { ErrorState } from '../ui/ErrorState';
 import { Skeleton } from '../ui/Skeleton';
+import { BottomSheet } from '../ui/BottomSheet';
 
 interface ReservationAgreementDialogProps {
   isOpen: boolean;
@@ -27,10 +28,6 @@ export const ReservationAgreementDialog: React.FC<ReservationAgreementDialogProp
   onClose,
   onRetry,
 }) => {
-  if (!isOpen) {
-    return null;
-  }
-
   const renderBody = () => {
     if (loading) {
       return (
@@ -73,29 +70,26 @@ export const ReservationAgreementDialog: React.FC<ReservationAgreementDialogProp
   };
 
   return (
-    <div className="fixed inset-0 z-[80] flex items-end justify-center bg-black/50 p-0 sm:items-center sm:p-4" onClick={onClose}>
-      <div
-        className="flex h-[82vh] w-full max-w-[560px] flex-col overflow-hidden rounded-t-[24px] bg-white shadow-2xl dark:bg-[#090b10] sm:h-[78vh] sm:rounded-[28px]"
-        onClick={(event) => event.stopPropagation()}
-      >
-        <div className="flex items-center justify-between border-b border-border-light px-4 py-3 dark:border-white/10">
-          <h3 className="pr-4 text-lg font-bold text-text-main dark:text-white">{title}</h3>
-          <button
-            type="button"
-            onClick={onClose}
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-bg-base text-text-sub transition-colors active:bg-border-light dark:bg-white/5 dark:text-white/70"
-            aria-label="关闭"
-          >
-            <X size={18} />
-          </button>
-        </div>
-
-        <div className="flex-1 overflow-y-auto px-4 py-4">{renderBody()}</div>
-
-        <div
-          className="border-t border-border-light px-4 pt-3 dark:border-white/10"
-          style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 12px)' }}
+    <BottomSheet
+      isOpen={isOpen}
+      onClose={onClose}
+      title={title}
+      zIndex={80}
+      maxHeight="82vh"
+      className="sm:max-w-[560px] sm:rounded-[28px]"
+      headerLeft={null}
+      headerRight={
+        <button
+          type="button"
+          onClick={onClose}
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-bg-base text-text-sub transition-colors active:bg-border-light dark:bg-white/5 dark:text-white/70"
+          aria-label="关闭"
         >
+          <X size={18} />
+        </button>
+      }
+      footer={
+        <div className="px-4 pt-3">
           <button
             type="button"
             onClick={onClose}
@@ -104,7 +98,9 @@ export const ReservationAgreementDialog: React.FC<ReservationAgreementDialogProp
             我已知晓
           </button>
         </div>
-      </div>
-    </div>
+      }
+    >
+      <div className="px-4 py-4">{renderBody()}</div>
+    </BottomSheet>
   );
 };

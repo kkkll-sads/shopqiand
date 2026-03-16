@@ -24,9 +24,9 @@ export const textButtonStateClass =
   'transition-[transform,color,opacity] duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-start/20 disabled:cursor-not-allowed disabled:opacity-40 enabled:hover:opacity-85 enabled:active:scale-[0.985] enabled:active:opacity-75';
 
 const sizeStyles: Record<ButtonSize, string> = {
-  sm: 'h-[36px] rounded-[16px] px-3 text-[13px]',
-  md: 'h-[42px] rounded-[18px] px-4 text-[14px]',
-  lg: 'h-[48px] rounded-2xl px-4 text-lg',
+  sm: 'min-h-[36px] h-auto rounded-[16px] px-3 py-2 text-sm',
+  md: 'min-h-[42px] h-auto rounded-[18px] px-4 py-2 text-base',
+  lg: 'min-h-[48px] h-auto rounded-2xl px-4 py-3 text-lg',
 };
 
 const variantStyles: Record<ButtonVariant, string> = {

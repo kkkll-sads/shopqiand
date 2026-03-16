@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type ChangeEvent } from 'react';
 import { Camera, ChevronRight, ImagePlus, PencilLine } from 'lucide-react';
 import { accountApi, uploadApi, userApi } from '../../api';
 import { getErrorMessage } from '../../api/core/errors';
+import { resolveUploadUrl } from '../../api/modules/upload';
 import { ImagePickerActionSheet } from '../../components/biz/ImagePickerActionSheet';
 import { SettingsNotice, SettingsSection } from '../../components/biz/settings/SettingsSection';
 import { PageHeader } from '../../components/layout/PageHeader';
@@ -48,7 +49,8 @@ export const EditProfilePage = () => {
   const sessionUserInfo = session?.userInfo;
   const baseUserInfo = profileUserInfo ?? sessionUserInfo;
   const currentNickname = readString(baseUserInfo?.nickname) || readString(baseUserInfo?.username);
-  const currentAvatar = readString(baseUserInfo?.avatar);
+  const currentAvatarRaw = readString(baseUserInfo?.avatar);
+  const currentAvatar = currentAvatarRaw ? resolveUploadUrl(currentAvatarRaw) : '';
   const displayName = nickname.trim() || currentNickname || '会员用户';
 
   useEffect(() => {
@@ -93,13 +95,26 @@ export const EditProfilePage = () => {
         throw new Error('头像上传失败，请稍后重试');
       }
 
-      await userApi.updateAvatar({
-        avatar: avatarUrl,
-        avatarUrl,
-      });
+      await userApi.updateNickname({ avatarUrl });
+      let latestAvatar = avatarUrl;
+      try {
+        const latestProfile = await profileRequest.reload();
+        const latestUserInfo = latestProfile?.userInfo;
+        latestAvatar = readString(latestUserInfo?.avatar) || avatarUrl;
 
-      patchAuthSessionUserInfo({ avatar: avatarUrl });
-      setAvatarPreview(avatarUrl);
+        if (latestUserInfo) {
+          patchAuthSessionUserInfo({
+            ...latestUserInfo,
+            avatar: latestAvatar,
+          });
+        } else {
+          patchAuthSessionUserInfo({ avatar: latestAvatar });
+        }
+      } catch {
+        patchAuthSessionUserInfo({ avatar: latestAvatar });
+      }
+
+      setAvatarPreview(latestAvatar);
       showToast({ message: '头像已更新', type: 'success' });
     } catch (error) {
       showToast({ message: getErrorMessage(error), type: 'error' });
@@ -172,7 +187,7 @@ export const EditProfilePage = () => {
         <div className="space-y-4">
           <SettingsSection
             title="资料信息"
-            description="头像修改会立即生效，昵称保存后会同步更新到 APP。"
+            description="头像修改会立即生效，昵称保存后会同步到 APP。"
           >
             <button
               type="button"
@@ -189,8 +204,8 @@ export const EditProfilePage = () => {
                   )}
                 </div>
                 <div>
-                  <div className="text-[16px] text-text-main">APP 头像</div>
-                  <div className="mt-1 text-[12px] leading-5 text-text-sub">
+                  <div className="text-lg text-text-main">APP 头像</div>
+                  <div className="mt-1 text-s leading-5 text-text-sub">
                     {avatarUploading ? '正在上传新头像...' : '支持拍照或从相册选择'}
                   </div>
                 </div>
@@ -203,10 +218,9 @@ export const EditProfilePage = () => {
                       src={avatarPreview}
                       alt="当前头像"
                       className="h-full w-full object-cover"
-                      referrerPolicy="no-referrer"
                     />
                   ) : (
-                    (displayName || '会').slice(0, 1)
+                    (displayName || '用').slice(0, 1)
                   )}
                 </div>
                 <ChevronRight size={16} className="text-text-aux" />
@@ -214,7 +228,7 @@ export const EditProfilePage = () => {
             </button>
 
             <div className="space-y-3 px-4 py-4">
-              <div className="flex items-center gap-2 text-[14px] font-medium text-text-main">
+              <div className="flex items-center gap-2 text-base font-medium text-text-main">
                 <PencilLine size={16} className="text-text-sub" />
                 APP 昵称
               </div>
@@ -227,7 +241,7 @@ export const EditProfilePage = () => {
                   setNicknameTouched(true);
                 }}
               />
-              <div className="flex items-center justify-between text-[12px] text-text-sub">
+              <div className="flex items-center justify-between text-s text-text-sub">
                 <span>当前显示昵称：{currentNickname || '未设置'}</span>
                 <span>{nickname.trim().length}/20</span>
               </div>

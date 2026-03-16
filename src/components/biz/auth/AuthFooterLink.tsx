@@ -1,6 +1,6 @@
 import { Button } from '../../ui/Button';
 
-const footerButtonClassName = 'text-[15px] font-medium text-text-main';
+const footerButtonClassName = 'text-md font-medium text-text-main';
 
 interface AuthFooterLinkProps {
   text: string;

@@ -1,20 +1,24 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# shuquanqian-codex-billing-align
 
-# Run and deploy your AI Studio app
+前端项目源码（React + Vite）。
 
-This contains everything you need to run your app locally.
+## 本地运行
 
-View your app in AI Studio: https://ai.studio/apps/a8542f84-d519-4e89-8928-a803253b97c4
+前置条件：Node.js
 
-## Run Locally
+1. 安装依赖：`npm install`
+2. 启动开发环境：`npm run dev`
+3. 构建产物：`npm run build`
 
-**Prerequisites:**  Node.js
+## 项目文档
 
+- 页面/组件/Hooks 详细说明：
+  - `docs/project-pages-components-hooks.md`
+- 资金流水接口优化方案：
+  - `docs/billing-log-api-optimization.md`
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+## 文档更新命令
+
+当页面、组件或 hooks 有新增/重构时，执行以下命令重新生成架构说明文档：
+
+`npm run docs:architecture`

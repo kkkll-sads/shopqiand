@@ -54,7 +54,7 @@ export function MyCollectionCertificateCard({
             <Award size={24} />
           </div>
           <h2 className="mb-1 text-2xl font-bold tracking-wide text-gray-900">数字资产持有凭证</h2>
-          <div className="text-[10px] uppercase tracking-[0.2em] text-gray-400">
+          <div className="text-2xs uppercase tracking-[0.2em] text-gray-400">
             Digital Asset Certificate
           </div>
         </div>
@@ -150,14 +150,14 @@ export function MyCollectionCertificateCard({
                 </label>
                 <div className="text-sm font-medium text-gray-600">
                   涉及农户/合作社：{item.farmer_info || '暂无数据'}
-                  <span className="ml-1 inline-block rounded border border-amber-200 bg-white px-1 text-[10px] text-amber-600">
+                  <span className="ml-1 inline-block rounded border border-amber-200 bg-white px-1 text-2xs text-amber-600">
                     隐私保护
                   </span>
                 </div>
                 <div className="mt-1 text-xs font-medium text-gray-600">
                   核心企业：{item.core_enterprise || '暂无数据'}
                 </div>
-                <div className="mt-1 text-[10px] leading-tight text-gray-400">
+                <div className="mt-1 text-2xs leading-tight text-gray-400">
                   * 根据相关数据合规要求，底层隐私信息已做 hash 脱敏处理，仅持有人可申请解密查看。
                 </div>
               </div>
@@ -175,7 +175,7 @@ export function MyCollectionCertificateCard({
                 <div className="grid grid-cols-1 gap-x-4 gap-y-3 md:grid-cols-2">
                   {item.contract_no ? (
                     <div>
-                      <div className="text-[10px] text-gray-400">合约编号</div>
+                      <div className="text-2xs text-gray-400">合约编号</div>
                       <div className="break-all font-mono text-sm font-medium text-gray-700">
                         {item.contract_no}
                       </div>
@@ -184,14 +184,14 @@ export function MyCollectionCertificateCard({
 
                   {item.session_title ? (
                     <div>
-                      <div className="text-[10px] text-gray-400">所属场次</div>
+                      <div className="text-2xs text-gray-400">所属场次</div>
                       <div className="text-sm font-medium text-gray-700">{item.session_title}</div>
                     </div>
                   ) : null}
 
                   {item.session_start_time || item.session_end_time ? (
                     <div>
-                      <div className="text-[10px] text-gray-400">交易时段</div>
+                      <div className="text-2xs text-gray-400">交易时段</div>
                       <div className="text-sm font-medium text-gray-700">
                         {formatTimeRange(item.session_start_time, item.session_end_time)}
                       </div>
@@ -199,7 +199,7 @@ export function MyCollectionCertificateCard({
                   ) : null}
 
                   <div>
-                    <div className="text-[10px] text-gray-400">权益节点状态</div>
+                    <div className="text-2xs text-gray-400">权益节点状态</div>
                     <div className="flex items-center gap-2">
                       <span
                         className={`rounded px-2 py-0.5 text-xs font-medium ${
@@ -211,7 +211,7 @@ export function MyCollectionCertificateCard({
                         {item.mining_status === 1 ? '运行中' : '未激活'}
                       </span>
                       {item.mining_start_time ? (
-                        <span className="text-[10px] text-gray-400">
+                        <span className="text-2xs text-gray-400">
                           （{item.mining_start_time} 开始）
                         </span>
                       ) : null}
@@ -220,7 +220,7 @@ export function MyCollectionCertificateCard({
 
                   {item.last_dividend_time ? (
                     <div>
-                      <div className="text-[10px] text-gray-400">最近更新</div>
+                      <div className="text-2xs text-gray-400">最近更新</div>
                       <div className="font-mono text-sm font-medium text-gray-700">
                         {item.last_dividend_time}
                       </div>
@@ -242,7 +242,7 @@ export function MyCollectionCertificateCard({
                   <div className="grid grid-cols-1 gap-x-4 gap-y-3 md:grid-cols-2">
                     {consignmentDetail.buy_price > 0 ? (
                       <div>
-                        <div className="text-[10px] text-gray-400">买入价</div>
+                        <div className="text-2xs text-gray-400">买入价</div>
                         <div className="font-mono text-sm font-medium text-gray-700">
                           ¥{consignmentDetail.buy_price.toFixed(2)}
                         </div>
@@ -250,7 +250,7 @@ export function MyCollectionCertificateCard({
                     ) : null}
                     {consignmentDetail.order_no ? (
                       <div>
-                        <div className="text-[10px] text-gray-400">成交订单号</div>
+                        <div className="text-2xs text-gray-400">成交订单号</div>
                         <div className="flex items-center gap-2">
                           <span className="break-all font-mono text-sm font-medium text-gray-700">
                             {consignmentDetail.order_no}
@@ -268,7 +268,7 @@ export function MyCollectionCertificateCard({
                     ) : null}
                     {consignmentDetail.flow_no ? (
                       <div>
-                        <div className="text-[10px] text-gray-400">卖家收益流水号</div>
+                        <div className="text-2xs text-gray-400">卖家收益流水号</div>
                         <div className="flex items-center gap-2">
                           <span className="break-all font-mono text-sm font-medium text-gray-700">
                             {consignmentDetail.flow_no}
@@ -294,7 +294,7 @@ export function MyCollectionCertificateCard({
             <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-gray-400">
               Blockchain Fingerprint / 存证指纹
             </label>
-            <div className="relative break-all rounded-t bg-gray-900 p-3 font-mono text-[10px] leading-relaxed text-green-500">
+            <div className="relative break-all rounded-t bg-gray-900 p-3 font-mono text-2xs leading-relaxed text-green-500">
               <div className="mb-1 flex items-center gap-2 font-sans font-bold text-gray-500">
                 <Fingerprint size={12} />
                 <span className="uppercase">TREE-CHAIN CONSORTIUM</span>
@@ -305,7 +305,7 @@ export function MyCollectionCertificateCard({
               <button
                 type="button"
                 onClick={() => void onCopy(hashValue, '链上指纹已复制')}
-                className="flex flex-1 items-center justify-center gap-1 rounded bg-gray-700 py-1.5 text-[10px] text-white transition-colors active:bg-gray-600"
+                className="flex flex-1 items-center justify-center gap-1 rounded bg-gray-700 py-1.5 text-2xs text-white transition-colors active:bg-gray-600"
               >
                 <Copy size={10} />
                 <span>复制 Hash</span>
@@ -313,7 +313,7 @@ export function MyCollectionCertificateCard({
               <button
                 type="button"
                 onClick={() => onSearchHash(hashValue)}
-                className="flex flex-1 items-center justify-center gap-1 rounded bg-gray-700 py-1.5 text-[10px] text-white transition-colors active:bg-gray-600"
+                className="flex flex-1 items-center justify-center gap-1 rounded bg-gray-700 py-1.5 text-2xs text-white transition-colors active:bg-gray-600"
               >
                 <ExternalLink size={10} />
                 <span>去查询</span>

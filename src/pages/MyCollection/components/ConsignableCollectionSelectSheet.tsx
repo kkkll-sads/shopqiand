@@ -1,13 +1,14 @@
 /**
  * @file ConsignableCollectionSelectSheet.tsx
- * @description 可寄售藏品选择 Bottom Sheet，支持多选后批量提交寄售，支持下拉加载更多。
+ * @description 可寄售藏品选择 Bottom Sheet，支持多选并批量提交寄售，支持下拉加载更多。
  */
 
 import { useEffect, useRef, useState } from 'react';
 import { Box, Check, ChevronRight, CreditCard, Loader2, X } from 'lucide-react';
 import type { ConsignmentEquityCard } from '../../../api';
-import { ConsignmentEquityCardSelectSheet } from '../../MyCollectionDetail/components/ConsignmentEquityCardSelectSheet';
+import { BottomSheet } from '../../../components/ui/BottomSheet';
 import { useInfiniteScroll } from '../../../hooks/useInfiniteScroll';
+import { ConsignmentEquityCardSelectSheet } from '../../MyCollectionDetail/components/ConsignmentEquityCardSelectSheet';
 
 export interface ConsignableCollectionItem {
   user_collection_id: number;
@@ -31,17 +32,11 @@ interface ConsignableCollectionSelectSheetProps {
     active_sessions?: number;
     is_in_trading_time?: boolean;
   };
-  /** 是否还有更多可加载 */
   hasMore?: boolean;
-  /** 是否正在加载更多 */
   loadingMore?: boolean;
-  /** 加载更多回调 */
   onLoadMore?: () => void | Promise<void>;
-  /** 可寄售总数（分页时用于显示「已选 x / total 个」） */
   totalCount?: number;
-  /** 可用权益卡列表 */
   equityCards?: ConsignmentEquityCard[];
-  /** 推荐的权益卡 ID */
   recommendedEquityCardId?: number | null;
 }
 
@@ -66,56 +61,37 @@ export function ConsignableCollectionSelectSheet({
 }: ConsignableCollectionSelectSheetProps) {
   const sheetScrollRef = useRef<HTMLDivElement | null>(null);
   const loadMoreTriggerRef = useRef<HTMLDivElement | null>(null);
-  const [isVisible, setIsVisible] = useState(false);
-  const [localSelectedIds, setLocalSelectedIds] = useState<Set<number>>(new Set());
+  const [localSelectedIds, setLocalSelectedIds] = useState<Set<number>>(new Set<number>());
   const [selectedEquityCardId, setSelectedEquityCardId] = useState<number | null>(null);
   const [equityCardSheetOpen, setEquityCardSheetOpen] = useState(false);
 
-  const availableEquityCards = equityCards.filter((c) => c.today_remaining > 0);
-  const selectedCard = equityCards.find((c) => c.id === selectedEquityCardId) ?? null;
+  const availableEquityCards = equityCards.filter((card) => card.today_remaining > 0);
+  const selectedCard = equityCards.find((card) => card.id === selectedEquityCardId) ?? null;
 
   useEffect(() => {
     if (isOpen && items.length > 0) {
-      setLocalSelectedIds(new Set(items.map((item) => item.user_collection_id)));
+      setLocalSelectedIds(new Set<number>(items.map((item) => item.user_collection_id)));
     }
 
     if (isOpen && recommendedEquityCardId != null && recommendedEquityCardId > 0) {
-      const exists = equityCards.some((c) => c.id === recommendedEquityCardId && c.today_remaining > 0);
+      const exists = equityCards.some((card) => card.id === recommendedEquityCardId && card.today_remaining > 0);
       if (exists) setSelectedEquityCardId(recommendedEquityCardId);
     }
   }, [isOpen, items, equityCards, recommendedEquityCardId]);
 
-  useEffect(() => {
-    if (isOpen) {
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          setIsVisible(true);
-        });
-      });
-      return undefined;
-    }
-
-    setIsVisible(false);
-  }, [isOpen]);
-
-  const handleClose = () => {
-    setIsVisible(false);
-    setTimeout(onClose, 300);
-  };
-
   const handleConfirm = () => {
-    const ids = Array.from(localSelectedIds);
+    const ids = Array.from<number>(localSelectedIds);
     if (ids.length === 0) {
       return;
     }
 
     onConfirm(ids, selectedEquityCardId);
-    handleClose();
+    onClose();
   };
 
   const toggleSelect = (id: number) => {
     setLocalSelectedIds((prev) => {
-      const next = new Set(prev);
+      const next = new Set<number>(prev);
       if (next.has(id)) {
         next.delete(id);
       } else {
@@ -126,11 +102,11 @@ export function ConsignableCollectionSelectSheet({
   };
 
   const handleSelectAll = () => {
-    setLocalSelectedIds(new Set(items.map((item) => item.user_collection_id)));
+    setLocalSelectedIds(new Set<number>(items.map((item) => item.user_collection_id)));
   };
 
   const handleDeselectAll = () => {
-    setLocalSelectedIds(new Set());
+    setLocalSelectedIds(new Set<number>());
   };
 
   const selectedCount = localSelectedIds.size;
@@ -145,53 +121,105 @@ export function ConsignableCollectionSelectSheet({
     targetRef: loadMoreTriggerRef,
   });
 
-  if (!isOpen) {
-    return null;
-  }
-
   return (
-    <div className="fixed inset-0 z-[100] flex flex-col justify-end">
-      <div
-        className={`absolute inset-0 bg-black/60 transition-opacity duration-300 ${isVisible ? 'opacity-100' : 'opacity-0'}`}
-        onClick={handleClose}
-      />
-      <div
-        className={`relative mx-auto flex w-full max-h-[80vh] flex-col rounded-t-2xl bg-bg-card shadow-lg transition-transform duration-300 ease-out sm:max-w-[430px] ${isVisible ? 'translate-y-0' : 'translate-y-full'}`}
-      >
-        <div className="flex shrink-0 items-center justify-between border-b border-border-main px-4 py-3.5">
-          <h3 className="text-base font-semibold text-text-main">选择寄售藏品</h3>
+    <>
+      <BottomSheet
+        isOpen={isOpen}
+        onClose={onClose}
+        title="选择寄售藏品"
+        zIndex={100}
+        className="bg-bg-card sm:max-w-[430px]"
+        headerLeft={null}
+        headerRight={
           <button
             type="button"
-            onClick={handleClose}
+            onClick={onClose}
             className="rounded-full p-1.5 text-text-sub active:bg-bg-hover"
           >
             <X size={20} />
           </button>
-        </div>
-
-        <div className="flex shrink-0 items-center justify-between border-b border-border-light px-4 py-2">
-          <div className="flex gap-2">
+        }
+        footer={
+          <div className="px-4 py-3">
+            {availableEquityCards.length > 0 ? (
+              <button
+                type="button"
+                onClick={() => setEquityCardSheetOpen(true)}
+                className={`mb-3 flex w-full items-center gap-3 rounded-2xl border-2 px-4 py-3.5 text-left transition-all active:scale-[0.98] ${
+                  selectedCard
+                    ? 'border-emerald-400 bg-emerald-50 shadow-md shadow-emerald-100 dark:border-emerald-500/50 dark:bg-emerald-950/30 dark:shadow-none'
+                    : 'border-amber-400 bg-amber-50 shadow-md shadow-amber-100 dark:border-amber-500/50 dark:bg-amber-950/30 dark:shadow-none'
+                }`}
+              >
+                <div className={`flex size-10 shrink-0 items-center justify-center rounded-xl ${
+                  selectedCard
+                    ? 'bg-emerald-500 text-white'
+                    : 'animate-pulse bg-amber-500 text-white'
+                }`}>
+                  <CreditCard size={20} />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="text-sm font-bold text-gray-900 dark:text-gray-100">
+                    {selectedCard ? '已选择权益卡' : '选择权益卡可抵扣手续费'}
+                  </div>
+                  <div className="mt-0.5 text-xs">
+                    {selectedCard ? (
+                      <span className="font-semibold text-emerald-600 dark:text-emerald-400">
+                        {selectedCard.card_name} · 每件抵扣 ¥{formatCurrency(selectedCard.actual_deduct_amount)}
+                      </span>
+                    ) : (
+                      <span className="text-amber-700 dark:text-amber-400">
+                        共 {availableEquityCards.length} 张可用，点击选择
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <ChevronRight size={18} className={selectedCard ? 'text-emerald-500' : 'text-amber-500'} />
+              </button>
+            ) : null}
+            <div className="mb-2 text-center text-xs leading-5 text-text-aux">
+              当前时间 {stats?.current_time || '--'}，活跃场次 {stats?.active_sessions ?? '--'}
+            </div>
             <button
               type="button"
-              onClick={handleSelectAll}
-              className="rounded-full border border-border-light bg-bg-base px-3 py-1.5 text-xs font-medium text-text-main active:bg-bg-hover"
+              onClick={handleConfirm}
+              disabled={selectedCount === 0}
+              className={`flex h-11 w-full items-center justify-center rounded-full text-base font-medium transition-colors ${
+                selectedCount > 0
+                  ? 'bg-gradient-to-r from-[#8B0000] to-[#A00000] text-amber-50 shadow-lg shadow-red-900/15 active:scale-[0.98]'
+                  : 'bg-gray-200 text-gray-400 dark:bg-gray-700 dark:text-gray-500'
+              }`}
             >
-              全选
-            </button>
-            <button
-              type="button"
-              onClick={handleDeselectAll}
-              className="rounded-full border border-border-light bg-bg-base px-3 py-1.5 text-xs font-medium text-text-main active:bg-bg-hover"
-            >
-              取消全选
+              确认寄售 {selectedCount > 0 ? `（${selectedCount} 个）` : ''}
             </button>
           </div>
-          <span className="text-xs text-text-sub">
-            已选 {selectedCount} / {displayTotal} 个
-          </span>
+        }
+      >
+        <div className="border-b border-border-light px-4 py-2">
+          <div className="flex items-center justify-between">
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={handleSelectAll}
+                className="rounded-full border border-border-light bg-bg-base px-3 py-1.5 text-xs font-medium text-text-main active:bg-bg-hover"
+              >
+                全选
+              </button>
+              <button
+                type="button"
+                onClick={handleDeselectAll}
+                className="rounded-full border border-border-light bg-bg-base px-3 py-1.5 text-xs font-medium text-text-main active:bg-bg-hover"
+              >
+                取消全选
+              </button>
+            </div>
+            <span className="text-xs text-text-sub">
+              已选 {selectedCount} / {displayTotal} 个
+            </span>
+          </div>
         </div>
 
-        <div ref={sheetScrollRef} className="flex-1 overflow-y-auto px-4 py-3 no-scrollbar">
+        <div ref={sheetScrollRef} className="px-4 py-3 no-scrollbar">
           {items.length === 0 && !loadingMore ? (
             <div className="py-8 text-center text-sm text-text-sub">暂无可寄售的藏品</div>
           ) : (
@@ -210,7 +238,7 @@ export function ConsignableCollectionSelectSheet({
                     }`}
                   >
                     {isSelected ? (
-                      <span className="absolute top-2 right-2 z-10 rounded-full bg-[#8B0000] px-2.5 py-1 text-[11px] font-bold text-white shadow-md dark:bg-red-600">
+                      <span className="absolute right-2 top-2 z-10 rounded-full bg-[#8B0000] px-2.5 py-1 text-xs font-bold text-white shadow-md dark:bg-red-600">
                         ✓ 已选
                       </span>
                     ) : null}
@@ -241,7 +269,7 @@ export function ConsignableCollectionSelectSheet({
                       <div className="line-clamp-2 text-sm font-medium text-text-main">
                         {item.title || `藏品 #${item.user_collection_id}`}
                       </div>
-                      {(item.session_title || item.zone_name) ? (
+                      {item.session_title || item.zone_name ? (
                         <div className="mt-1 flex flex-wrap gap-x-2 text-xs text-text-sub">
                           {item.session_title ? (
                             <span className="rounded-full bg-bg-base px-2 py-0.5">{item.session_title}</span>
@@ -251,7 +279,7 @@ export function ConsignableCollectionSelectSheet({
                           ) : null}
                         </div>
                       ) : null}
-                      {(item.consignment_price != null || item.service_fee != null) ? (
+                      {item.consignment_price != null || item.service_fee != null ? (
                         <div className="mt-1 flex flex-wrap gap-x-3 text-xs text-text-sub">
                           {item.consignment_price != null ? (
                             <span>寄售价 ¥{Number(item.consignment_price).toFixed(2)}</span>
@@ -278,61 +306,7 @@ export function ConsignableCollectionSelectSheet({
             </div>
           )}
         </div>
-
-        <div className="shrink-0 border-t border-border-main px-4 py-3 pb-safe">
-          {availableEquityCards.length > 0 ? (
-            <button
-              type="button"
-              onClick={() => setEquityCardSheetOpen(true)}
-              className={`mb-3 flex w-full items-center gap-3 rounded-2xl border-2 px-4 py-3.5 text-left transition-all active:scale-[0.98] ${
-                selectedCard
-                  ? 'border-emerald-400 bg-emerald-50 shadow-md shadow-emerald-100 dark:border-emerald-500/50 dark:bg-emerald-950/30 dark:shadow-none'
-                  : 'border-amber-400 bg-amber-50 shadow-md shadow-amber-100 dark:border-amber-500/50 dark:bg-amber-950/30 dark:shadow-none'
-              }`}
-            >
-              <div className={`flex size-10 shrink-0 items-center justify-center rounded-xl ${
-                selectedCard
-                  ? 'bg-emerald-500 text-white'
-                  : 'animate-pulse bg-amber-500 text-white'
-              }`}>
-                <CreditCard size={20} />
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="text-sm font-bold text-gray-900 dark:text-gray-100">
-                  {selectedCard ? '已选择权益卡' : '选择权益卡可抵扣手续费'}
-                </div>
-                <div className="mt-0.5 text-xs">
-                  {selectedCard ? (
-                    <span className="font-semibold text-emerald-600 dark:text-emerald-400">
-                      {selectedCard.card_name} · 每件抵扣 ¥{formatCurrency(selectedCard.actual_deduct_amount)}
-                    </span>
-                  ) : (
-                    <span className="text-amber-700 dark:text-amber-400">
-                      有 {availableEquityCards.length} 张可用，点击选择
-                    </span>
-                  )}
-                </div>
-              </div>
-              <ChevronRight size={18} className={selectedCard ? 'text-emerald-500' : 'text-amber-500'} />
-            </button>
-          ) : null}
-          <div className="mb-2 text-center text-[11px] leading-5 text-text-aux">
-            当前时间 {stats?.current_time || '--'}，活跃场次 {stats?.active_sessions ?? '--'}
-          </div>
-          <button
-            type="button"
-            onClick={handleConfirm}
-            disabled={selectedCount === 0}
-            className={`flex h-11 w-full items-center justify-center rounded-full text-base font-medium transition-colors ${
-              selectedCount > 0
-                ? 'bg-gradient-to-r from-[#8B0000] to-[#A00000] text-amber-50 shadow-lg shadow-red-900/15 active:scale-[0.98]'
-                : 'bg-gray-200 text-gray-400 dark:bg-gray-700 dark:text-gray-500'
-            }`}
-          >
-            确认寄售 {selectedCount > 0 ? `（${selectedCount} 个）` : ''}
-          </button>
-        </div>
-      </div>
+      </BottomSheet>
 
       <ConsignmentEquityCardSelectSheet
         cards={equityCards}
@@ -342,6 +316,6 @@ export function ConsignableCollectionSelectSheet({
         recommendedId={recommendedEquityCardId ?? null}
         selectedId={selectedEquityCardId}
       />
-    </div>
+    </>
   );
 }

@@ -307,7 +307,7 @@ export function QuestionnairePage() {
                 <div className="inline-flex items-center rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs uppercase tracking-[0.26em] text-white/80">
                   Questionnaire
                 </div>
-                <h1 className="mt-4 text-[28px] font-semibold leading-tight">参与问卷，赢取每日算力奖励</h1>
+                <h1 className="mt-4 text-5_5xl font-semibold leading-tight">参与问卷，赢取每日算力奖励</h1>
                 <p className="mt-2 max-w-[280px] text-sm leading-6 text-white/78">
                   每日最多提交 3 份问卷，审核通过后发放奖励。建议内容越具体，越方便后台处理。
                 </p>

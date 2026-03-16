@@ -56,7 +56,7 @@ export const AuthSmsField = ({
           {buttonText}
         </Button>
       </div>
-      {message ? <p className="px-1 text-[12px] text-primary-start">{message}</p> : null}
+      {message ? <p className="px-1 text-s text-primary-start">{message}</p> : null}
     </div>
   );
 };

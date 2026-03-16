@@ -86,8 +86,7 @@ export const HomePage = () => {
     { cacheKey: 'home:popup-announcements', cache: false },
   );
   const popupList = popupRequest.data?.list ?? [];
-  /** 弹出公告：直接使用接口返回列表，该接口应只返回需要弹出的公告 */
-  const popupsToShow = popupList;
+  const popupsToShow = popupList.filter(item => !item.is_read);
 
   const [showPopupIndex, setShowPopupIndex] = useState(0);
   const [popupVisible, setPopupVisible] = useState(false);

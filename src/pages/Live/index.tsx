@@ -152,7 +152,7 @@ export const LivePage = () => {
                     <div className="mt-2 text-sm text-white/72">来源 {domainLabel}</div>
                   </div>
                 </div>
-                <h2 className="mt-5 text-[30px] font-semibold leading-tight">{title}</h2>
+                <h2 className="mt-5 text-6xl font-semibold leading-tight">{title}</h2>
                 <p className="mt-3 max-w-[300px] text-sm leading-6 text-white/78">{description}</p>
 
                 <button

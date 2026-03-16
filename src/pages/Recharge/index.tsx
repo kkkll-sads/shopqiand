@@ -695,7 +695,7 @@ export function RechargePage() {
 
   if (!isAuthenticated) {
     return (
-      <div className="flex h-full flex-1 flex-col bg-bg-base">
+      <div className="recharge-dark-scope flex h-full flex-1 flex-col bg-bg-base">
         {renderHeader()}
         <div ref={scrollContainerRef} className="flex-1 overflow-y-auto no-scrollbar px-4">
           <EmptyState
@@ -711,7 +711,7 @@ export function RechargePage() {
 
   if (hasBlockingError) {
     return (
-      <div className="flex h-full flex-1 flex-col bg-bg-base">
+      <div className="recharge-dark-scope flex h-full flex-1 flex-col bg-bg-base">
         {renderHeader()}
         <div ref={scrollContainerRef} className="flex-1 overflow-y-auto no-scrollbar">
           <ErrorState
@@ -725,7 +725,7 @@ export function RechargePage() {
 
   if (isBankCardOfflineMatched && matchedAccount) {
     return (
-      <div className="relative flex h-full flex-1 flex-col bg-gray-50">
+      <div className="recharge-dark-scope relative flex h-full flex-1 flex-col bg-bg-base">
         {isOffline ? <OfflineBanner onAction={handleReload} className="absolute left-0 right-0 top-0 z-50" /> : null}
 
         <input
@@ -766,7 +766,7 @@ export function RechargePage() {
           <div className="relative z-10 -mt-4 rounded-t-[28px] bg-gray-50 px-4 pb-6 pt-5">
             <div className="mb-4 flex items-center justify-between px-1">
               <span className="text-xs font-bold uppercase tracking-wider text-gray-400">Offline Payment</span>
-              <span className="flex items-center gap-1 rounded-md bg-orange-100 px-2.5 py-1 text-[10px] font-bold text-orange-700">
+              <span className="flex items-center gap-1 rounded-md bg-orange-100 px-2.5 py-1 text-2xs font-bold text-orange-700">
                 <ShieldCheck size={10} />
                 人工到账审核
               </span>
@@ -805,7 +805,7 @@ export function RechargePage() {
                         <span className="flex-1 break-all text-sm font-bold text-gray-900">{item.value}</span>
                         <button
                           type="button"
-                          className="shrink-0 rounded bg-white px-2 py-1 text-[10px] text-gray-600 ring-1 ring-gray-200"
+                          className="shrink-0 rounded bg-white px-2 py-1 text-2xs text-gray-600 ring-1 ring-gray-200"
                           onClick={() => void handleCopy(item.value, `${item.label}已复制`)}
                         >
                           复制
@@ -938,7 +938,7 @@ export function RechargePage() {
   }
 
   return (
-    <div className="relative flex h-full flex-1 flex-col bg-bg-base">
+    <div className="recharge-dark-scope relative flex h-full flex-1 flex-col bg-bg-base">
       {isOffline && <OfflineBanner onAction={handleReload} className="absolute top-12 right-0 left-0 z-50" />}
 
       {renderHeader()}

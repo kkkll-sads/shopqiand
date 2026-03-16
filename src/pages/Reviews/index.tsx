@@ -21,7 +21,7 @@ import { Skeleton } from '../../components/ui/Skeleton';
 import {
   getShopProductReviewImages,
   getShopProductReviewUser,
-  resolveShopProductImageUrl,
+  resolveShopProductReviewAvatarUrl,
 } from '../../features/shop-product/utils';
 import { useNetworkStatus } from '../../hooks/useNetworkStatus';
 import { useRequest } from '../../hooks/useRequest';
@@ -276,7 +276,7 @@ export function ReviewsPage() {
           </div>
         </Card>
 
-        <div className="sticky top-11 z-10 flex min-w-0 overflow-x-auto overflow-y-hidden border-b border-border-light bg-bg-base/95 px-4 py-2 backdrop-blur no-scrollbar overscroll-x-contain">
+        <div className="sticky top-0 z-10 flex min-w-0 overflow-x-auto overflow-y-hidden border-b border-border-light bg-bg-base/95 px-4 py-2 backdrop-blur no-scrollbar overscroll-x-contain">
           {REVIEW_FILTERS.map((filter) => (
             <button
               key={filter.id}
@@ -303,10 +303,14 @@ export function ReviewsPage() {
                   <div className="mb-3 flex items-start justify-between">
                     <div className="flex items-center space-x-2">
                       <img
-                        src={resolveShopProductImageUrl(review.avatar)}
+                        src={resolveShopProductReviewAvatarUrl(review.avatar)}
                         alt={getShopProductReviewUser(review)}
                         className="h-8 w-8 rounded-full bg-border-light object-cover"
-                        referrerPolicy="no-referrer"
+                        onError={(event) => {
+                          const target = event.currentTarget;
+                          target.onerror = null;
+                          target.src = '/favicon.png';
+                        }}
                       />
                       <div>
                         <div className="flex items-center space-x-2">

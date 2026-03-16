@@ -42,22 +42,39 @@ interface UploadResponseRaw extends UploadedFileRaw {
   file?: UploadedFileRaw;
 }
 
+function normalizeResolvedUrl(targetUrl: URL): string {
+  // Keep the original asset key from backend to avoid rewriting valid OSS object paths.
+  return targetUrl.toString();
+}
+
 export function resolveUploadUrl(url: string): string {
-  if (!url) {
-    return url;
+  const trimmedUrl = url.trim();
+  if (!trimmedUrl) {
+    return trimmedUrl;
   }
 
-  if (/^https?:\/\//i.test(url)) {
-    return url;
+  if (/^https?:\/\//i.test(trimmedUrl)) {
+    try {
+      return normalizeResolvedUrl(new URL(trimmedUrl));
+    } catch {
+      return trimmedUrl;
+    }
   }
 
-  if (/^[\w-]+\.[\w-]+\.\w+\//.test(url)) {
-    return `https://${url}`;
+  if (/^[\w-]+\.[\w-]+\.\w+\//.test(trimmedUrl)) {
+    try {
+      return normalizeResolvedUrl(new URL(`https://${trimmedUrl}`));
+    } catch {
+      return `https://${trimmedUrl}`;
+    }
   }
 
-  /* baseURL 为空时使用当前页面 origin，资源路径（如 /uploads/xxx）会通过代理访问后端 */
-  const base = apiConfig.baseURL || window.location.origin;
-  return new URL(url.startsWith('/') ? url : `/${url}`, base).toString();
+  /* 优先使用 HTTP 客户端已解析出的线路域名，避免在本地页面 origin 下拼出错误资源地址 */
+  const runtimeOrigin = typeof window === 'undefined' ? 'http://localhost' : window.location.origin;
+  const base = http.getResolvedBaseURL() || apiConfig.baseURL || runtimeOrigin;
+  return normalizeResolvedUrl(
+    new URL(trimmedUrl.startsWith('/') ? trimmedUrl : `/${trimmedUrl}`, base),
+  );
 }
 
 function readNumber(value: number | string | undefined): number {

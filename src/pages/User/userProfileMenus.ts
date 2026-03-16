@@ -89,7 +89,7 @@ export const buildRightsManagement = (navigate: NavigateFunction): ProfileSectio
       action: () => navigate('/billing'),
     },
     {
-      label: '累计确权',
+      label: '累计权益',
       icon: ShieldCheck,
       iconColorClass: 'text-green-600',
       iconBgClass: 'bg-green-50',

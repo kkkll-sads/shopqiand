@@ -32,8 +32,8 @@ export const AuthFormSection = ({
     <div className={`${sectionRootClassName} ${className}`.trim()}>
       {showHeader ? (
         <div className={sectionHeaderClassName}>
-          {title ? <h1 className="text-[28px] font-bold text-text-main">{title}</h1> : null}
-          {description ? <p className="mt-2 text-[15px] text-text-sub">{description}</p> : null}
+          {title ? <h1 className="text-5_5xl font-bold text-text-main">{title}</h1> : null}
+          {description ? <p className="mt-2 text-md text-text-sub">{description}</p> : null}
         </div>
       ) : null}
 

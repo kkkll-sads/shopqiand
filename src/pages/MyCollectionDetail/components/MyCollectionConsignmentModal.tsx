@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react';
 import { AlertTriangle, ChevronRight, Clock3, Copy, CreditCard, Loader2, Store, Ticket, Wallet, X } from 'lucide-react';
 import type { CollectionConsignmentCheckData, ConsignmentEquityCard } from '../../../api';
 import type { UserCollectionDetail } from '../../../api/modules/userCollection';
+import { BottomSheet } from '../../../components/ui/BottomSheet';
 
 interface MyCollectionConsignmentModalProps {
   availableConsignmentCouponCount: number;
@@ -75,27 +75,6 @@ export function MyCollectionConsignmentModal({
   serviceFeeBalance,
   submitError,
 }: MyCollectionConsignmentModalProps) {
-  const [isRendered, setIsRendered] = useState(false);
-  const [isVisible, setIsVisible] = useState(false);
-
-  useEffect(() => {
-    if (isOpen) {
-      setIsRendered(true);
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          setIsVisible(true);
-        });
-      });
-      return undefined;
-    }
-
-    setIsVisible(false);
-    const timer = setTimeout(() => {
-      setIsRendered(false);
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [isOpen]);
-
   const isUnlocked =
     Boolean(checkData?.unlocked) || (typeof countdownSeconds === 'number' && countdownSeconds <= 0);
   const serviceFeeBalanceValue = Number(serviceFeeBalance);
@@ -122,38 +101,27 @@ export function MyCollectionConsignmentModal({
     && !hasServiceFeeWarning
     && !hasCouponShortage;
 
-  if (!isRendered) {
-    return null;
-  }
-
   return (
-    <div className="fixed inset-0 z-[90] flex flex-col justify-end">
-      <button
-        type="button"
-        aria-label="关闭寄售弹层"
-        className={`absolute inset-0 bg-black/55 transition-opacity duration-300 ${isVisible ? 'opacity-100' : 'opacity-0'}`}
-        onClick={onClose}
-      />
-
-      <div
-        className={`relative mx-auto w-full max-w-[430px] px-3 pb-safe transition-transform duration-300 ease-out ${isVisible ? 'translate-y-0' : 'translate-y-full'}`}
-      >
-        <div className="overflow-hidden rounded-[28px] bg-[#F7F4EE] shadow-2xl">
-          <div className="border-b border-[#e8dfd2] bg-white/90 px-5 py-4">
-            <div className="flex items-center justify-between">
-              <div className="text-base font-bold text-gray-900">资产寄售委托</div>
-              <button
-                type="button"
-                className="rounded-full p-1 text-gray-400 transition-colors active:bg-gray-100 active:text-gray-700"
-                onClick={onClose}
-                aria-label="关闭"
-              >
-                <X size={18} />
-              </button>
-            </div>
-          </div>
-
-          <div className="max-h-[78vh] space-y-4 overflow-y-auto px-4 py-4">
+    <BottomSheet
+      isOpen={isOpen}
+      onClose={onClose}
+      title="资产寄售委托"
+      headerLeft={null}
+      headerRight={
+        <button
+          type="button"
+          className="rounded-full p-1 text-gray-400 transition-colors active:bg-gray-100 active:text-gray-700"
+          onClick={onClose}
+          aria-label="关闭"
+        >
+          <X size={18} />
+        </button>
+      }
+      maxHeight="78vh"
+      zIndex={90}
+      className="collection-certificate-dark-scope max-w-[430px] rounded-t-[28px] bg-[#F7F4EE] shadow-2xl dark:bg-gray-900"
+    >
+      <div className="space-y-4 px-4 py-4 pb-safe">
             <div className="rounded-[22px] border border-[#eadfce] bg-white p-4 shadow-[0_10px_24px_rgba(56,40,20,0.06)]">
               <div className="flex gap-3">
                 <div className="h-16 w-16 shrink-0 overflow-hidden rounded-[18px] bg-[#f4efe7]">
@@ -395,9 +363,7 @@ export function MyCollectionConsignmentModal({
                 </span>
               )}
             </button>
-          </div>
-        </div>
       </div>
-    </div>
+    </BottomSheet>
   );
 }

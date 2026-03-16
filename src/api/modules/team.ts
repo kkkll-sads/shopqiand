@@ -1,5 +1,6 @@
 import { createApiHeaders } from '../core/headers';
 import { http } from '../http';
+import { resolveUploadUrl } from './upload';
 
 export interface TeamOverviewData {
   balance: number;
@@ -72,16 +73,67 @@ export interface MemberDetailData {
   };
 }
 
+function normalizeAssetUrl(url: string | undefined): string {
+  if (typeof url !== 'string') {
+    return '';
+  }
+
+  const nextUrl = url.trim();
+  if (!nextUrl) {
+    return '';
+  }
+
+  return resolveUploadUrl(nextUrl);
+}
+
+function normalizeOverview(payload: TeamOverviewData): TeamOverviewData {
+  return {
+    ...payload,
+    invite_link: normalizeAssetUrl(payload.invite_link),
+    qrcode_url: normalizeAssetUrl(payload.qrcode_url),
+  };
+}
+
+function normalizeMember(member: TeamMember): TeamMember {
+  return {
+    ...member,
+    avatar: normalizeAssetUrl(member.avatar),
+  };
+}
+
+function normalizePromotionCard(payload: PromotionCardData): PromotionCardData {
+  return {
+    ...payload,
+    invite_link: normalizeAssetUrl(payload.invite_link),
+    qrcode_url: normalizeAssetUrl(payload.qrcode_url),
+    user_info: {
+      ...payload.user_info,
+      avatar: normalizeAssetUrl(payload.user_info?.avatar),
+    },
+  };
+}
+
+function normalizeMemberDetail(payload: MemberDetailData): MemberDetailData {
+  return {
+    ...payload,
+    user_info: {
+      ...payload.user_info,
+      avatar: normalizeAssetUrl(payload.user_info?.avatar),
+    },
+  };
+}
+
 export const teamApi = {
   /**
    * 我的团队概览
    * GET /api/Team/overview
    */
   async getOverview(signal?: AbortSignal): Promise<TeamOverviewData> {
-    return http.get<TeamOverviewData>('/api/Team/overview', {
+    const payload = await http.get<TeamOverviewData>('/api/Team/overview', {
       headers: createApiHeaders(),
       signal,
     });
+    return normalizeOverview(payload);
   },
 
   /**
@@ -98,11 +150,15 @@ export const teamApi = {
     } = {},
     signal?: AbortSignal,
   ): Promise<TeamMembersData> {
-    return http.get<TeamMembersData>('/api/Team/members', {
+    const payload = await http.get<TeamMembersData>('/api/Team/members', {
       headers: createApiHeaders(),
       query: params,
       signal,
     });
+    return {
+      ...payload,
+      list: (payload.list ?? []).map(normalizeMember),
+    };
   },
 
   /**
@@ -110,10 +166,11 @@ export const teamApi = {
    * GET /api/Team/promotionCard
    */
   async getPromotionCard(signal?: AbortSignal): Promise<PromotionCardData> {
-    return http.get<PromotionCardData>('/api/Team/promotionCard', {
+    const payload = await http.get<PromotionCardData>('/api/Team/promotionCard', {
       headers: createApiHeaders(),
       signal,
     });
+    return normalizePromotionCard(payload);
   },
 
   /**
@@ -121,10 +178,11 @@ export const teamApi = {
    * GET /api/Team/memberDetail
    */
   async getMemberDetail(userId: number, signal?: AbortSignal): Promise<MemberDetailData> {
-    return http.get<MemberDetailData>('/api/Team/memberDetail', {
+    const payload = await http.get<MemberDetailData>('/api/Team/memberDetail', {
       headers: createApiHeaders(),
       query: { user_id: userId },
       signal,
     });
+    return normalizeMemberDetail(payload);
   },
 };

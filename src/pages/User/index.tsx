@@ -7,6 +7,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { ChevronRight, LogOut } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { accountApi, userApi } from '../../api';
+import { resolveUploadUrl } from '../../api/modules/upload';
 import { messageApi } from '../../api/modules/message';
 import { OfflineBanner } from '../../components/layout/OfflineBanner';
 import { ActionSheet } from '../../components/ui/ActionSheet';
@@ -129,7 +130,9 @@ export const UserPage = () => {
   const displayName = (isVerified && verifiedName) ? verifiedName : String(userInfo.nickname ?? userInfo.username ?? userInfo.mobile ?? '会员用户');
   const displayUid = String(userInfo.uid ?? userInfo.id ?? '--');
   const displayAvatar =
-    typeof userInfo.avatar === 'string' && userInfo.avatar.trim() ? userInfo.avatar.trim() : '';
+    typeof userInfo.avatar === 'string' && userInfo.avatar.trim()
+      ? resolveUploadUrl(userInfo.avatar.trim())
+      : '';
 
   const isHeaderLoading =
     loading || (isLoggedIn && (profileLoading || accountOverviewLoading || realNameLoading));

@@ -174,7 +174,7 @@ export const LogisticsPage = () => {
   const renderHeader = () => (
     <div className="relative z-40 shrink-0 border-b border-border-light bg-white dark:bg-gray-900">
       {isOffline && (
-        <div className="flex items-center justify-between bg-red-50 px-4 py-2 text-[12px] text-primary-start dark:bg-red-500/15 dark:text-red-300">
+        <div className="flex items-center justify-between bg-red-50 px-4 py-2 text-s text-primary-start dark:bg-red-500/15 dark:text-red-300">
           <div className="flex items-center">
             <WifiOff size={14} className="mr-2" />
             <span>网络不稳定，请检查网络设置</span>
@@ -198,7 +198,7 @@ export const LogisticsPage = () => {
             <ChevronLeft size={24} />
           </button>
         </div>
-        <h1 className="w-1/3 text-center text-[16px] font-bold text-text-main">物流详情</h1>
+        <h1 className="w-1/3 text-center text-lg font-bold text-text-main">物流详情</h1>
         <div className="w-1/3" />
       </div>
     </div>
@@ -245,11 +245,11 @@ export const LogisticsPage = () => {
       return (
         <div className="flex flex-1 flex-col items-center justify-center p-4">
           <RefreshCcw size={32} className="mb-3 text-text-aux" />
-          <p className="mb-4 text-[14px] text-text-sub">加载失败，请检查网络</p>
+          <p className="mb-4 text-base text-text-sub">加载失败，请检查网络</p>
           <button
             type="button"
             onClick={handleRetry}
-            className="rounded-full border border-border-light bg-white px-6 py-2 text-[13px] text-text-main shadow-sm active:bg-bg-base dark:bg-gray-900"
+            className="rounded-full border border-border-light bg-white px-6 py-2 text-sm text-text-main shadow-sm active:bg-bg-base dark:bg-gray-900"
           >
             重试
           </button>
@@ -261,8 +261,8 @@ export const LogisticsPage = () => {
       return (
         <div className="flex flex-1 flex-col items-center justify-center p-4">
           <Package size={48} className="mb-4 text-border-light" />
-          <p className="mb-1 text-[15px] font-medium text-text-main">暂无物流信息</p>
-          <p className="text-[13px] text-text-sub">商家正快马加鞭为您准备商品，请耐心等待</p>
+          <p className="mb-1 text-md font-medium text-text-main">暂无物流信息</p>
+          <p className="text-sm text-text-sub">商家正快马加鞭为您准备商品，请耐心等待</p>
         </div>
       );
     }
@@ -282,7 +282,7 @@ export const LogisticsPage = () => {
                 key={s.shipment_id}
                 type="button"
                 onClick={() => setActiveShipmentIndex(idx)}
-                className={`shrink-0 rounded-full px-4 py-2 text-[13px] font-medium transition-colors ${
+                className={`shrink-0 rounded-full px-4 py-2 text-sm font-medium transition-colors ${
                   idx === activeShipmentIndex
                     ? 'bg-primary-start text-white'
                     : 'bg-white dark:bg-gray-900 text-text-sub border border-border-light'
@@ -305,12 +305,12 @@ export const LogisticsPage = () => {
           </div>
           <div className="min-w-0 flex-1">
             <div className="mb-1 flex items-center">
-              <span className="mr-2 text-[16px] font-bold text-text-main">{statusText}</span>
-              <span className="text-[13px] text-text-sub">
+              <span className="mr-2 text-lg font-bold text-text-main">{statusText}</span>
+              <span className="text-sm text-text-sub">
                 {readText(displayShippingCompany, '树交所物流')}
               </span>
             </div>
-            <div className="flex items-center text-[12px] text-text-sub">
+            <div className="flex items-center text-s text-text-sub">
               <span className="mr-2">运单号：{readText(displayShippingNo)}</span>
               <button
                 type="button"
@@ -329,10 +329,10 @@ export const LogisticsPage = () => {
           <div className="mb-3 flex items-start rounded-[16px] bg-white p-4 shadow-sm dark:bg-gray-900">
             <MapPin size={16} className="mr-2 mt-0.5 shrink-0 text-text-main" />
             <div className="min-w-0 flex-1">
-              <div className="mb-1 text-[13px] leading-snug text-text-main">
+              <div className="mb-1 text-sm leading-snug text-text-main">
                 [收货地址] {readText(singleData.recipient_address)}
               </div>
-              <div className="text-[12px] text-text-sub">
+              <div className="text-s text-text-sub">
                 {readText(singleData.recipient_name)} {maskPhone(singleData.recipient_phone)}
               </div>
             </div>
@@ -349,8 +349,8 @@ export const LogisticsPage = () => {
                   <div className="absolute left-1/2 top-4 h-[calc(100%+16px)] w-[1px] -translate-x-1/2 bg-border-light" />
                 </div>
                 <div className="flex-1 pb-6">
-                  <div className="mb-1 text-[14px] leading-snug font-medium text-text-main">包裹等待揽收</div>
-                  <div className="text-[12px] text-text-aux">—</div>
+                  <div className="mb-1 text-base leading-snug font-medium text-text-main">包裹等待揽收</div>
+                  <div className="text-s text-text-aux">—</div>
                 </div>
               </div>
               <div className="flex">
@@ -358,8 +358,8 @@ export const LogisticsPage = () => {
                   <div className="z-10 mt-1 h-3 w-3 rounded-full bg-border-light" />
                 </div>
                 <div className="flex-1 pb-6 opacity-70">
-                  <div className="mb-1 text-[14px] leading-snug text-text-sub">商家已发货</div>
-                  <div className="text-[12px] text-text-aux">—</div>
+                  <div className="mb-1 text-base leading-snug text-text-sub">商家已发货</div>
+                  <div className="text-s text-text-aux">—</div>
                 </div>
               </div>
             </>
@@ -384,13 +384,13 @@ export const LogisticsPage = () => {
                 </div>
                 <div className={`flex-1 pb-6 ${isLatest ? '' : 'opacity-70'}`}>
                   <div
-                    className={`mb-1 text-[14px] leading-snug ${
+                    className={`mb-1 text-base leading-snug ${
                       isLatest ? 'font-medium text-text-main' : 'text-text-sub'
                     }`}
                   >
                     {readText(item.content)}
                   </div>
-                  <div className={`text-[12px] ${isLatest ? 'text-text-main' : 'text-text-aux'}`}>
+                  <div className={`text-s ${isLatest ? 'text-text-main' : 'text-text-aux'}`}>
                     {readText(item.time)}
                   </div>
                 </div>
@@ -419,7 +419,7 @@ export const LogisticsPage = () => {
         <div className="absolute bottom-0 left-0 right-0 z-40 border-t border-border-light bg-white px-4 py-2 pb-safe dark:bg-gray-900">
           <button
             type="button"
-            className="flex w-full items-center justify-center rounded-full border border-border-light text-[14px] font-medium text-text-main active:bg-bg-base"
+            className="flex w-full items-center justify-center rounded-full border border-border-light text-base font-medium text-text-main active:bg-bg-base"
             onClick={handleCustomerService}
           >
             <HeadphonesIcon size={16} className="mr-1.5 text-text-sub" />

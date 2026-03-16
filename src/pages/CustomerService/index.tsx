@@ -63,7 +63,7 @@ export const CustomerServicePage = () => {
   };
 
   return (
-    <div className="flex flex-1 flex-col overflow-hidden bg-[#f7f3ec] dark:bg-gray-950">
+    <div className="flex flex-1 flex-col overflow-hidden bg-bg-base">
       <PageHeader
         title={title}
         onBack={goBack}
@@ -72,32 +72,27 @@ export const CustomerServicePage = () => {
             type="button"
             onClick={handleOpenBrowser}
             disabled={!url}
-            className="inline-flex h-8 items-center justify-center rounded-full border border-[#e6dac8] bg-[#f8f2e8] px-3 text-[11px] font-medium text-[#7d6041] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200"
+            className="inline-flex h-8 items-center justify-center rounded-full border border-border-light bg-bg-card px-3 text-xs font-medium text-text-sub active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40"
           >
             <ExternalLink size={13} className="mr-1.5" />
             浏览器打开
           </button>
         )}
-        className="border-b border-[#eadfce] bg-white/92 shadow-sm backdrop-blur-sm dark:border-gray-800 dark:bg-gray-950/92"
+        className="border-b border-border-light bg-bg-card/92 shadow-sm backdrop-blur-sm"
         contentClassName="h-11 px-4 pt-safe"
         titleClassName="text-base font-semibold"
         backButtonClassName="rounded-full p-1.5 active:bg-black/5 dark:active:bg-white/10"
         rightClassName="items-center"
       />
 
-      <div className="flex items-center justify-between gap-3 border-b border-[#efe5d6] bg-[#fcf8f2] px-4 py-2 text-[11px] text-[#82684d] dark:border-gray-800 dark:bg-gray-900 dark:text-gray-400">
-        <span className="truncate">当前客服来源：{domainLabel}</span>
-        <span className="shrink-0 opacity-75">可返回上一页继续操作</span>
-      </div>
-
       <div className="min-h-0 flex-1 p-3">
         {url ? (
-          <div className="relative h-full overflow-hidden rounded-[24px] border border-white/70 bg-white shadow-[0_18px_42px_rgba(84,56,28,0.12)] dark:border-gray-800 dark:bg-gray-900 dark:shadow-[0_20px_48px_rgba(0,0,0,0.32)]">
+          <div className="relative h-full overflow-hidden rounded-[24px] border border-border-light bg-bg-card shadow-[0_18px_42px_rgba(84,56,28,0.12)] dark:shadow-[0_20px_48px_rgba(0,0,0,0.32)]">
             {isFrameLoading ? (
-              <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 bg-white/94 text-text-sub dark:bg-gray-900/94 dark:text-gray-300">
+              <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 bg-bg-card/94 text-text-sub">
                 <Loader2 size={20} className="animate-spin" />
-                <div className="text-[13px] font-medium">正在连接客服...</div>
-                <div className="text-[11px] opacity-75">如页面空白，可点击右上角用浏览器打开</div>
+                <div className="text-sm font-medium">正在连接客服...</div>
+                <div className="text-xs opacity-75">如页面空白，可点击右上角用浏览器打开</div>
               </div>
             ) : null}
 
@@ -105,7 +100,7 @@ export const CustomerServicePage = () => {
               key={`${frameKey}:${url}`}
               src={url}
               title={title}
-              className="h-full w-full border-0 bg-white dark:bg-gray-950"
+              className="h-full w-full border-0 bg-bg-card"
               allow="clipboard-read; clipboard-write"
               referrerPolicy="no-referrer"
               onLoad={() => setIsFrameLoading(false)}

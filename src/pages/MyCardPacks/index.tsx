@@ -1,9 +1,9 @@
-/**
+﻿/**
  * @file MyCardPacks/index.tsx
  * @description 我的卡包页面，展示可购买权益卡与已持有权益卡。
  */
 
-import { Check, Coins, CreditCard, Loader2, ShieldCheck, Ticket, TrendingUp, Wallet, X, Zap } from 'lucide-react';
+import { Coins, CreditCard, ShieldCheck, Ticket, TrendingUp, Wallet, Zap } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   accountApi,
@@ -29,6 +29,7 @@ import { useRequest } from '../../hooks/useRequest';
 import { useRouteScrollRestoration } from '../../hooks/useRouteScrollRestoration';
 import { useSessionState } from '../../hooks/useSessionState';
 import { useAppNavigate } from '../../lib/navigation';
+import { MiningSelectionSheet } from './components/MiningSelectionSheet';
 
 type CardTab = MembershipCardType | 'owned';
 
@@ -790,219 +791,24 @@ export function MyCardPacksPage() {
         </div>
       </PullToRefreshContainer>
 
-      {miningSheetOpen ? (
-        <MiningSelectionSheet
-          product={miningSheetProduct}
-          loading={miningLoading}
-          loadingMore={miningLoadingMore}
-          hasMore={miningHasMore}
-          list={miningList}
-          selectedId={selectedMiningId}
-          buying={amplifyBuying}
-          onSelect={setSelectedMiningId}
-          onBuy={handleAmplifyBuy}
-          onClose={closeMiningSheet}
-          onLoadMore={loadMoreMining}
-        />
-      ) : null}
-    </div>
-  );
-}
-
-interface MiningSelectionSheetProps {
-  buying: boolean;
-  hasMore: boolean;
-  list: BindableMiningItem[];
-  loading: boolean;
-  loadingMore: boolean;
-  onBuy: () => void;
-  onClose: () => void;
-  onLoadMore: () => void;
-  onSelect: (id: number | null) => void;
-  product: MembershipCardProduct | null;
-  selectedId: number | null;
-}
-
-function MiningSelectionSheet({
-  buying,
-  hasMore,
-  list,
-  loading,
-  loadingMore,
-  onBuy,
-  onClose,
-  onLoadMore,
-  onSelect,
-  product,
-  selectedId,
-}: MiningSelectionSheetProps) {
-  const [isVisible, setIsVisible] = useState(false);
-  const scrollRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        setIsVisible(true);
-      });
-    });
-  }, []);
-
-  useEffect(() => {
-    const el = scrollRef.current;
-    if (!el || !hasMore || loadingMore) return;
-
-    const handleScroll = () => {
-      const threshold = 80;
-      if (el.scrollHeight - el.scrollTop - el.clientHeight < threshold) {
-        onLoadMore();
-      }
-    };
-
-    el.addEventListener('scroll', handleScroll, { passive: true });
-    return () => el.removeEventListener('scroll', handleScroll);
-  }, [hasMore, loadingMore, onLoadMore]);
-
-  const handleClose = () => {
-    if (buying) return;
-    setIsVisible(false);
-    setTimeout(onClose, 300);
-  };
-
-  const toggleSelect = (id: number) => {
-    onSelect(selectedId === id ? null : id);
-  };
-
-  return (
-    <div className="fixed inset-0 z-[100] flex flex-col justify-end">
-      <div
-        className={`absolute inset-0 bg-black/60 transition-opacity duration-300 ${isVisible ? 'opacity-100' : 'opacity-0'}`}
-        onClick={handleClose}
+      <MiningSelectionSheet
+        isOpen={miningSheetOpen}
+        product={miningSheetProduct}
+        loading={miningLoading}
+        loadingMore={miningLoadingMore}
+        hasMore={miningHasMore}
+        list={miningList}
+        selectedId={selectedMiningId}
+        buying={amplifyBuying}
+        onSelect={setSelectedMiningId}
+        onBuy={handleAmplifyBuy}
+        onClose={closeMiningSheet}
+        onLoadMore={loadMoreMining}
+        formatMoney={formatMoney}
       />
-      <div
-        className={`relative mx-auto flex w-full max-h-[80vh] flex-col rounded-t-2xl bg-bg-card shadow-lg transition-transform duration-300 ease-out sm:max-w-[430px] ${isVisible ? 'translate-y-0' : 'translate-y-full'}`}
-      >
-        <div className="flex shrink-0 items-center justify-between border-b border-border-main px-4 py-3.5">
-          <div>
-            <h3 className="text-base font-semibold text-text-main">选择绑定矿机</h3>
-            {product ? (
-              <p className="mt-0.5 text-xs text-text-sub">
-                {product.name} · ¥{formatMoney(product.price)}
-              </p>
-            ) : null}
-          </div>
-          <button
-            type="button"
-            onClick={handleClose}
-            disabled={buying}
-            className="rounded-full p-1.5 text-text-sub active:bg-bg-hover"
-          >
-            <X size={20} />
-          </button>
-        </div>
-
-        <div ref={scrollRef} className="flex-1 overflow-y-auto no-scrollbar px-4 py-3">
-          {loading ? (
-            <div className="space-y-3">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="flex items-center gap-3 rounded-2xl bg-bg-base p-3">
-                  <Skeleton className="size-14 shrink-0 rounded-xl" />
-                  <div className="flex-1 space-y-2">
-                    <Skeleton className="h-4 w-32" />
-                    <Skeleton className="h-3 w-20" />
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : !list.length ? (
-            <EmptyState
-              icon={<Zap size={48} />}
-              message="暂无可绑定的矿机"
-              actionText="关闭"
-              onAction={handleClose}
-            />
-          ) : (
-            <div className="space-y-2">
-              {list.map((item) => {
-                const isSelected = selectedId === item.userCollectionId;
-                return (
-                  <button
-                    key={item.userCollectionId}
-                    type="button"
-                    onClick={() => toggleSelect(item.userCollectionId)}
-                    disabled={buying}
-                    className={`flex w-full items-center gap-3 rounded-2xl border-2 p-3 text-left transition-colors ${
-                      isSelected
-                        ? 'border-primary bg-primary/10'
-                        : 'border-transparent bg-bg-base active:bg-bg-hover'
-                    }`}
-                  >
-                    <div className={`relative z-10 flex size-5 shrink-0 items-center justify-center rounded-md border-2 transition-colors ${
-                      isSelected
-                        ? 'border-primary bg-primary text-white'
-                        : 'border-gray-300 bg-white dark:border-gray-600 dark:bg-gray-700'
-                    }`}>
-                      {isSelected ? <Check size={14} strokeWidth={3} /> : null}
-                    </div>
-                    {item.image ? (
-                      <img
-                        src={item.image}
-                        alt=""
-                        className="size-14 shrink-0 rounded-xl object-cover"
-                      />
-                    ) : (
-                      <div className="flex size-14 shrink-0 items-center justify-center rounded-xl bg-gray-100 dark:bg-gray-800">
-                        <Zap size={20} className="text-gray-400" />
-                      </div>
-                    )}
-                    <div className="min-w-0 flex-1">
-                      <div className="truncate text-sm font-medium text-text-main">{item.title}</div>
-                      <div className="mt-1 text-xs text-text-sub">
-                        买入价 ¥{formatMoney(item.price)}
-                      </div>
-                    </div>
-                  </button>
-                );
-              })}
-              {loadingMore ? (
-                <div className="flex items-center justify-center py-3 text-text-sub">
-                  <Loader2 size={18} className="mr-2 animate-spin" />
-                  <span className="text-xs">加载更多...</span>
-                </div>
-              ) : !hasMore && list.length > 0 ? (
-                <div className="py-3 text-center text-xs text-text-sub">已加载全部</div>
-              ) : null}
-            </div>
-          )}
-        </div>
-
-        {!loading && list.length > 0 ? (
-          <div className="shrink-0 border-t border-border-main px-4 py-3 pb-safe">
-            <button
-              type="button"
-              onClick={onBuy}
-              disabled={selectedId === null || buying}
-              className={`flex h-11 w-full items-center justify-center rounded-full text-base font-medium transition-colors ${
-                selectedId !== null && !buying
-                  ? 'gradient-primary-r text-white'
-                  : 'bg-gray-200 text-gray-400 dark:bg-gray-800 dark:text-gray-500'
-              }`}
-            >
-              {buying ? (
-                <>
-                  <Loader2 size={18} className="mr-2 animate-spin" />
-                  购买中...
-                </>
-              ) : selectedId === null ? (
-                '请选择矿机'
-              ) : (
-                '确认购买'
-              )}
-            </button>
-          </div>
-        ) : null}
-      </div>
     </div>
   );
 }
+
 
 export default MyCardPacksPage;

@@ -20,7 +20,7 @@ export const AuthTabs = <T extends string>({ items, value, onChange }: AuthTabsP
           <button
             key={item.key}
             type="button"
-            className={`relative pb-1 text-[18px] font-medium ${active ? 'text-text-main' : 'text-text-aux'}`}
+            className={`relative pb-1 text-2xl font-medium ${active ? 'text-text-main' : 'text-text-aux'}`}
             onClick={() => onChange(item.key)}
           >
             {item.label}

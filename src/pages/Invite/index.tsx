@@ -58,7 +58,7 @@ export const InvitePage = () => {
           <button type="button" onClick={() => goBack()} className="-ml-2 p-2 text-text-main active:opacity-70">
             <ChevronLeft size={24} />
           </button>
-          <span className="text-[17px] font-medium text-text-main">推广名片</span>
+          <span className="text-xl font-medium text-text-main">推广名片</span>
           <div className="w-8" />
         </div>
         <div className="flex flex-1 flex-col items-center justify-center p-6">
@@ -75,7 +75,7 @@ export const InvitePage = () => {
           <button type="button" onClick={() => goBack()} className="-ml-2 p-2 text-text-main active:opacity-70">
             <ChevronLeft size={24} />
           </button>
-          <span className="ml-2 text-[17px] font-medium text-text-main">推广名片</span>
+          <span className="ml-2 text-xl font-medium text-text-main">推广名片</span>
         </div>
         <div className="flex-1">
           <ErrorState onRetry={fetchData} />
@@ -96,7 +96,7 @@ export const InvitePage = () => {
         <button type="button" onClick={() => goBack()} className="-ml-2 p-2 text-white active:opacity-70">
           <ChevronLeft size={24} />
         </button>
-        <span className="text-[17px] font-medium text-white">推广名片</span>
+        <span className="text-xl font-medium text-white">推广名片</span>
         <button type="button" className="-mr-2 p-2 text-white active:opacity-70" aria-label="分享">
           <Share2 size={20} />
         </button>
@@ -130,14 +130,14 @@ export const InvitePage = () => {
               )}
             </div>
             <div className="relative z-10">
-              <h2 className="mb-1 text-[18px] font-bold text-text-main">{displayName}</h2>
-              <div className="text-[12px] text-text-sub">邀请您加入数字藏品平台</div>
+              <h2 className="mb-1 text-2xl font-bold text-text-main">{displayName}</h2>
+              <div className="text-s text-text-sub">邀请您加入数字藏品平台</div>
             </div>
           </div>
 
           {/* 中部：二维码 + 邀请码 */}
           <div className="flex flex-1 flex-col items-center justify-center p-8">
-            <div className="relative mb-6 flex h-48 w-48 items-center justify-center rounded-xl border border-border-light bg-white p-2 shadow-sm">
+            <div className="relative mb-6 flex h-48 w-48 items-center justify-center rounded-xl border border-border-light bg-white p-2 shadow-sm dark:border-white/10 dark:bg-gray-800">
               {qrcode_url ? (
                 <img
                   src={qrcode_url}
@@ -151,14 +151,14 @@ export const InvitePage = () => {
               <img
                 src="/img/photo_2025-12-29_21-08-24%20(2).jpg"
                 alt="品牌LOGO"
-                className="absolute top-1/2 left-1/2 h-12 w-12 -translate-x-1/2 -translate-y-1/2 rounded-lg object-contain bg-white p-1 shadow-md"
+                className="absolute top-1/2 left-1/2 h-12 w-12 -translate-x-1/2 -translate-y-1/2 rounded-lg bg-white p-1 object-contain shadow-md dark:bg-gray-800"
               />
             </div>
 
             <div className="w-full space-y-2 text-center">
-              <div className="text-[13px] text-text-sub">我的邀请码</div>
+              <div className="text-sm text-text-sub">我的邀请码</div>
               <div className="flex items-center justify-center space-x-2 rounded-xl bg-gray-50 py-2 px-4 dark:bg-gray-800">
-                <span className="tracking-widest text-[24px] font-bold text-primary-start">{invite_code}</span>
+                <span className="tracking-widest text-4_5xl font-bold text-primary-start">{invite_code}</span>
                 <button
                   type="button"
                   onClick={() => handleCopy(invite_code, '邀请码')}
@@ -174,12 +174,12 @@ export const InvitePage = () => {
           {/* 底部：团队数据 */}
           <div className="grid grid-cols-2 gap-4 bg-gray-50 p-4 dark:bg-gray-800">
             <div className="text-center">
-              <div className="mb-1 text-[11px] text-text-sub">团队人数</div>
-              <div className="text-[16px] font-bold text-text-main">{team_count ?? 0}</div>
+              <div className="mb-1 text-xs text-text-sub">团队人数</div>
+              <div className="text-lg font-bold text-text-main">{team_count ?? 0}</div>
             </div>
             <div className="border-l border-border-light text-center">
-              <div className="mb-1 text-[11px] text-text-sub">总业绩</div>
-              <div className="text-[16px] font-bold text-text-main">
+              <div className="mb-1 text-xs text-text-sub">总业绩</div>
+              <div className="text-lg font-bold text-text-main">
                 ¥{Number(total_performance ?? 0).toLocaleString('zh-CN')}
               </div>
             </div>
@@ -199,7 +199,7 @@ export const InvitePage = () => {
           <button
             type="button"
             onClick={handleSaveImage}
-            className="flex items-center justify-center space-x-2 rounded-full bg-white py-3 font-medium text-primary-start shadow-lg transition-colors active:bg-gray-50"
+            className="flex items-center justify-center space-x-2 rounded-full bg-white py-3 font-medium text-primary-start shadow-lg transition-colors active:bg-gray-50 dark:bg-white/15 dark:text-white dark:active:bg-white/25"
           >
             <Download size={18} />
             <span>保存图片</span>

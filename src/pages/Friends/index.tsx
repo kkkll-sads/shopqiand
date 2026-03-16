@@ -148,7 +148,7 @@ export const FriendsPage = () => {
         <button onClick={() => goBack()} className="-ml-1 p-1 text-text-main active:opacity-70">
           <ChevronLeft size={20} />
         </button>
-        <span className="text-[17px] font-medium text-text-main">我的团队</span>
+        <span className="text-xl font-medium text-text-main">我的团队</span>
         <button
           onClick={() => goTo('/invite')}
           className="flex items-center gradient-primary-r rounded-full px-3 py-1.5 text-sm font-medium text-white shadow-sm active:opacity-80"
@@ -176,25 +176,25 @@ export const FriendsPage = () => {
         <div className="relative z-10">
           <div className="mb-6 flex items-center justify-between">
             <div>
-              <div className="mb-1 text-[13px] text-white/80">团队总人数 (人)</div>
+              <div className="mb-1 text-sm text-white/80">团队总人数 (人)</div>
               <div className="text-[32px] font-bold leading-none">{overview.team_total}</div>
             </div>
             <div className="text-right">
-              <div className="mb-1 text-[13px] text-white/80">今日新增 (人)</div>
-              <div className="text-[20px] font-bold leading-none">+{overview.today_register}</div>
+              <div className="mb-1 text-sm text-white/80">今日新增 (人)</div>
+              <div className="text-3xl font-bold leading-none">+{overview.today_register}</div>
             </div>
           </div>
 
           <div className="mb-4 grid grid-cols-2 gap-4">
             <div className="rounded-xl bg-white/10 p-3 backdrop-blur-sm">
-              <div className="mb-1 text-[11px] text-white/80">直推交易用户</div>
-              <div className="text-[16px] font-bold">
+              <div className="mb-1 text-xs text-white/80">直推交易用户</div>
+              <div className="text-lg font-bold">
                 {overview.level1_active_count ?? 0}
               </div>
             </div>
             <div className="rounded-xl bg-white/10 p-3 backdrop-blur-sm">
-              <div className="mb-1 text-[11px] text-white/80">间推交易用户</div>
-              <div className="text-[16px] font-bold">
+              <div className="mb-1 text-xs text-white/80">间推交易用户</div>
+              <div className="text-lg font-bold">
                 {overview.level2_active_count ?? 0}
               </div>
             </div>
@@ -202,8 +202,8 @@ export const FriendsPage = () => {
 
           <div className="flex items-center justify-between rounded-xl bg-white/10 p-3 backdrop-blur-sm">
             <div className="flex items-center space-x-2">
-              <span className="text-[12px] text-white/80">邀请码:</span>
-              <span className="text-[14px] font-bold tracking-wider">{overview.invite_code}</span>
+              <span className="text-s text-white/80">邀请码:</span>
+              <span className="text-base font-bold tracking-wider">{overview.invite_code}</span>
               <button
                 type="button"
                 onClick={() => handleCopy(overview.invite_code)}
@@ -215,7 +215,7 @@ export const FriendsPage = () => {
             <button
               type="button"
               onClick={() => goTo('/invite')}
-              className="flex items-center space-x-1 rounded-full bg-white px-3 py-1.5 text-[12px] font-medium text-primary-start active:opacity-90"
+              className="flex items-center space-x-1 rounded-full bg-white px-3 py-1.5 text-s font-medium text-primary-start active:opacity-90"
             >
               <QrCode size={14} />
               <span>推广名片</span>
@@ -241,7 +241,7 @@ export const FriendsPage = () => {
             key={tab.id}
             role="tab"
             tabIndex={0}
-            className={`relative flex-1 py-3 text-center text-[13px] font-medium transition-colors ${
+            className={`relative flex-1 py-3 text-center text-sm font-medium transition-colors ${
               activeTab === tab.id ? 'text-primary-start' : 'text-text-sub'
             }`}
             onClick={() => setActiveTab(tab.id)}
@@ -281,7 +281,7 @@ export const FriendsPage = () => {
       return (
         <div className="flex flex-col items-center justify-center py-20">
           <Users size={48} className="mb-4 text-border-main" strokeWidth={1} />
-          <p className="text-[14px] text-text-sub">暂无团队成员</p>
+          <p className="text-base text-text-sub">暂无团队成员</p>
         </div>
       );
     }
@@ -317,14 +317,14 @@ export const FriendsPage = () => {
             </div>
             <div className="min-w-0 flex-1">
               <div className="mb-1 flex items-center justify-between gap-2">
-                <h3 className="min-w-0 flex-1 truncate pr-2 text-[15px] font-medium text-text-main">
+                <h3 className="min-w-0 flex-1 truncate pr-2 text-md font-medium text-text-main">
                   {member.username && member.username !== '未实名'
                     ? member.username
                     : member.nickname || member.username}
                 </h3>
                 <div className="flex shrink-0 flex-wrap items-center gap-1">
                   <span
-                    className={`rounded px-1.5 py-0.5 text-[10px] ${
+                    className={`rounded px-1.5 py-0.5 text-2xs ${
                       member.level === 1
                         ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/20'
                         : 'bg-orange-50 text-orange-600 dark:bg-orange-900/20'
@@ -333,13 +333,13 @@ export const FriendsPage = () => {
                     {member.level_text}
                   </span>
                   {member.user_level_text && (
-                    <span className="rounded bg-gray-100 px-1.5 py-0.5 text-[10px] text-gray-600 dark:bg-gray-800 dark:text-gray-400">
+                    <span className="rounded bg-gray-100 px-1.5 py-0.5 text-2xs text-gray-600 dark:bg-gray-800 dark:text-gray-400">
                       {member.user_level_text}
                     </span>
                   )}
                 </div>
               </div>
-              <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 truncate text-[12px] text-text-sub">
+              <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 truncate text-s text-text-sub">
                 {member.username && member.username !== '未实名' && (
                   <span className="flex shrink-0 items-center text-green-600">
                     <ShieldCheck size={10} className="mr-0.5" /> 已实名
@@ -361,7 +361,7 @@ export const FriendsPage = () => {
               type="button"
               onClick={handleLoadMore}
               disabled={loadingMore}
-              className="flex items-center text-[13px] text-text-sub active:opacity-70 disabled:opacity-50"
+              className="flex items-center text-sm text-text-sub active:opacity-70 disabled:opacity-50"
             >
               {loadingMore && <Loader2 size={14} className="mr-1 animate-spin" />}
               {loadingMore ? '加载中...' : '加载更多'}

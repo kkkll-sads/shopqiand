@@ -308,7 +308,7 @@ export const LoginPage = () => {
                 variant="ghost"
                 size="sm"
                 fullWidth={false}
-                className="px-0 text-[12px] text-text-sub"
+                className="px-0 text-s text-text-sub"
                 onClick={() => navigate('/forgot-password')}
               >
                 忘记密码

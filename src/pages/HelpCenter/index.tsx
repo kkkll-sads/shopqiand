@@ -220,7 +220,7 @@ export const HelpCenterPage = () => {
                 onClick={() => toggleFaq(faq.id)}
                 className="flex w-full items-center justify-between gap-3 py-4 text-left"
               >
-                <span className={`text-[15px] ${expanded ? 'font-medium text-primary-start' : 'text-text-main'}`}>
+                <span className={`text-md ${expanded ? 'font-medium text-primary-start' : 'text-text-main'}`}>
                   {faq.title}
                 </span>
                 {expanded ? (
@@ -231,7 +231,7 @@ export const HelpCenterPage = () => {
               </button>
 
               <div
-                className={`overflow-hidden text-[13px] leading-6 text-text-sub transition-all duration-300 ${
+                className={`overflow-hidden text-sm leading-6 text-text-sub transition-all duration-300 ${
                   expanded ? 'max-h-[640px] pb-4 opacity-100' : 'max-h-0 opacity-0'
                 }`}
                 dangerouslySetInnerHTML={{ __html: faq.content }}
@@ -283,8 +283,8 @@ export const HelpCenterPage = () => {
                       <HeadphonesIcon size={24} />
                     </div>
                     <div>
-                      <h2 className="mb-1 text-[18px] font-medium text-text-main">在线客服</h2>
-                      <div className="flex items-center text-[12px] text-text-aux">
+                      <h2 className="mb-1 text-2xl font-medium text-text-main">在线客服</h2>
+                      <div className="flex items-center text-s text-text-aux">
                         <Clock size={12} className="mr-1" />
                         <span>工作时间：9:00 - 22:00</span>
                       </div>
@@ -295,7 +295,7 @@ export const HelpCenterPage = () => {
                 <button
                   type="button"
                   onClick={() => void handleOpenCS()}
-                  className="flex h-11 w-full items-center justify-center rounded-full gradient-primary-r text-[15px] font-medium text-white shadow-sm disabled:cursor-not-allowed disabled:opacity-70"
+                  className="flex h-11 w-full items-center justify-center rounded-full gradient-primary-r text-md font-medium text-white shadow-sm disabled:cursor-not-allowed disabled:opacity-70"
                 >
                   <MessageSquare size={18} className="mr-2" />
                   立即咨询
@@ -303,7 +303,7 @@ export const HelpCenterPage = () => {
               </Card>
 
               <Card className="p-4 shadow-sm">
-                <h3 className="mb-4 px-1 text-[16px] font-medium text-text-main">自助服务</h3>
+                <h3 className="mb-4 px-1 text-lg font-medium text-text-main">自助服务</h3>
                 <div className="grid grid-cols-3 gap-2">
                   <button
                     type="button"
@@ -311,7 +311,7 @@ export const HelpCenterPage = () => {
                     onClick={() => goTo('announcement')}
                   >
                     <FileText size={24} className="mx-auto mb-2 text-text-sub" />
-                    <span className="text-[13px] text-text-main">公告中心</span>
+                    <span className="text-sm text-text-main">公告中心</span>
                   </button>
 
                   <button
@@ -320,7 +320,7 @@ export const HelpCenterPage = () => {
                     onClick={() => goTo('message_center')}
                   >
                     <MessageSquare size={24} className="mx-auto mb-2 text-text-sub" />
-                    <span className="text-[13px] text-text-main">消息中心</span>
+                    <span className="text-sm text-text-main">消息中心</span>
                   </button>
 
                   <button
@@ -329,13 +329,13 @@ export const HelpCenterPage = () => {
                     onClick={() => goTo('announcement')}
                   >
                     <HelpCircle size={24} className="mx-auto mb-2 text-text-sub" />
-                    <span className="text-[13px] text-text-main">问题反馈</span>
+                    <span className="text-sm text-text-main">问题反馈</span>
                   </button>
                 </div>
               </Card>
 
               <Card className="p-4 shadow-sm">
-                <h3 className="mb-2 px-1 text-[16px] font-medium text-text-main">常见问题</h3>
+                <h3 className="mb-2 px-1 text-lg font-medium text-text-main">常见问题</h3>
 
                 {categories.length > 1 ? (
                   <div className="mb-3 flex min-w-0 gap-2 overflow-x-auto overflow-y-hidden px-1 no-scrollbar overscroll-x-contain">
@@ -347,7 +347,7 @@ export const HelpCenterPage = () => {
                           key={category.id}
                           type="button"
                           onClick={() => handleCategoryChange(category.id)}
-                          className={`shrink-0 rounded-full border px-3 py-1 text-[12px] transition ${
+                          className={`shrink-0 rounded-full border px-3 py-1 text-s transition ${
                             active
                               ? 'border-primary-start/30 bg-red-50 text-primary-start dark:bg-red-500/12 dark:text-red-300'
                               : 'border-transparent bg-bg-base text-text-sub'
@@ -365,7 +365,7 @@ export const HelpCenterPage = () => {
 
               <div className="mb-4 mt-6 flex items-center justify-center text-text-aux">
                 <ExternalLink size={12} className="mr-1" />
-                <span className="text-[12px]">客服将在站内打开，可随时返回当前页面</span>
+                <span className="text-s">客服将在站内打开，可随时返回当前页面</span>
               </div>
             </div>
           </div>

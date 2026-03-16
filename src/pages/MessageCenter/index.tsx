@@ -336,7 +336,7 @@ export const MessageCenterPage = () => {
         <div className="flex items-start justify-between gap-3">
           <div>
             <p className="text-sm font-medium text-orange-500 dark:text-orange-300">消息概览</p>
-            <h2 className="mt-2 text-[28px] font-semibold leading-none text-gray-900 dark:text-gray-100">
+            <h2 className="mt-2 text-5_5xl font-semibold leading-none text-gray-900 dark:text-gray-100">
               {summary.total}
             </h2>
             <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
@@ -390,7 +390,7 @@ export const MessageCenterPage = () => {
             >
               <span>{tab.label}</span>
               {unread > 0 && (
-                <span className={`rounded-full px-1.5 py-0.5 text-[11px] leading-none ${
+                <span className={`rounded-full px-1.5 py-0.5 text-xs leading-none ${
                   isActive
                     ? 'bg-white/20 text-white dark:bg-gray-900/10 dark:text-gray-900'
                     : 'bg-red-50 text-red-500 dark:bg-red-500/10 dark:text-red-300'
@@ -423,7 +423,7 @@ export const MessageCenterPage = () => {
             >
               <span>{tab.label}</span>
               {tab.unread > 0 && (
-                <span className={`rounded-full px-1.5 py-0.5 text-[11px] leading-none ${
+                <span className={`rounded-full px-1.5 py-0.5 text-xs leading-none ${
                   isActive
                     ? 'bg-white/20 text-white'
                     : 'bg-gray-100 text-gray-500 dark:bg-white/10 dark:text-gray-300'
@@ -494,11 +494,11 @@ export const MessageCenterPage = () => {
                   </h3>
                 </div>
                 <div className="mt-2 flex flex-wrap items-center gap-2">
-                  <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-medium text-gray-500 dark:bg-white/10 dark:text-gray-300">
+                  <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-500 dark:bg-white/10 dark:text-gray-300">
                     {sceneLabel}
                   </span>
                   {message.isBroadcast && (
-                    <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-600 dark:bg-amber-500/10 dark:text-amber-300">
+                    <span className="rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-600 dark:bg-amber-500/10 dark:text-amber-300">
                       广播
                     </span>
                   )}
@@ -560,12 +560,12 @@ export const MessageCenterPage = () => {
   };
 
   return (
-    <div className="relative flex h-full flex-1 flex-col overflow-hidden bg-[#f7f7fb] dark:bg-gray-950">
+    <div className="relative flex h-full flex-1 flex-col overflow-hidden bg-bg-base">
       {isOffline && (
         <OfflineBanner
           center
           message="网络连接已断开，请检查后重试"
-          className="sticky top-0 z-50 bg-[#ffe4e4] text-text-price"
+          className="sticky top-0 z-50 bg-red-50 text-text-price dark:bg-red-500/14 dark:text-red-300"
         />
       )}
 
@@ -578,17 +578,17 @@ export const MessageCenterPage = () => {
               type="button"
               onClick={() => void handleMarkAllRead()}
               disabled={markAllLoading}
-              className="inline-flex min-h-[32px] items-center gap-1 rounded-full px-2 py-1 text-sm text-gray-600 transition-opacity active:opacity-70 disabled:opacity-50 dark:text-gray-300"
+              className="inline-flex min-h-[32px] items-center gap-1 rounded-full px-2 py-1 text-sm text-text-sub transition-opacity active:opacity-70 disabled:opacity-50"
             >
               <CheckCircle2 size={14} />
               {markAllLoading ? '处理中' : '全部已读'}
             </button>
           ) : null
         }
-        className="border-b border-gray-100 bg-white dark:border-gray-800 dark:bg-gray-900"
+        className="border-b border-border-light bg-bg-card"
         contentClassName="h-11 px-3"
-        titleClassName="text-2xl font-medium text-gray-900 dark:text-gray-100"
-        backButtonClassName="text-gray-900 dark:text-gray-100"
+        titleClassName="text-2xl font-medium text-text-main"
+        backButtonClassName="text-text-main"
       />
 
       <PullToRefreshContainer

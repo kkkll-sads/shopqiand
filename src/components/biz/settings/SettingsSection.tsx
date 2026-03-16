@@ -65,8 +65,8 @@ export const SettingsSection = ({
     >
       {title || description ? (
         <div className="border-b border-border-light/80 px-4 py-4">
-          {title ? <div className="text-[16px] font-medium text-text-main">{title}</div> : null}
-          {description ? <div className="mt-1 text-[12px] leading-5 text-text-sub">{description}</div> : null}
+          {title ? <div className="text-lg font-medium text-text-main">{title}</div> : null}
+          {description ? <div className="mt-1 text-s leading-5 text-text-sub">{description}</div> : null}
         </div>
       ) : null}
       <div className={contentClassName}>{children}</div>
@@ -105,15 +105,15 @@ export const SettingsActionItem = ({
           </div>
         ) : null}
         <div className="min-w-0">
-          <div className={`truncate text-[16px] ${variant === 'danger' ? 'text-primary-start' : 'text-text-main'}`}>{label}</div>
+          <div className={`truncate text-lg ${variant === 'danger' ? 'text-primary-start' : 'text-text-main'}`}>{label}</div>
           {description ? (
-            <div className={`mt-1 text-[12px] leading-5 ${descriptionVariantClassName[variant]}`}>{description}</div>
+            <div className={`mt-1 text-s leading-5 ${descriptionVariantClassName[variant]}`}>{description}</div>
           ) : null}
         </div>
       </div>
 
       <div className="ml-3 flex shrink-0 items-center gap-2">
-        {value ? <div className={`text-[13px] ${showValueOnly ? 'text-text-sub' : 'text-text-aux'}`}>{value}</div> : null}
+        {value ? <div className={`text-sm ${showValueOnly ? 'text-text-sub' : 'text-text-aux'}`}>{value}</div> : null}
         {showChevron ? <ChevronRight size={16} className="text-text-aux" /> : null}
       </div>
     </button>
@@ -133,8 +133,8 @@ export const SettingsNotice = ({
 
   return (
     <div className={`rounded-[20px] border px-4 py-3 ${toneClassName} ${className}`.trim()}>
-      {title ? <div className="text-[13px] font-medium">{title}</div> : null}
-      <div className={`${title ? 'mt-1' : ''} text-[12px] leading-5`}>{children}</div>
+      {title ? <div className="text-sm font-medium">{title}</div> : null}
+      <div className={`${title ? 'mt-1' : ''} text-s leading-5`}>{children}</div>
     </div>
   );
 };

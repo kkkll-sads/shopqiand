@@ -1,62 +1,51 @@
-/**
- * @file MyCollection/index.tsx
- * @description 展示用户持有的数字藏品列表，支持搜索、状态筛选和无限滚动。
- */
-
-import { type FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Box, ChevronRight, RefreshCcw, Search, X, Zap } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import {
-  collectionConsignmentApi,
+  AlertCircle,
+  CheckCircle2,
+  ChevronLeft,
+  Circle,
+  Filter,
+  PackageOpen,
+  Search,
+  X,
+} from 'lucide-react';
+import { getErrorMessage, isAbortError } from '../../api/core/errors';
+import {
   collectionTradeApi,
-  membershipCardApi,
-  type BatchConsignResult,
-  type BatchConsignableListData,
-  type BatchConsignableListItem,
-  type ConsignmentEquityCard,
   type MyCollectionItem,
-  type MyCollectionResponse,
   type MyCollectionStatus,
-} from '../../api';
-import { resolveUploadUrl } from '../../api/modules/upload';
-import { getErrorMessage } from '../../api/core/errors';
-import { OfflineBanner } from '../../components/layout/OfflineBanner';
-import { PageHeader } from '../../components/layout/PageHeader';
-import { useFeedback } from '../../components/ui/FeedbackProvider';
-import { Card } from '../../components/ui/Card';
-import { EmptyState } from '../../components/ui/EmptyState';
-import { ErrorState } from '../../components/ui/ErrorState';
+} from '../../api/modules/collectionTrade';
 import { PullToRefreshContainer } from '../../components/ui/PullToRefreshContainer';
 import { Skeleton } from '../../components/ui/Skeleton';
-import { useInfiniteScroll } from '../../hooks/useInfiniteScroll';
-import { useNetworkStatus } from '../../hooks/useNetworkStatus';
-import { useRequest } from '../../hooks/useRequest';
-import { useRouteScrollRestoration } from '../../hooks/useRouteScrollRestoration';
-import { useAppNavigate } from '../../lib/navigation';
-import { ConsignableCollectionSelectSheet } from './components/ConsignableCollectionSelectSheet';
+import { useFeedback } from '../../components/ui/FeedbackProvider';
+import { useAppNavigate } from '../../hooks/useAppNavigate';
+import {
+  collectionConsignmentService,
+  type BatchConsignableResponse,
+} from '../../services/collectionConsignmentService';
 
-const PAGE_SIZE = 10;
-const EMPTY_RESPONSE: MyCollectionResponse = {
-  list: [],
-  total: 0,
-  page: 1,
-  limit: PAGE_SIZE,
-  last_page: 1,
-};
+type CollectionTab = 'holding' | 'consigning' | 'transferred' | 'rights_node';
+type PriceFilter = 'all' | 'high_price' | 'low_price';
 
-type CollectionCategoryTab = 'hold' | 'consign' | 'sold' | 'dividend';
-
-const COLLECTION_CATEGORY_TABS: Array<{ key: CollectionCategoryTab; label: string }> = [
-  { key: 'hold', label: '持仓中' },
-  { key: 'consign', label: '寄售中' },
-  { key: 'sold', label: '已流转' },
-  { key: 'dividend', label: '权益节点' },
+const TABS: Array<{ id: CollectionTab; label: string }> = [
+  { id: 'holding', label: '持仓中' },
+  { id: 'consigning', label: '寄售中' },
+  { id: 'transferred', label: '已流转' },
+  { id: 'rights_node', label: '权益节点' },
 ];
 
-const CATEGORY_STATUS_MAP: Record<CollectionCategoryTab, MyCollectionStatus> = {
-  hold: 'holding',
-  consign: 'consigned',
-  sold: 'sold',
-  dividend: 'mining',
+const FILTERS: Array<{ id: PriceFilter; label: string }> = [
+  { id: 'all', label: '全部' },
+  { id: 'high_price', label: '2000元以上' },
+  { id: 'low_price', label: '2000元及以下' },
+];
+
+const TAB_STATUS_MAP: Record<CollectionTab, MyCollectionStatus> = {
+  holding: 'holding',
+  consigning: 'consigned',
+  transferred: 'sold',
+  rights_node: 'mining',
 };
 
 function formatMoney(value: number): string {
@@ -64,798 +53,601 @@ function formatMoney(value: number): string {
   return amount.toFixed(2);
 }
 
-function formatSignedAmount(value: number): string {
-  const amount = Number.isFinite(value) ? value : 0;
-  const prefix = amount > 0 ? '+' : '';
-  return `${prefix}${amount.toFixed(2)}`;
-}
-
-function formatHash(value: string): string {
-  if (!value) {
-    return '--';
+function getEmptyMessage(activeTab: CollectionTab, hasKeyword: boolean) {
+  if (hasKeyword) {
+    return '未找到匹配的藏品';
   }
 
-  if (value.length <= 16) {
-    return value;
+  if (activeTab === 'holding') {
+    return '暂无持仓中的藏品';
   }
 
-  return `${value.slice(0, 8)}...${value.slice(-6)}`;
-}
-
-function isFailedItem(item: MyCollectionItem): boolean {
-  return item.consignment_status === 3 || item.status_text === '寄售失败';
-}
-
-function isConsigningItem(item: MyCollectionItem): boolean {
-  return item.consignment_status === 1 || item.status_text === '寄售中';
-}
-
-function isSoldItem(item: MyCollectionItem): boolean {
-  return item.consignment_status === 2 || item.status_text === '已售出';
-}
-
-function isMiningItem(item: MyCollectionItem): boolean {
-  return item.mining_status === 1 || item.status_text === '运行中';
-}
-
-function getStatusBadgeClass(item: MyCollectionItem): string {
-  if (isFailedItem(item)) {
-    return 'bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300';
+  if (activeTab === 'consigning') {
+    return '暂无寄售中的藏品';
   }
 
-  if (isSoldItem(item)) {
-    return 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300';
+  if (activeTab === 'transferred') {
+    return '暂无已流转藏品';
   }
 
-  if (isMiningItem(item)) {
-    return 'bg-sky-100 text-sky-700 dark:bg-sky-500/15 dark:text-sky-300';
-  }
-
-  if (item.consignment_status === 1 || item.status_text === '寄售中') {
-    return 'bg-violet-100 text-violet-700 dark:bg-violet-500/15 dark:text-violet-300';
-  }
-
-  return 'bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-300';
-}
-
-function getPrimaryTimeMeta(item: MyCollectionItem): { label: string; value: string } {
-  if (isSoldItem(item)) {
-    return { label: '成交时间', value: item.sold_time || item.settle_time || '--' };
-  }
-
-  if (isFailedItem(item)) {
-    return { label: '寄售结束', value: item.sold_time || item.create_time_text || '--' };
-  }
-
-  if (isMiningItem(item)) {
-    return { label: '启动时间', value: item.mining_start_time_text || item.create_time_text || '--' };
-  }
-
-  return { label: '入藏时间', value: item.create_time_text || '--' };
-}
-
-function CollectionCard({
-  item,
-  onClick,
-}: {
-  item: MyCollectionItem;
-  onClick?: () => void;
-}) {
-  const sold = isSoldItem(item);
-  const failed = isFailedItem(item);
-  const zoneLabel = item.price_zone || item.zone_name || '--';
-  const primaryPriceLabel = sold ? '成交价' : failed ? '挂单价' : '买入价';
-  const primaryPriceValue = sold || failed ? item.sold_price || item.buy_price : item.buy_price;
-  const secondaryLabel = sold || failed ? '买入价' : '市场价';
-  const secondaryValue = sold || failed ? item.buy_price : item.market_price || item.buy_price;
-  const thirdLabel = sold ? '收益' : failed ? '服务费' : '交易次数';
-  const thirdValue = sold
-    ? formatSignedAmount(item.profit_amount)
-    : failed
-      ? `￥${formatMoney(item.service_fee)}`
-      : `${item.transaction_count} 次`;
-  const fourthLabel = sold ? '到账拆分' : '流拍次数';
-  const fourthValue = sold
-    ? `可提现 ￥${formatMoney(item.payout_total_withdrawable)} / 消费金 ￥${formatMoney(item.payout_total_consume)}`
-    : `${item.fail_count} 次`;
-  const timeMeta = getPrimaryTimeMeta(item);
-  const interactive = typeof onClick === 'function';
-
-  return (
-    <Card
-      className={`overflow-hidden p-0 shadow-sm transition ${interactive ? 'cursor-pointer active:scale-[0.995]' : ''}`}
-      onClick={onClick}
-      onKeyDown={(event) => {
-        if (!interactive) {
-          return;
-        }
-
-        if (event.key === 'Enter' || event.key === ' ') {
-          event.preventDefault();
-          onClick();
-        }
-      }}
-      role={interactive ? 'button' : undefined}
-      tabIndex={interactive ? 0 : undefined}
-    >
-      <div className="flex gap-3 border-b border-border-light px-4 py-4">
-        <div className="h-24 w-24 shrink-0 overflow-hidden rounded-2xl bg-bg-base">
-          {item.image ? (
-            <img
-              src={item.image}
-              alt={item.title}
-              className="h-full w-full object-cover"
-              referrerPolicy="no-referrer"
-            />
-          ) : (
-            <div className="flex h-full w-full items-center justify-center text-text-aux">
-              <Box size={30} />
-            </div>
-          )}
-        </div>
-
-        <div className="min-w-0 flex-1">
-          <div className="mb-2 flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <h2 className="line-clamp-2 text-[15px] font-semibold leading-6 text-text-main">
-                {item.title || '未命名藏品'}
-              </h2>
-              <div className="mt-2 flex flex-wrap gap-2 text-[11px] text-text-aux">
-                <span className="rounded-full bg-bg-base px-2 py-1">{item.session_title || '未分场次'}</span>
-                <span className="rounded-full bg-bg-base px-2 py-1">{zoneLabel}</span>
-              </div>
-            </div>
-
-            <div className="shrink-0 text-right">
-              <span className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-medium ${getStatusBadgeClass(item)}`}>
-                {item.status_text}
-              </span>
-              <div className="mt-3 text-[11px] text-text-aux">{primaryPriceLabel}</div>
-              <div className="mt-1 text-xl font-bold leading-none text-text-main">
-                ￥{formatMoney(primaryPriceValue)}
-              </div>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-2 text-[12px]">
-            <div className="rounded-2xl bg-bg-base px-3 py-2.5">
-              <div className="text-text-aux">{secondaryLabel}</div>
-              <div className="mt-1 font-semibold text-text-main">￥{formatMoney(secondaryValue)}</div>
-            </div>
-            <div className="rounded-2xl bg-bg-base px-3 py-2.5">
-              <div className="text-text-aux">{thirdLabel}</div>
-              <div className={`mt-1 font-semibold ${sold ? (item.profit_amount >= 0 ? 'text-emerald-600' : 'text-red-600') : 'text-text-main'}`}>
-                {thirdValue}
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="space-y-2 px-4 py-3 text-[12px] text-text-sub">
-        <div className="flex items-center justify-between gap-4">
-          <span className="text-text-aux">{timeMeta.label}</span>
-          <span className="truncate text-right text-text-main">{timeMeta.value}</span>
-        </div>
-        <div className="flex items-center justify-between gap-4">
-          <span className="text-text-aux">{fourthLabel}</span>
-          <span className="truncate text-right text-text-main">{fourthValue}</span>
-        </div>
-        <div className="flex items-center justify-between gap-4">
-          <span className="text-text-aux">资产编号</span>
-          <span className="truncate text-right font-mono text-text-main">
-            {item.asset_code || item.unique_id || '--'}
-          </span>
-        </div>
-        <div className="flex items-center justify-between gap-4">
-          <span className="text-text-aux">Hash</span>
-          <span className="truncate text-right font-mono text-text-main">{formatHash(item.hash)}</span>
-        </div>
-        {interactive ? (
-          <div className="flex items-center justify-end gap-1 pt-1 text-[12px] font-medium text-primary-start">
-            <span>查看持有凭证</span>
-            <ChevronRight size={14} />
-          </div>
-        ) : null}
-      </div>
-    </Card>
-  );
-}
-
-function CollectionListSkeleton() {
-  return (
-    <div className="space-y-3 p-4">
-      {[1, 2, 3].map((item) => (
-        <div key={item} className="rounded-[20px] border border-border-light bg-bg-card p-4 shadow-sm">
-          <div className="flex gap-3">
-            <Skeleton className="h-24 w-24 rounded-2xl" />
-            <div className="flex-1 space-y-3">
-              <Skeleton className="h-5 w-2/3" />
-              <Skeleton className="h-4 w-1/3" />
-              <div className="grid grid-cols-2 gap-2">
-                <Skeleton className="h-16 rounded-2xl" />
-                <Skeleton className="h-16 rounded-2xl" />
-              </div>
-            </div>
-          </div>
-          <div className="mt-4 space-y-2">
-            <Skeleton className="h-4 w-full" />
-            <Skeleton className="h-4 w-5/6" />
-            <Skeleton className="h-4 w-2/3" />
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function BatchConsignButton({
-  checking,
-  data,
-  disabled,
-  onClick,
-}: {
-  checking: boolean;
-  data: BatchConsignableListData | null | undefined;
-  disabled: boolean;
-  onClick: () => void;
-}) {
-  if (!data || data.items.length === 0 || !data.stats.is_in_trading_time) {
-    return null;
-  }
-
-  const availableCount = data.available_now_count || data.stats.available_collections || data.items.length;
-
-  return (
-    <div className="mt-3 rounded-2xl border border-[#f3d6cf] bg-[#fff7f4] p-3 dark:border-red-500/25 dark:bg-red-500/10">
-      <button
-        type="button"
-        onClick={onClick}
-        disabled={disabled}
-        className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-primary-start px-4 text-sm font-medium text-white disabled:opacity-50"
-      >
-        {checking ? (
-          <>
-            <RefreshCcw size={15} className="animate-spin" />
-            <span>一键寄售检测中...</span>
-          </>
-        ) : (
-          <>
-            <Zap size={15} />
-            <span>一键寄售</span>
-            <span className="rounded-full bg-white/20 px-2 py-0.5 text-[11px]">
-              {availableCount} 个可寄售
-            </span>
-          </>
-        )}
-      </button>
-      <div className="mt-2 text-center text-[11px] leading-5 text-text-aux">
-        当前时间 {data.stats.current_time || '--'}，活跃场次 {data.stats.active_sessions}
-      </div>
-    </div>
-  );
-}
-
-function buildBatchFailureLines(result: BatchConsignResult): string[] {
-  if (result.results.length > 0) {
-    return result.results
-      .filter((item) => !item.success)
-      .map((item) => `藏品 ${item.user_collection_id}: ${item.message || '寄售失败'}`);
-  }
-
-  return Object.entries(result.failure_summary).map(([reason, count]) => `${reason}: ${count} 个`);
-}
-
-function getEmptyCollectionMessage(tab: CollectionCategoryTab, keyword: string): string {
-  if (keyword) {
-    return '没有找到匹配的藏品';
-  }
-
-  switch (tab) {
-    case 'hold':
-      return '暂时还没有持仓中的藏品';
-    case 'consign':
-      return '暂时还没有寄售中的藏品';
-    case 'sold':
-      return '暂时还没有已流转的藏品';
-    case 'dividend':
-      return '暂时还没有权益节点藏品';
-    default:
-      return '暂时还没有藏品';
-  }
+  return '暂无权益节点藏品';
 }
 
 export const MyCollectionPage = () => {
-  const { goBackOr, navigate } = useAppNavigate();
-  const { isOffline, refreshStatus } = useNetworkStatus();
-  const { hideLoading, showConfirm, showLoading, showToast } = useFeedback();
-  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
-  const loadMoreRef = useRef<HTMLDivElement | null>(null);
-  const [activeTab, setActiveTab] = useState<CollectionCategoryTab>('hold');
-  const [draftKeyword, setDraftKeyword] = useState('');
-  const [keyword, setKeyword] = useState('');
-  const [items, setItems] = useState<MyCollectionItem[]>([]);
-  const [page, setPage] = useState(1);
-  const [hasMore, setHasMore] = useState(false);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const [loadMoreError, setLoadMoreError] = useState<string | null>(null);
-  const [consignableSelectSheetOpen, setConsignableSelectSheetOpen] = useState(false);
-  const activeStatus = CATEGORY_STATUS_MAP[activeTab];
-  const visibleItems = useMemo(() => {
-    if (activeTab === 'consign') {
-      return items.filter(isConsigningItem);
-    }
+  const location = useLocation();
+  const { goBackOr, goTo, navigate } = useAppNavigate();
+  const { showToast } = useFeedback();
 
-    return items;
-  }, [activeTab, items]);
-  const queryKey = `${activeTab}::${keyword}`;
-  const queryKeyRef = useRef(queryKey);
+  const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<CollectionTab>('holding');
+  const [showSearch, setShowSearch] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showFilter, setShowFilter] = useState(false);
+  const [activeFilter, setActiveFilter] = useState<PriceFilter>('all');
+  const [requestKeyword, setRequestKeyword] = useState('');
+
+  const [collections, setCollections] = useState<MyCollectionItem[]>([]);
+  const [total, setTotal] = useState(0);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [reloadSeed, setReloadSeed] = useState(0);
+
+  const [showBatchModal, setShowBatchModal] = useState(false);
+  const [batchData, setBatchData] = useState<BatchConsignableResponse | null>(null);
+  const [batchLoading, setBatchLoading] = useState(false);
+  const [selectedBatchItems, setSelectedBatchItems] = useState<number[]>([]);
 
   useEffect(() => {
-    queryKeyRef.current = queryKey;
-    setItems([]);
-    setPage(1);
-    setHasMore(false);
-    setLoadMoreError(null);
-    scrollContainerRef.current?.scrollTo({ top: 0 });
-  }, [queryKey]);
+    const query = new URLSearchParams(location.search);
+    const routeTab = query.get('tab');
 
-  const firstRequest = useRequest(
-    async (signal) => {
+    if (routeTab && TABS.some((tab) => tab.id === routeTab)) {
+      setActiveTab(routeTab as CollectionTab);
+    }
+  }, [location.search]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setRequestKeyword(searchQuery.trim());
+    }, 250);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [searchQuery]);
+
+  const loadCollections = useCallback(async (signal?: AbortSignal) => {
+    setLoading(true);
+    setLoadError(null);
+
+    try {
       const response = await collectionTradeApi.myCollection(
         {
           page: 1,
-          limit: PAGE_SIZE,
-          status: activeStatus,
-          ...(keyword ? { keyword } : {}),
+          limit: 50,
+          status: TAB_STATUS_MAP[activeTab],
+          ...(requestKeyword ? { keyword: requestKeyword } : {}),
+          sort: 'create_time',
+          order: 'desc',
         },
         signal,
       );
 
-      setItems(response.list);
-      setPage(response.page);
-      setHasMore(response.page < response.last_page);
-      setLoadMoreError(null);
-      return response;
-    },
-    {
-      deps: [activeTab, keyword],
-      initialData: EMPTY_RESPONSE,
-      keepPreviousData: false,
-    },
-  );
+      setCollections(response.list);
+      setTotal(response.total);
+    } catch (error) {
+      if (isAbortError(error)) {
+        return;
+      }
 
-  const batchConsignRequest = useRequest<BatchConsignableListData | null>(
-    (signal) => collectionConsignmentApi.batchConsignableList({ page: 1, limit: 20 }, signal),
-    {
-      cacheKey: 'my-collection:batch-consignable',
-      initialData: null,
-    },
-  );
-
-  const equityCardsRequest = useRequest(
-    async (signal) => {
-      const res = await membershipCardApi.myCards({ signal });
-      const cards: ConsignmentEquityCard[] = res.membershipList
-        .filter((c) => c.isActive && c.status === 1)
-        .map((c) => ({
-          id: c.id,
-          card_name: c.cardName,
-          deduct_amount_per_use: c.deductAmountPerUse,
-          actual_deduct_amount: c.deductAmountPerUse,
-          remaining_days: c.remainingDays,
-          today_remaining: c.todayRemaining,
-          end_time_text: c.endTimeText ?? '',
-          end_time: 0,
-        }));
-      return cards;
-    },
-    {
-      cacheKey: 'my-collection:equity-cards',
-      initialData: [] as ConsignmentEquityCard[],
-    },
-  );
-
-  const [consignableItems, setConsignableItems] = useState<BatchConsignableListItem[]>([]);
-  const [consignablePage, setConsignablePage] = useState(1);
-  const [consignableHasMore, setConsignableHasMore] = useState(false);
-  const [consignableLoadingMore, setConsignableLoadingMore] = useState(false);
+      setCollections([]);
+      setTotal(0);
+      setLoadError(getErrorMessage(error));
+    } finally {
+      if (!signal?.aborted) {
+        setLoading(false);
+      }
+    }
+  }, [activeTab, requestKeyword]);
 
   useEffect(() => {
-    const data = batchConsignRequest.data;
-    if (data && data.current_page === 1) {
-      setConsignableItems(data.items);
-      setConsignablePage(1);
-      setConsignableHasMore(data.has_more);
-    }
-  }, [batchConsignRequest.data]);
+    const controller = new AbortController();
+    void loadCollections(controller.signal);
 
-  const loadMoreConsignable = useCallback(async () => {
-    if (consignableLoadingMore || !consignableHasMore) return;
-    const nextPage = consignablePage + 1;
-    setConsignableLoadingMore(true);
-    try {
-      const res = await collectionConsignmentApi.batchConsignableList(
-        { page: nextPage, limit: 20 },
-      );
-      setConsignableItems((prev) => [...prev, ...res.items]);
-      setConsignablePage(res.current_page);
-      setConsignableHasMore(res.has_more);
-    } finally {
-      setConsignableLoadingMore(false);
-    }
-  }, [consignableHasMore, consignableLoadingMore, consignablePage]);
+    return () => {
+      controller.abort();
+    };
+  }, [loadCollections, reloadSeed]);
 
-  const itemsById = useMemo(() => {
+  const handleRefresh = useCallback(async () => {
+    await loadCollections();
+  }, [loadCollections]);
+
+  const filteredCollections = useMemo(() => {
+    if (activeFilter === 'all') {
+      return collections;
+    }
+
+    return collections.filter((item) => {
+      if (activeFilter === 'high_price') {
+        return item.market_price > 2000;
+      }
+
+      return item.market_price <= 2000;
+    });
+  }, [activeFilter, collections]);
+
+  const collectionMap = useMemo(() => {
     const map = new Map<number, MyCollectionItem>();
-    for (const item of items) {
-      const id = item.user_collection_id ?? item.id;
-      if (typeof id === 'number' && id > 0) {
-        map.set(id, item);
+    for (const item of collections) {
+      const key = item.user_collection_id || item.id;
+      if (key > 0) {
+        map.set(key, item);
       }
     }
     return map;
-  }, [items]);
+  }, [collections]);
 
-  const enrichedConsignableItems = useMemo(() => {
-    if (!consignableItems.length) return [];
-    return consignableItems.map((batchItem) => {
-      const id = batchItem.user_collection_id;
-      const detail = itemsById.get(id);
-      const title = batchItem.title ?? detail?.title ?? detail?.name ?? detail?.item_title ?? `藏品 #${id}`;
-      const rawImage = batchItem.image ?? detail?.image;
-      const image = rawImage ? (rawImage.startsWith('/') || !rawImage.startsWith('http') ? resolveUploadUrl(rawImage) : rawImage) : null;
-      return {
-        user_collection_id: id,
-        title,
-        image,
-        session_title: detail?.session_title,
-        zone_name: detail?.zone_name ?? detail?.price_zone,
-        buy_price: batchItem.buy_price,
-        consignment_price: batchItem.consignment_price,
-        service_fee: batchItem.service_fee,
-        service_fee_rate: batchItem.service_fee_rate,
-      };
-    });
-  }, [consignableItems, itemsById]);
-
-  const batchConsignButtonData = useMemo((): BatchConsignableListData | null => {
-    const data = batchConsignRequest.data;
-    if (!data) return null;
-    return { ...data, items: consignableItems };
-  }, [batchConsignRequest.data, consignableItems]);
-
-  const loadMore = useCallback(async () => {
-    if (loadingMore || !hasMore) {
-      return;
-    }
-
-    const nextPage = page + 1;
-    const requestKey = queryKeyRef.current;
-
-    setLoadingMore(true);
-    setLoadMoreError(null);
+  const handleBatchConsignClick = async () => {
+    setShowBatchModal(true);
+    setBatchLoading(true);
 
     try {
-      const response = await collectionTradeApi.myCollection({
-        page: nextPage,
-        limit: PAGE_SIZE,
-        status: activeStatus,
-        ...(keyword ? { keyword } : {}),
-      });
-
-      if (queryKeyRef.current !== requestKey) {
-        return;
+      const response = await collectionConsignmentService.getBatchConsignableList();
+      if (response.code === 1) {
+        setBatchData(response);
+        setSelectedBatchItems(response.data.items.map((item) => item.user_collection_id));
+      } else {
+        showToast({ message: '获取可寄售藏品失败', type: 'error' });
       }
-
-      setItems((current) => [...current, ...response.list]);
-      setPage(response.page);
-      setHasMore(response.page < response.last_page);
     } catch (error) {
-      if (queryKeyRef.current !== requestKey) {
-        return;
-      }
-
-      setLoadMoreError(getErrorMessage(error));
+      console.error('Failed to fetch batch consignable list', error);
+      showToast({ message: '获取可寄售藏品失败，请稍后重试', type: 'error' });
     } finally {
-      if (queryKeyRef.current === requestKey) {
-        setLoadingMore(false);
-      }
+      setBatchLoading(false);
     }
-  }, [activeStatus, hasMore, keyword, loadingMore, page]);
+  };
 
-  useInfiniteScroll({
-    hasMore,
-    loading: loadingMore,
-    onLoadMore: loadMore,
-    rootRef: scrollContainerRef,
-    targetRef: loadMoreRef,
-  });
-
-  useRouteScrollRestoration({
-    containerRef: scrollContainerRef,
-    namespace: 'my-collection-page',
-    restoreDeps: [activeTab, keyword, firstRequest.loading, visibleItems.length],
-    restoreWhen: !firstRequest.loading && visibleItems.length > 0,
-  });
-
-  const handleRefresh = useCallback(async () => {
-    refreshStatus();
-    await Promise.allSettled([
-      firstRequest.reload(),
-      batchConsignRequest.reload(),
-      equityCardsRequest.reload(),
-    ]);
-  }, [batchConsignRequest, equityCardsRequest, firstRequest, refreshStatus]);
-
-  const handleSearchSubmit = useCallback((event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    setKeyword(draftKeyword.trim());
-  }, [draftKeyword]);
-
-  const handleClearKeyword = useCallback(() => {
-    setDraftKeyword('');
-    setKeyword('');
-  }, []);
-
-  const handleOpenDetail = useCallback((item: MyCollectionItem) => {
-    const targetId = item.user_collection_id || item.id;
-    if (!targetId) {
+  const openDetail = (item: MyCollectionItem) => {
+    if (activeTab === 'transferred' && item.consignment_id > 0) {
+      navigate(
+        `/order?order_type=collectible&collectible_tab=${encodeURIComponent('卖出订单')}&sell_id=${item.consignment_id}&from=my_collection_transferred`,
+      );
       return;
     }
 
-    navigate(`/my-collection/detail/${targetId}`, { state: { item } });
-  }, [navigate]);
-
-  const handleOpenConsignableSheet = useCallback(() => {
-    const batchData = batchConsignRequest.data;
-    if (!batchData || batchData.items.length === 0) {
-      showToast({ type: 'warning', message: '暂无可一键寄售的藏品' });
+    const id = item.user_collection_id || item.id;
+    if (!id) {
       return;
     }
 
-    if (!batchData.stats.is_in_trading_time) {
-      showToast({ type: 'warning', message: '当前不在交易时段，暂不可一键寄售' });
-      return;
-    }
+    navigate(`/my-collection/detail/${id}`, { state: { item } });
+  };
 
-    setConsignableSelectSheetOpen(true);
-  }, [batchConsignRequest.data, showToast]);
-
-  const handleConsignableConfirm = useCallback(
-    async (selectedIds: number[], equityCardId: number | null) => {
-      if (selectedIds.length === 0) {
-        showToast({ type: 'warning', message: '请至少选择一件藏品' });
-        return;
-      }
-
-      setConsignableSelectSheetOpen(false);
-
-      showLoading({ message: '寄售处理中...' });
-
-      try {
-        const result = await collectionConsignmentApi.batchConsign({
-          consignments: selectedIds.map((id) => ({
-            user_collection_id: id,
-            equity_card_id: equityCardId ?? undefined,
-          })),
-        });
-
-        await Promise.allSettled([
-          firstRequest.reload(),
-          batchConsignRequest.reload(),
-          equityCardsRequest.reload(),
-        ]);
-
-        hideLoading();
-
-        if (result.success_count > 0 && result.failure_count === 0) {
-          showToast({ type: 'success', message: `成功寄售 ${result.success_count} 个藏品` });
-          return;
-        }
-
-        const failureLines = buildBatchFailureLines(result);
-        await showConfirm({
-          title: '寄售完成',
-          message: (
-            <div className="space-y-2 text-left text-sm leading-6">
-              <p>总计 {result.total_count} 个</p>
-              <p>成功 {result.success_count} 个，失败 {result.failure_count} 个</p>
-              {result.note ? <p className="text-text-sub">{result.note}</p> : null}
-              {failureLines.length > 0 ? (
-                <div className="max-h-48 overflow-y-auto rounded-xl bg-bg-base px-3 py-2 text-xs text-text-sub">
-                  {failureLines.map((line) => (
-                    <div key={line}>{line}</div>
-                  ))}
-                </div>
-              ) : null}
-            </div>
-          ),
-          confirmText: '知道了',
-          cancelText: '关闭',
-        });
-      } catch (error) {
-        hideLoading();
-        showToast({ type: 'error', message: getErrorMessage(error) || '寄售失败' });
-      } finally {
-        hideLoading();
-      }
-    },
-    [
-      batchConsignRequest,
-      equityCardsRequest,
-      firstRequest,
-      hideLoading,
-      showConfirm,
-      showLoading,
-      showToast,
-    ],
+  const renderTabs = () => (
+    <div className="sticky top-12 z-10 flex border-b border-border-light bg-white px-2 dark:bg-gray-900">
+      {TABS.map((tab) => (
+        <div
+          key={tab.id}
+          className={`relative flex-1 py-3 text-center text-[14px] font-medium transition-colors ${
+            activeTab === tab.id ? 'text-primary-start' : 'text-text-sub'
+          }`}
+          onClick={() => {
+            setActiveTab(tab.id);
+            setShowFilter(false);
+          }}
+        >
+          {tab.label}
+          {activeTab === tab.id ? (
+            <div className="absolute bottom-0 left-1/2 h-[3px] w-6 -translate-x-1/2 rounded-t-full bg-primary-start" />
+          ) : null}
+        </div>
+      ))}
+    </div>
   );
 
-  const total = activeTab === 'consign'
-    ? visibleItems.length
-    : firstRequest.data?.total ?? visibleItems.length;
+  const renderItem = (item: MyCollectionItem) => {
+    const imageUrl = item.image;
+    const showTransferredIncome = activeTab === 'transferred';
+    const handleCardKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+      if (event.key !== 'Enter' && event.key !== ' ') {
+        return;
+      }
 
-  const renderLoadMore = () => {
-    if (loadingMore) {
-      return (
-        <span className="inline-flex items-center">
-          <RefreshCcw size={14} className="mr-2 animate-spin" />
-          加载中...
-        </span>
-      );
-    }
+      event.preventDefault();
+      openDetail(item);
+    };
 
-    if (loadMoreError) {
-      return (
-        <button
-          type="button"
-          className="rounded-full border border-border-light px-4 py-2 text-text-main"
-          onClick={() => void loadMore()}
-        >
-          加载失败，点击重试
-        </button>
-      );
-    }
+    return (
+      <div
+        className="mb-3 cursor-pointer rounded-[16px] bg-white p-3 shadow-sm transition-transform active:scale-[0.98] dark:bg-gray-900"
+        role="button"
+        tabIndex={0}
+        onClick={() => openDetail(item)}
+        onKeyDown={handleCardKeyDown}
+      >
+        <div className="mb-3 flex space-x-3">
+          <div className="relative h-[88px] w-[88px] shrink-0 overflow-hidden rounded-[12px] bg-gray-100 dark:bg-gray-800">
+            {imageUrl ? (
+              <img
+                src={imageUrl}
+                alt={item.title || '藏品'}
+                className="h-full w-full object-cover"
+                referrerPolicy="no-referrer"
+              />
+            ) : (
+              <div className="flex h-full w-full items-center justify-center text-text-aux">
+                <PackageOpen size={20} />
+              </div>
+            )}
+            <div className="absolute left-0 top-0 rounded-br-[8px] bg-black/50 px-1.5 py-0.5 text-[10px] text-white backdrop-blur-sm">
+              {item.session_title || '未分场次'}
+            </div>
+          </div>
 
-    if (hasMore) {
-      return <span>继续下拉加载更多</span>;
-    }
+          <div className="flex flex-1 flex-col pt-0.5">
+            <div className="mb-1 flex items-start justify-between">
+              <h3 className="mr-2 line-clamp-1 text-[15px] font-bold text-text-main">{item.title || '未命名藏品'}</h3>
+              <span className="shrink-0 whitespace-nowrap rounded bg-red-50 px-1.5 py-0.5 text-[11px] text-primary-start dark:bg-red-900/20">
+                {item.status_text || '持有中'}
+              </span>
+            </div>
 
-    if (items.length > PAGE_SIZE) {
-      return <span>没有更多了</span>;
-    }
+            <div className="mb-2 text-[11px] text-text-sub">入藏时间: {item.create_time_text || '--'}</div>
 
-    return null;
+            <div className="mt-auto grid grid-cols-2 gap-2 rounded-[8px] bg-gray-50 p-2 dark:bg-gray-800/50">
+              <div>
+                <div className="mb-1 text-[10px] text-text-sub">买入价</div>
+                <div className="text-[13px] font-medium leading-none text-text-main">¥{formatMoney(item.buy_price)}</div>
+              </div>
+              <div>
+                <div className="mb-1 text-[10px] text-text-sub">
+                  {showTransferredIncome ? '寄售收益' : '市场价'}
+                </div>
+                <div className="text-[13px] font-bold leading-none text-primary-start">
+                  ¥{formatMoney(showTransferredIncome ? item.profit_amount : item.market_price)}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between border-t border-border-light pt-3">
+          <div className="text-[11px] text-text-sub">
+            交易次数: <span className="font-medium text-text-main">{item.transaction_count}</span> 次
+          </div>
+          <div className="flex shrink-0 space-x-2">
+            <button
+              className="rounded-full border border-border-main px-4 py-1.5 text-[12px] text-text-main active:bg-gray-50 dark:active:bg-gray-800"
+              onClick={(event) => {
+                event.stopPropagation();
+                openDetail(item);
+              }}
+            >
+              详情
+            </button>
+            {activeTab === 'holding' ? (
+              <button
+                className="rounded-full bg-gradient-to-r from-primary-start to-primary-end px-4 py-1.5 text-[12px] text-white shadow-sm active:opacity-80"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  openDetail(item);
+                }}
+              >
+                寄售
+              </button>
+            ) : null}
+          </div>
+        </div>
+      </div>
+    );
   };
 
   const renderContent = () => {
-    if (firstRequest.loading && items.length === 0) {
-      return <CollectionListSkeleton />;
-    }
-
-    if (firstRequest.error && items.length === 0) {
+    if (loading) {
       return (
-        <ErrorState
-          message={getErrorMessage(firstRequest.error)}
-          onRetry={() => void firstRequest.reload()}
-        />
+        <div className="space-y-3 p-4">
+          {[1, 2, 3].map((item) => (
+            <div key={item} className="mb-3 rounded-[16px] bg-white p-3 shadow-sm dark:bg-gray-900">
+              <div className="mb-3 flex space-x-3">
+                <Skeleton className="h-[88px] w-[88px] shrink-0 rounded-[12px]" />
+                <div className="flex flex-1 flex-col pt-0.5">
+                  <div className="mb-1 flex items-start justify-between">
+                    <Skeleton className="h-5 w-2/3" />
+                    <Skeleton className="h-5 w-12 rounded" />
+                  </div>
+                  <Skeleton className="mb-2 h-3 w-1/2" />
+                  <Skeleton className="mt-auto h-12 w-full rounded-[8px]" />
+                </div>
+              </div>
+              <div className="flex items-center justify-between border-t border-border-light pt-3">
+                <Skeleton className="h-4 w-24" />
+                <div className="flex space-x-2">
+                  <Skeleton className="h-7 w-14 rounded-full" />
+                  <Skeleton className="h-7 w-14 rounded-full" />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
       );
     }
 
-    if (visibleItems.length === 0) {
+    if (loadError) {
       return (
-        <EmptyState
-          icon={<Box size={42} />}
-          message={getEmptyCollectionMessage(activeTab, keyword)}
-        />
+        <div className="flex flex-col items-center justify-center px-4 py-20">
+          <AlertCircle size={40} className="mb-3 text-red-500" />
+          <p className="mb-4 text-[14px] text-text-sub">{loadError}</p>
+          <button
+            className="rounded-full border border-primary-start px-5 py-2 text-[13px] font-medium text-primary-start"
+            onClick={() => setReloadSeed((seed) => seed + 1)}
+          >
+            重试
+          </button>
+        </div>
+      );
+    }
+
+    if (filteredCollections.length === 0) {
+      return (
+        <div className="flex flex-col items-center justify-center px-4 py-20">
+          <PackageOpen size={48} className="mb-4 text-border-main" strokeWidth={1} />
+          <p className="mb-2 text-[14px] text-text-sub">{getEmptyMessage(activeTab, requestKeyword.length > 0)}</p>
+          {activeTab !== 'holding' ? (
+            <p className="text-center text-[12px] text-text-aux">您可以在市场中选购心仪的藏品</p>
+          ) : null}
+          {activeTab !== 'holding' ? (
+            <button
+              className="mt-6 rounded-full border border-primary-start px-6 py-2 text-[14px] font-medium text-primary-start transition-colors active:bg-red-50 dark:active:bg-red-900/20"
+              onClick={() => goTo('store')}
+            >
+              去逛逛
+            </button>
+          ) : null}
+        </div>
       );
     }
 
     return (
-      <div className="space-y-3 p-4 pb-8">
-        {visibleItems.map((item) => (
-          <div key={`${item.consignment_id || item.user_collection_id || item.id}-${item.status_text}`}>
-            <CollectionCard item={item} onClick={() => handleOpenDetail(item)} />
+      <div className="p-4">
+        {filteredCollections.map((item, index) => (
+          <div key={`collection-${item.user_collection_id || item.id || 0}-${index}`}>
+            {renderItem(item)}
           </div>
         ))}
-
-        <div ref={loadMoreRef} className="py-4 text-center text-sm text-text-aux">
-          {renderLoadMore()}
-        </div>
       </div>
     );
   };
 
   return (
     <div className="relative flex flex-1 flex-col overflow-hidden bg-bg-base">
-      {isOffline && <OfflineBanner onAction={refreshStatus} />}
-
-      <PageHeader title="我的藏品" onBack={() => goBackOr('user')} />
-
-      <div className="z-10 shrink-0 border-b border-border-light bg-bg-card px-4 pb-4 pt-2">
-        <form onSubmit={handleSearchSubmit} className="flex h-auto shrink-0 gap-2">
-          <div className="relative flex h-11 flex-1 items-center overflow-hidden">
-            <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-text-aux" />
-            <input
-              value={draftKeyword}
-              onChange={(event) => setDraftKeyword(event.target.value)}
-              placeholder="搜索藏品标题"
-              className="h-11 w-full rounded-2xl border border-border-light bg-bg-base pl-10 pr-10 text-lg text-text-main outline-none placeholder:text-text-aux"
-            />
-            {draftKeyword ? (
-              <button
-                type="button"
-                onClick={handleClearKeyword}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-text-aux"
-                aria-label="清空搜索"
-              >
-                <X size={16} />
-              </button>
-            ) : null}
-          </div>
+      <div className="sticky top-0 z-30 flex h-12 items-center justify-between border-b border-border-light bg-white px-4 dark:bg-gray-900">
+        <button onClick={() => goBackOr('user')} className="-ml-2 p-2 text-text-main active:opacity-70">
+          <ChevronLeft size={20} />
+        </button>
+        <span className="text-[17px] font-medium text-text-main">我的藏品</span>
+        <div className="-mr-2 flex space-x-1">
           <button
-            type="submit"
-            className="h-11 rounded-2xl bg-primary-start px-4 text-[14px] font-medium text-white"
+            className={`p-2 active:opacity-70 ${showSearch ? 'text-primary-start' : 'text-text-main'}`}
+            onClick={() => {
+              setShowSearch((current) => !current);
+              if (showFilter) {
+                setShowFilter(false);
+              }
+            }}
           >
-            搜索
+            <Search size={18} />
           </button>
-        </form>
-
-        <div className="mt-3 rounded-[18px] border border-[#f0e3d6] bg-[#fbf6ef] p-1.5 shadow-[0_8px_24px_rgba(140,97,54,0.06)] dark:border-white/10 dark:bg-white/5 dark:shadow-none">
-          <div className="grid grid-cols-4 gap-1.5">
-            {COLLECTION_CATEGORY_TABS.map((tab) => {
-              const active = tab.key === activeTab;
-              return (
-                <button
-                  key={tab.key}
-                  type="button"
-                  onClick={() => setActiveTab(tab.key)}
-                  className={`min-h-11 rounded-[14px] px-2 py-2 text-[12px] font-bold transition ${
-                    active
-                      ? 'bg-white text-primary-start shadow-[0_6px_18px_rgba(140,97,54,0.12)] dark:bg-bg-card dark:text-red-300 dark:shadow-none'
-                      : 'text-text-sub'
-                  }`}
-                >
-                  {tab.label}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        <BatchConsignButton
-          checking={batchConsignRequest.loading}
-          data={batchConsignButtonData}
-          disabled={isOffline || batchConsignRequest.loading}
-          onClick={() => void handleOpenConsignableSheet()}
-        />
-
-        <div className="mt-3 flex items-center justify-between text-[12px] text-text-aux">
-          <span>共 {total} 件</span>
-          {keyword ? <span className="truncate">关键词: {keyword}</span> : <span>按分类浏览</span>}
+          <button
+            className={`p-2 active:opacity-70 ${showFilter ? 'text-primary-start' : 'text-text-main'}`}
+            onClick={() => {
+              setShowFilter((current) => !current);
+              if (showSearch) {
+                setShowSearch(false);
+              }
+            }}
+          >
+            <Filter size={18} />
+          </button>
         </div>
       </div>
 
-      <PullToRefreshContainer onRefresh={handleRefresh} disabled={isOffline}>
-        <div ref={scrollContainerRef} className="flex-1 overflow-y-auto no-scrollbar">
+      {showSearch ? (
+        <div className="animate-in slide-in-from-top-2 sticky top-12 z-20 border-b border-border-light bg-white px-4 py-3 dark:bg-gray-900">
+          <div className="relative flex items-center">
+            <Search size={16} className="absolute left-3 text-text-aux" />
+            <input
+              type="text"
+              placeholder="搜索藏品名称/编号"
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
+              className="w-full rounded-full bg-gray-100 py-2 pl-9 pr-8 text-[13px] text-text-main focus:outline-none dark:bg-gray-800"
+            />
+            {searchQuery ? (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="absolute right-3 p-0.5 text-text-aux active:text-text-main"
+              >
+                <X size={14} />
+              </button>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
+
+      {showFilter ? (
+        <>
+          <div className="fixed inset-0 z-20 bg-black/40" onClick={() => setShowFilter(false)} />
+          <div className="animate-in slide-in-from-top-2 absolute left-0 right-0 top-12 z-30 border-b border-border-light bg-white dark:bg-gray-900">
+            <div className="p-4">
+              <div className="mb-3 text-[13px] font-medium text-text-main">价格筛选</div>
+              <div className="grid grid-cols-3 gap-3">
+                {FILTERS.map((filter) => (
+                  <button
+                    key={filter.id}
+                    onClick={() => {
+                      setActiveFilter(filter.id);
+                      setShowFilter(false);
+                    }}
+                    className={`rounded-[8px] py-2 text-center text-[12px] transition-colors ${
+                      activeFilter === filter.id
+                        ? 'border border-primary-start bg-red-50 text-primary-start dark:bg-red-900/20'
+                        : 'border border-transparent bg-gray-50 text-text-main dark:bg-gray-800'
+                    }`}
+                  >
+                    {filter.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        </>
+      ) : null}
+
+      {renderTabs()}
+
+      <PullToRefreshContainer className="flex-1" onRefresh={handleRefresh} disabled={loading}>
+        <div className={`flex-1 overflow-y-auto no-scrollbar ${activeTab === 'holding' ? 'pb-[80px]' : 'pb-safe'}`}>
           {renderContent()}
         </div>
       </PullToRefreshContainer>
 
-      {batchConsignButtonData ? (
-        <ConsignableCollectionSelectSheet
-          isOpen={consignableSelectSheetOpen}
-          items={enrichedConsignableItems}
-          onClose={() => setConsignableSelectSheetOpen(false)}
-          onConfirm={handleConsignableConfirm}
-          stats={batchConsignButtonData.stats}
-          hasMore={consignableHasMore}
-          loadingMore={consignableLoadingMore}
-          onLoadMore={loadMoreConsignable}
-          totalCount={batchConsignButtonData.total}
-          equityCards={equityCardsRequest.data ?? []}
-        />
+      {activeTab === 'holding' ? (
+        <div className="fixed bottom-0 left-0 right-0 z-30 border-t border-border-light bg-white pb-safe shadow-[0_-4px_16px_rgba(0,0,0,0.05)] dark:bg-gray-900 dark:shadow-[0_-4px_16px_rgba(0,0,0,0.2)]">
+          <div className="mx-auto flex max-w-[390px] items-center justify-between px-4 py-3">
+            <div className="text-[13px] text-text-sub">可批量寄售藏品</div>
+            <button
+              onClick={() => void handleBatchConsignClick()}
+              disabled={batchLoading}
+              className="rounded-full bg-gradient-to-r from-primary-start to-primary-end px-6 py-2 text-[14px] font-medium text-white shadow-sm active:opacity-80 disabled:opacity-50"
+            >
+              {batchLoading ? '加载中...' : '批量寄售'}
+            </button>
+          </div>
+        </div>
+      ) : null}
+
+      {showBatchModal ? (
+        <div className="fixed inset-0 z-[100] flex flex-col justify-end">
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setShowBatchModal(false)} />
+          <div className="animate-in slide-in-from-bottom duration-200 relative z-10 mx-auto flex max-h-[80vh] w-full max-w-[390px] flex-col rounded-t-[20px] bg-bg-card">
+            <div className="flex items-center justify-between border-b border-border-light p-4">
+              <h3 className="text-[16px] font-bold text-text-main">批量寄售</h3>
+              <div className="flex items-center space-x-3">
+                {batchData && batchData.data.items.length > 0 && !batchLoading ? (
+                  <button
+                    onClick={() => {
+                      if (selectedBatchItems.length === batchData.data.items.length) {
+                        setSelectedBatchItems([]);
+                      } else {
+                        setSelectedBatchItems(batchData.data.items.map((item) => item.user_collection_id));
+                      }
+                    }}
+                    className="text-[14px] text-primary-start active:opacity-70"
+                  >
+                    {selectedBatchItems.length === batchData.data.items.length ? '取消全选' : '全选'}
+                  </button>
+                ) : null}
+                <button onClick={() => setShowBatchModal(false)} className="-mr-1 p-1 text-text-aux active:text-text-main">
+                  <X size={20} />
+                </button>
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-4 no-scrollbar">
+              {batchLoading ? (
+                <div className="space-y-3">
+                  <Skeleton className="h-16 w-full rounded-[12px]" />
+                  <Skeleton className="h-16 w-full rounded-[12px]" />
+                  <Skeleton className="h-16 w-full rounded-[12px]" />
+                </div>
+              ) : batchData ? (
+                <>
+                  <div className="mb-4 flex items-start rounded-[12px] bg-red-50 p-3 dark:bg-red-900/20">
+                    <AlertCircle size={16} className="mt-0.5 mr-2 shrink-0 text-primary-start" />
+                    <div className="text-[13px] text-text-main">
+                      当前可寄售藏品数量：
+                      <span className="font-bold text-primary-start">{batchData.data.available_now_count}</span> 个
+                      <div className="mt-1 text-[11px] text-text-sub">
+                        总藏品数 {batchData.data.stats.total_collections} 个，活跃场次 {batchData.data.stats.active_sessions} 场
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    {batchData.data.items.map((item, index) => {
+                      const linked = collectionMap.get(item.user_collection_id);
+                      const title = item.title || linked?.title || `藏品 ${item.user_collection_id}`;
+                      const serial = linked?.unique_id || linked?.asset_code || String(item.user_collection_id);
+                      const imageUrl = item.image || linked?.image || '';
+                      const isSelected = selectedBatchItems.includes(item.user_collection_id);
+
+                      const toggleSelection = () => {
+                        if (isSelected) {
+                          setSelectedBatchItems((previous) => previous.filter((id) => id !== item.user_collection_id));
+                        } else {
+                          setSelectedBatchItems((previous) => [...previous, item.user_collection_id]);
+                        }
+                      };
+
+                      return (
+                        <div
+                          key={`${item.user_collection_id}-${index}`}
+                          className={`cursor-pointer rounded-[12px] border p-3 transition-colors ${
+                            isSelected
+                              ? 'border-primary-start bg-red-50/50 dark:bg-red-900/10'
+                              : 'border-border-light'
+                          }`}
+                          onClick={toggleSelection}
+                        >
+                          <div className="flex items-center">
+                            <div className="mr-3 flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-[8px] bg-gray-100 dark:bg-gray-800">
+                              {imageUrl ? (
+                                <img
+                                  src={imageUrl}
+                                  alt={title}
+                                  className="h-full w-full object-cover"
+                                  referrerPolicy="no-referrer"
+                                />
+                              ) : (
+                                <PackageOpen size={16} className="text-text-aux" />
+                              )}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <div className="mb-1 line-clamp-1 text-[14px] font-medium text-text-main">{title}</div>
+                              <div className="text-[12px] text-text-sub">编号: {serial}</div>
+                            </div>
+                            {isSelected ? (
+                              <CheckCircle2 size={20} className="ml-2 shrink-0 text-primary-start" />
+                            ) : (
+                              <Circle size={20} className="ml-2 shrink-0 text-border-main" />
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </>
+              ) : (
+                <div className="py-10 text-center text-[14px] text-text-sub">暂无数据</div>
+              )}
+            </div>
+
+            {batchData && batchData.data.items.length > 0 ? (
+              <div className="border-t border-border-light bg-bg-card p-4 pb-safe">
+                <button
+                  className="w-full rounded-full bg-gradient-to-r from-primary-start to-primary-end py-3 text-[15px] font-medium text-white shadow-sm active:opacity-80 disabled:opacity-50"
+                  disabled={selectedBatchItems.length === 0}
+                  onClick={() => {
+                    showToast({ message: `已确认寄售 ${selectedBatchItems.length} 个藏品`, type: 'success' });
+                    setShowBatchModal(false);
+                  }}
+                >
+                  确认寄售 ({selectedBatchItems.length})
+                </button>
+              </div>
+            ) : null}
+          </div>
+        </div>
       ) : null}
     </div>
   );

@@ -84,7 +84,7 @@ const SignInCalendarModal: React.FC<SignInCalendarModalProps> = ({
           {day}
         </div>
         {signed && (
-          <div className="absolute -bottom-1 text-[10px] text-red-500 font-bold">
+          <div className="absolute -bottom-1 text-2xs text-red-500 font-bold">
             ✓
           </div>
         )}

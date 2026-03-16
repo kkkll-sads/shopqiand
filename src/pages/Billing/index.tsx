@@ -4,7 +4,15 @@
  *              分月分组展示，无限滚动加载，点击查看流水详情。
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'; // React 核心 Hook 和类型
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type KeyboardEvent,
+  type MouseEvent,
+} from 'react'; // React 核心 Hook 和类型
 import {
   ArrowLeft,
   Calendar,
@@ -71,6 +79,16 @@ interface BillingCategoryOption {
 }
 
 type BillingListResponse = AccountLogList | RechargeOrderList | WithdrawRecordList;
+
+interface MergedLogChildrenState {
+  error: string | null;
+  items: AccountLogItem[];
+  loaded: boolean;
+  loading: boolean;
+  mergeRowCount?: number;
+  mergeScene?: string;
+  total: number;
+}
 
 /** 账户类型筛选选项（全部/供应链专项金/可调度收益/确权金/待激活确权金/消费金/绿色算力/静态收益） */
 const ACCOUNT_TYPE_OPTIONS: Array<{ key: AccountLogType; label: string }> = [
@@ -317,7 +335,7 @@ function getLegacyAccountTagClassName(type: string | undefined) {
     case 'pending_activation_gold':
       return 'bg-orange-50 text-orange-600';
     default:
-      return 'bg-gray-100 text-gray-500';
+      return 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-300';
   }
 }
 
@@ -331,10 +349,10 @@ function getLegacyListAmountClassName(type: string | undefined, amount: number) 
   }
 
   if (amount < 0) {
-    return 'text-gray-900';
+    return 'text-gray-900 dark:text-gray-100';
   }
 
-  return 'text-gray-500';
+  return 'text-gray-500 dark:text-gray-300';
 }
 
 function getLegacyBalanceAfterClassName(type: string | undefined, amount: number) {
@@ -342,7 +360,7 @@ function getLegacyBalanceAfterClassName(type: string | undefined, amount: number
     return amount >= 0 ? 'text-emerald-500' : 'text-emerald-600';
   }
 
-  return amount >= 0 ? 'text-red-500' : 'text-gray-600';
+  return amount >= 0 ? 'text-red-500' : 'text-gray-600 dark:text-gray-300';
 }
 
 function getWithdrawStatusBadgeClassName(status: number) {
@@ -358,7 +376,7 @@ function getWithdrawStatusBadgeClassName(status: number) {
     case 4:
       return 'bg-rose-50 text-rose-600';
     default:
-      return 'bg-gray-100 text-gray-500';
+      return 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-300';
   }
 }
 
@@ -427,7 +445,7 @@ function getRechargeRecordStatusBadgeClassName(record: RechargeOrderRecord) {
     case 2:
       return 'bg-red-50 text-red-600';
     default:
-      return 'bg-gray-100 text-gray-500';
+      return 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-300';
   }
 }
 
@@ -588,6 +606,14 @@ function getBillingListHasMore(response: BillingListResponse) {
   return 'hasMore' in response ? response.hasMore : getNextHasMore(response);
 }
 
+function getMergedLogChildrenStateKey(item: Pick<AccountLogItem, 'accountType' | 'flowNo' | 'id'>) {
+  return `${item.id}:${item.flowNo ?? ''}:${item.accountType ?? ''}`;
+}
+
+function canExpandMergedLogChildren(item: AccountLogItem) {
+  return (item.mergeRowCount ?? 0) > 1;
+}
+
 /**
  * BillingPage - 资产明细页面
  * 功能：账户类型/收支方向/关键词筛选 → 分月分组流水列表 → 无限滚动 → 点击查看详情
@@ -639,6 +665,8 @@ export function BillingPage() {
   const [selectedLog, setSelectedLog] = useState<AccountLogItem | null>(null);
   const [selectedRechargeRecord, setSelectedRechargeRecord] = useState<RechargeOrderRecord | null>(null);
   const [selectedWithdrawRecord, setSelectedWithdrawRecord] = useState<WithdrawRecord | null>(null);
+  const [expandedMergedLogMap, setExpandedMergedLogMap] = useState<Record<string, boolean>>({});
+  const [mergedLogChildrenMap, setMergedLogChildrenMap] = useState<Record<string, MergedLogChildrenState>>({});
 
   const openLogDetail = useCallback((item: AccountLogItem) => {
     setSelectedLog(item);
@@ -788,6 +816,8 @@ export function BillingPage() {
     setItems([]);
     setRechargeItems([]);
     setWithdrawItems([]);
+    setExpandedMergedLogMap({});
+    setMergedLogChildrenMap({});
     setPage(1);
     setHasMore(false);
     setLoadMoreError(null);
@@ -899,6 +929,100 @@ export function BillingPage() {
       setSelectedDetail(undefined);
     }
   }, [isRechargeScene, isWithdrawScene, selectedLog, setSelectedDetail]);
+
+  const loadMergedLogChildren = useCallback(async (item: AccountLogItem) => {
+    const stateKey = getMergedLogChildrenStateKey(item);
+    const requestKey = queryKeyRef.current;
+
+    setMergedLogChildrenMap((current) => ({
+      ...current,
+      [stateKey]: {
+        error: null,
+        items: current[stateKey]?.items ?? [],
+        loaded: current[stateKey]?.loaded ?? false,
+        loading: true,
+        mergeRowCount: current[stateKey]?.mergeRowCount,
+        mergeScene: current[stateKey]?.mergeScene,
+        total: current[stateKey]?.total ?? 0,
+      },
+    }));
+
+    try {
+      const response = await accountApi.getAllLogMergedItems({
+        accountType: item.accountType,
+        flowNo: item.flowNo,
+        id: item.id,
+      });
+
+      if (queryKeyRef.current !== requestKey) {
+        return;
+      }
+
+      setMergedLogChildrenMap((current) => ({
+        ...current,
+        [stateKey]: {
+          error: null,
+          items: response.list,
+          loaded: true,
+          loading: false,
+          mergeRowCount: response.mergeRowCount,
+          mergeScene: response.mergeScene,
+          total: response.total,
+        },
+      }));
+    } catch (error) {
+      if (queryKeyRef.current !== requestKey) {
+        return;
+      }
+
+      setMergedLogChildrenMap((current) => ({
+        ...current,
+        [stateKey]: {
+          error: getErrorMessage(error),
+          items: current[stateKey]?.items ?? [],
+          loaded: current[stateKey]?.loaded ?? false,
+          loading: false,
+          mergeRowCount: current[stateKey]?.mergeRowCount,
+          mergeScene: current[stateKey]?.mergeScene,
+          total: current[stateKey]?.total ?? 0,
+        },
+      }));
+    }
+  }, []);
+
+  const handleToggleMergedLogChildren = useCallback(
+    (event: MouseEvent<HTMLButtonElement>, item: AccountLogItem) => {
+      event.stopPropagation();
+
+      const stateKey = getMergedLogChildrenStateKey(item);
+      const nextExpanded = !Boolean(expandedMergedLogMap[stateKey]);
+
+      setExpandedMergedLogMap((current) => ({
+        ...current,
+        [stateKey]: nextExpanded,
+      }));
+
+      if (!nextExpanded) {
+        return;
+      }
+
+      const currentState = mergedLogChildrenMap[stateKey];
+      if (!currentState || (!currentState.loaded && !currentState.loading)) {
+        void loadMergedLogChildren(item);
+      }
+    },
+    [expandedMergedLogMap, loadMergedLogChildren, mergedLogChildrenMap],
+  );
+
+  const handleLogCardKeyDown = useCallback(
+    (event: KeyboardEvent<HTMLDivElement>, item: AccountLogItem) => {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        openLogDetail(item);
+      }
+    },
+    [openLogDetail],
+  );
 
   const loadMore = useCallback(async () => {
     if (!hasMore || loadingMore || !isAuthenticated) {
@@ -1103,29 +1227,29 @@ export function BillingPage() {
   };
 
   const renderHeader = () => (
-    <div className="shrink-0 bg-white">
-      <div className="relative flex items-center border-b border-gray-100 px-4 py-3 pt-safe">
+    <div className="shrink-0 bg-bg-card">
+      <div className="relative flex items-center border-b border-border-light px-4 py-3 pt-safe">
         <button
           type="button"
           onClick={handleBack}
-          className="absolute left-4 z-10 p-1 text-gray-600 active:opacity-70"
+          className="absolute left-4 z-10 p-1 text-text-sub active:opacity-70"
           aria-label="返回"
         >
           <ArrowLeft size={20} />
         </button>
         {selectedRechargeRecord ? (
           <>
-            <h1 className="w-full text-center text-lg font-bold text-gray-800">{'充值详情'}</h1>
-            {/*
-          <h1 className="w-full text-center text-lg font-bold text-gray-800">充值详情</h1>
+            <h1 className="w-full text-center text-lg font-bold text-text-main">{'充值详情'}</h1>
+            {/* 
+          <h1 className="w-full text-center text-lg font-bold text-text-main">充值详情</h1> 
             */}
           </>
         ) : null}
         {selectedWithdrawRecord ? (
-          <h1 className="w-full text-center text-lg font-bold text-gray-800">提现详情</h1>
+          <h1 className="w-full text-center text-lg font-bold text-text-main">提现详情</h1>
         ) : null}
         <h1
-          className={`w-full text-center text-lg font-bold text-gray-800 ${
+          className={`w-full text-center text-lg font-bold text-text-main ${
             selectedRechargeRecord || selectedWithdrawRecord ? 'hidden' : ''
           }`}
         >
@@ -1142,7 +1266,7 @@ export function BillingPage() {
 
     if (isRechargeScene || isWithdrawScene) {
       return (
-        <div className="z-20 shrink-0 bg-white">
+        <div className="z-20 shrink-0 bg-bg-card">
           <div className="border-b border-gray-100 bg-gray-50/70 px-4 py-3">
             <div className="flex items-start justify-between gap-3 rounded-xl border border-gray-100 bg-white px-3.5 py-3">
               <div>
@@ -1163,7 +1287,7 @@ export function BillingPage() {
     }
 
     return (
-      <div className="z-20 shrink-0 bg-white">
+      <div className="z-20 shrink-0 bg-bg-card">
         {scene !== 'all' ? (
           <div className="border-b border-gray-100 bg-gray-50/70 px-4 py-3">
             <div className="flex items-start justify-between gap-3 rounded-xl border border-gray-100 bg-white px-3.5 py-3">
@@ -1593,12 +1717,19 @@ export function BillingPage() {
           const memoText = item.memo?.trim();
           const titleText = memoText || bizLabel;
           const subtitleText = memoText && memoText !== bizLabel ? bizLabel : undefined;
+          const mergedStateKey = getMergedLogChildrenStateKey(item);
+          const mergedChildrenState = mergedLogChildrenMap[mergedStateKey];
+          const mergedExpanded = Boolean(expandedMergedLogMap[mergedStateKey]);
+          const mergedCount = mergedChildrenState?.total || item.mergeRowCount || 0;
+          const showMergedToggle = canExpandMergedLogChildren(item);
 
           return (
-            <button
+            <div
               key={`${item.id}-${item.flowNo ?? item.createTime ?? index}`}
-              type="button"
+              role="button"
+              tabIndex={0}
               onClick={() => openLogDetail(item)}
+              onKeyDown={(event) => handleLogCardKeyDown(event, item)}
               className="group w-full rounded-xl border border-gray-100 bg-white p-4 text-left shadow-sm transition-all active:scale-[0.99] active:bg-gray-50"
             >
               <div className="mb-2 flex items-start justify-between gap-3">
@@ -1609,7 +1740,7 @@ export function BillingPage() {
                     >
                       {accountLabel}
                     </span>
-                    {item.isMerged ? (
+                    {item.isMerged || (item.mergeRowCount ?? 0) > 1 ? (
                       <span className="inline-flex shrink-0 rounded bg-amber-50 px-1.5 py-0.5 text-[10px] font-medium text-amber-600">
                         {item.mergeRowCount && item.mergeRowCount > 1 ? `已合并 ${item.mergeRowCount} 笔` : '合并流水'}
                       </span>
@@ -1644,7 +1775,108 @@ export function BillingPage() {
                   <span className={getLegacyBalanceAfterClassName(item.accountType, item.amount)}>{afterValueText}</span>
                 </div>
               </div>
-            </button>
+
+              {showMergedToggle ? (
+                <div className="mt-2 border-t border-gray-50 pt-2" onClick={(event) => event.stopPropagation()}>
+                  <button
+                    type="button"
+                    onClick={(event) => handleToggleMergedLogChildren(event, item)}
+                    className="flex w-full items-center justify-between rounded-lg bg-gray-50/80 px-2.5 py-2 text-xs text-gray-600 active:bg-gray-100"
+                  >
+                    <span className="font-medium text-gray-700">
+                      {mergedExpanded ? '收起合并流水子明细' : '展开合并流水子明细'}
+                    </span>
+                    <span className="flex items-center gap-1 text-gray-500">
+                      {mergedCount > 0 ? `${mergedCount} 条` : '查看'}
+                      <ChevronRight
+                        size={14}
+                        className={`transition-transform duration-200 ${mergedExpanded ? 'rotate-90' : ''}`}
+                      />
+                    </span>
+                  </button>
+
+                  {mergedExpanded ? (
+                    <div className="mt-2 rounded-lg border border-gray-100 bg-white px-2.5 py-1.5">
+                      {mergedChildrenState?.mergeScene ? (
+                        <div className="mb-1 text-[11px] text-gray-400">场景：{mergedChildrenState.mergeScene}</div>
+                      ) : null}
+
+                      {mergedChildrenState?.loading ? (
+                        <div className="flex items-center justify-center py-3 text-xs text-gray-400">
+                          <Loader2 size={12} className="mr-1.5 animate-spin" />
+                          加载子明细中...
+                        </div>
+                      ) : null}
+
+                      {!mergedChildrenState?.loading && mergedChildrenState?.error ? (
+                        <div className="flex items-center justify-between gap-2 py-2 text-xs text-red-500">
+                          <span className="line-clamp-2">{mergedChildrenState.error}</span>
+                          <button
+                            type="button"
+                            onClick={() => void loadMergedLogChildren(item)}
+                            className="shrink-0 rounded-full bg-red-50 px-2.5 py-1 text-[11px] font-medium text-red-600 active:opacity-80"
+                          >
+                            重试
+                          </button>
+                        </div>
+                      ) : null}
+
+                      {!mergedChildrenState?.loading &&
+                      !mergedChildrenState?.error &&
+                      mergedChildrenState &&
+                      mergedChildrenState.items.length === 0 ? (
+                        <div className="py-3 text-center text-xs text-gray-400">暂无子明细</div>
+                      ) : null}
+
+                      {!mergedChildrenState?.loading &&
+                      !mergedChildrenState?.error &&
+                      mergedChildrenState &&
+                      mergedChildrenState.items.length > 0 ? (
+                        <div>
+                          {mergedChildrenState.items.map((child, childIndex) => {
+                            const childMemoText = child.memo?.trim();
+                            const childBizLabel = formatBizTypeLabel(child.bizType);
+                            const childTitleText = childMemoText || childBizLabel;
+                            const childBeforeValueText = formatMoney(child.beforeValue);
+                            const childAfterValueText = formatMoney(child.afterValue);
+
+                            return (
+                              <div
+                                key={`${child.id}-${child.flowNo ?? child.createTime ?? childIndex}`}
+                                className={`flex items-start justify-between gap-2 py-2 ${childIndex > 0 ? 'border-t border-gray-50' : ''}`}
+                              >
+                                <div className="min-w-0 flex-1">
+                                  <div className="truncate text-xs text-gray-700">{childTitleText}</div>
+                                  <div className="mt-0.5 text-[11px] text-gray-400">{child.createTimeText || '--'}</div>
+                                  <div className="mt-0.5 truncate text-[11px] text-gray-400">
+                                    {child.flowNo || `记录 #${child.id}`}
+                                  </div>
+                                </div>
+
+                                <div className="shrink-0 text-right">
+                                  <div
+                                    className={`text-xs font-semibold ${getLegacyListAmountClassName(child.accountType, child.amount)}`}
+                                  >
+                                    {formatSignedMoney(child.amount)}
+                                  </div>
+                                  <div className="mt-0.5 font-mono text-[11px] text-gray-400">
+                                    <span>{childBeforeValueText}</span>
+                                    <span className="mx-1 text-gray-300">→</span>
+                                    <span className={getLegacyBalanceAfterClassName(child.accountType, child.amount)}>
+                                      {childAfterValueText}
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ) : null}
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
+            </div>
           );
         })}
 
@@ -2099,7 +2331,7 @@ export function BillingPage() {
 
   if (!isAuthenticated) {
     return (
-      <div className="billing-dark-scope flex h-full flex-1 flex-col bg-gray-50">
+      <div className="billing-dark-scope flex h-full flex-1 flex-col bg-bg-base">
         {renderHeader()}
         <div ref={scrollContainerRef} className="flex-1 overflow-y-auto no-scrollbar px-4">
           <EmptyState
@@ -2114,7 +2346,7 @@ export function BillingPage() {
   }
 
   return (
-    <div className="billing-dark-scope relative flex h-full flex-1 flex-col bg-gray-50">
+    <div className="billing-dark-scope relative flex h-full flex-1 flex-col bg-bg-base">
       {isOffline ? (
         <OfflineBanner onAction={handleRefresh} className="absolute top-12 right-0 left-0 z-50" />
       ) : null}
@@ -2141,7 +2373,7 @@ export function BillingPage() {
       </PullToRefreshContainer>
 
       {detailLoading && selectedDetail ? (
-        <div className="pointer-events-none absolute right-4 bottom-4 flex items-center rounded-full bg-gray-900/85 px-3 py-2 text-sm text-white shadow-sm">
+        <div className="pointer-events-none absolute right-4 bottom-4 flex items-center rounded-full border border-border-light bg-bg-card/90 px-3 py-2 text-sm text-text-main shadow-sm">
           <Loader2 size={14} className="mr-2 animate-spin" />
           加载详情中...
         </div>

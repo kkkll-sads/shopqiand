@@ -33,7 +33,7 @@ const ProfileBalanceCard: React.FC<ProfileBalanceCardProps> = ({ userInfo, onNav
           <div className="mb-3 flex items-start justify-between">
             <div className="flex items-center gap-2">
               <span className="text-sm font-medium text-red-50">供应链专项金</span>
-              <span className="profile-balance-chip rounded-full px-2 py-0.5 text-[10px] font-bold backdrop-blur-sm">
+              <span className="profile-balance-chip rounded-full px-2 py-0.5 text-2xs font-bold backdrop-blur-sm">
                 采购本金
               </span>
             </div>
@@ -64,7 +64,7 @@ const ProfileBalanceCard: React.FC<ProfileBalanceCardProps> = ({ userInfo, onNav
               className="cursor-pointer text-center active:opacity-70"
               onClick={() => onNavigate('/withdraw')}
             >
-              <div className="mb-1 whitespace-nowrap text-[10px] text-red-100">可提现收益</div>
+              <div className="mb-1 whitespace-nowrap text-2xs text-red-100">可提现收益</div>
               <div className="truncate font-mono text-sm font-bold">
                 {formatPriceSmart(userInfo?.withdrawableMoney)}
               </div>
@@ -74,7 +74,7 @@ const ProfileBalanceCard: React.FC<ProfileBalanceCardProps> = ({ userInfo, onNav
               className="cursor-pointer text-center active:opacity-70"
               onClick={() => onNavigate('/store')}
             >
-              <div className="mb-1 whitespace-nowrap text-[10px] text-red-100">消费金</div>
+              <div className="mb-1 whitespace-nowrap text-2xs text-red-100">消费金</div>
               <div className="truncate font-mono text-sm font-bold">{formatPriceSmart(userInfo?.score)}</div>
             </div>
 
@@ -82,7 +82,7 @@ const ProfileBalanceCard: React.FC<ProfileBalanceCardProps> = ({ userInfo, onNav
               className="cursor-pointer text-center active:opacity-70"
               onClick={() => onNavigate('/hashrate-exchange')}
             >
-              <div className="mb-1 whitespace-nowrap text-[10px] text-red-100">绿色算力</div>
+              <div className="mb-1 whitespace-nowrap text-2xs text-red-100">绿色算力</div>
               <div className="truncate font-mono text-sm font-bold">
                 {formatPriceSmart(userInfo?.greenPower)}
               </div>
@@ -92,7 +92,7 @@ const ProfileBalanceCard: React.FC<ProfileBalanceCardProps> = ({ userInfo, onNav
               className="cursor-pointer text-center active:opacity-70"
               onClick={() => onNavigate('/service-recharge')}
             >
-              <div className="mb-1 whitespace-nowrap text-[10px] text-red-100">确权金</div>
+              <div className="mb-1 whitespace-nowrap text-2xs text-red-100">确权金</div>
               <div className="truncate font-mono text-sm font-bold">
                 {formatPriceSmart(userInfo?.serviceFeeBalance)}
               </div>

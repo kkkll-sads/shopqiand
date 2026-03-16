@@ -1,4 +1,4 @@
-﻿import { createApiHeaders, type ApiAuthOptions } from '../core/headers';
+import { createApiHeaders, type ApiAuthOptions } from '../core/headers';
 import { http } from '../http';
 import { resolveUploadUrl } from './upload';
 
@@ -234,12 +234,17 @@ export interface ResetPayPasswordBySmsPayload {
 }
 
 export interface UpdateAvatarPayload {
-  avatar: string;
+  avatar?: string;
   avatarUrl?: string;
+  avatarFile?: File;
 }
 
 export interface UpdateNicknamePayload {
-  nickname: string;
+  nickname?: string;
+  avatar?: File;
+  avatarUrl?: string;
+  birthday?: string;
+  gender?: 0 | 1 | 2;
 }
 
 function readOptionalString(value: string | undefined) {
@@ -570,24 +575,19 @@ export const userApi = {
     payload: UpdateAvatarPayload,
     options: UserRequestOptions = {},
   ): Promise<void> {
-    const avatar = payload.avatar.trim();
+    const avatar = payload.avatar?.trim() ?? '';
     const avatarUrl = payload.avatarUrl?.trim() ?? '';
 
-    if (!avatar && !avatarUrl) {
+    if (!avatar && !avatarUrl && !(payload.avatarFile instanceof File)) {
       throw new Error('头像地址不能为空');
     }
 
-    await http.post<null, Record<string, string>>(
-      '/api/User/updateAvatar',
+    await userApi.updateNickname(
       {
-        avatar: avatar || avatarUrl,
-        avatar_url: avatarUrl,
+        avatar: payload.avatarFile,
+        avatarUrl: avatarUrl || avatar,
       },
-      {
-        headers: createApiHeaders(options),
-        signal: options.signal,
-        useMock: false,
-      },
+      options,
     );
   },
 
@@ -595,14 +595,41 @@ export const userApi = {
     payload: UpdateNicknamePayload,
     options: UserRequestOptions = {},
   ): Promise<void> {
-    const nickname = payload.nickname.trim();
+    const nickname = payload.nickname?.trim() ?? '';
+    const avatarUrl = payload.avatarUrl?.trim() ?? '';
+    const birthday = payload.birthday?.trim() ?? '';
+    const hasAvatarFile = payload.avatar instanceof File;
+    const hasGender = payload.gender === 0 || payload.gender === 1 || payload.gender === 2;
 
-    if (!nickname) {
-      throw new Error('昵称不能为空');
+    if (birthday && !/^\d{4}-\d{2}-\d{2}$/.test(birthday)) {
+      throw new Error('生日格式不正确，应为 YYYY-MM-DD');
+    }
+
+    if (!nickname && !avatarUrl && !hasAvatarFile && !birthday && !hasGender) {
+      throw new Error('至少需要一个可更新字段');
     }
 
     const formData = new FormData();
-    formData.append('nickname', nickname);
+
+    if (nickname) {
+      formData.append('nickname', nickname);
+    }
+
+    if (hasAvatarFile) {
+      formData.append('avatar', payload.avatar as File);
+    }
+
+    if (avatarUrl) {
+      formData.append('avatar_url', avatarUrl);
+    }
+
+    if (birthday) {
+      formData.append('birthday', birthday);
+    }
+
+    if (hasGender) {
+      formData.append('gender', String(payload.gender));
+    }
 
     await http.post<null, FormData>('/api/User/updateNickname', formData, {
       headers: createApiHeaders(options),

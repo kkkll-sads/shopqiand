@@ -4,7 +4,7 @@ import { ChevronRight, Loader2 } from 'lucide-react';
 export interface ActionSheetOption {
   label: string;
   icon?: React.ReactNode;
-  desc?: string;
+  desc?: React.ReactNode;
   danger?: boolean;
   disabled?: boolean;
   loading?: boolean;
@@ -126,11 +126,7 @@ export const ActionSheet: React.FC<ActionSheetProps> = ({
                     </div>
                     
                     <div className="flex items-center shrink-0">
-                      {option.desc && (
-                        <span className="text-base text-gray-400 dark:text-gray-500 mr-1">
-                          {option.desc}
-                        </span>
-                      )}
+                      {option.desc ? <div className="mr-1 text-base text-gray-400 dark:text-gray-500">{option.desc}</div> : null}
                       {option.loading ? (
                         <Loader2 size={16} className="text-gray-400 dark:text-gray-500 animate-spin ml-1" />
                       ) : option.showArrow ? (
@@ -152,7 +148,7 @@ export const ActionSheet: React.FC<ActionSheetProps> = ({
         {showCancel && (
           <button
             onClick={onClose}
-            className="w-full h-[52px] bg-white dark:bg-gray-900 rounded-2xl shadow-sm flex items-center justify-center text-xl font-medium text-gray-900 dark:text-gray-100 active:bg-gray-50 dark:active:bg-gray-800 transition-colors mb-4"
+            className="mb-4 flex h-auto min-h-[52px] w-full items-center justify-center rounded-2xl bg-white py-3 text-xl font-medium text-gray-900 shadow-sm transition-colors active:bg-gray-50 dark:bg-gray-900 dark:text-gray-100 dark:active:bg-gray-800"
           >
             {cancelText}
           </button>

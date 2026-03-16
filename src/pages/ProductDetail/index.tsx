@@ -445,7 +445,7 @@ export const ProductDetailPage = () => {
     (Boolean(productRequest.error) || (!hasValidProductId && Boolean(fallbackProductRequest.error)));
 
   return (
-    <div className="product-detail-dark-scope relative flex flex-1 flex-col overflow-hidden bg-[#f5f5f5]">
+    <div className="product-detail-dark-scope relative flex flex-1 flex-col overflow-hidden bg-bg-base">
       {isOffline && (
         <OfflineBanner
           onAction={refreshStatus}
@@ -464,7 +464,7 @@ export const ProductDetailPage = () => {
         />
       ) : (
         <>
-          <div ref={scrollRef} className="flex-1 overflow-y-auto bg-[#f5f5f5] pb-[72px]">
+          <div ref={scrollRef} className="flex-1 overflow-y-auto bg-bg-base pb-[72px]">
             <ProductOverviewSection
               loading={isLoading}
               onOpenServiceDescription={() => setShowServiceSheet(true)}

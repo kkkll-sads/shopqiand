@@ -1,0 +1,43 @@
+- generic [ref=e4]:
+  - generic [ref=e26]:
+    - generic [ref=e27]:
+      - button [ref=e28]:
+        - img [ref=e29]
+      - button "客服" [ref=e31]:
+        - img [ref=e32]
+        - generic [ref=e35]: 客服
+    - generic [ref=e36]:
+      - generic [ref=e37]:
+        - heading "Hello!" [level=1] [ref=e38]
+        - paragraph [ref=e39]: 欢迎登录树交所
+      - generic [ref=e41]:
+        - button "密码登录" [ref=e42]: 密码登录
+        - button "验证码登录" [ref=e44]
+      - generic [ref=e45]:
+        - textbox "请输入用户名或手机号" [ref=e47]
+        - generic [ref=e48]:
+          - textbox "请输入登录密码" [ref=e49]
+          - button "显示密码" [ref=e51]:
+            - img [ref=e52]
+      - generic [ref=e58]:
+        - generic [ref=e61] [cursor=pointer]: 记住密码
+        - button "忘记密码" [ref=e62]:
+          - generic [ref=e63]: 忘记密码
+      - button "登录" [ref=e65]:
+        - generic [ref=e66]: 登录
+      - generic [ref=e67]:
+        - generic [ref=e71]:
+          - text: 登录即代表你已同意
+          - button "用户协议" [ref=e72]
+          - text: 和
+          - button "隐私政策" [ref=e73]
+        - button "没有账户？点击注册" [ref=e75]:
+          - generic [ref=e76]: 没有账户？点击注册
+  - generic:
+    - img
+  - generic [ref=e13]:
+    - img "树交所" [ref=e15]
+    - heading "树交所" [level=1] [ref=e16]
+    - paragraph [ref=e17]: 数字权益可信交易平台
+    - generic [ref=e23]: 安全加载中
+    - generic [ref=e24]: 安全 · 稳定 · 可追溯

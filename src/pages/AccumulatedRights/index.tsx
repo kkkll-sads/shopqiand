@@ -163,21 +163,21 @@ export const AccumulatedRightsPage = () => {
         <div className="bg-gradient-to-br from-primary-start to-primary-end px-6 py-8 text-white relative overflow-hidden">
           <div className="absolute right-0 top-0 w-32 h-32 bg-white/10 rounded-full blur-2xl -mr-10 -mt-10 pointer-events-none" />
           <div className="relative z-10">
-            <div className="text-[14px] text-white/80 mb-1">累计可提现收益 (元)</div>
+            <div className="text-base text-white/80 mb-1">累计可提现收益 (元)</div>
             <div className="text-[36px] font-bold leading-none mb-4">
               {formatMoney(accountOverview.income.totalIncomeWithdrawable)}
             </div>
             <div className="flex items-center space-x-6">
               <div>
-                <div className="text-[12px] text-white/70 mb-0.5">累计消费金收益</div>
-                <div className="text-[16px] font-medium">
+                <div className="text-s text-white/70 mb-0.5">累计消费金收益</div>
+                <div className="text-lg font-medium">
                   {formatCount(accountOverview.income.totalIncomeScore)}
                 </div>
               </div>
               <div className="w-px h-8 bg-white/20" />
               <div>
-                <div className="text-[12px] text-white/70 mb-0.5">当前总资产 (元)</div>
-                <div className="text-[16px] font-medium">
+                <div className="text-s text-white/70 mb-0.5">当前总资产 (元)</div>
+                <div className="text-lg font-medium">
                   {formatMoney(accountOverview.balance.totalAssets)}
                 </div>
               </div>
@@ -188,7 +188,7 @@ export const AccumulatedRightsPage = () => {
         <div className="p-4 space-y-4">
           {/* Income Breakdown */}
           <div>
-            <h3 className="text-[15px] font-bold text-text-main mb-3 flex items-center">
+            <h3 className="text-md font-bold text-text-main mb-3 flex items-center">
               <BarChart3 size={16} className="mr-1.5 text-primary-start" /> 收益构成
             </h3>
             <div className="grid grid-cols-2 gap-3">
@@ -204,16 +204,16 @@ export const AccumulatedRightsPage = () => {
                       <div className="w-6 h-6 rounded-full bg-bg-base flex items-center justify-center mr-2">
                         <Icon size={14} className={item.iconClass} />
                       </div>
-                      <span className="text-[13px] font-medium text-text-main">{item.label}</span>
+                      <span className="text-sm font-medium text-text-main">{item.label}</span>
                     </div>
                     <div className="space-y-1">
-                      <div className="flex justify-between items-center text-[12px]">
+                      <div className="flex justify-between items-center text-s">
                         <span className="text-text-sub">可提现</span>
                         <span className="font-medium text-text-main">
                           ¥{data ? formatMoney(data.withdrawableIncome) : '0.00'}
                         </span>
                       </div>
-                      <div className="flex justify-between items-center text-[12px]">
+                      <div className="flex justify-between items-center text-s">
                         <span className="text-text-sub">消费金</span>
                         <span className="font-medium text-orange-500">
                           {data ? formatCount(data.scoreIncome) : '0'}
@@ -228,57 +228,57 @@ export const AccumulatedRightsPage = () => {
 
           {/* Collection Stats */}
           <Card className="p-4 shadow-sm border-none bg-bg-card dark:bg-bg-card">
-            <h3 className="text-[15px] font-bold text-text-main mb-4 flex items-center">
+            <h3 className="text-md font-bold text-text-main mb-4 flex items-center">
               <Box size={16} className="mr-1.5 text-primary-start" /> 藏品资产统计
             </h3>
             <div className="flex justify-between items-center mb-5 pb-4 border-b border-border-main">
               <div className="text-center flex-1 border-r border-border-main">
-                <div className="text-[12px] text-text-sub mb-1">藏品总价值</div>
-                <div className="text-[18px] font-bold text-text-main">
+                <div className="text-s text-text-sub mb-1">藏品总价值</div>
+                <div className="text-2xl font-bold text-text-main">
                   ¥{formatMoney(accountOverview.collection.totalValue)}
                 </div>
               </div>
               <div className="text-center flex-1">
-                <div className="text-[12px] text-text-sub mb-1">藏品总数</div>
-                <div className="text-[18px] font-bold text-text-main">
+                <div className="text-s text-text-sub mb-1">藏品总数</div>
+                <div className="text-2xl font-bold text-text-main">
                   {formatCount(accountOverview.collection.totalCount)}
                 </div>
               </div>
             </div>
             <div className="grid grid-cols-3 gap-y-4 text-center">
               <div>
-                <div className="text-[12px] text-text-sub mb-1">持有中</div>
-                <div className="text-[15px] font-medium text-text-main">
+                <div className="text-s text-text-sub mb-1">持有中</div>
+                <div className="text-md font-medium text-text-main">
                   {formatCount(accountOverview.collection.holdingCount)}
                 </div>
               </div>
               <div>
-                <div className="text-[12px] text-text-sub mb-1">寄售中</div>
-                <div className="text-[15px] font-medium text-text-main">
+                <div className="text-s text-text-sub mb-1">寄售中</div>
+                <div className="text-md font-medium text-text-main">
                   {formatCount(accountOverview.collection.consignmentCount)}
                 </div>
               </div>
               <div>
-                <div className="text-[12px] text-text-sub mb-1">已售出</div>
-                <div className="text-[15px] font-medium text-text-main">
+                <div className="text-s text-text-sub mb-1">已售出</div>
+                <div className="text-md font-medium text-text-main">
                   {formatCount(accountOverview.collection.soldCount)}
                 </div>
               </div>
               <div>
-                <div className="text-[12px] text-text-sub mb-1">矿机数量</div>
-                <div className="text-[15px] font-medium text-text-main">
+                <div className="text-s text-text-sub mb-1">矿机数量</div>
+                <div className="text-md font-medium text-text-main">
                   {formatCount(accountOverview.collection.miningCount)}
                 </div>
               </div>
               <div>
-                <div className="text-[12px] text-text-sub mb-1">矿机价值</div>
-                <div className="text-[15px] font-medium text-text-main">
+                <div className="text-s text-text-sub mb-1">矿机价值</div>
+                <div className="text-md font-medium text-text-main">
                   ¥{formatMoney(accountOverview.collection.miningValue)}
                 </div>
               </div>
               <div>
-                <div className="text-[12px] text-text-sub mb-1">平均价格</div>
-                <div className="text-[15px] font-medium text-text-main">
+                <div className="text-s text-text-sub mb-1">平均价格</div>
+                <div className="text-md font-medium text-text-main">
                   ¥{formatMoney(accountOverview.collection.avgPrice)}
                 </div>
               </div>
@@ -288,7 +288,7 @@ export const AccumulatedRightsPage = () => {
           {/* 7 Days Trend */}
           {dailyBreakdown.length > 0 && (
             <Card className="p-4 shadow-sm border-none bg-bg-card dark:bg-bg-card">
-              <h3 className="text-[15px] font-bold text-text-main mb-4 flex items-center">
+              <h3 className="text-md font-bold text-text-main mb-4 flex items-center">
                 <TrendingUp size={16} className="mr-1.5 text-primary-start" /> 近7日收支
               </h3>
               <div className="space-y-3">
@@ -302,8 +302,8 @@ export const AccumulatedRightsPage = () => {
                       key={day.date ?? idx}
                       className="flex justify-between items-center py-2 border-b border-border-main last:border-0 last:pb-0"
                     >
-                      <div className="text-[13px] text-text-sub">{day.date ?? '--'}</div>
-                      <div className="flex items-center space-x-4 text-[12px]">
+                      <div className="text-sm text-text-sub">{day.date ?? '--'}</div>
+                      <div className="flex items-center space-x-4 text-s">
                         <div className="text-right">
                           <div className="text-text-sub">收入</div>
                           <div className="text-green-500 font-medium">

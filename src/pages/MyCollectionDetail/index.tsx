@@ -274,37 +274,44 @@ export const MyCollectionDetailPage = () => {
     (item && 'consignment_id' in item && typeof item.consignment_id === 'number' && item.consignment_id > 0
       ? item.consignment_id
       : null) ?? (sourceItem?.consignment_id && sourceItem.consignment_id > 0 ? sourceItem.consignment_id : null);
-
-  /** 列表已含 order_no、flow_no 时无需再请求 */
-  const hasConsignmentFromList =
-    sourceItem && (sourceItem.order_no || sourceItem.flow_no);
+  const sourceItemStatusText = `${sourceItem?.status_text || ''}${sourceItem?.consignment_status_text || ''}`;
+  const sourceItemSold = Boolean(
+    sourceItem && (sourceItem.consignment_status === 2 || sourceItemStatusText.includes('已售出')),
+  );
+  const shouldLoadConsignmentDetail = Boolean(
+    consignmentId && (sourceItemSold || (item ? isSoldItem(item) : false)),
+  );
 
   const consignmentDetailRequest = useRequest(
     async (signal) => {
-      if (hasConsignmentFromList || !consignmentId || !item || !isSoldItem(item)) {
+      if (!consignmentId || !shouldLoadConsignmentDetail) {
         return null;
       }
       return collectionConsignmentApi.consignmentDetail(consignmentId, signal);
     },
     {
-      deps: [consignmentId, hasConsignmentFromList, item],
+      deps: [consignmentId, shouldLoadConsignmentDetail],
       initialData: null,
     },
   );
 
-  /** 优先用列表数据，否则用 API 结果 */
+  /** 优先使用 consignmentDetail 接口结果，列表数据作兜底 */
   const consignmentDetail = useMemo(() => {
-    if (sourceItem && (sourceItem.order_no || sourceItem.flow_no)) {
+    const api = consignmentDetailRequest.data;
+    if (api && (api.order_no || api.flow_no || api.buy_price > 0)) {
+      return { ...api };
+    }
+
+    if (sourceItem && (sourceItem.order_no || sourceItem.flow_no || sourceItem.buy_price > 0)) {
       return {
         buy_price: sourceItem.buy_price ?? 0,
         order_no: sourceItem.order_no ?? '',
         flow_no: sourceItem.flow_no ?? '',
       };
     }
-    const api = consignmentDetailRequest.data;
-    if (!api || (!api.order_no && !api.flow_no)) return null;
-    return { ...api };
-  }, [sourceItem, consignmentDetailRequest.data]);
+
+    return null;
+  }, [consignmentDetailRequest.data, sourceItem]);
   const profile = pageRequest.data?.profile;
   const realNameStatus = pageRequest.data?.realNameStatus;
   const userInfo = profile?.userInfo;
@@ -559,17 +566,15 @@ export const MyCollectionDetailPage = () => {
     await Promise.allSettled([
       pageRequest.reload(),
       consignmentModalOpen ? loadConsignmentCheck() : Promise.resolve(undefined),
-      item && isSoldItem(item) && consignmentId && !hasConsignmentFromList ? consignmentDetailRequest.reload() : Promise.resolve(undefined),
+      shouldLoadConsignmentDetail ? consignmentDetailRequest.reload() : Promise.resolve(undefined),
     ]);
   }, [
     consignmentDetailRequest,
-    consignmentId,
     consignmentModalOpen,
-    hasConsignmentFromList,
-    item,
     loadConsignmentCheck,
     pageRequest,
     refreshStatus,
+    shouldLoadConsignmentDetail,
   ]);
 
   const handleOpenConsignment = useCallback(async () => {
@@ -797,22 +802,22 @@ export const MyCollectionDetailPage = () => {
     if (pageRequest.loading && !item) {
       return (
         <div className="flex min-h-[60vh] items-center justify-center">
-          <Loader2 size={28} className="animate-spin text-[#8c6136]" />
+          <Loader2 size={28} className="animate-spin text-[#8c6136] dark:text-[#d8b68b]" />
         </div>
       );
     }
 
     if (pageRequest.error && !item) {
       return (
-        <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4 px-6 text-center text-gray-400">
+        <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4 px-6 text-center text-text-aux">
           <Shield size={48} className="opacity-20" />
-          <div className="max-w-[280px] text-sm leading-6 text-gray-500">
+          <div className="max-w-[280px] text-sm leading-6 text-text-sub">
             {getErrorMessage(pageRequest.error)}
           </div>
           <button
             type="button"
             onClick={() => void pageRequest.reload()}
-            className="font-bold text-amber-600"
+            className="font-bold text-amber-600 dark:text-amber-300"
           >
             重新加载
           </button>
@@ -822,13 +827,13 @@ export const MyCollectionDetailPage = () => {
 
     if (!item) {
       return (
-        <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4 px-6 text-center text-gray-400">
+        <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4 px-6 text-center text-text-aux">
           <Shield size={48} className="opacity-20" />
           <div>无法加载藏品信息</div>
           <button
             type="button"
             onClick={() => goBackOr('my_collection')}
-            className="font-bold text-amber-600"
+            className="font-bold text-amber-600 dark:text-amber-300"
           >
             返回
           </button>
@@ -849,7 +854,7 @@ export const MyCollectionDetailPage = () => {
 
   return (
     <div
-      className="collection-certificate-dark-scope relative flex h-full flex-1 flex-col overflow-hidden bg-[#FDFBF7] text-gray-900"
+      className="collection-certificate-dark-scope relative flex h-full flex-1 flex-col overflow-hidden bg-bg-base text-text-main"
       style={{ paddingBottom: showBottomActions ? 'calc(env(safe-area-inset-bottom) + 5.75rem)' : undefined }}
     >
       <div

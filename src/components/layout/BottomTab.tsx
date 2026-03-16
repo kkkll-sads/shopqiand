@@ -28,7 +28,7 @@ export const BottomTab = ({ active = 'home', absolute = false }: any) => {
   };
 
   return (
-    <div className={`${absolute ? 'absolute bottom-0 left-0 right-0' : 'w-full shrink-0'} h-[83px] bg-bg-card border-t border-border-light flex justify-around items-start pt-2 px-2 pb-safe z-50`}>
+    <div className={`${absolute ? 'absolute bottom-0 left-0 right-0' : 'w-full shrink-0'} flex h-auto min-h-[83px] items-start justify-around border-t border-border-light bg-bg-card px-2 pt-2 pb-safe z-50`}>
       {tabs.map(tab => {
         const Icon = tab.icon;
         const isActive = active === tab.id;
@@ -39,7 +39,7 @@ export const BottomTab = ({ active = 'home', absolute = false }: any) => {
             onClick={() => handleTabClick(tab.id)}
           >
             <Icon size={24} strokeWidth={isActive ? 2.5 : 2} />
-            <span className={`text-[10px] mt-1 ${isActive ? 'font-medium' : ''}`}>{tab.label}</span>
+            <span className={`mt-1 text-2xs ${isActive ? 'font-medium' : ''}`}>{tab.label}</span>
           </div>
         );
       })}

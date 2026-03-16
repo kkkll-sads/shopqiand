@@ -214,7 +214,7 @@ export const HashrateExchangePage: React.FC = () => {
                 </div>
                 <div>
                   <p className="text-xs font-bold text-text-main">提升产出</p>
-                  <p className="text-[10px] text-text-aux">增加每日收益效率</p>
+                  <p className="text-2xs text-text-aux">增加每日收益效率</p>
                 </div>
               </div>
               <div className="flex items-start gap-2">
@@ -223,7 +223,7 @@ export const HashrateExchangePage: React.FC = () => {
                 </div>
                 <div>
                   <p className="text-xs font-bold text-text-main">即时生效</p>
-                  <p className="text-[10px] text-text-aux">兑换后立即可用</p>
+                  <p className="text-2xs text-text-aux">兑换后立即可用</p>
                 </div>
               </div>
               <div className="flex items-start gap-2">
@@ -232,7 +232,7 @@ export const HashrateExchangePage: React.FC = () => {
                 </div>
                 <div>
                   <p className="text-xs font-bold text-text-main">绿色补贴</p>
-                  <p className="text-[10px] text-text-aux">享受60%优惠折扣</p>
+                  <p className="text-2xs text-text-aux">享受60%优惠折扣</p>
                 </div>
               </div>
               <div className="flex items-start gap-2">
@@ -241,7 +241,7 @@ export const HashrateExchangePage: React.FC = () => {
                 </div>
                 <div>
                   <p className="text-xs font-bold text-text-main">绿色能源</p>
-                  <p className="text-[10px] text-text-aux">清洁环保可持续</p>
+                  <p className="text-2xs text-text-aux">清洁环保可持续</p>
                 </div>
               </div>
             </div>
@@ -253,7 +253,7 @@ export const HashrateExchangePage: React.FC = () => {
       <div className="fixed bottom-0 left-0 right-0 z-[60] border-t border-border-light bg-white/90 p-4 pb-safe backdrop-blur-md dark:bg-bg-card/90">
         <div className="mx-auto flex w-full max-w-[480px] items-center gap-3">
           <div className="min-w-0 flex-1 rounded-xl bg-emerald-50 px-3 py-2.5 dark:bg-emerald-900/20">
-            <div className="text-[11px] text-emerald-700/80 dark:text-emerald-300/80">预计消耗</div>
+            <div className="text-xs text-emerald-700/80 dark:text-emerald-300/80">预计消耗</div>
             <div className="truncate text-sm font-bold text-emerald-700 dark:text-emerald-300">
               {cost} 消费金
             </div>
