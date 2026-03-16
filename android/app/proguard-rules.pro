@@ -19,3 +19,11 @@
 # If you keep the line number information, uncomment this to
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
+
+# Keep Capacitor and Cordova bridge classes used by reflection.
+-keep class com.getcapacitor.** { *; }
+-keep class org.apache.cordova.** { *; }
+-dontwarn org.apache.cordova.**
+
+# Keep annotations used by runtime reflection.
+-keepattributes *Annotation*
