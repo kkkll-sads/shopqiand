@@ -9,6 +9,7 @@ import { Search, Headset, Store, ShieldCheck, FileText, Volume2, Wallet, Package
 import { Skeleton } from '../../components/ui/Skeleton';
 import { PullToRefreshContainer } from '../../components/ui/PullToRefreshContainer';
 import { ForceAnnouncementModal } from '../../components/biz/ForceAnnouncementModal';
+import { GenesisNodeModal } from '../../components/biz/GenesisNodeModal';
 import { useRouteScrollRestoration } from '../../hooks/useRouteScrollRestoration';
 import { useRequest } from '../../hooks/useRequest';
 import { bannerApi, type BannerItem } from '../../api/modules/banner';
@@ -59,34 +60,50 @@ export const HomePage = () => {
     return () => controller.abort();
   }, [fetchBanners]);
 
-  /* ---- 申购记录（实时 API） ---- */
+  /* ---- 申购记录（延迟 1.5s 加载，不阻塞首屏核心内容） ---- */
   const reservationsRequest = useRequest(
     (signal) => reservationApi.getList({ page: 1, limit: 3 }, signal),
-    { cacheKey: 'home:reservations' },
+    { cacheKey: 'home:reservations', manual: true },
   );
   const reservations = reservationsRequest.data?.list ?? [];
 
-  /* ---- 滚动公告（实时 API） ---- */
+  /* ---- 滚动公告（低频变化，缓存 30 分钟） ---- */
   const scrollAnnouncementsRequest = useRequest(
     (signal) => announcementApi.getScrollList(signal),
-    { cacheKey: 'home:scroll-announcements' },
+    { cacheKey: 'home:scroll-announcements', cacheTTL: 30 * 60 * 1000 },
   );
   const scrollAnnouncements = scrollAnnouncementsRequest.data?.list ?? [];
 
   /* ---- 用户资料（头像） ---- */
   const profileRequest = useRequest(
     (signal) => accountApi.getProfile({ signal }),
-    { cacheKey: 'home:profile' },
+    { cacheKey: 'global:profile' },
   );
   const userAvatar = profileRequest.data?.userInfo?.avatar;
 
-  /* ---- 弹出公告 ---- */
+  /* ---- 弹出公告（延迟 2s，且缓存 2 分钟；用户不会立刻关注弹窗） ---- */
   const popupRequest = useRequest(
     (signal) => announcementApi.getPopupList(signal),
-    { cacheKey: 'home:popup-announcements', cache: false },
+    { cacheKey: 'home:popup-announcements', cacheTTL: 2 * 60 * 1000, manual: true },
   );
   const popupList = popupRequest.data?.list ?? [];
   const popupsToShow = popupList.filter(item => !item.is_read);
+
+  /* 首屏加载完成后延迟发起次要请求，避免高并发时一次打出过多 API 请求 */
+  useEffect(() => {
+    const t1 = window.setTimeout(() => {
+      void reservationsRequest.reload().catch(() => undefined);
+    }, 1500);
+    const t2 = window.setTimeout(() => {
+      void popupRequest.reload().catch(() => undefined);
+    }, 2000);
+    return () => {
+      window.clearTimeout(t1);
+      window.clearTimeout(t2);
+    };
+  // 仅在组件挂载时触发一次
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const [showPopupIndex, setShowPopupIndex] = useState(0);
   const [popupVisible, setPopupVisible] = useState(false);
@@ -125,7 +142,7 @@ export const HomePage = () => {
     }
   }, [showPopupIndex, popupsToShow.length]);
 
-  /** 下拉刷新回调 */
+  /** 下拉刷新回调：刷新所有数据（包括延迟加载的） */
   const handleRefresh = useCallback(async () => {
     await Promise.allSettled([
       fetchBanners(),
@@ -148,8 +165,8 @@ export const HomePage = () => {
   useRouteScrollRestoration({
     containerRef: scrollContainerRef,
     namespace: 'home-page',
-    restoreDeps: [error, bannersLoading, reservationsRequest.loading, scrollAnnouncementsRequest.loading],
-    restoreWhen: !error && !bannersLoading && !reservationsRequest.loading && !scrollAnnouncementsRequest.loading,
+    restoreDeps: [error, bannersLoading, scrollAnnouncementsRequest.loading],
+    restoreWhen: !error && !bannersLoading && !scrollAnnouncementsRequest.loading,
   });
 
   /** 解析轮播图图片地址（支持后端返回相对路径） */
@@ -167,10 +184,8 @@ export const HomePage = () => {
 
   const isInitialLoading =
     bannersLoading ||
-    reservationsRequest.loading ||
     scrollAnnouncementsRequest.loading ||
-    profileRequest.loading ||
-    popupRequest.loading;
+    profileRequest.loading;
 
   const hasInitialContent =
     banners.length > 0 ||
@@ -543,6 +558,13 @@ export const HomePage = () => {
       <PullToRefreshContainer onRefresh={handleRefresh} disabled={error || offline}>
         {renderContent()}
       </PullToRefreshContainer>
+
+      {/* 活动弹窗：创世共识节点（当前不触发，isOpen 固定为 false） */}
+      <GenesisNodeModal
+        isOpen={false}
+        onClose={() => {}}
+        onConfirm={() => goTo('shield')}
+      />
 
       {/* 弹出公告 */}
       {popupVisible && popupsToShow[showPopupIndex] && (
