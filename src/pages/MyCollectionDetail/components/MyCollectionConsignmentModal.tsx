@@ -25,7 +25,7 @@ interface MyCollectionConsignmentModalProps {
   onSubmit: () => void;
   originalServiceFee: number;
   requiredConsignmentCouponCount: number;
-  selectedEquityCardId: number | null;
+  selectedEquityCardIds: number[];
   serviceFee: number;
   serviceFeeBalance: string;
   submitError: string | null;
@@ -70,7 +70,7 @@ export function MyCollectionConsignmentModal({
   onSubmit,
   originalServiceFee,
   requiredConsignmentCouponCount,
-  selectedEquityCardId,
+  selectedEquityCardIds,
   serviceFee,
   serviceFeeBalance,
   submitError,
@@ -228,12 +228,12 @@ export function MyCollectionConsignmentModal({
                       权益卡
                     </span>
                     <span className="inline-flex items-center gap-1 text-sm">
-                      {selectedEquityCardId ? (
+                      {selectedEquityCardIds.length > 0 ? (
                         <span className="font-semibold text-emerald-600">
-                          已选择 · 抵扣 ¥{formatCurrency(membershipDeduction)}
+                          {'\u5df2\u9009 '}{selectedEquityCardIds.length}{' \u5f20 \u00b7 \u62b5\u6263 \u00a5'}{formatCurrency(membershipDeduction)}
                         </span>
                       ) : (
-                        <span className="text-[#8c6136]">选择权益卡</span>
+                        <span className="text-[#8c6136]">{'\u9009\u62e9\u6743\u76ca\u5361'}</span>
                       )}
                       <ChevronRight size={14} className="text-gray-400" />
                     </span>

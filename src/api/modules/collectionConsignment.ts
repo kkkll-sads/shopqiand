@@ -253,7 +253,7 @@ export interface CollectionConsignmentCheckData {
 export interface ConsignCollectionPayload {
   user_collection_id: number | string;
   price: number;
-  equity_card_id?: number;
+  equity_card_ids?: number[];
 }
 
 export interface ConsignCollectionResult {
@@ -540,8 +540,12 @@ export const collectionConsignmentApi = {
     const formData = new FormData();
     formData.append('user_collection_id', String(payload.user_collection_id));
     formData.append('price', String(payload.price));
-    if (payload.equity_card_id != null && payload.equity_card_id > 0) {
-      formData.append('equity_card_id', String(payload.equity_card_id));
+    if (Array.isArray(payload.equity_card_ids) && payload.equity_card_ids.length > 0) {
+      for (const cardId of payload.equity_card_ids) {
+        if (cardId > 0) {
+          formData.append('equity_card_ids[]', String(cardId));
+        }
+      }
     }
 
     const response = await http.post<{
@@ -632,7 +636,7 @@ export const collectionConsignmentApi = {
     payload: {
       consignments: Array<{
         user_collection_id: number | string;
-        equity_card_id?: number;
+        equity_card_ids?: number[];
       }>;
     },
     signal?: AbortSignal,

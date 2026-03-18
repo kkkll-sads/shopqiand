@@ -241,7 +241,7 @@ export const MyCollectionDetailPage = () => {
   const [consignmentSubmitting, setConsignmentSubmitting] = useState(false);
   const [nodeSubmitting, setNodeSubmitting] = useState(false);
   const [countdownSeconds, setCountdownSeconds] = useState<number | null>(null);
-  const [selectedEquityCardId, setSelectedEquityCardId] = useState<number | null>(null);
+  const [selectedEquityCardIds, setSelectedEquityCardIds] = useState<number[]>([]);
   const [equityCardSelectSheetOpen, setEquityCardSelectSheetOpen] = useState(false);
 
   const pageRequest = useRequest<MyCollectionDetailPageData>(
@@ -400,23 +400,29 @@ export const MyCollectionDetailPage = () => {
       };
     }
 
-    if (selectedEquityCardId == null) {
+    if (selectedEquityCardIds.length === 0) {
       return {
         consignmentServiceFee: baseFee,
         membershipDeduction: 0,
       };
     }
 
-    const card = availableEquityCards.find((c: { id: number; actual_deduct_amount: number }) => c.id === selectedEquityCardId);
-    if (!card) {
+    let totalDeduct = 0;
+    for (const cardId of selectedEquityCardIds) {
+      const card = availableEquityCards.find((c: { id: number; actual_deduct_amount: number }) => c.id === cardId);
+      if (card) {
+        totalDeduct += card.actual_deduct_amount;
+      }
+    }
+
+    if (totalDeduct <= 0) {
       return {
         consignmentServiceFee: baseFee,
         membershipDeduction: 0,
       };
     }
 
-    const deductAmount = card.actual_deduct_amount;
-    const finalFee = Math.max(globalMinFee, Number((baseFee - deductAmount).toFixed(2)));
+    const finalFee = Math.max(globalMinFee, Number((baseFee - totalDeduct).toFixed(2)));
     return {
       consignmentServiceFee: finalFee,
       membershipDeduction: Number((baseFee - finalFee).toFixed(2)),
@@ -430,7 +436,7 @@ export const MyCollectionDetailPage = () => {
     consignmentPrice,
     globalMinFee,
     isFreeResend,
-    selectedEquityCardId,
+    selectedEquityCardIds,
   ]);
   const originalServiceFee = baseFee;
   const serviceFeeBalance = useMemo(() => {
@@ -489,12 +495,12 @@ export const MyCollectionDetailPage = () => {
       const cards = consignmentCheckData.available_equity_cards ?? [];
       const exists = cards.some((c: { id: number }) => c.id === recommended);
       if (exists) {
-        setSelectedEquityCardId(recommended);
+        setSelectedEquityCardIds([recommended]);
         return;
       }
     }
 
-    setSelectedEquityCardId(null);
+    setSelectedEquityCardIds([]);
   }, [consignmentCheckData, consignmentModalOpen]);
 
   const handleCopy = useCallback(async (text: string, successMessage = '已复制') => {
@@ -598,7 +604,7 @@ export const MyCollectionDetailPage = () => {
 
     setConsignmentModalOpen(false);
     setEquityCardSelectSheetOpen(false);
-    setSelectedEquityCardId(null);
+    setSelectedEquityCardIds([]);
     setConsignmentSubmitError(null);
   }, [consignmentSubmitting]);
 
@@ -606,8 +612,8 @@ export const MyCollectionDetailPage = () => {
     setEquityCardSelectSheetOpen(true);
   }, []);
 
-  const handleEquityCardConfirm = useCallback((cardId: number | null) => {
-    setSelectedEquityCardId(cardId);
+  const handleEquityCardConfirm = useCallback((cardIds: number[]) => {
+    setSelectedEquityCardIds(cardIds);
     setEquityCardSelectSheetOpen(false);
   }, []);
 
@@ -712,7 +718,7 @@ export const MyCollectionDetailPage = () => {
       const result = await collectionConsignmentApi.consign({
         user_collection_id: resolvedCollectionId,
         price: consignmentPrice,
-        equity_card_id: selectedEquityCardId ?? undefined,
+        equity_card_ids: selectedEquityCardIds.length > 0 ? selectedEquityCardIds : undefined,
       });
       const failureMessage = getConsignFailureMessage(result);
       if (failureMessage) {
@@ -794,7 +800,7 @@ export const MyCollectionDetailPage = () => {
     requiredConsignmentCouponCount,
     resolvedCollectionId,
     serviceFeeBalance,
-    selectedEquityCardId,
+    selectedEquityCardIds,
     showToast,
   ]);
 
@@ -915,7 +921,7 @@ export const MyCollectionDetailPage = () => {
             }}
             onRetry={() => void loadConsignmentCheck()}
             requiredConsignmentCouponCount={requiredConsignmentCouponCount}
-            selectedEquityCardId={selectedEquityCardId}
+            selectedEquityCardIds={selectedEquityCardIds}
             onSubmit={() => void handleSubmitConsignment()}
             serviceFee={consignmentServiceFee}
             serviceFeeBalance={serviceFeeBalance}
@@ -927,7 +933,7 @@ export const MyCollectionDetailPage = () => {
             cards={availableEquityCards}
             isOpen={equityCardSelectSheetOpen}
             recommendedId={consignmentCheckData?.recommended_equity_card_id ?? null}
-            selectedId={selectedEquityCardId}
+            selectedIds={selectedEquityCardIds}
             onClose={() => setEquityCardSelectSheetOpen(false)}
             onConfirm={handleEquityCardConfirm}
           />

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { CheckCircle2, Circle, CreditCard, X } from 'lucide-react';
 import type { ConsignmentEquityCard } from '../../../api';
 import { BottomSheet } from '../../../components/ui/BottomSheet';
@@ -7,9 +7,9 @@ interface ConsignmentEquityCardSelectSheetProps {
   cards: ConsignmentEquityCard[];
   isOpen: boolean;
   onClose: () => void;
-  onConfirm: (selectedId: number | null) => void;
+  onConfirm: (selectedIds: number[]) => void;
   recommendedId: number | null;
-  selectedId: number | null;
+  selectedIds: number[];
 }
 
 const TEXT = {
@@ -39,24 +39,44 @@ export function ConsignmentEquityCardSelectSheet({
   onClose,
   onConfirm,
   recommendedId,
-  selectedId,
+  selectedIds,
 }: ConsignmentEquityCardSelectSheetProps) {
-  const [localSelectedId, setLocalSelectedId] = useState<number | null>(selectedId);
+  const [localSelectedIds, setLocalSelectedIds] = useState<number[]>(selectedIds);
 
   useEffect(() => {
     if (!isOpen) {
       return;
     }
-    setLocalSelectedId(selectedId);
-  }, [selectedId, isOpen]);
+    setLocalSelectedIds(selectedIds);
+  }, [selectedIds, isOpen]);
+
+  const totalDeduction = useMemo(() => {
+    let sum = 0;
+    for (const id of localSelectedIds) {
+      const card = cards.find((c) => c.id === id);
+      if (card) {
+        sum += card.actual_deduct_amount;
+      }
+    }
+    return sum;
+  }, [cards, localSelectedIds]);
 
   const handleConfirm = () => {
-    onConfirm(localSelectedId);
+    onConfirm(localSelectedIds);
     onClose();
   };
 
-  const handleSelect = (id: number | null) => {
-    setLocalSelectedId(id);
+  const handleToggle = (id: number) => {
+    setLocalSelectedIds((prev) => {
+      if (prev.indexOf(id) >= 0) {
+        return prev.filter((v) => v !== id);
+      }
+      return prev.concat(id);
+    });
+  };
+
+  const handleClearAll = () => {
+    setLocalSelectedIds([]);
   };
 
   return (
@@ -78,6 +98,11 @@ export function ConsignmentEquityCardSelectSheet({
       }
       footer={
         <div className="px-4 py-3">
+          {localSelectedIds.length > 0 ? (
+            <div className="mb-2 text-center text-xs text-text-sub">
+              {'\u5df2\u9009 '}{localSelectedIds.length}{' \u5f20\uff0c\u5408\u8ba1\u62b5\u6263 \u00a5'}{formatCurrency(totalDeduction)}
+            </div>
+          ) : null}
           <button
             type="button"
             onClick={handleConfirm}
@@ -92,9 +117,9 @@ export function ConsignmentEquityCardSelectSheet({
         <div className="space-y-2.5">
           <button
             type="button"
-            onClick={() => handleSelect(null)}
+            onClick={handleClearAll}
             className={`flex w-full items-center rounded-[12px] border p-3 text-left transition-colors ${
-              localSelectedId === null
+              localSelectedIds.length === 0
                 ? 'border-primary-start bg-red-50/50 dark:bg-red-900/10'
                 : 'border-border-light bg-bg-card active:bg-bg-hover'
             }`}
@@ -106,7 +131,7 @@ export function ConsignmentEquityCardSelectSheet({
               <div className="text-sm font-medium text-text-main">{TEXT.noCard}</div>
               <div className="mt-0.5 text-xs text-text-sub">{TEXT.fullFee}</div>
             </div>
-            {localSelectedId === null ? (
+            {localSelectedIds.length === 0 ? (
               <CheckCircle2 size={20} className="ml-2 shrink-0 text-primary-start" />
             ) : (
               <Circle size={20} className="ml-2 shrink-0 text-border-main" />
@@ -115,14 +140,14 @@ export function ConsignmentEquityCardSelectSheet({
 
           {cards.map((card) => {
             const isAvailable = card.today_remaining > 0;
-            const isSelected = localSelectedId === card.id;
+            const isSelected = localSelectedIds.indexOf(card.id) >= 0;
             const isRecommended = recommendedId != null && recommendedId === card.id;
 
             return (
               <button
                 key={card.id}
                 type="button"
-                onClick={() => isAvailable && handleSelect(card.id)}
+                onClick={() => isAvailable && handleToggle(card.id)}
                 disabled={!isAvailable}
                 className={`flex w-full items-center rounded-[12px] border p-3 text-left transition-colors ${
                   !isAvailable
@@ -155,7 +180,7 @@ export function ConsignmentEquityCardSelectSheet({
                   </div>
                   <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-text-sub">
                     <span>
-                      {TEXT.deductible} \u00a5{formatCurrency(card.actual_deduct_amount)}
+                      {TEXT.deductible} {'\u00a5'}{formatCurrency(card.actual_deduct_amount)}
                     </span>
                     <span>
                       {card.end_time_text || ''} {TEXT.expireSuffix}

@@ -20,6 +20,7 @@ import { PullToRefreshContainer } from '../../components/ui/PullToRefreshContain
 import { Skeleton } from '../../components/ui/Skeleton';
 import { useFeedback } from '../../components/ui/FeedbackProvider';
 import { useAppNavigate } from '../../hooks/useAppNavigate';
+import { collectionConsignmentApi } from '../../api/modules/collectionConsignment';
 import {
   collectionConsignmentService,
   type BatchConsignableResponse,
@@ -95,6 +96,7 @@ export const MyCollectionPage = () => {
   const [batchData, setBatchData] = useState<BatchConsignableResponse | null>(null);
   const [batchLoading, setBatchLoading] = useState(false);
   const [selectedBatchItems, setSelectedBatchItems] = useState<number[]>([]);
+  const [batchSubmitting, setBatchSubmitting] = useState(false);
 
   useEffect(() => {
     const query = new URLSearchParams(location.search);
@@ -636,13 +638,46 @@ export const MyCollectionPage = () => {
               <div className="border-t border-border-light bg-bg-card p-4 pb-safe">
                 <button
                   className="w-full rounded-full bg-gradient-to-r from-primary-start to-primary-end py-3 text-[15px] font-medium text-white shadow-sm active:opacity-80 disabled:opacity-50"
-                  disabled={selectedBatchItems.length === 0}
-                  onClick={() => {
-                    showToast({ message: `已确认寄售 ${selectedBatchItems.length} 个藏品`, type: 'success' });
-                    setShowBatchModal(false);
+                  disabled={selectedBatchItems.length === 0 || batchSubmitting}
+                  onClick={async () => {
+                    if (selectedBatchItems.length === 0 || batchSubmitting) {
+                      return;
+                    }
+                    setBatchSubmitting(true);
+                    try {
+                      const result = await collectionConsignmentApi.batchConsign({
+                        consignments: selectedBatchItems.map((id) => ({
+                          user_collection_id: id,
+                        })),
+                      });
+                      const successCount = result.success_count;
+                      const failureCount = result.failure_count;
+                      if (failureCount > 0 && successCount > 0) {
+                        showToast({
+                          message: `\u6210\u529f\u5bc4\u552e ${successCount} \u4e2a\uff0c\u5931\u8d25 ${failureCount} \u4e2a`,
+                          type: 'warning',
+                        });
+                      } else if (failureCount > 0) {
+                        const failMsg = result.note || `\u5bc4\u552e\u5931\u8d25 ${failureCount} \u4e2a`;
+                        showToast({ message: failMsg, type: 'error' });
+                      } else {
+                        showToast({
+                          message: `\u5df2\u6210\u529f\u5bc4\u552e ${successCount} \u4e2a\u85cf\u54c1`,
+                          type: 'success',
+                        });
+                      }
+                      setShowBatchModal(false);
+                      setSelectedBatchItems([]);
+                      setReloadSeed((s) => s + 1);
+                    } catch (error) {
+                      const msg = error instanceof Error ? error.message : '\u6279\u91cf\u5bc4\u552e\u5931\u8d25\uff0c\u8bf7\u7a0d\u540e\u91cd\u8bd5';
+                      showToast({ message: msg, type: 'error' });
+                    } finally {
+                      setBatchSubmitting(false);
+                    }
                   }}
                 >
-                  确认寄售 ({selectedBatchItems.length})
+                  {batchSubmitting ? '\u63d0\u4ea4\u4e2d...' : `\u786e\u8ba4\u5bc4\u552e (${selectedBatchItems.length})`}
                 </button>
               </div>
             ) : null}
