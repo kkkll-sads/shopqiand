@@ -1,11 +1,11 @@
 /**
  * @file Home/index.tsx - 首页
- * @description 应用主页面，包括轮播图、快捷入口、滚动公告、交易专区、订单状态、申购记录、弹出公告。
+ * @description 应用主页面，包括轮播图、滚动公告、交易专区、节点活动抢购列表、申购记录、弹出公告。
  */
 
-import React, { useCallback, useEffect, useRef, useState } from 'react'; // React 核心 Hook
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'; // React 核心 Hook
 import { useAppNavigate } from '../../lib/navigation';
-import { Search, Headset, Store, ShieldCheck, FileText, Volume2, Wallet, Package, Truck, WifiOff, RefreshCcw, ArrowRight, User } from 'lucide-react';
+import { Search, Headset, Volume2, WifiOff, RefreshCcw, ArrowRight, User } from 'lucide-react';
 import { Skeleton } from '../../components/ui/Skeleton';
 import { PullToRefreshContainer } from '../../components/ui/PullToRefreshContainer';
 import { ForceAnnouncementModal } from '../../components/biz/ForceAnnouncementModal';
@@ -15,17 +15,82 @@ import { useRequest } from '../../hooks/useRequest';
 import { bannerApi, type BannerItem } from '../../api/modules/banner';
 import { announcementApi } from '../../api/modules/announcement';
 import { accountApi } from '../../api/modules/account';
+import { genesisNodeApi } from '../../api/modules/genesisNode';
 import { reservationApi } from '../../api/modules/reservation';
 import { resolveUploadUrl } from '../../api/modules/upload';
 import { useFeedback } from '../../components/ui/FeedbackProvider';
+import {
+  BASE_NODE_PURCHASE_ENTRIES,
+  buildGenesisNodeEntry,
+  type NodePurchaseEntry,
+} from '../../features/node-purchase/entries';
 import { ReservationCard } from '../../features/reservation/ReservationCard';
 import { openCustomerServiceLink } from '../../lib/customerService';
 
+const HOME_DISMISSED_POPUPS_STORAGE_KEY = 'home:dismissed-popup-announcements';
+const HOME_SEEN_GENESIS_MODAL_ACTIVITY_IDS_STORAGE_KEY = 'home:seen-genesis-node-modal-activity-ids';
 
+function readDismissedPopupIds(): string[] {
+  if (typeof window === 'undefined') {
+    return [];
+  }
+
+  try {
+    const rawValue = window.sessionStorage.getItem(HOME_DISMISSED_POPUPS_STORAGE_KEY);
+    if (!rawValue) {
+      return [];
+    }
+    const parsedValue = JSON.parse(rawValue);
+    return Array.isArray(parsedValue) ? parsedValue.map((item) => String(item)) : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeDismissedPopupIds(ids: string[]) {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  try {
+    window.sessionStorage.setItem(HOME_DISMISSED_POPUPS_STORAGE_KEY, JSON.stringify(ids));
+  } catch {
+    /* 忽略本地存储异常 */
+  }
+}
+
+function readSeenGenesisModalActivityIds(): string[] {
+  if (typeof window === 'undefined') {
+    return [];
+  }
+
+  try {
+    const rawValue = window.localStorage.getItem(HOME_SEEN_GENESIS_MODAL_ACTIVITY_IDS_STORAGE_KEY);
+    if (!rawValue) {
+      return [];
+    }
+    const parsedValue = JSON.parse(rawValue);
+    return Array.isArray(parsedValue) ? parsedValue.map((item) => String(item)) : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeSeenGenesisModalActivityIds(ids: string[]) {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  try {
+    window.localStorage.setItem(HOME_SEEN_GENESIS_MODAL_ACTIVITY_IDS_STORAGE_KEY, JSON.stringify(ids));
+  } catch {
+    /* 忽略本地存储异常 */
+  }
+}
 
 /**
  * HomePage - 应用首页
- * 功能：轮播图 → 快捷入口 → 公告 → 交易专区 → 订单状态 → 申购记录
+ * 功能：轮播图 → 公告 → 交易专区 → 节点活动抢购列表 → 申购记录
  */
 export const HomePage = () => {
   const { goTo } = useAppNavigate();
@@ -80,14 +145,24 @@ export const HomePage = () => {
     { cacheKey: 'global:profile' },
   );
   const userAvatar = profileRequest.data?.userInfo?.avatar;
+  const genesisActivityRequest = useRequest(
+    (signal) => genesisNodeApi.getActivity({ signal }),
+    { cacheKey: 'home:genesis-node:activity' },
+  );
+  const homeActivityEntries = useMemo<NodePurchaseEntry[]>(
+    () => [buildGenesisNodeEntry(genesisActivityRequest.data), ...BASE_NODE_PURCHASE_ENTRIES],
+    [genesisActivityRequest.data],
+  );
 
   /* ---- 弹出公告（延迟 2s，且缓存 2 分钟；用户不会立刻关注弹窗） ---- */
   const popupRequest = useRequest(
     (signal) => announcementApi.getPopupList(signal),
     { cacheKey: 'home:popup-announcements', cacheTTL: 2 * 60 * 1000, manual: true },
   );
+  const [dismissedPopupIds, setDismissedPopupIds] = useState<string[]>(() => readDismissedPopupIds());
   const popupList = popupRequest.data?.list ?? [];
-  const popupsToShow = popupList.filter(item => !item.is_read);
+  const popupsToShow = popupList.filter((item) => !item.is_read && !dismissedPopupIds.includes(String(item.id)));
+  const currentPopup = popupsToShow[0] ?? null;
 
   /* 首屏加载完成后延迟发起次要请求，避免高并发时一次打出过多 API 请求 */
   useEffect(() => {
@@ -105,22 +180,21 @@ export const HomePage = () => {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const [showPopupIndex, setShowPopupIndex] = useState(0);
   const [popupVisible, setPopupVisible] = useState(false);
+  const [genesisNodeVisible, setGenesisNodeVisible] = useState(false);
+  const [seenGenesisModalActivityIds, setSeenGenesisModalActivityIds] = useState<string[]>(() => readSeenGenesisModalActivityIds());
   const popupDelayRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    setShowPopupIndex(0);
     setPopupVisible(false);
-  }, [popupList.length]);
+  }, [currentPopup?.id]);
 
   useEffect(() => {
-    if (popupsToShow.length === 0) return;
+    if (!currentPopup) {
+      return;
+    }
 
-    const item = popupsToShow[showPopupIndex];
-    if (!item) return;
-
-    const raw = Math.max(0, item.popup_delay ?? 0);
+    const raw = Math.max(0, currentPopup.popup_delay ?? 0);
     const delayMs = raw >= 100 ? raw : raw * 1000;
 
     popupDelayRef.current = window.setTimeout(() => {
@@ -133,14 +207,37 @@ export const HomePage = () => {
         popupDelayRef.current = null;
       }
     };
-  }, [popupsToShow, showPopupIndex]);
+  }, [currentPopup]);
+
+  useEffect(() => {
+    const activityId = genesisActivityRequest.data?.activityId ?? 0;
+    if (!activityId) {
+      return;
+    }
+
+    const activityIdText = String(activityId);
+    if (seenGenesisModalActivityIds.includes(activityIdText)) {
+      return;
+    }
+
+    const nextSeenActivityIds = [...seenGenesisModalActivityIds, activityIdText];
+    setSeenGenesisModalActivityIds(nextSeenActivityIds);
+    writeSeenGenesisModalActivityIds(nextSeenActivityIds);
+    setGenesisNodeVisible(true);
+  }, [genesisActivityRequest.data?.activityId, seenGenesisModalActivityIds]);
 
   const handlePopupClose = useCallback(() => {
     setPopupVisible(false);
-    if (showPopupIndex < popupsToShow.length - 1) {
-      setShowPopupIndex((i) => i + 1);
+    if (popupsToShow.length === 0) {
+      return;
     }
-  }, [showPopupIndex, popupsToShow.length]);
+    const nextDismissedIds = Array.from(new Set([
+      ...dismissedPopupIds,
+      ...popupsToShow.map((item) => String(item.id)),
+    ]));
+    setDismissedPopupIds(nextDismissedIds);
+    writeDismissedPopupIds(nextDismissedIds);
+  }, [dismissedPopupIds, popupsToShow]);
 
   /** 下拉刷新回调：刷新所有数据（包括延迟加载的） */
   const handleRefresh = useCallback(async () => {
@@ -149,9 +246,10 @@ export const HomePage = () => {
       reservationsRequest.reload(),
       scrollAnnouncementsRequest.reload(),
       profileRequest.reload(),
+      genesisActivityRequest.reload(),
       popupRequest.reload(),
     ]);
-  }, [fetchBanners, reservationsRequest, scrollAnnouncementsRequest, profileRequest, popupRequest]);
+  }, [fetchBanners, reservationsRequest, scrollAnnouncementsRequest, profileRequest, genesisActivityRequest, popupRequest]);
 
   /* 自动轮播：依赖 banners 长度 */
   useEffect(() => {
@@ -176,6 +274,19 @@ export const HomePage = () => {
     return resolveUploadUrl(item.image);
   };
 
+  const getBannerKey = (banner: BannerItem, index: number) => {
+    const rawId = typeof banner.id === 'string' ? banner.id.trim() : banner.id;
+    return rawId === '' || rawId == null ? `banner-${index}` : `banner-${rawId}-${index}`;
+  };
+
+  const getReservationKey = (id: number | string | null | undefined, index: number) => {
+    if (id == null) {
+      return `reservation-${index}`;
+    }
+    const rawId = typeof id === 'string' ? id.trim() : id;
+    return rawId === '' ? `reservation-${index}` : `reservation-${rawId}-${index}`;
+  };
+
   const handleOpenSupport = useCallback(() => {
     void openCustomerServiceLink(({ duration, message, type }) => {
       showToast({ duration, message, type });
@@ -185,12 +296,14 @@ export const HomePage = () => {
   const isInitialLoading =
     bannersLoading ||
     scrollAnnouncementsRequest.loading ||
-    profileRequest.loading;
+    profileRequest.loading ||
+    genesisActivityRequest.loading;
 
   const hasInitialContent =
     banners.length > 0 ||
     scrollAnnouncements.length > 0 ||
     reservations.length > 0 ||
+    homeActivityEntries.length > 0 ||
     Boolean(userAvatar) ||
     popupList.length > 0;
 
@@ -198,15 +311,6 @@ export const HomePage = () => {
     <div ref={scrollContainerRef} className="flex-1 overflow-y-auto no-scrollbar pb-4">
       <div className="mx-4 mt-4 mb-4">
         <Skeleton className="h-[168px] w-full rounded-[24px]" />
-      </div>
-
-      <div className="grid grid-cols-5 gap-2 px-4 mb-4">
-        {[1, 2, 3, 4, 5].map((item) => (
-          <div key={item} className="flex flex-col items-center">
-            <Skeleton className="mb-1.5 h-11 w-11 rounded-[14px]" />
-            <Skeleton className="h-3 w-8 rounded-full" />
-          </div>
-        ))}
       </div>
 
       <div className="mx-4 mb-4">
@@ -217,16 +321,16 @@ export const HomePage = () => {
         <Skeleton className="h-[88px] w-full rounded-[16px]" />
       </div>
 
-      <div className="mx-4 mb-4 rounded-[16px] bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 py-4">
-        <div className="flex justify-around">
-          {[1, 2, 3, 4].map((item) => (
-            <div key={item} className="flex w-1/4 flex-col items-center">
-              <Skeleton className="mb-1.5 h-6 w-6 rounded-full" />
-              <Skeleton className="h-3 w-10 rounded-full" />
-            </div>
-          ))}
+        <div className="px-4 mb-4">
+          <div className="mb-3 flex items-center justify-between">
+            <Skeleton className="h-5 w-28" />
+          </div>
+          <div className="space-y-3">
+            {homeActivityEntries.map((item) => (
+              <Skeleton key={item.id} className="h-[108px] w-full rounded-[24px]" />
+            ))}
+          </div>
         </div>
-      </div>
 
       <div className="px-4 mb-4">
         <div className="mb-3 flex items-center justify-between">
@@ -316,12 +420,12 @@ export const HomePage = () => {
                   className="flex transition-transform duration-500 ease-out"
                   style={{ transform: `translateX(-${activeBannerIndex * 100}%)` }}
                 >
-                  {banners.map((banner) => {
+                  {banners.map((banner, index) => {
                     const imageUrl = resolveBannerImage(banner);
 
                     return (
                       <div
-                        key={banner.id}
+                        key={getBannerKey(banner, index)}
                         className="relative aspect-[750/336] min-h-[168px] w-full shrink-0 overflow-hidden bg-gradient-to-r from-[#171717] via-[#2D1B69] to-[#FF4B2B]"
                         aria-label={banner.title || '轮播图'}
                       >
@@ -353,7 +457,7 @@ export const HomePage = () => {
                         const isActive = index === activeBannerIndex;
                         return (
                           <button
-                            key={banner.id}
+                            key={getBannerKey(banner, index)}
                             type="button"
                             aria-label={`切换到第 ${index + 1} 张轮播`}
                             onClick={() => setActiveBannerIndex(index)}
@@ -371,55 +475,6 @@ export const HomePage = () => {
                 )}
               </>
             ) : null}
-          </div>
-        </div>
-
-        {/* Quick Entry */}
-        <div className="grid grid-cols-5 gap-2 px-4 mb-4">
-          <div 
-            className="flex flex-col items-center cursor-pointer active:opacity-70"
-            onClick={() => goTo('store')}
-          >
-            <div className="w-11 h-11 rounded-[14px] bg-white dark:bg-gray-800 shadow-sm flex items-center justify-center text-[#FF4142] dark:text-red-300 mb-1.5">
-              <Store size={22} strokeWidth={1.5} />
-            </div>
-            <span className="text-[12px] text-gray-900 dark:text-gray-100">商城</span>
-          </div>
-          <div 
-            className="flex flex-col items-center cursor-pointer active:opacity-70"
-            onClick={() => goTo('shield')}
-          >
-            <div className="w-11 h-11 rounded-[14px] bg-white dark:bg-gray-800 shadow-sm flex items-center justify-center text-[#FF4142] dark:text-red-300 mb-1.5">
-              <ShieldCheck size={22} strokeWidth={1.5} />
-            </div>
-            <span className="text-[12px] text-gray-900 dark:text-gray-100">确权中心</span>
-          </div>
-          <div 
-            className="flex flex-col items-center cursor-pointer active:opacity-70"
-            onClick={() => goTo('order')}
-          >
-            <div className="w-11 h-11 rounded-[14px] bg-white dark:bg-gray-800 shadow-sm flex items-center justify-center text-[#FF4142] dark:text-red-300 mb-1.5">
-              <FileText size={22} strokeWidth={1.5} />
-            </div>
-            <span className="text-[12px] text-gray-900 dark:text-gray-100">订单</span>
-          </div>
-          <div 
-            className="flex flex-col items-center cursor-pointer active:opacity-70"
-            onClick={() => goTo('live')}
-          >
-            <div className="w-11 h-11 rounded-[14px] bg-white dark:bg-gray-800 shadow-sm flex items-center justify-center text-[#FF4142] dark:text-red-300 mb-1.5">
-              <Volume2 size={22} strokeWidth={1.5} />
-            </div>
-            <span className="text-[12px] text-gray-900 dark:text-gray-100">直播</span>
-          </div>
-          <div 
-            className="flex flex-col items-center cursor-pointer active:opacity-70"
-            onClick={handleOpenSupport}
-          >
-            <div className="w-11 h-11 rounded-[14px] bg-white dark:bg-gray-800 shadow-sm flex items-center justify-center text-[#FF4142] dark:text-red-300 mb-1.5">
-              <Headset size={22} strokeWidth={1.5} />
-            </div>
-            <span className="text-[12px] text-gray-900 dark:text-gray-100">客服</span>
           </div>
         </div>
 
@@ -456,37 +511,63 @@ export const HomePage = () => {
           </div>
         </div>
 
-        {/* Order Status */}
-        <div className="mx-4 mb-4 bg-white dark:bg-gray-900 rounded-[16px] shadow-sm border border-gray-100 dark:border-gray-800 py-4">
-          <div className="flex justify-around">
-            <div 
-              className="flex flex-col items-center text-gray-900 dark:text-gray-100 relative cursor-pointer active:opacity-70 w-1/4"
-              onClick={() => goTo('order')}
-            >
-              <Wallet size={24} strokeWidth={1.5} className="mb-1.5 text-gray-700 dark:text-gray-400" />
-              <span className="text-[12px]">待付款</span>
-            </div>
-            <div 
-              className="flex flex-col items-center text-gray-900 dark:text-gray-100 cursor-pointer active:opacity-70 w-1/4"
-              onClick={() => goTo('order')}
-            >
-              <Package size={24} strokeWidth={1.5} className="mb-1.5 text-gray-700 dark:text-gray-400" />
-              <span className="text-[12px]">待发货</span>
-            </div>
-            <div 
-              className="flex flex-col items-center text-gray-900 dark:text-gray-100 cursor-pointer active:opacity-70 w-1/4"
-              onClick={() => goTo('order')}
-            >
-              <Truck size={24} strokeWidth={1.5} className="mb-1.5 text-gray-700 dark:text-gray-400" />
-              <span className="text-[12px]">待收货</span>
-            </div>
-            <div 
-              className="flex flex-col items-center text-gray-900 dark:text-gray-100 cursor-pointer active:opacity-70 w-1/4"
-              onClick={() => goTo('after_sales')}
-            >
-              <Headset size={24} strokeWidth={1.5} className="mb-1.5 text-gray-700 dark:text-gray-400" />
-              <span className="text-[12px]">售后</span>
-            </div>
+        {/* 节点活动抢购列表 */}
+        <div className="px-4 mb-4">
+          <div className="mb-3 flex items-center">
+            <h3 className="text-[16px] font-bold text-gray-900 dark:text-gray-100 flex items-center">
+              <span className="w-4 h-px bg-gray-300 dark:bg-gray-600 mr-2"></span>
+              抢购列表
+              <span className="w-4 h-px bg-gray-300 dark:bg-gray-600 ml-2"></span>
+            </h3>
+          </div>
+
+          <div className="space-y-3">
+            {homeActivityEntries.map((activity) => {
+              const Icon = activity.icon;
+
+              return (
+                <button
+                  key={activity.id}
+                  type="button"
+                  onClick={() => goTo(activity.homeTarget)}
+                  className="group relative flex w-full items-center gap-4 overflow-hidden rounded-[24px] border border-[#2f2f30] bg-[linear-gradient(180deg,#242526_0%,#18191a_100%)] px-4 py-4 text-left text-white shadow-[0_14px_36px_rgba(15,23,42,0.16)] transition-transform active:scale-[0.98]"
+                >
+                  <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.08),transparent_30%),linear-gradient(90deg,transparent_0%,rgba(255,255,255,0.02)_100%)]" />
+                  <div className="absolute inset-y-0 left-0 w-[88px] bg-[linear-gradient(180deg,rgba(255,255,255,0.05)_0%,rgba(255,255,255,0)_100%)]" />
+
+                  <div className="relative flex h-[64px] w-[64px] shrink-0 items-center justify-center rounded-[18px] border border-white/10 shadow-inner shadow-black/15">
+                    <div className={`absolute inset-0 rounded-[18px] ${activity.iconPanelClassName}`} />
+                    <Icon size={30} strokeWidth={1.9} className={`relative ${activity.iconClassName}`} />
+                  </div>
+
+                  <div className="relative min-w-0 flex-1">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <h4 className="truncate text-[17px] font-bold leading-tight text-white">{activity.title}</h4>
+                          <span className="inline-flex shrink-0 rounded-full bg-[#b83d44] px-2 py-1 text-[10px] font-semibold leading-none text-white">
+                            {activity.badge}
+                          </span>
+                        </div>
+                        <p className="mt-2 pr-2 text-[13px] leading-6 text-white/72">
+                          {activity.description}
+                        </p>
+                      </div>
+                      <div className="shrink-0 text-right">
+                      <div className="inline-flex items-center text-[12px] font-semibold text-[#ffd84f]">
+                        {activity.homeCta} <ArrowRight size={14} className="ml-1" />
+                      </div>
+                        {activity.homeMeta ? (
+                          <div className={`mt-2 text-[12px] font-semibold ${activity.homeMetaClassName}`}>
+                            {activity.homeMeta}
+                          </div>
+                        ) : null}
+                      </div>
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
           </div>
         </div>
 
@@ -521,9 +602,9 @@ export const HomePage = () => {
             </div>
           ) : reservations.length > 0 ? (
             <div className="space-y-3">
-              {reservations.map((item) => (
+              {reservations.map((item, index) => (
                 <ReservationCard
-                  key={item.id}
+                  key={getReservationKey(item.id, index)}
                   item={item}
                   onClick={() => goTo(`/reservation_detail/${item.id}`)}
                 />
@@ -559,31 +640,36 @@ export const HomePage = () => {
         {renderContent()}
       </PullToRefreshContainer>
 
-      {/* 活动弹窗：创世共识节点（当前不触发，isOpen 固定为 false） */}
+      {/* 活动弹窗：创世共识节点 */}
       <GenesisNodeModal
-        isOpen={false}
-        onClose={() => {}}
-        onConfirm={() => goTo('shield')}
+        activity={genesisActivityRequest.data}
+        error={Boolean(genesisActivityRequest.error)}
+        isOpen={genesisNodeVisible}
+        loading={genesisActivityRequest.loading}
+        onClose={() => setGenesisNodeVisible(false)}
+        onConfirm={() => {
+          setGenesisNodeVisible(false);
+          const phase = buildGenesisNodeEntry(genesisActivityRequest.data).pageTarget;
+          goTo(phase);
+        }}
+        onRetry={() => void genesisActivityRequest.reload()}
       />
 
       {/* 弹出公告 */}
-      {popupVisible && popupsToShow[showPopupIndex] && (
+      {popupVisible && currentPopup && (
         <ForceAnnouncementModal
-          item={popupsToShow[showPopupIndex]}
+          item={currentPopup}
           isOpen={popupVisible}
           loading={popupRequest.loading}
           error={Boolean(popupRequest.error)}
           onClose={handlePopupClose}
           onRetry={() => void popupRequest.reload()}
           onViewDetail={() => {
-            const currentAnnouncement = popupsToShow[showPopupIndex];
             handlePopupClose();
-            goTo(currentAnnouncement ? `/announcement/${currentAnnouncement.id}` : 'announcement');
+            goTo(`/announcement/${currentPopup.id}`);
           }}
         />
       )}
     </div>
   );
 };
-
-

@@ -49,6 +49,9 @@ const ResetPasswordBySmsPage = lazy(() => import('../pages/ResetPasswordBySms').
 const ResetPayPasswordBySmsPage = lazy(() => import('../pages/ResetPayPasswordBySms').then(m => ({ default: m.ResetPayPasswordBySmsPage })));
 const BillingPage = lazy(() => import('../pages/Billing').then(m => ({ default: m.BillingPage })));
 const MyCardPacksPage = lazy(() => import('../pages/MyCardPacks').then(m => ({ default: m.MyCardPacksPage })));
+const GenesisNodeActivityPage = lazy(() => import('../pages/GenesisNodeActivity').then(m => ({ default: m.GenesisNodeActivityPage })));
+const MyGenesisNodesPage = lazy(() => import('../pages/MyGenesisNodes').then(m => ({ default: m.MyGenesisNodesPage })));
+const GenesisMinerDetailPage = lazy(() => import('../pages/GenesisMinerDetail').then(m => ({ default: m.GenesisMinerDetailPage })));
 const RealNameAuthPage = lazy(() => import('../pages/RealNameAuth').then(m => ({ default: m.RealNameAuthPage })));
 const InvitePage = lazy(() => import('../pages/Invite').then(m => ({ default: m.InvitePage })));
 const FriendsPage = lazy(() => import('../pages/Friends').then(m => ({ default: m.FriendsPage })));
@@ -241,6 +244,10 @@ export const router = createHashRouter([
       { path: 'my-collection', element: null },
       { path: 'my-collection/detail/:id', element: <Lazy><MyCollectionDetailPage /></Lazy> },
       { path: 'my-card-packs', element: <Lazy><MyCardPacksPage /></Lazy> },
+      { path: 'node-purchase-list', element: <Navigate replace to="/" /> },
+      { path: 'node-purchase/genesis', element: <Lazy><GenesisNodeActivityPage /></Lazy> },
+      { path: 'node-purchase/genesis/records', element: <Lazy><MyGenesisNodesPage /></Lazy> },
+      { path: 'node-purchase/genesis/miner/:recordId', element: <Lazy><GenesisMinerDetailPage /></Lazy> },
       { path: 'accumulated-rights', element: <Lazy><AccumulatedRightsPage /></Lazy> },
       { path: 'growth_rights', element: <Lazy><GrowthRightsPage /></Lazy> },
       { path: 'growth-rights', element: <Lazy><GrowthRightsPage /></Lazy> },
@@ -312,12 +319,6 @@ export const router = createHashRouter([
     v7_normalizeFormMethod: true,
     v7_partialHydration: true,
     v7_relativeSplatPath: true,
-    v7_startTransition: true,
     v7_skipActionErrorRevalidation: true,
   },
 });
-
-
-
-
-

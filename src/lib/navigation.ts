@@ -128,6 +128,8 @@ export const VIEW_TO_PATH: Record<string, string> = {
   my_collection: '/my-collection',
   my_collection_detail: '/my-collection/detail/0',
   my_card_packs: '/my-card-packs',
+  genesis_node_activity: '/node-purchase/genesis',
+  my_genesis_nodes: '/node-purchase/genesis/records',
   accumulated_rights: '/accumulated-rights',
   growth_rights: '/growth_rights',
   service_fee_recharge: '/service-recharge',
@@ -251,5 +253,3 @@ export function useAppNavigate() {
 
   return useMemo(() => ({ goTo, goBack, goBackOr, navigate }), [goTo, goBack, goBackOr, navigate]);
 }
-
-

@@ -61,6 +61,15 @@ export function resolveUploadUrl(url: string): string {
     }
   }
 
+  if (/^\/\//.test(trimmedUrl)) {
+    try {
+      const protocol = typeof window === 'undefined' ? 'https:' : window.location.protocol || 'https:';
+      return normalizeResolvedUrl(new URL(`${protocol}${trimmedUrl}`));
+    } catch {
+      return trimmedUrl;
+    }
+  }
+
   if (/^[\w-]+\.[\w-]+\.\w+\//.test(trimmedUrl)) {
     try {
       return normalizeResolvedUrl(new URL(`https://${trimmedUrl}`));

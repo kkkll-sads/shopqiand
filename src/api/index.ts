@@ -10,6 +10,7 @@ export * from './modules/collectionSession';
 export * from './modules/collectionTrade';
 export * from './modules/common';
 export * from './modules/flashSale';
+export * from './modules/genesisNode';
 export * from './modules/message';
 export * from './modules/membershipCard';
 export * from './modules/nodeAmplifyCard';
